@@ -1,1 +1,349 @@
-import{CDOM as t}from"../../basic/CDOM.js";import{CString as e}from"../../basic/CString.js";import{CUtil as n}from"../../basic/CUtil.js";import{CUtilWeb as o}from"../../util/CUtilWeb.js";import{CPath as a}from"../../basic/CPath.js";import{CFecth as r}from"../../network/CFecth.js";import{getAuthToken as s}from"../CAuthToken.js";import{CIframeMsg as i}from"./CIframeMsg.js";const c=o.Parameter("path")??"",l=o.Parameter("url")??"",d=t.ID("editor-save-btn"),f=t.ID("editor-refresh-btn"),u=t.ID("editor-path"),w=t.ID("editor-status");u&&(u.textContent=c||l,u.title=c||l);let h=!1,m=!1,p=null,x=null,y=!1,C="",b=null,k=!1;function v(t){h=t,window.parent!==window&&i.Send(window.parent,"editor-dirty",{dirty:t})}let g=null,S=null;function j(){null!==g&&w&&(w.textContent=function(t){const e=Math.floor(t/1e3);return e<60?`${e}초 전 저장됨`:`${Math.floor(e/60)}분 전 저장됨`}(Date.now()-g))}function E(){null!==S&&(window.clearInterval(S),S=null),g=null}function I(){f&&(f.style.display="inline-block"),d&&y&&(d.style.display="inline-block")}function T(){k||(k=!0,d&&d.addEventListener("click",()=>{"sheet"===x?async function(){if(!$)return;let t;if("csv"===D)t=btoa(unescape(encodeURIComponent(($[0]?.rows??[]).map(t=>t.map(t=>{const e=String(t??"");return e.includes(",")||e.includes('"')||e.includes("\n")?'"'+e.replace(/"/g,'""')+'"':e}).join(",")).join("\r\n"))));else{const e=window.XLSX;if(!e)return void(w&&(w.textContent="xlsx library not loaded."));const n=e.utils.book_new();$.forEach(t=>{const o=e.utils.aoa_to_sheet(t.rows);e.utils.book_append_sheet(n,o,t.name)}),t=e.write(n,{bookType:"xlsx",type:"base64"})}await R(t)}():p&&U(p)}),f&&f.addEventListener("click",()=>{!async function(){if(l&&x&&(!h||confirm("저장되지 않은 변경이 있습니다. 서버 내용으로 덮어쓸까요?"))){w&&(w.textContent="Refreshing...");try{if("text"===x&&p){const t=await fetch(l,{cache:"no-store"});if(!t.ok)throw new Error(`HTTP ${t.status}`);const e=await t.text();return m=!0,p.setValue(e),m=!1,v(!1),E(),void(w&&(w.textContent="Refreshed"))}"sheet"===x&&b&&(await M(b,C,y),v(!1),E(),w&&(w.textContent="Refreshed"))}catch(t){m=!1,w&&(w.textContent=`Refresh failed: ${t.message}`)}}}()}))}async function R(t){if(!c)return void(w&&(w.textContent="No path info, cannot save."));const e=c.lastIndexOf("/"),n=c.slice(0,e+1),o=c.slice(e+1),i=s(a.WebRootUrl());E(),w&&(w.textContent="Saving...");try{const e=await r.Exe(a.WebRootUrl()+"File/Upload",{path:n,name:[o],data:[t],token:i},"json");e.ok?(g=Date.now(),j(),null===S&&(S=window.setInterval(j,1e3)),v(!1)):w&&(w.textContent=`Save failed: ${e.msg??""}`)}catch(t){w&&(w.textContent=`Save failed: ${t.message}`)}}async function U(t){await R(btoa(unescape(encodeURIComponent(t.getValue()))))}let $=null,D="";async function M(t,e,a){let r;x="sheet",b=t,C=e,y=a;try{r=await async function(t){const e=await fetch(l,{cache:"no-store"});if(!e.ok)throw new Error(`HTTP ${e.status}`);const o=await e.arrayBuffer();if("csv"===t)return[{name:"Sheet1",rows:n.ArrayToString(o).split(/\r?\n/).filter(t=>t.trim()).map(t=>function(t){const e=[];let n="",o=!1;for(let a=0;a<t.length;a++){const r=t[a];'"'===r?o&&'"'===t[a+1]?(n+='"',a++):o=!o:","!==r||o?n+=r:(e.push(n),n="")}return e.push(n),e}(t))}];const a=window.XLSX;if(!a)throw new Error("xlsx library not loaded.");const r=a.read(new Uint8Array(o),{type:"array"});return r.SheetNames.map(t=>{const e=r.Sheets[t];return{name:t,rows:a.utils.sheet_to_json(e,{header:1,defval:""})}})}(e)}catch(e){return void(t.textContent=`Failed to load file: ${e.message}`)}$=r,D=e,t.innerHTML="",o.SheetEditor(t,r,a,(t,e)=>{!function(t,e){if($)switch(t){case"update":{const t=$.find(t=>t.name===e.sheet);if(!t)break;const n=e.row+1;t.rows[n]||(t.rows[n]=[]),t.rows[n][e.col]=e.value;break}case"insert":{const t=$.find(t=>t.name===e.sheet);t&&t.rows.splice(e.row+1,0,e.values);break}case"delete":{const t=$.find(t=>t.name===e.sheet);t&&t.rows.splice(e.row+1,1);break}case"alter":{const t=$.find(t=>t.name===e.sheet);if(!t)break;t.rows[0]||(t.rows[0]=[]),t.rows[0][e.col]=e.name;break}case"insertSheet":$.splice(e.index,0,{name:e.name,rows:[[""]]});break;case"deleteSheet":{const t=$.findIndex(t=>t.name===e.name);t>=0&&$.splice(t,1);break}}}(t,e),v(!0)}),T(),I()}!async function(){const n=t.ID("editor-body");if(!l)return void(n.textContent="No file specified.");const{ext:i}=e.ExtCut(c||l),d=await async function(){const t=s(a.WebRootUrl());if(!t)return!1;try{return!!(await r.Exe(a.WebRootUrl()+"auth/check",{token:t},"json")).authed}catch{return!1}}();if(y=d,C=i,b=n,"csv"===i||"xlsx"===i||"xls"===i)return void await M(n,i,d);let f;x="text";try{const t=await fetch(l,{cache:"no-store"});if(!t.ok)return void(n.textContent=`Failed to load file: HTTP ${t.status}`);f=await t.text()}catch(t){return void(n.textContent=`Failed to load file: ${t.message}`)}const u=o.sMonacoExtToLang[i]??"plaintext";o.MonacoEditer(n,f,u,"vs-dark",t=>{if(p=t,t?.updateOptions({readOnly:!d}),T(),I(),!d)return;const e=window.monaco;t.addCommand(e.KeyMod.CtrlCmd|e.KeyCode.KeyS,()=>U(t)),t.onDidChangeModelContent(()=>{m||v(!0)})},!1,l)}();
+import { CDOM } from "../../basic/CDOM.js";
+import { CString } from "../../basic/CString.js";
+import { CUtil } from "../../basic/CUtil.js";
+import { CUtilWeb } from "../../util/CUtilWeb.js";
+import { CPath } from "../../basic/CPath.js";
+import { CFecth } from "../../network/CFecth.js";
+import { getAuthToken } from "../CAuthToken.js";
+import { CIframeMsg } from "./CIframeMsg.js";
+const gPath = CUtilWeb.Parameter("path") ?? "";
+const gUrl = CUtilWeb.Parameter("url") ?? "";
+const saveBtn = CDOM.ID("editor-save-btn");
+const refreshBtn = CDOM.ID("editor-refresh-btn");
+const pathEl = CDOM.ID("editor-path");
+const statusEl = CDOM.ID("editor-status");
+if (pathEl) {
+    pathEl.textContent = gPath || gUrl;
+    pathEl.title = gPath || gUrl;
+}
+let gDirty = false;
+let gSuppressDirty = false;
+let gEditor = null;
+let gMode = null;
+let gWritable = false;
+let gExt = "";
+let gContainer = null;
+let gToolbarBound = false;
+async function canWrite() {
+    const token = getAuthToken(CPath.WebRootUrl());
+    if (!token)
+        return false;
+    try {
+        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/check', { token }, 'json');
+        return !!j.authed;
+    }
+    catch {
+        return false;
+    }
+}
+function sendDirty(_dirty) {
+    gDirty = _dirty;
+    if (window.parent !== window)
+        CIframeMsg.Send(window.parent, 'editor-dirty', { dirty: _dirty });
+}
+let gLastSaveTime = null;
+let gSaveTimerId = null;
+function formatElapsed(_ms) {
+    const sec = Math.floor(_ms / 1000);
+    if (sec < 60)
+        return `${sec}초 전 저장됨`;
+    return `${Math.floor(sec / 60)}분 전 저장됨`;
+}
+function tickSaveStatus() {
+    if (gLastSaveTime === null || !statusEl)
+        return;
+    statusEl.textContent = formatElapsed(Date.now() - gLastSaveTime);
+}
+function startSaveTimer() {
+    gLastSaveTime = Date.now();
+    tickSaveStatus();
+    if (gSaveTimerId === null)
+        gSaveTimerId = window.setInterval(tickSaveStatus, 1000);
+}
+function stopSaveTimer() {
+    if (gSaveTimerId !== null) {
+        window.clearInterval(gSaveTimerId);
+        gSaveTimerId = null;
+    }
+    gLastSaveTime = null;
+}
+function showToolbar() {
+    if (refreshBtn)
+        refreshBtn.style.display = "inline-block";
+    if (saveBtn && gWritable)
+        saveBtn.style.display = "inline-block";
+}
+function bindToolbarOnce() {
+    if (gToolbarBound)
+        return;
+    gToolbarBound = true;
+    if (saveBtn) {
+        saveBtn.addEventListener("click", () => {
+            if (gMode === "sheet")
+                saveSheetFile();
+            else if (gEditor)
+                saveFile(gEditor);
+        });
+    }
+    if (refreshBtn) {
+        refreshBtn.addEventListener("click", () => { void refreshFile(); });
+    }
+}
+async function uploadFile(_base64) {
+    if (!gPath) {
+        if (statusEl)
+            statusEl.textContent = "No path info, cannot save.";
+        return;
+    }
+    const dirEnd = gPath.lastIndexOf('/');
+    const dir = gPath.slice(0, dirEnd + 1);
+    const fileName = gPath.slice(dirEnd + 1);
+    const token = getAuthToken(CPath.WebRootUrl());
+    stopSaveTimer();
+    if (statusEl)
+        statusEl.textContent = "Saving...";
+    try {
+        const j = await CFecth.Exe(CPath.WebRootUrl() + 'File/Upload', { path: dir, name: [fileName], data: [_base64], token }, 'json');
+        if (j.ok) {
+            startSaveTimer();
+            sendDirty(false);
+        }
+        else if (statusEl)
+            statusEl.textContent = `Save failed: ${j.msg ?? ''}`;
+    }
+    catch (e) {
+        if (statusEl)
+            statusEl.textContent = `Save failed: ${e.message}`;
+    }
+}
+async function saveFile(editor) {
+    await uploadFile(btoa(unescape(encodeURIComponent(editor.getValue()))));
+}
+let gSheetData = null;
+let gSheetExt = '';
+function parseCSVLine(_line) {
+    const result = [];
+    let cur = '';
+    let inQuote = false;
+    for (let i = 0; i < _line.length; i++) {
+        const ch = _line[i];
+        if (ch === '"') {
+            if (inQuote && _line[i + 1] === '"') {
+                cur += '"';
+                i++;
+            }
+            else
+                inQuote = !inQuote;
+        }
+        else if (ch === ',' && !inQuote) {
+            result.push(cur);
+            cur = '';
+        }
+        else
+            cur += ch;
+    }
+    result.push(cur);
+    return result;
+}
+function serializeCSV(_rows) {
+    return _rows.map(row => row.map(cell => {
+        const str = String(cell ?? '');
+        if (str.includes(',') || str.includes('"') || str.includes('\n'))
+            return '"' + str.replace(/"/g, '""') + '"';
+        return str;
+    }).join(',')).join('\r\n');
+}
+function applySheetAction(_action, _payload) {
+    if (!gSheetData)
+        return;
+    switch (_action) {
+        case 'update': {
+            const sheet = gSheetData.find(s => s.name === _payload.sheet);
+            if (!sheet)
+                break;
+            const rowIdx = _payload.row + 1;
+            if (!sheet.rows[rowIdx])
+                sheet.rows[rowIdx] = [];
+            sheet.rows[rowIdx][_payload.col] = _payload.value;
+            break;
+        }
+        case 'insert': {
+            const sheet = gSheetData.find(s => s.name === _payload.sheet);
+            if (sheet)
+                sheet.rows.splice(_payload.row + 1, 0, _payload.values);
+            break;
+        }
+        case 'delete': {
+            const sheet = gSheetData.find(s => s.name === _payload.sheet);
+            if (sheet)
+                sheet.rows.splice(_payload.row + 1, 1);
+            break;
+        }
+        case 'alter': {
+            const sheet = gSheetData.find(s => s.name === _payload.sheet);
+            if (!sheet)
+                break;
+            if (!sheet.rows[0])
+                sheet.rows[0] = [];
+            sheet.rows[0][_payload.col] = _payload.name;
+            break;
+        }
+        case 'insertSheet':
+            gSheetData.splice(_payload.index, 0, { name: _payload.name, rows: [['']] });
+            break;
+        case 'deleteSheet': {
+            const idx = gSheetData.findIndex(s => s.name === _payload.name);
+            if (idx >= 0)
+                gSheetData.splice(idx, 1);
+            break;
+        }
+    }
+}
+async function saveSheetFile() {
+    if (!gSheetData)
+        return;
+    let base64;
+    if (gSheetExt === 'csv') {
+        base64 = btoa(unescape(encodeURIComponent(serializeCSV(gSheetData[0]?.rows ?? []))));
+    }
+    else {
+        const XLSX = window["XLSX"];
+        if (!XLSX) {
+            if (statusEl)
+                statusEl.textContent = "xlsx library not loaded.";
+            return;
+        }
+        const wb = XLSX.utils.book_new();
+        gSheetData.forEach(sheet => {
+            const ws = XLSX.utils.aoa_to_sheet(sheet.rows);
+            XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+        });
+        base64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+    }
+    await uploadFile(base64);
+}
+async function loadSheetData(ext) {
+    const res = await fetch(gUrl, { cache: "no-store" });
+    if (!res.ok)
+        throw new Error(`HTTP ${res.status}`);
+    const buf = await res.arrayBuffer();
+    if (ext === 'csv') {
+        const str = CUtil.ArrayToString(buf);
+        const lines = str.split(/\r?\n/).filter(l => l.trim());
+        return [{ name: 'Sheet1', rows: lines.map(l => parseCSVLine(l)) }];
+    }
+    const XLSX = window["XLSX"];
+    if (!XLSX)
+        throw new Error("xlsx library not loaded.");
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+    return wb.SheetNames.map((name) => {
+        const sheet = wb.Sheets[name];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        return { name, rows };
+    });
+}
+async function mainSheet(container, ext, writable) {
+    gMode = "sheet";
+    gContainer = container;
+    gExt = ext;
+    gWritable = writable;
+    let data;
+    try {
+        data = await loadSheetData(ext);
+    }
+    catch (e) {
+        container.textContent = `Failed to load file: ${e.message}`;
+        return;
+    }
+    gSheetData = data;
+    gSheetExt = ext;
+    container.innerHTML = "";
+    CUtilWeb.SheetEditor(container, data, writable, (_action, _payload) => {
+        applySheetAction(_action, _payload);
+        sendDirty(true);
+    });
+    bindToolbarOnce();
+    showToolbar();
+}
+async function refreshFile() {
+    if (!gUrl || !gMode)
+        return;
+    if (gDirty && !confirm("저장되지 않은 변경이 있습니다. 서버 내용으로 덮어쓸까요?"))
+        return;
+    if (statusEl)
+        statusEl.textContent = "Refreshing...";
+    try {
+        if (gMode === "text" && gEditor) {
+            const res = await fetch(gUrl, { cache: "no-store" });
+            if (!res.ok)
+                throw new Error(`HTTP ${res.status}`);
+            const source = await res.text();
+            gSuppressDirty = true;
+            gEditor.setValue(source);
+            gSuppressDirty = false;
+            sendDirty(false);
+            stopSaveTimer();
+            if (statusEl)
+                statusEl.textContent = "Refreshed";
+            return;
+        }
+        if (gMode === "sheet" && gContainer) {
+            await mainSheet(gContainer, gExt, gWritable);
+            sendDirty(false);
+            stopSaveTimer();
+            if (statusEl)
+                statusEl.textContent = "Refreshed";
+        }
+    }
+    catch (e) {
+        gSuppressDirty = false;
+        if (statusEl)
+            statusEl.textContent = `Refresh failed: ${e.message}`;
+    }
+}
+async function main() {
+    const container = CDOM.ID("editor-body");
+    if (!gUrl) {
+        container.textContent = "No file specified.";
+        return;
+    }
+    const { ext } = CString.ExtCut(gPath || gUrl);
+    const writable = await canWrite();
+    gWritable = writable;
+    gExt = ext;
+    gContainer = container;
+    if (ext === 'csv' || ext === 'xlsx' || ext === 'xls') {
+        await mainSheet(container, ext, writable);
+        return;
+    }
+    gMode = "text";
+    let source;
+    try {
+        const res = await fetch(gUrl, { cache: "no-store" });
+        if (!res.ok) {
+            container.textContent = `Failed to load file: HTTP ${res.status}`;
+            return;
+        }
+        source = await res.text();
+    }
+    catch (e) {
+        container.textContent = `Failed to load file: ${e.message}`;
+        return;
+    }
+    const language = CUtilWeb.sMonacoExtToLang[ext] ?? "plaintext";
+    CUtilWeb.MonacoEditer(container, source, language, "vs-dark", (editor) => {
+        gEditor = editor;
+        editor?.updateOptions({ readOnly: !writable });
+        bindToolbarOnce();
+        showToolbar();
+        if (!writable)
+            return;
+        const monacoNs = window["monaco"];
+        editor.addCommand(monacoNs.KeyMod.CtrlCmd | monacoNs.KeyCode.KeyS, () => saveFile(editor));
+        editor.onDidChangeModelContent(() => {
+            if (!gSuppressDirty)
+                sendDirty(true);
+        });
+    }, false, gUrl);
+}
+main();

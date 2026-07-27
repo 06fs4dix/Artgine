@@ -1,1 +1,115 @@
-var t=this&&this.__decorate||function(t,e,r,n){var a,s=arguments.length,i=s<3?e:null===n?n=Object.getOwnPropertyDescriptor(e,r):n;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)i=Reflect.decorate(t,e,r,n);else for(var o=t.length-1;o>=0;o--)(a=t[o])&&(i=(s<3?a(i):s>3?a(e,r,i):a(e,r))||i);return s>3&&i&&Object.defineProperty(e,r,i),i};import{URLPatterns as e}from"../network/CServerMain.js";import{CAuthServer as r,isAuthedReq as n,isValidToken as a}from"./CAuthServer.js";import{CORMCondition as s,CORMField as i,CORMOption as o}from"../network/CORM.js";import{CAuthInfo as m}from"../network/CAuthInfo.js";let l=class extends r{IsAuth(t,e){const r=t.GetStr("token");return r?a(r):n(e)}async CreateORM(t){switch(t){case"mysql":{const{CMysql:t}=await import("../network/CMysql.js");return new t}case"mssql":{const{CMssql:t}=await import("../network/CMssql.js");return new t}case"sqlite":{const{CSQLite:t}=await import("../network/CSQLite.js");return new t}case"ne":{const{CNe:t}=await import("../network/CNe.js");return new t}}return null}constructor(){super(),this.On("/ORM/Exec",this.onExec.bind(this))}async onExec(t,e,r){if(!this.IsAuth(t,e))return r.status(401).json({ok:!1,msg:"Authentication required"}),null;const n=t.GetStr("dbType"),a=await this.CreateORM(n);if(!a)return r.status(400).json({ok:!1,msg:"지원하지 않는 dbType: "+n}),null;const l=t.GetVal("auth")||{},c=new m;c.mID=l.mID||"",c.mPW=l.mPW||"",c.mAddres=l.mAddres||"",c.mPort=l.mPort||"",a.mAuth=c,a.mDatabase=t.GetStr("database")||"";try{await a.Init();const e=t.GetStr("func"),n=t.GetStr("collection"),m=t.GetArray("condition")?.mArray??[],l=t.GetArray("data")?.mArray??[],c=t.GetArray("projection")?.mArray??[],u=t.GetVal("limit")||{},w=m.map(t=>new s(t.GetStr("mKey"),t.GetStr("mCondition"),t.GetVal("mValue"),t.GetStr("mLogical"))),f=l.map(t=>new i(t.GetStr("mKey"),t.GetVal("mValue"))),y=new o;let d;switch(null!=u.mLimitOffset&&(y.mLimitOffset=u.mLimitOffset),null!=u.mLimit&&(y.mLimit=u.mLimit),null!=u.mDistinct&&(y.mDistinct=u.mDistinct),null!=u.mOrderBy&&(y.mOrderBy=u.mOrderBy),null!=u.mASC&&(y.mASC=u.mASC),e){case"Insert":d=await a.Insert(n,f);break;case"Update":d=await a.Update(n,w,f);break;case"Select":d=await a.Select(n,w,c,y);break;case"Delete":d=await a.Delete(n,w);break;case"GetCollection":d=await a.GetCollection();break;case"GetProjection":d=await a.GetProjection(n);break;default:return r.status(400).json({ok:!1,msg:"지원하지 않는 func: "+e}),null}r.json({ok:!0,result:d})}catch(t){r.status(500).json({ok:!1,msg:t?.message||"ORM 처리 오류"})}finally{await a.Close()}return null}};l=t([e(["/ORM/Exec"])],l);export{l as CORMRouter};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { URLPatterns } from '../network/CServerMain.js';
+import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
+import { CORMCondition, CORMField, CORMOption } from '../network/CORM.js';
+import { CAuthInfo } from '../network/CAuthInfo.js';
+import { CMysql } from '../network/CMysql.js';
+import { CMssql } from '../network/CMssql.js';
+import { CSQLite } from '../network/CSQLite.js';
+import { CNe } from '../network/CNe.js';
+import { CPostgreSQL } from '../network/CPostgreSQL.js';
+import { CMongoDB } from '../network/CMongoDB.js';
+let CORMRouter = class CORMRouter extends CAuthServer {
+    IsAuth(_json, req) {
+        const token = _json.GetStr('token');
+        return token ? isValidToken(token) : isAuthedReq(req);
+    }
+    CreateORM(_dbType) {
+        switch (_dbType) {
+            case 'mysql': return new CMysql();
+            case 'mssql': return new CMssql();
+            case 'sqlite': return new CSQLite();
+            case 'ne': return new CNe();
+            case 'postgresql': return new CPostgreSQL();
+            case 'mongodb': return new CMongoDB();
+        }
+        return null;
+    }
+    constructor() {
+        super();
+        this.On("/ORM/Exec", this.onExec.bind(this));
+    }
+    async onExec(_json, _req, _res) {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(401).json({ ok: false, msg: 'Authentication required' });
+            return null;
+        }
+        const dbType = _json.GetStr('dbType');
+        const orm = this.CreateORM(dbType);
+        if (!orm) {
+            _res.status(400).json({ ok: false, msg: '지원하지 않는 dbType: ' + dbType });
+            return null;
+        }
+        const authRaw = _json.GetVal('auth') || {};
+        const auth = new CAuthInfo();
+        auth.mID = authRaw.mID || '';
+        auth.mPW = authRaw.mPW || '';
+        auth.mAddres = authRaw.mAddres || '';
+        auth.mPort = authRaw.mPort || '';
+        orm.mAuth = auth;
+        orm.mDatabase = _json.GetStr('database') || '';
+        try {
+            await orm.Init();
+            const func = _json.GetStr('func');
+            const collection = _json.GetStr('collection');
+            const conditionRaw = (_json.GetArray('condition')?.mArray ?? []);
+            const dataRaw = (_json.GetArray('data')?.mArray ?? []);
+            const projection = (_json.GetArray('projection')?.mArray ?? []);
+            const limitRaw = _json.GetVal('limit') || {};
+            const condition = conditionRaw.map((c) => new CORMCondition(c.GetStr('mKey'), c.GetStr('mCondition'), c.GetVal('mValue'), c.GetStr('mLogical')));
+            const data = dataRaw.map((d) => new CORMField(d.GetStr('mKey'), d.GetVal('mValue')));
+            const limit = new CORMOption();
+            if (limitRaw.mLimitOffset != null)
+                limit.mLimitOffset = limitRaw.mLimitOffset;
+            if (limitRaw.mLimit != null)
+                limit.mLimit = limitRaw.mLimit;
+            if (limitRaw.mDistinct != null)
+                limit.mDistinct = limitRaw.mDistinct;
+            if (limitRaw.mOrderBy != null)
+                limit.mOrderBy = limitRaw.mOrderBy;
+            if (limitRaw.mASC != null)
+                limit.mASC = limitRaw.mASC;
+            let result;
+            switch (func) {
+                case 'Insert':
+                    result = await orm.Insert(collection, data);
+                    break;
+                case 'Update':
+                    result = await orm.Update(collection, condition, data);
+                    break;
+                case 'Select':
+                    result = await orm.Select(collection, condition, projection, limit);
+                    break;
+                case 'Delete':
+                    result = await orm.Delete(collection, condition);
+                    break;
+                case 'GetCollection':
+                    result = await orm.GetCollection();
+                    break;
+                case 'GetProjection':
+                    result = await orm.GetProjection(collection);
+                    break;
+                default:
+                    _res.status(400).json({ ok: false, msg: '지원하지 않는 func: ' + func });
+                    return null;
+            }
+            _res.json({ ok: true, result });
+        }
+        catch (e) {
+            _res.status(500).json({ ok: false, msg: e?.message || 'ORM 처리 오류' });
+        }
+        finally {
+            await orm.Close();
+        }
+        return null;
+    }
+};
+CORMRouter = __decorate([
+    URLPatterns(["/ORM/Exec"])
+], CORMRouter);
+export { CORMRouter };

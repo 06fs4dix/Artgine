@@ -4,39 +4,33 @@ import { CSQLite } from '../network/CSQLite.js';
 export type ProviderLogRecord = {
     id: number;
     key: string;        // pty 세션 key(없으면 token) — 라우터가 아는 값
-    provider: string;   // claude | grok | codex | opencode
+    provider: string;   // claude | grok | codex | opencode | antigravity
     sessionId: string;  // CLI 자체 세션 ID
     cwd: string;        // 워크스페이스
     model: string;      // 모델명
-    role: string;       // user | assistant
-    text: string;       // 본문(마크다운 원문)
+    role: string;       // user | assistant | tool
+    text: string;       // 본문(마크다운 원문). tool 행은 ''
+    tool: string;       // tool 행: 도구 이름. Q&A는 ''
+    file: string;       // tool 행: 대상 경로(없으면 ''). Q&A는 ''
     createdAt: number;  // YYYYMMDDHHmmss
 };
 
-// 터미널 세션의 질문/최종답변만 저장하는 provider(CLI)별 대화 로그.
+// 터미널 세션의 질문/최종답변 + 도구 호출(tool,file만)을 저장하는 provider(CLI)별 대화 로그.
 //
 // 소스는 화면이 아니라 각 CLI가 직접 남기는 세션 트랜스크립트다(CConversationReader 참조).
 // 화면 스크래핑으로는 도구 출력과 답변이 원리적으로 구분되지 않아 폐기했다 — 자세한 이유는 리더 주석에.
 // 도구 호출 직전의 중간 멘트("~를 확인하겠습니다")는 저장하지 않는다. 최종 답변만 남긴다.
+// tool 행은 result 본문 없이 이름·경로만 남긴다(AI 요약 없음).
 export class CProviderLog {
     private static sDB: CRDBMS = null;
     private static sTable = 'provider_log';
+    private static readonly sCols = 'id, key, provider, sessionId, cwd, model, role, text, tool, file, createdAt';
 
     private static async Init(): Promise<CRDBMS> {
         if (CProviderLog.sDB != null) return CProviderLog.sDB;
 
         const db = new CSQLite();
         await db.Init();
-
-        // 구 스키마(key/mode/createdAt/content — 화면 스크래핑 시절)로 만들어진 테이블이 남아 있으면 버린다.
-        // CreateCollection은 CREATE TABLE IF NOT EXISTS라 컬럼을 추가해주지 않아, 그대로 두면 INSERT가 깨진다.
-        // (CWorkOrder가 from/to → requester/assignee 바꿀 때 쓴 것과 같은 1회성 처리)
-        if (await db.IsCollection(CProviderLog.sTable)) {
-            const cols = await db.GetProjection(CProviderLog.sTable);
-            if (!cols.includes('sessionId')) {
-                await db.Send(`DROP TABLE ${CProviderLog.sTable}`);
-            }
-        }
 
         await db.CreateCollection(CProviderLog.sTable, [
             new CORMField('id', 1),
@@ -47,6 +41,8 @@ export class CProviderLog {
             new CORMField('model', ''),
             new CORMField('role', ''),
             new CORMField('text', ''),
+            new CORMField('tool', ''),
+            new CORMField('file', ''),
             new CORMField('createdAt', 0),
         ]);
 
@@ -55,21 +51,65 @@ export class CProviderLog {
     }
 
     public static async Append(_rec: Omit<ProviderLogRecord, 'id'>): Promise<void> {
-        if (!_rec.text) return;
+        // user/assistant는 본문, tool은 도구 이름이 있어야 저장한다.
+        if (_rec.role === 'tool') {
+            if (!_rec.tool) return;
+        } else if (!_rec.text) {
+            return;
+        }
         const db = await CProviderLog.Init();
         await db.Send(
-            `INSERT INTO ${CProviderLog.sTable} (key, provider, sessionId, cwd, model, role, text, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [_rec.key, _rec.provider, _rec.sessionId, _rec.cwd, _rec.model, _rec.role, _rec.text, _rec.createdAt]
+            `INSERT INTO ${CProviderLog.sTable} (key, provider, sessionId, cwd, model, role, text, tool, file, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                _rec.key, _rec.provider, _rec.sessionId, _rec.cwd, _rec.model, _rec.role,
+                _rec.text ?? '', _rec.tool ?? '', _rec.file ?? '', _rec.createdAt,
+            ]
         );
     }
 
-    // _key 기준 시간순(id 오름차순). _limit이 있으면 최신 _limit건을 시간순으로 반환한다.
-    public static async List(_key: string, _limit?: number): Promise<ProviderLogRecord[]> {
+    // _key 기준 시간순(id 오름차순).
+    // _afterId: 생략 또는 -1 → 전체(또는 _limit). 0 이상이면 id > _afterId 만(증분 폴링용).
+    // _limit: 전체 조회(_afterId < 0)일 때만 적용 — 최신 _limit건을 시간순으로 반환. 증분 조회에는 무시.
+    public static async List(_key: string, _afterId: number = -1, _limit?: number): Promise<ProviderLogRecord[]> {
         const db = await CProviderLog.Init();
-        const cols = 'id, key, provider, sessionId, cwd, model, role, text, createdAt';
-        const rows = _limit
-            ? await db.Recv(`SELECT * FROM (SELECT ${cols} FROM ${CProviderLog.sTable} WHERE key = ? ORDER BY id DESC LIMIT ${Number(_limit)}) ORDER BY id ASC`, [_key])
-            : await db.Recv(`SELECT ${cols} FROM ${CProviderLog.sTable} WHERE key = ? ORDER BY id ASC`, [_key]);
+        const cols = CProviderLog.sCols;
+        const afterId = _afterId == null || isNaN(Number(_afterId)) ? -1 : Number(_afterId);
+        let rows: any[] | null;
+        if (afterId >= 0) {
+            rows = await db.Recv(
+                `SELECT ${cols} FROM ${CProviderLog.sTable} WHERE key = ? AND id > ? ORDER BY id ASC`,
+                [_key, afterId]
+            );
+        } else if (_limit) {
+            rows = await db.Recv(
+                `SELECT * FROM (SELECT ${cols} FROM ${CProviderLog.sTable} WHERE key = ? ORDER BY id DESC LIMIT ${Number(_limit)}) ORDER BY id ASC`,
+                [_key]
+            );
+        } else {
+            rows = await db.Recv(
+                `SELECT ${cols} FROM ${CProviderLog.sTable} WHERE key = ? ORDER BY id ASC`,
+                [_key]
+            );
+        }
+        if (rows == null) return [];
+        return rows.map(CProviderLog.RowToRecord);
+    }
+
+    // 터미널 로그 패널용: key로 직접 붙은 행 + 그 key가 한 번이라도 등장한 CLI sessionId의 전체 행.
+    // key 매칭 실패로 key=''인 같은 대화 행도 세션 단위로 함께 나온다(부분 로그만 보이던 문제 해결).
+    // _afterId: -1=전체, ≥0 이면 id > _afterId (증분). sessionId 집합은 afterId와 무관하게 key 기준 전체 이력에서 잡는다.
+    public static async ListForTerminalKey(_key: string, _afterId: number = -1): Promise<ProviderLogRecord[]> {
+        const db = await CProviderLog.Init();
+        const t = CProviderLog.sTable;
+        const cols = CProviderLog.sCols;
+        const afterId = _afterId == null || isNaN(Number(_afterId)) ? -1 : Number(_afterId);
+        // key = ? 이거나, (비어 있지 않은 sessionId가 key 소속 세션 집합에 속함)
+        const owned = `sessionId != '' AND sessionId IN (SELECT DISTINCT sessionId FROM ${t} WHERE key = ? AND sessionId != '')`;
+        const where = afterId >= 0
+            ? `WHERE id > ? AND (key = ? OR (${owned}))`
+            : `WHERE key = ? OR (${owned})`;
+        const params = afterId >= 0 ? [afterId, _key, _key] : [_key, _key];
+        const rows = await db.Recv(`SELECT ${cols} FROM ${t} ${where} ORDER BY id ASC`, params);
         if (rows == null) return [];
         return rows.map(CProviderLog.RowToRecord);
     }
@@ -78,7 +118,7 @@ export class CProviderLog {
     public static async ListBySession(_sessionId: string): Promise<ProviderLogRecord[]> {
         const db = await CProviderLog.Init();
         const rows = await db.Recv(
-            `SELECT id, key, provider, sessionId, cwd, model, role, text, createdAt FROM ${CProviderLog.sTable} WHERE sessionId = ? ORDER BY id ASC`,
+            `SELECT ${CProviderLog.sCols} FROM ${CProviderLog.sTable} WHERE sessionId = ? ORDER BY id ASC`,
             [_sessionId]
         );
         if (rows == null) return [];
@@ -87,9 +127,9 @@ export class CProviderLog {
 
     // 세션 단위로 묶은 최신 세션 목록(최신 대화순). _beforeId를 주면 그 id보다 오래된 세션부터
     // (아코디언 "더 보기"용 커서 페이징). offset은 그 세션의 마지막(가장 큰) id — 다음 페이지 호출 시 그대로 _beforeId로 넘긴다.
-    // firstText/cwd는 그 세션의 첫 레코드(id 최소) 기준(작업 디렉토리는 세션 내내 동일하다). time은 마지막 레코드(id 최대) 기준(최근 활동 시각).
-    // model은 첫 레코드가 아니라 "model이 채워진 최초 레코드" 기준 — user 메시지에는 model이 없고(assistant 응답에만 기록됨),
-    // 첫 레코드는 보통 user 질문이라 그대로 쓰면 항상 빈 값이 나온다.
+    // firstText/cwd는 그 세션의 첫 user 레코드 기준(tool이 먼저 끼면 제목이 비는 문제 방지). 없으면 min(id) 폴백.
+    // time은 마지막 레코드(id 최대) 기준(최근 활동 시각).
+    // model은 "model이 채워진 최초 레코드" 기준 — user/tool 메시지에는 model이 없고 assistant 응답에만 기록됨.
     public static async ListSessions(_beforeId?: number, _limit = 30): Promise<{ name: string; offset: number; model: string; firstText: string; cwd: string; time: number }[]> {
         const db = await CProviderLog.Init();
         const t = CProviderLog.sTable;
@@ -97,14 +137,15 @@ export class CProviderLog {
             ? `SELECT sessionId, MAX(id) AS maxId, MIN(id) AS minId FROM ${t} GROUP BY sessionId HAVING maxId < ? ORDER BY maxId DESC LIMIT ${Number(_limit)}`
             : `SELECT sessionId, MAX(id) AS maxId, MIN(id) AS minId FROM ${t} GROUP BY sessionId ORDER BY maxId DESC LIMIT ${Number(_limit)}`;
         const modelSub = `SELECT t1.sessionId AS sid, t1.model AS model FROM ${t} t1 WHERE t1.model != '' AND t1.id = (SELECT MIN(t2.id) FROM ${t} t2 WHERE t2.sessionId = t1.sessionId AND t2.model != '')`;
-        const sql = `SELECT g.sessionId, g.maxId, m.model, f.text, f.cwd, l.createdAt FROM (${group}) g JOIN ${t} f ON f.id = g.minId JOIN ${t} l ON l.id = g.maxId LEFT JOIN (${modelSub}) m ON m.sid = g.sessionId`;
+        const firstUserSub = `SELECT t1.sessionId AS sid, t1.text AS text, t1.cwd AS cwd FROM ${t} t1 WHERE t1.role = 'user' AND t1.id = (SELECT MIN(t2.id) FROM ${t} t2 WHERE t2.sessionId = t1.sessionId AND t2.role = 'user')`;
+        const sql = `SELECT g.sessionId, g.maxId, m.model, COALESCE(u.text, f.text), COALESCE(u.cwd, f.cwd), l.createdAt FROM (${group}) g JOIN ${t} f ON f.id = g.minId JOIN ${t} l ON l.id = g.maxId LEFT JOIN (${modelSub}) m ON m.sid = g.sessionId LEFT JOIN (${firstUserSub}) u ON u.sid = g.sessionId`;
         const rows = await db.Recv(sql, _beforeId ? [_beforeId] : []);
         if (rows == null) return [];
         return rows
             .sort((a, b) => Number(b[1]) - Number(a[1]))
             .map(row => ({
-                name: String(row[0]), offset: Number(row[1]), model: String(row[2] ?? ''), firstText: String(row[3]),
-                cwd: String(row[4]), time: Number(row[5]),
+                name: String(row[0]), offset: Number(row[1]), model: String(row[2] ?? ''), firstText: String(row[3] ?? ''),
+                cwd: String(row[4] ?? ''), time: Number(row[5]),
             }));
     }
 
@@ -130,7 +171,9 @@ export class CProviderLog {
             model: String(_row[5]),
             role: String(_row[6]),
             text: String(_row[7]),
-            createdAt: Number(_row[8]),
+            tool: String(_row[8] ?? ''),
+            file: String(_row[9] ?? ''),
+            createdAt: Number(_row[10]),
         };
     }
 

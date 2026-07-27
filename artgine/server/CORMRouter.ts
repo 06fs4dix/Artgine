@@ -4,14 +4,21 @@ import { Request, Response } from 'express';
 import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
 import { CORM, CORMCondition, CORMField, CORMOption } from '../network/CORM.js';
 import { CAuthInfo } from '../network/CAuthInfo.js';
+import { CMysql } from '../network/CMysql.js';
+import { CMssql } from '../network/CMssql.js';
+import { CSQLite } from '../network/CSQLite.js';
+import { CNe } from '../network/CNe.js';
+import { CPostgreSQL } from '../network/CPostgreSQL.js';
+import { CMongoDB } from '../network/CMongoDB.js';
 
 /*
 ORM Router
 - 클라이언트가 넘긴 인증정보 + DB정보로 CORM 인스턴스를 만들어 연결하고,
   요청받은 함수(func)를 그 인스턴스에서 실행한 뒤 결과를 JSON으로 돌려주는 단일 프록시 엔드포인트.
+- 네이티브 드라이버(mysql2/mssql/sqlite/pg/mongodb)는 각 DB 클래스 Init()에서 NPMInstall 후 동적 로드한다.
 - /ORM/Exec POST
   body: {
-      token?, auth:{mID,mPW,mAddres,mPort}, dbType:"mysql"|"mssql"|"sqlite"|"ne", database,
+      token?, auth:{mID,mPW,mAddres,mPort}, dbType:"mysql"|"mssql"|"sqlite"|"ne"|"postgresql"|"mongodb", database,
       func:"Insert"|"Update"|"Select"|"Delete"|"GetCollection"|"GetProjection",
       collection?, condition?:CORMCondition[], data?:CORMField[], projection?:string[], limit?:CORMOption
   }
@@ -24,15 +31,14 @@ export class CORMRouter extends CAuthServer {
         return token ? isValidToken(token) : isAuthedReq(req);
     }
 
-    // dbType별 드라이버 모듈은 실제 선택된 타입만 동적 import한다.
-    // 정적 import로 4개를 전부 얹으면, 해당 패키지(mysql2/sqlite/mssql)가 하나라도 설치 안 됐을 때
-    // 다른 dbType 요청까지 모듈 로드 단계에서 함께 깨진다(예: mssql 미설치 시 sqlite 요청도 실패).
-    private async CreateORM(_dbType: string): Promise<CORM> {
+    private CreateORM(_dbType: string): CORM {
         switch (_dbType) {
-            case 'mysql': { const { CMysql } = await import('../network/CMysql.js'); return new CMysql(); }
-            case 'mssql': { const { CMssql } = await import('../network/CMssql.js'); return new CMssql(); }
-            case 'sqlite': { const { CSQLite } = await import('../network/CSQLite.js'); return new CSQLite(); }
-            case 'ne': { const { CNe } = await import('../network/CNe.js'); return new CNe(); }
+            case 'mysql': return new CMysql();
+            case 'mssql': return new CMssql();
+            case 'sqlite': return new CSQLite();
+            case 'ne': return new CNe();
+            case 'postgresql': return new CPostgreSQL();
+            case 'mongodb': return new CMongoDB();
         }
         return null;
     }
@@ -46,7 +52,7 @@ export class CORMRouter extends CAuthServer {
         if (!this.IsAuth(_json, _req)) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
 
         const dbType = _json.GetStr('dbType');
-        const orm = await this.CreateORM(dbType);
+        const orm = this.CreateORM(dbType);
         if (!orm) { _res.status(400).json({ ok: false, msg: '지원하지 않는 dbType: ' + dbType }); return null; }
 
         const authRaw: any = _json.GetVal('auth') || {};

@@ -86,6 +86,7 @@ if (location.protocol == 'file:' && isElectron==false){
 	location.replace(target);
 	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });
 }</script>
+<script type="server" src="../../plugin/ControlDownload/ControlDownloadServer.js"></script>
 <script type='module' src='Control.js'></script>
 
 <!--Manifest-->
@@ -93,33 +94,103 @@ if (location.protocol == 'file:' && isElectron==false){
 <style>
 #myTab{font-size:0.8rem;} #myTab .nav-link, #myTab .btn{padding:0.25rem 0.5rem; font-size:0.8rem;}
 #rightSidebarTab{font-size:0.8rem;} #rightSidebarTab .nav-link{padding:0.25rem 0.5rem; font-size:0.8rem;}
-/* Bootstrap 기본 .container는 폭별로 max-width가 계단식(xl:1140px, xxl:1320px)이라, 화면폭에 따라
-   좌우 여백이 사이드바 두 개(310px/300px) 임계값 사이에 애매하게 걸릴 수 있다(예: 1920px에서 여백 300px→
-   왼쪽만 실패). 좁을 땐 꽉 채우고, 1850px부터는 한 번에 두 사이드바가 동시에 들어갈 여백(각 325px)을
-   보장하도록 재정의한다. */
-.container{max-width:100%;}
-@media (min-width:1850px){ .container{max-width:1200px;} }
+/* 사이드바 단계 레이아웃(Control.ts updateSidebarMode):
+   both(≥1850): 좌·우 도킹(flex 자리 차지) + 컨테이너 max 1200
+   left(≥1030): 왼쪽만 도킹, 오른쪽 오버레이 — 본문은 남은 flex 폭 사용
+   none: 컨테이너 풀폭, 양쪽 오버레이(offcanvas)
+   ※ 도킹은 fixed+margin 이 아니라 position:static 으로 flex 행에 참여시킨다.
+     fixed 오버레이 도킹은 최소 모드에서 히트영역이 본문 위를 가려 클릭/선택이 전부 막히는 경우가 있다. */
+/* Bootstrap .container 기본 margin:auto 는 flex 도킹과 충돌하므로 기본은 0, both 모드만 중앙 정렬. */
+.container{max-width:100%;flex:1 1 auto;min-width:0;margin-left:0;margin-right:0;}
+body.sidebar-layout-both .container{max-width:1200px;margin-left:auto;margin-right:auto;}
 /* 사이드바(offcanvas 기본 z-index:1045)가 CModal 모달(기본 z-index 1000부터 시작)보다 위에 뜨는 문제 방지 -
    모달이 항상 사이드바 위에 오도록 사이드바 z-index를 모달 최소값보다 낮게 고정한다. */
 #app-sidebar, #app-sidebar-right{z-index:900 !important;}
 #app-sidebar{--bs-offcanvas-width:310px;}
-/* 우측 콘텐츠 옆 여백이 충분할 때: 사이드바를 좌측 여백 자리에 고정 표시(콘텐츠를 밀지 않음, 오버레이/배경막 없음) */
-#app-sidebar.sidebar-docked{transform:none !important; visibility:visible !important; box-shadow:none; border-right:1px solid var(--bs-border-color);}
-#app-sidebar.sidebar-docked .offcanvas-header{display:none;}
 #app-sidebar-right{--bs-offcanvas-width:300px;}
-/* 좌측 사이드바와 동일한 방식: 콘텐츠 우측에 여백이 충분하면 고정 표시, 부족하면 열고닫는 오버레이. */
-#app-sidebar-right.sidebar-docked{transform:none !important; visibility:visible !important; box-shadow:none; border-left:1px solid var(--bs-border-color);}
+/* 도킹: offcanvas fixed 오버레이를 끄고 실제 레이아웃 폭을 차지(본문과 겹치지 않음). */
+#app-sidebar.sidebar-docked,
+#app-sidebar-right.sidebar-docked{
+	position:static !important;
+	transform:none !important;
+	visibility:visible !important;
+	height:auto !important;
+	max-height:none !important;
+	max-width:none !important;
+	flex-shrink:0;
+	box-shadow:none;
+	z-index:auto !important;
+	transition:none !important;
+}
+#app-sidebar.sidebar-docked{width:310px !important;border-right:1px solid var(--bs-border-color);}
+#app-sidebar-right.sidebar-docked{width:300px !important;border-left:1px solid var(--bs-border-color);}
+#app-sidebar.sidebar-docked .offcanvas-header,
 #app-sidebar-right.sidebar-docked .offcanvas-header{display:none;}
+/* Multiplexer 최대화: 좌우 사이드바 숨김(flex에서 제거) + 컨테이너가 남은 폭 전부 사용. */
+body.tmux-fullscreen .container{max-width:100% !important;width:auto !important;flex:1 1 auto !important;margin:0 !important;}
+body.tmux-fullscreen #app-sidebar, body.tmux-fullscreen #app-sidebar-right{display:none !important;}
+body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleBtnWrapRight{display:none !important;}
 /* 히든 콘솔 채팅 트리거를 위해 탭 맨 앞에 작은 여백 확보 */
 #myTab{padding-left:14px;}
-#rdp-sidebar-list .ai-session-item, #session-sidebar-list .ai-session-item{cursor:pointer;}
+#rdp-sidebar-list .ai-session-item, #agent-sidebar-list .ai-session-item, #other-sidebar-list .ai-session-item{cursor:pointer;}
+/* 좌측 사이드바 하위 탭(Agent/Other) */
+#sidebarSubTab .nav-link{font-size:0.8rem;border-radius:0.375rem;}
+/* Agent 경로 그룹: 헤더 클릭으로 접기/펼치기, ...버튼으로 그 경로에 Chat/Terminal 생성.
+   세션 아이템과 확실히 구분되도록 진한 배경 + 좌측 액센트 바 + 살짝 굵은 텍스트로 강조한다. */
+.agent-group-head{cursor:pointer;user-select:none;background-color:var(--bs-secondary-bg);box-shadow:inset 3px 0 0 var(--bs-primary);border:1px solid var(--bs-border-color);}
+.agent-group-head:hover{background-color:var(--bs-primary-bg-subtle);}
+.agent-group-caret{transition:transform 0.15s;font-size:0.72rem;color:var(--bs-primary);}
+/* 로그 탭 검색: 일치 항목 타이틀 전체는 text-primary로, 그중 실제 일치 단어는 배경+글자색을 둘 다 바꿔 더 강조한다. */
+.log-search-hit{background-color:#ff4d4f !important;color:#fff !important;border-radius:0.15em;padding:0 0.15em;font-weight:700;}
+/* 로그 본문은 마크다운 원문을 렌더링한 것이라 pre/code 최소 스타일을 잡아준다(Chat.html msg-bubble과 동일 패턴). */
+.log-body-text{line-height:1.5;}
+/* Tmux 패널: split 노드는 flex 컨테이너로 절반씩(고정 50/50) 나누고, leaf는 iframe을 채운 뒤
+   설정 모드에서만 클릭 가능한 오버레이를 씌워 선택 상태를 표시한다(work 모드에서는 오버레이를 꺼서
+   iframe 내부 조작이 그대로 통과되게 한다). */
+#tmux-tree-root{overflow:hidden;}
+.tmux-split{display:flex;width:100%;height:100%;}
+.tmux-split-row{flex-direction:row;}
+.tmux-split-col{flex-direction:column;}
+.tmux-split>.tmux-leaf, .tmux-split>.tmux-split{flex:1 1 0;min-width:0;min-height:0;}
+.tmux-split-row>:first-child{border-right:1px solid var(--bs-border-color);}
+.tmux-split-col>:first-child{border-bottom:1px solid var(--bs-border-color);}
+.tmux-leaf{position:relative;width:100%;height:100%;overflow:hidden;background-color:var(--bs-tertiary-bg);}
+.tmux-leaf-content{position:absolute;inset:0;}
+.tmux-leaf-content iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+.tmux-leaf-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--bs-secondary-color);font-size:0.85rem;text-align:center;padding:0.5rem;}
+/* 설정 모드에서만 각 칸 중앙에 분할/병합/셀렉트 버튼 묶음을 띄운다(칸을 고르는 별도 선택 단계 없이
+   버튼이 곧 그 칸의 조작 대상이다). 오버레이 배경은 살짝 어둡게 해 대상 iframe과 구분한다. */
+.tmux-leaf-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background-color:rgba(0,0,0,0.06);}
+#tmux-tree-root.tmux-config-mode .tmux-leaf-overlay{display:flex;}
+#tmux-tree-root.tmux-config-mode .tmux-leaf{outline:1px dashed var(--bs-border-color);outline-offset:-1px;}
+.tmux-leaf-toolbar{display:flex;gap:0.25rem;background-color:var(--bs-body-bg);padding:0.3rem;border-radius:0.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.35);}
+.log-body-text p:last-child{margin-bottom:0;}
+.log-body-text pre{background:var(--bs-tertiary-bg);padding:.5rem;border-radius:.25rem;overflow-x:auto;}
+.log-body-text code{font-family:var(--bs-font-monospace);font-size:.875em;}
+.agent-group-collapsed .agent-group-caret{transform:rotate(-90deg);}
+/* 본문에 .d-flex(display:flex !important)가 있어 !important로 눌러야 접힌다. */
+.agent-group-collapsed .agent-group-body{display:none !important;}
+.agent-group-body{padding-left:8px;}
+/* 경로가 길면 앞에서부터 …로 자르고 뒤쪽(꼬리) 경로가 보이게 한다(direction:rtl로 잘림 위치를 왼쪽으로,
+   내부 텍스트는 unicode-bidi:plaintext로 원래(LTR) 순서 유지). */
+.agent-group-path{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:rtl;text-align:left;font-size:0.78rem;font-weight:600;}
+.agent-group-path > span{unicode-bidi:plaintext;}
+.agent-group-add{line-height:1;}
+/* 원격 서버 소유의 경로 그룹(remoteRootsCache 유래): 로컬(파랑) 대신 빨강 액센트로 구분하고,
+   경로 위에 원격 주소를 한 줄 더 보여준다. Chat/Terminal 생성은 아직 로컬 전용이라 '+' 메뉴는 숨긴다. */
+.agent-group-head.agent-group-remote{box-shadow:inset 3px 0 0 var(--bs-danger);}
+.agent-group-head.agent-group-remote:hover{background-color:var(--bs-danger-bg-subtle);}
+.agent-group-head.agent-group-remote .agent-group-caret{color:var(--bs-danger);}
+.agent-group-addr{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.68rem;font-weight:400;color:var(--bs-secondary-color);line-height:1.2;}
 /* 사이드바 항목 종류(RDP/Chat/Terminal/Browser/Editor)마다 다른 활성색(bg-primary-subtle/bg-success-subtle)을 쓰면
    항목 자체의 상태 점(초록/빨강/주황) 색과 뒤섞여 "지금 포커스된 것"이 눈에 띄지 않는다.
-   종류에 상관없이 단일 강조(좌측 바 + 배경 + 굵게)로 통일한다. */
+   종류에 상관없이 단일 강조(좌측 바 + 배경 + 굵게)로 통일한다. 다만 원격지 소유 항목은 로컬과
+   구분되도록 파랑 대신 빨강(-remote) 강조를 쓴다.*/
 .ai-session-item.ai-session-item-active{background-color:var(--bs-primary-bg-subtle);box-shadow:inset 3px 0 0 var(--bs-primary);font-weight:600;}
+.ai-session-item.ai-session-item-active-remote{background-color:var(--bs-danger-bg-subtle);box-shadow:inset 3px 0 0 var(--bs-danger);font-weight:600;}
 /* 호버 강조는 CSS로 처리한다. JS에서 생성 시점의 isActive를 클로저로 캡처해 클래스를 토글하면,
    나중에 active가 바뀌었을 때 그 클로저가 옛 값을 들고 있어 active 항목에 호버색이 덧칠된다. */
-.ai-session-item:hover:not(.ai-session-item-active){background-color:var(--bs-secondary-bg);}
+.ai-session-item:hover:not(.ai-session-item-active):not(.ai-session-item-active-remote){background-color:var(--bs-secondary-bg);}
 /* Bootstrap 유틸리티 클래스(d-flex 등)는 !important라서 JS의 style.display 토글이 먹히지 않는다.
    placeholder를 확실히 숨기기 위한 전용 클래스. */
 #rdp-frame-placeholder.rdp-frame-placeholder-hidden{display:none !important;}
@@ -147,19 +218,25 @@ if (location.protocol == 'file:' && isElectron==false){
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar" aria-label="Close" data-CLan-title="ctrl.close" title="Close"></button>
         </div>
         <div class="offcanvas-body p-2 flex-grow-1 overflow-auto d-flex flex-column" id="app-sidebar-body">
-            <!-- 현재 활성 서버(Local/원격)의 File/Root 목록. Control.ts의 ctrlRefreshRootSelect()가 채우고,
-                 선택 시 File 탭 iframe에 'set-file-root'를 보내 실제 루트를 바꾼다. -->
-            <div class="d-flex gap-1 mb-2">
-                <select id="ctrl-root-sel" class="form-select form-select-sm"></select>
-                <button type="button" id="ctrlRootAddFolderBtn" class="btn btn-sm btn-outline-secondary p-0 flex-shrink-0 d-flex align-items-center justify-content-center" style="width:31px;height:31px;" data-CLan-title="ctrl.addWorkingFolder" title="Add Working Folder">
-                    <i class="bi bi-plus-lg"></i>
-                </button>
-            </div>
             <!-- RDP 세션 목록(Local + Remote). Control.ts의 rdpRenderList()가 채운다. -->
             <div id="rdp-sidebar-list" class="d-flex flex-column gap-1"></div>
-            <!-- Chat/Terminal/Browser 통합 세션 목록. 유형 구분 없이 실제 최신순으로 함께 정렬된다.
-                 Control.ts의 renderSessionSidebar()가 채운다. -->
-            <div id="session-sidebar-list" class="d-flex flex-column gap-1"></div>
+            <!-- 하위 탭: Agent(Chat/Terminal) ↔ Other(Browser/Editor). 선택 탭은 localStorage에 기억된다. -->
+            <ul class="nav nav-pills nav-fill my-2 flex-shrink-0" id="sidebarSubTab" role="tablist">
+                <li class="nav-item"><button class="nav-link active py-1 px-2" id="sb-agent-tab" type="button">Agent</button></li>
+                <li class="nav-item"><button class="nav-link py-1 px-2" id="sb-other-tab" type="button">Other</button></li>
+            </ul>
+            <!-- Agent: Chat/Terminal 세션을 workingDir 경로별 그룹으로 묶어 표시. 등록된 경로는 세션이 없어도 빈 그룹으로 남는다.
+                 Control.ts의 renderSessionSidebar() → renderAgentGroups()가 채운다.
+                 로그인 대기/전환 시 renderSessionSidebar()가 이 div의 innerHTML을 통째로 비우는 지점이 있어서
+                 agentAddFolderBtn은 이 안에 넣지 않고 별도 sibling으로 둔다(Control.ts applySidebarSubTab에서
+                 agent-sidebar-list와 같이 d-none 토글). 목록이 길어져도 항상 Agent 탭 바로 아래에 보이도록
+                 agent-sidebar-list보다 앞에 둔다. -->
+            <button type="button" id="agentAddFolderBtn" class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1 mb-1" data-CLan-title="ctrl.addWorkingFolder" title="Add Working Folder">
+                <i class="bi bi-plus-lg"></i> <span data-CLan="ctrl.addWorkingFolder">Add Working Folder</span>
+            </button>
+            <div id="agent-sidebar-list" class="d-flex flex-column gap-1"></div>
+            <!-- Other: Browser/Editor 세션을 최신순 평면 목록으로 표시. renderOtherList()가 채운다. -->
+            <div id="other-sidebar-list" class="d-flex flex-column gap-1 d-none"></div>
         </div>
     </div>
 
@@ -185,42 +262,49 @@ if (location.protocol == 'file:' && isElectron==false){
         <li class="nav-item d-none" role="presentation">
             <button type="button" id="editor-panel-tab" data-bs-toggle="tab" data-bs-target="#editor-panel" role="tab" aria-controls="editor-panel"></button>
         </li>
-        <!-- Help 패널 숨은 탭 트리거(초기 진입 기본. More 드롭다운 항목으로 다시 열 수 있다. Chat과 같이
-             드롭다운 밖에 두어 More에 active가 붙지 않게 한다). -->
+        <!-- Terminal 패널을 활성화하기 위한 숨은 탭 트리거(RDP/Chat/Browser/Editor와 동일 패턴). data-bs-toggle="tab"을
+             갖춰야 다른 탭(File 등)으로 전환할 때 Bootstrap이 이 탭의 active 상태를 정상적으로 해제한다
+             (예전에는 이 속성이 빠져 있어, 터미널이 열린 뒤 다른 탭으로 옮겨도 Terminal이 계속 선택된 것처럼
+             active가 남는 문제가 있었다). 실제 생성은 More > Terminal 버튼(New Terminal 모달)에서 한다. -->
         <li class="nav-item d-none" role="presentation">
-            <button type="button" id="help-panel-tab" class="active" data-bs-toggle="tab" data-bs-target="#help-panel" role="tab" aria-controls="help-panel" aria-selected="true"></button>
+            <button type="button" id="term-tab" data-bs-toggle="tab" data-bs-target="#term-panel" role="tab" aria-controls="term-panel"></button>
+        </li>
+        <!-- Help 패널 숨은 탭 트리거. 예전에는 More 드롭다운 안의 dropdown-item을 직접 탭으로 써서
+             Tab.show() 시 Bootstrap이 부모 More 메뉴에 show/active를 붙여 초기 진입만 해도 드롭다운이
+             펼쳐지는 문제가 있었다. Chat/RDP와 같이 드롭다운 밖 트리거로 분리한다. -->
+        <li class="nav-item d-none" role="presentation">
+            <button type="button" id="help-panel-tab" data-bs-toggle="tab" data-bs-target="#help-panel" role="tab" aria-controls="help-panel" aria-selected="true"></button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-panel" type="button" role="tab"
                 aria-controls="file-panel" aria-selected="false"><i class="bi bi-folder-fill"></i> <span data-CLan="ctrl.file">File</span></button>
         </li>
+        <!-- 상단 Search 탭은 제거됨. 파일 검색 모달: 등록 루트 체크박스 목록.
+             F2 = 전부 체크, 좌측 경로 그룹 '...' > Search = 그 경로만 미리 체크(나머지는 토글 가능). -->
         <li class="nav-item" role="presentation">
-            <!-- File 탭으로 이동한 뒤 File.ts의 FileSearch() 모달을 연다(Home.ts의 F2 단축키와 동일한 trigger-file-search 메시지 사용). -->
-            <button type="button" class="nav-link" id="file-search-btn" data-CLan-title="ctrl.fileSearch" title="File Search"><i class="bi bi-search"></i> <span data-CLan="ctrl.search">Search</span></button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <!-- data-bs-toggle="tab"을 일부러 빼서 클릭해도 자동으로 탭이 전환되지 않게 한다(보고 있던 화면 유지).
-                 실제 전환은 termActivatePane()이 New Terminal 모달에서 세션을 실제로 열었을 때만 수행한다. -->
-            <button class="nav-link" id="term-tab" data-bs-target="#term-panel" type="button"
-                role="tab" aria-controls="term-panel" aria-selected="false"><i class="bi bi-terminal"></i> <span data-CLan="ctrl.terminal">Terminal</span></button>
+            <button class="nav-link" id="tmux-tab" data-bs-toggle="tab" data-bs-target="#tmux-panel" type="button" role="tab"
+                aria-controls="tmux-panel" aria-selected="false"><i class="bi bi-grid-3x3-gap"></i> <span data-CLan="ctrl.tmux">Multiplexer</span></button>
         </li>
         <li class="nav-item dropdown" role="presentation">
             <button class="nav-link dropdown-toggle" id="more-tab" data-bs-toggle="dropdown" type="button" aria-expanded="false" data-CLan-title="ctrl.more" title="More">
                 <i class="bi bi-three-dots"></i>
             </button>
             <ul class="dropdown-menu" aria-labelledby="more-tab">
-                <li><button class="dropdown-item" id="help-btn" type="button" data-CLan-title="ctrl.help" title="Help"><i class="bi bi-question-circle"></i> <span data-CLan="ctrl.help">Help</span></button></li>
                 <li><button class="dropdown-item" id="memo-tab" data-bs-toggle="tab" data-bs-target="#memo-panel" type="button" role="tab"
                     aria-controls="memo-panel" aria-selected="false"><i class="bi bi-journal-text"></i> <span data-CLan="ctrl.memo">Memo</span></button></li>
                 <li><button class="dropdown-item" id="rdp-add-btn" type="button"><i class="bi bi-display"></i> <span data-CLan="ctrl.rdp">RDP</span></button></li>
                 <li><button class="dropdown-item" id="chat-new-btn" type="button"><i class="bi bi-chat-dots"></i> <span data-CLan="ctrl.chat">Chat</span></button></li>
+                <li><button class="dropdown-item" id="term-new-btn" type="button"><i class="bi bi-terminal"></i> <span data-CLan="ctrl.terminal">Terminal</span></button></li>
                 <li><button class="dropdown-item" id="browser-new-btn" type="button"><i class="bi bi-browser-chrome"></i> <span data-CLan="ctrl.browser">Browser</span></button></li>
+                <li><button class="dropdown-item" id="search-open-btn" type="button"><i class="bi bi-search"></i> <span data-CLan="ctrl.search">Search</span></button></li>
                 <!-- 팀의 메인 터미널은 생성 후 Terminal 패널에 표시되므로 별도 Team 패널은 두지 않는다. -->
                 <li><button class="dropdown-item" id="team-tab" type="button" data-CLan-title="ctrl.newTeam" title="New Team"><i class="bi bi-people"></i> <span data-CLan="ctrl.team">Team</span></button></li>
-                <li><button class="dropdown-item" id="download-tab" data-bs-toggle="tab" data-bs-target="#download-panel" type="button"
-                    role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> <span data-CLan="ctrl.download">Download</span></button></li>
+                <!-- Download 탭은 Downloads/DownloadTab.ts가 import될 때 이 위치(더보기 메뉴)에 스스로 등록한다. -->
                 <li><button class="dropdown-item" id="log-tab" data-bs-toggle="tab" data-bs-target="#log-panel" type="button"
                     role="tab" aria-controls="log-panel" aria-selected="false"><i class="bi bi-journal-code"></i> <span data-CLan="ctrl.log">Log</span></button></li>
+                <li><button class="dropdown-item" id="messenger-tab" data-bs-toggle="tab" data-bs-target="#messenger-panel" type="button"
+                    role="tab" aria-controls="messenger-panel" aria-selected="false"><i class="bi bi-chat-dots-fill"></i> Messenger</button></li>
+                <li><button class="dropdown-item" id="help-open-btn" type="button"><i class="bi bi-question-circle"></i> <span data-CLan="ctrl.help">Help</span></button></li>
             </ul>
         </li>
         <li class="nav-item ms-auto" role="presentation" style="display:none;" id="sidebarToggleBtnWrap">
@@ -275,22 +359,53 @@ if (location.protocol == 'file:' && isElectron==false){
     </div>
     <div class="tab-pane h-100" id="memo-panel" role="tabpanel" aria-labelledby="memo-tab" style="overflow-x:hidden;">
     </div>
-    <div class="tab-pane h-100" id="download-panel" role="tabpanel" aria-labelledby="download-tab" style="overflow-y:auto;">
-        <div id="download-root"></div>
+    <!-- download-panel(#download-root)은 Downloads/DownloadTab.ts가 import될 때 동적으로 생성한다. -->
+    <div class="tab-pane h-100" id="messenger-panel" role="tabpanel" aria-labelledby="messenger-tab" style="overflow:hidden;">
+        <div id="messenger-root" class="h-100"></div>
     </div>
     <div class="tab-pane h-100" id="log-panel" role="tabpanel" aria-labelledby="log-tab" style="overflow-y:auto;">
         <div class="p-2">
             <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="mb-0"><i class="bi bi-journal-code"></i> <span data-CLan="ctrl.providerLog">Provider Log</span></h6>
+                <h6 class="mb-0 d-flex align-items-center gap-2 overflow-hidden">
+                    <i class="bi bi-journal-code"></i> <span data-CLan="ctrl.providerLog">Provider Log</span>
+                    <!-- 지금 로그를 가져오는 서버(RDP 사이드바 선택을 따라감). Control.ts의 logUpdateSource()가 채운다. -->
+                    <span id="logSourceLabel" class="small fw-normal text-truncate" style="font-size:0.72rem;"></span>
+                </h6>
                 <div class="d-flex align-items-center gap-1">
                     <button id="logRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary" data-CLan-title="ctrl.refresh" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
                     <button id="logClearBtn" type="button" class="btn btn-sm btn-outline-danger" data-CLan-title="ctrl.deleteAllLogsTitle" title="Delete all logs"><i class="bi bi-x-lg"></i></button>
                 </div>
             </div>
+            <div class="mb-2">
+                <input type="text" id="logSearchInput" class="form-control form-control-sm" placeholder="검색 후 Enter">
+            </div>
             <div id="logAccordionList" class="d-flex flex-column gap-1"></div>
             <div class="d-flex justify-content-center mt-2">
                 <button id="logLoadMoreBtn" type="button" class="btn btn-sm btn-outline-secondary" style="display:none;" data-CLan="ctrl.loadMore">Load more</button>
             </div>
+        </div>
+    </div>
+    <!-- Tmux 패널: 별도 툴바 행 없이, 작업/설정 모드 스위치는 우측 상단에 떠있는 오버레이로만 표시된다
+         (공간을 차지하지 않음). 설정 모드의 분할/상하분할/병합/셀렉트 버튼은 Control.ts의 tmuxBuildEl()이
+         각 leaf(칸)마다 그 칸 중앙에 떠있는 형태로 직접 만들어 붙인다. 트리 구조/선택 콘텐츠는
+         Control.ts의 tmux* 함수들이 관리하며 localStorage에 저장된다. -->
+    <div class="tab-pane h-100 position-relative" id="tmux-panel" role="tabpanel" aria-labelledby="tmux-tab">
+        <div id="tmux-tree-root" class="position-absolute" style="inset:0;"></div>
+        <!-- 아이콘만 있는 작은 드롭다운 버튼: 최대/최소 토글 + 작업/설정 모드 전환 + 종료. -->
+        <div class="dropdown position-absolute" style="top:0.4rem;right:0.4rem;z-index:5;">
+            <button id="tmux-menu-btn" type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="dropdown" aria-expanded="false" data-CLan-title="ctrl.tmux.menu" title="Multiplexer Menu">
+                <i class="bi bi-three-dots"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="tmux-menu-btn">
+                <!-- 최대: 사이드바 숨김 + 폭 전체(탭 바는 보임, 지금까지의 기본 동작). 최소: 사이드바가 보이는 일반 센터 레이아웃.
+                     아이콘/텍스트는 Control.ts의 tmuxApplyMaximize()가 현재 상태에 따라 "전환할 대상"으로 바꿔 넣는다. -->
+                <li><button id="tmux-maximize-btn" type="button" class="dropdown-item"><i class="bi bi-fullscreen-exit"></i> <span data-CLan="ctrl.tmux.minimize">최소</span></button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button id="tmux-mode-work-btn" type="button" class="dropdown-item"><i class="bi bi-play-fill"></i> <span data-CLan="ctrl.tmux.work">작업</span></button></li>
+                <li><button id="tmux-mode-config-btn" type="button" class="dropdown-item"><i class="bi bi-sliders"></i> <span data-CLan="ctrl.tmux.config">설정</span></button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button id="tmux-close-btn" type="button" class="dropdown-item"><i class="bi bi-box-arrow-right"></i> <span data-CLan="ctrl.tmux.close">종료</span></button></li>
+            </ul>
         </div>
     </div>
     </div>
@@ -368,7 +483,7 @@ if (location.protocol == 'file:' && isElectron==false){
                             <button id="sqliteViewerBtn" type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-table"></i><span data-CLan="ctrl.sqlite">SQLite</span>
                             </button>
-                            <button id="dbViewerBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" data-CLan-title="ctrl.dbViewerTitle" title="Connect to any DB (mysql/mssql/sqlite/ne)">
+                            <button id="dbViewerBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" data-CLan-title="ctrl.dbViewerTitle" title="Connect to any DB (mysql/mssql/sqlite/ne/postgresql/mongodb)">
                                 <i class="bi bi-hdd-stack"></i><span data-CLan="ctrl.dbViewer">DB Viewer</span>
                             </button>
                         </div>
@@ -401,10 +516,11 @@ if (location.protocol == 'file:' && isElectron==false){
                         <div class="small text-secondary fw-semibold mb-1" data-CLan="ctrl.kb.global">Global Shortcuts</div>
                         <ul class="list-unstyled small mb-0">
                             <li data-CLan="ctrl.kb.f1"><kbd>F1</kbd> Right sidebar File ↔ Info toggle (opens sidebar on small screens)</li>
-                            <li data-CLan="ctrl.kb.f2"><kbd>F2</kbd> Open File Search</li>
+                            <li data-CLan="ctrl.kb.f2"><kbd>F2</kbd> File Search (all registered paths checked; toggle checkboxes)</li>
                             <li data-CLan="ctrl.kb.f3"><kbd>F3</kbd> Open New Terminal</li>
                             <li data-CLan="ctrl.kb.f4"><kbd>F4</kbd> / double-tap <kbd>Ctrl</kbd> Focus/toggle sidebar</li>
-                            <li data-CLan="ctrl.kb.f6"><kbd>F6</kbd> Toggle SUPER (auto-approve) + focus input bar (Chat/Terminal)</li>
+                            <li data-CLan="ctrl.kb.f6"><kbd>F6</kbd> Terminal: SUPER (auto-approve) + show/focus input. Outside Terminal: same as F4</li>
+                            <li data-CLan="ctrl.kb.f7"><kbd>F7</kbd> Terminal: toggle Log/Terminal conversation panel</li>
                             <li data-CLan="ctrl.kb.updown"><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Move through session list (sidebar open)</li>
                         </ul>
                     </div>
@@ -415,4 +531,4 @@ if (location.protocol == 'file:' && isElectron==false){
 </div>
 
 
-<script type="server" src="Server.js"></script>
+<script type="server" src="Server.js" package="*Control"></script>

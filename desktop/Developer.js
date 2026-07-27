@@ -4,6 +4,15 @@ import { CModal } from "../artgine/basic/CModal.js";
 import { CString } from "../artgine/basic/CString.js";
 import { CWebView } from "../artgine/system/CWebView.js";
 import { CHash } from "../artgine/basic/CHash.js";
+function BuildPluginTooltipHTML(tooltip) {
+    const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    let inner = "";
+    for (const key in tooltip ?? {}) {
+        const value = esc(tooltip[key]).replace(/\n/g, "<br>");
+        inner += `<strong>${esc(key)}:</strong> ${value}<br>`;
+    }
+    return `<div style="font-size: 0.875em; line-height: 1.2; min-width: 240px;">${inner}</div>`;
+}
 var gProjJSON = null;
 var gAppJSON = null;
 var gManifest = null;
@@ -181,7 +190,7 @@ async function Init() {
             label.textContent = plugin.name;
             label.setAttribute("data-bs-toggle", "tooltip");
             label.setAttribute("data-bs-placement", "top");
-            label.setAttribute("title", plugin.html);
+            label.setAttribute("title", BuildPluginTooltipHTML(plugin.tooltip));
             label.setAttribute("data-bs-html", "true");
             inner.appendChild(checkbox);
             inner.appendChild(label);

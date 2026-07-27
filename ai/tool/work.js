@@ -27,7 +27,7 @@ function findProjectRoot(_startDir) {
     throw new Error(`프로젝트 루트를 찾지 못했습니다 (기준 경로: ${_startDir})`);
 }
 
-// PROJECT_ROOT는 모듈(CWorkOrder.js)을 import하는 용도로만 쓴다. cwd를 여기로 옮기면 CSQLite
+// PROJECT_ROOT는 모듈(CWorkOrder.js 등)을 import하는 용도로만 쓴다. cwd를 여기로 옮기면 CSQLite
 // 기본 경로(./db/artgine.sqlite)가 실행한 위치가 아니라 이 폴더 기준으로 잡혀 서버가 쓰는 db와
 // 어긋날 수 있다(예: 감싸는 프로젝트 구조에서 실제 코드 폴더와 서버 cwd가 다른 경우) — 그래서
 // process.chdir()은 하지 않고 cwd는 실행한 위치 그대로 둔다.
@@ -35,13 +35,19 @@ const PROJECT_ROOT = findProjectRoot(SCRIPT_DIR);
 
 const { CWorkOrder } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CWorkOrder.js')));
 const { CSubAgent } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CSubAgent.js')));
+const { CTerminalScheduler } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CTerminalScheduler.js')));
 
 const [cmd, ...rest] = process.argv.slice(2);
 
 function usageAndExit() {
     console.error('Usage: node ai/tool/work.js list-work [status] [limit]         (워크오더 목록, status 비우면 전체)');
     console.error('       node ai/tool/work.js list-agent                         (서브 에이전트 목록)');
-    console.error('       node ai/tool/work.js get <id>                            (단건 조회)');
+    console.error('       node ai/tool/work.js set-agent <key> <provider> <model> [score] [workingDir] [super] [retryCount] [retryText] [traits_json] [permissions_json]');
+    console.error('       node ai/tool/work.js del-agent <key>                    (서브 에이전트 삭제)');
+    console.error('       node ai/tool/work.js list-sched                         (스케줄러 목록)');
+    console.error('       node ai/tool/work.js set-sched <name> <subAgentKey> <mode> <option_json> <command...>');
+    console.error('       node ai/tool/work.js del-sched <name>                   (스케줄러 삭제)');
+    console.error('       node ai/tool/work.js get <id>                            (워크오더 단건 조회)');
     console.error('       node ai/tool/work.js check <팀키> [시작시각]              (팀 경과분 + 워크오더 집계)');
     console.error('       node ai/tool/work.js push <from> <to> <content...>       (작업 생성, 줄바꿈은 실제 Enter 대신 \\n으로)');
     console.error('       node ai/tool/work.js status <id> <status>                (상태 갱신)');
@@ -76,6 +82,45 @@ function stampToDate(_stamp) {
     );
 }
 
+// traits: JSON 배열 문자열 또는 콤마/줄바꿈 구분. 빈 값·"-" → []
+function parseTraits(_raw) {
+    if (_raw == null || _raw === '' || _raw === '-') return [];
+    const s = unescapeNewlines(String(_raw)).trim();
+    if (!s) return [];
+    if (s.startsWith('[')) {
+        try {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) return parsed.map(String);
+        } catch { /* fallthrough */ }
+    }
+    return s.split(/[\n,]/).map(t => t.trim()).filter(t => t.length > 0);
+}
+
+// permissions: JSON {allow:[],deny:[]}. 빈 값·"-" → 빈 규칙
+function parsePermissions(_raw) {
+    const empty = { allow: [], deny: [] };
+    if (_raw == null || _raw === '' || _raw === '-') return empty;
+    try {
+        const parsed = JSON.parse(String(_raw));
+        return {
+            allow: Array.isArray(parsed?.allow) ? parsed.allow : [],
+            deny: Array.isArray(parsed?.deny) ? parsed.deny : [],
+        };
+    } catch {
+        console.error('fail: permissions_json 파싱 실패');
+        process.exit(1);
+    }
+}
+
+function parseOptionJson(_raw) {
+    try {
+        const parsed = JSON.parse(String(_raw || '{}'));
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch { /* fallthrough */ }
+    console.error('fail: option_json 파싱 실패 (유효한 JSON 객체 필요)');
+    process.exit(1);
+}
+
 if (cmd === 'list-work') {
     const [status, limit] = rest;
     const records = await CWorkOrder.List(status || undefined, limit ? Number(limit) : undefined);
@@ -84,6 +129,63 @@ if (cmd === 'list-work') {
 } else if (cmd === 'list-agent') {
     const records = await CSubAgent.List();
     printResult(records);
+
+} else if (cmd === 'set-agent') {
+    // set-agent <key> <provider> <model> [score] [workingDir] [super] [retryCount] [retryText] [traits_json] [permissions_json]
+    const [key, provider, model, scoreArg, workingDirArg, superArg, retryCountArg, retryTextArg, traitsArg, permsArg] = rest;
+    if (!key || !provider || !model) usageAndExit();
+    const record = {
+        key,
+        provider,
+        model,
+        score: scoreArg != null && scoreArg !== '' ? Number(scoreArg) || 0 : 0,
+        workingDir: (workingDirArg != null && workingDirArg !== '' && workingDirArg !== '-') ? workingDirArg : './',
+        super: superArg === '1' || superArg === 'true' ? 1 : 0,
+        retryCount: retryCountArg != null && retryCountArg !== '' ? Math.max(0, Number(retryCountArg) || 0) : 0,
+        retryText: (retryTextArg != null && retryTextArg !== '-') ? unescapeNewlines(retryTextArg) : '',
+        traits: parseTraits(traitsArg),
+        permissions: parsePermissions(permsArg),
+    };
+    await CSubAgent.Set(record);
+    console.log('ok');
+
+} else if (cmd === 'del-agent') {
+    const [key] = rest;
+    if (!key) usageAndExit();
+    const ok = await CSubAgent.Delete(key);
+    console.log(ok ? 'ok' : 'fail: not found');
+
+} else if (cmd === 'list-sched') {
+    const records = await CTerminalScheduler.List();
+    printResult(records);
+
+} else if (cmd === 'set-sched') {
+    // set-sched <name> <subAgentKey> <mode> <option_json> <command...>
+    const [name, subAgentKey, modeArg, optionArg, ...commandParts] = rest;
+    const command = unescapeNewlines(commandParts.join(' ').trim());
+    if (!name || !subAgentKey || !modeArg || optionArg == null || !command) usageAndExit();
+    const mode = modeArg === 'time' ? 'time' : (modeArg === 'interval' ? 'interval' : null);
+    if (!mode) {
+        console.error('fail: mode는 interval 또는 time');
+        process.exit(1);
+    }
+    const option = parseOptionJson(optionArg);
+    if (mode === 'time' && (!Array.isArray(option.days) || option.days.length === 0)) {
+        console.error('fail: time 모드는 option.days 배열이 하나 이상 필요');
+        process.exit(1);
+    }
+    if (mode === 'interval' && !(Number(option.delay) > 0)) {
+        console.error('fail: interval 모드는 option.delay가 1 이상이어야 함');
+        process.exit(1);
+    }
+    await CTerminalScheduler.Set({ name, subAgentKey, mode, option, command });
+    console.log('ok');
+
+} else if (cmd === 'del-sched') {
+    const [name] = rest;
+    if (!name) usageAndExit();
+    const ok = await CTerminalScheduler.Delete(name);
+    console.log(ok ? 'ok' : 'fail: not found');
 
 } else if (cmd === 'get') {
     const [id] = rest;

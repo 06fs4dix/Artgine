@@ -1,1 +1,194 @@
-import{CArray as t}from"../basic/CArray.js";import{CBound as n}from"./CBound.js";import{CMath as i}from"./CMath.js";import{CVec3 as m}from"./CVec3.js";import{CUtilMath as e}from"./CUtilMath.js";export class COctreeData{mData=null;mCenter=new m;mSize=new m;mMin=new m;mMax=new m;mCol=new t;mUpdate=0;mStatic=!1;constructor(){}}export class COctree{mPool;mCenter;mHalf;mChild=null;mData=null;mMax=new m;mBound;constructor(t,i,m=null){this.mCenter=t,this.mHalf=i,this.mBound=new n,this.mPool=m}NewChild(t,n){if(null==this.mPool)return new COctree(t,n);let i=this.mPool.New(COctree);return i.mCenter=t,i.mHalf=n,i.mPool=this.mPool,i.mChild=null,i.mData=null,i.mBound.Reset(),i.mMax.Zero(),i}ContainingPoint(t){return 0}IsLeafNode(){return null==this.mChild}SelectChild(t){return null}ResetBound(t){}SortXMinData(){}Insert(t,n){}InsideRay(t,n,i,m){}InsidePlane(t,n){if(this.IsLeafNode())for(var m=0;m<this.mData.length;++m)n(this.mData[m]);else for(let m=0;m<this.mChild.length;++m)if(null!=this.mChild[m]){var l=i.Max(i.Max(this.mHalf.mF32A[0],this.mHalf.mF32A[1]),this.mHalf.mF32A[2]),s=Math.sqrt(l*l+l*l+l*l);e.PlaneSphereInside(t,this.mChild[m].mCenter,s,null)&&this.mChild[m].InsidePlane(t,n)}}InsideBox(t,n,i,m=null){}}export class COctreeMgr{mDynamic;mStatic;mStaticUpdate=!0;mStaticBuild=!1;mOCDMap=new Map;mOCSMap=new Map;mDBound;mSBound;mUpdate=0;mPool=new t;constructor(t=null){this.mDBound=new n,this.mDBound.mMin.x=-100,this.mDBound.mMin.y=-100,this.mDBound.mMin.z=-100,this.mDBound.mMax.x=100,this.mDBound.mMax.y=100,this.mDBound.mMax.z=100,this.mSBound=new n,this.mSBound.mMin.x=-100,this.mSBound.mMin.y=-100,this.mSBound.mMin.z=-100,this.mSBound.mMax.x=100,this.mSBound.mMax.y=100,this.mSBound.mMax.z=100,this.mDynamic=null}RegistHeap(t){}GetBound(){let t=new Array,n=new Array;if(null==this.mDynamic.mChild)return t;for(let t=0;t<this.mDynamic.mChild.length;++t)null!=this.mDynamic.mChild[t]&&n.push(this.mDynamic.mChild[t]);for(;n.length>0;){let i=n.splice(0,1)[0];if(null!=i&&(t.push(i.mBound),null!=i.mChild))for(let t=0;t<i.mChild.length;++t)n.push(i.mChild[t])}return t}Build(){}Insert(t,n,i,m=null,e=null,l=!1){}InsideRay(t,n,i,m){this.mDynamic.InsideRay(t,n,i,m),null!=this.mStatic&&this.mStatic.InsideRay(t,n,i,m)}InsidePlane(t,n){this.mDynamic.InsidePlane(t,n)}InsideBoxData(t,n,i,m){let e=this.mOCDMap.get(m);if(null!=e){for(let t=0;t<e.mCol.Size();++t)i(e.mCol.Find(t));this.mDynamic.InsideBox(t,n,i,e),null!=this.mStatic&&this.mStatic.InsideBox(t,n,i)}}InsideBox(t,n,i){this.mDynamic.InsideBox(t,n,i),null!=this.mStatic&&this.mStatic.InsideBox(t,n,i)}Find(t,n,i,m=null,e,l=100,s=1){return null}CorrectPosition(t,n,e,l=null){for(let s=0;s<8;++s){const s=i.V3AddV3(t,new m(-n,-n,-n)),o=i.V3AddV3(t,new m(n,n,n));let a=1/0,r=null;if(this.InsideBox(s,o,n=>{if(null!=l&&1==l(n))return;const m=i.V3Distance(t,n.mCenter);m<a&&(a=m,r=n.mCenter)}),null==r)break;{const n=i.V3Nor(i.V3SubV3(t,r));t=i.V3AddV3(t,i.V3MulFloat(n,e))}}return t}}import l from"../geometry_imple/COctree.js";l();
+import { CArray } from "../basic/CArray.js";
+import { CBound } from "./CBound.js";
+import { CMath } from "./CMath.js";
+import { CVec3 } from "./CVec3.js";
+import { CUtilMath } from "./CUtilMath.js";
+export class COctreeData {
+    mData = null;
+    mCenter = new CVec3();
+    mSize = new CVec3();
+    mMin = new CVec3();
+    mMax = new CVec3();
+    mCol = new CArray();
+    mUpdate = 0;
+    mStatic = false;
+    constructor() {
+    }
+}
+let gOctreePool = [];
+let gOCCount = 0;
+export class COctree {
+    mPool;
+    mCenter;
+    mHalf;
+    mChild = null;
+    mData = null;
+    mMax = new CVec3();
+    mBound;
+    constructor(_center, _half, _pool = null) {
+        this.mCenter = _center;
+        this.mHalf = _half;
+        this.mBound = new CBound();
+        this.mPool = _pool;
+    }
+    NewChild(_center, _half) {
+        if (this.mPool == null)
+            return new COctree(_center, _half);
+        let oc = this.mPool.New(COctree);
+        oc.mCenter = _center;
+        oc.mHalf = _half;
+        oc.mPool = this.mPool;
+        oc.mChild = null;
+        oc.mData = null;
+        oc.mBound.Reset();
+        oc.mMax.Zero();
+        return oc;
+    }
+    ContainingPoint(point) {
+        return 0;
+    }
+    IsLeafNode() {
+        return this.mChild == null;
+    }
+    SelectChild(point) {
+        return null;
+    }
+    ResetBound(_max) {
+    }
+    SortXMinData() {
+    }
+    Insert(_ocData, _depth) {
+    }
+    InsideRay(_ray, _RayLength, _boundary, results) {
+    }
+    InsidePlane(bplane, results) {
+        if (this.IsLeafNode()) {
+            for (var i = 0; i < this.mData.length; ++i) {
+                results(this.mData[i]);
+            }
+        }
+        else {
+            for (let i = 0; i < this.mChild.length; ++i) {
+                if (this.mChild[i] == null)
+                    continue;
+                var r = CMath.Max(CMath.Max(this.mHalf.mF32A[0], this.mHalf.mF32A[1]), this.mHalf.mF32A[2]);
+                var rad = Math.sqrt(r * r + r * r + r * r);
+                if (CUtilMath.PlaneSphereInside(bplane, this.mChild[i].mCenter, rad, null)) {
+                    this.mChild[i].InsidePlane(bplane, results);
+                }
+            }
+        }
+    }
+    InsideBox(bmin, bmax, results, _ocd = null) {
+    }
+}
+export class COctreeMgr {
+    mDynamic;
+    mStatic;
+    mStaticUpdate = true;
+    mStaticBuild = false;
+    mOCDMap = new Map();
+    mOCSMap = new Map();
+    mDBound;
+    mSBound;
+    mUpdate = 0;
+    mPool = new CArray;
+    constructor(_wasm = null) {
+        this.mDBound = new CBound();
+        this.mDBound.mMin.x = -100;
+        this.mDBound.mMin.y = -100;
+        this.mDBound.mMin.z = -100;
+        this.mDBound.mMax.x = 100;
+        this.mDBound.mMax.y = 100;
+        this.mDBound.mMax.z = 100;
+        this.mSBound = new CBound();
+        this.mSBound.mMin.x = -100;
+        this.mSBound.mMin.y = -100;
+        this.mSBound.mMin.z = -100;
+        this.mSBound.mMax.x = 100;
+        this.mSBound.mMax.y = 100;
+        this.mSBound.mMax.z = 100;
+        this.mDynamic = null;
+    }
+    RegistHeap(_F32A) {
+    }
+    GetBound() {
+        let bList = new Array();
+        let que = new Array();
+        if (this.mDynamic.mChild == null) {
+            return bList;
+        }
+        for (let i = 0; i < this.mDynamic.mChild.length; ++i) {
+            if (this.mDynamic.mChild[i] != null)
+                que.push(this.mDynamic.mChild[i]);
+        }
+        while (que.length > 0) {
+            let pst = que.splice(0, 1)[0];
+            if (pst == null)
+                continue;
+            bList.push(pst.mBound);
+            if (pst.mChild != null) {
+                for (let i = 0; i < pst.mChild.length; ++i)
+                    que.push(pst.mChild[i]);
+            }
+        }
+        return bList;
+    }
+    Build() {
+    }
+    Insert(_center, _size, _data, _min = null, _max = null, _static = false) {
+    }
+    InsideRay(_ray, _RayLength, _boundary, results) {
+        this.mDynamic.InsideRay(_ray, _RayLength, _boundary, results);
+        if (this.mStatic != null)
+            this.mStatic.InsideRay(_ray, _RayLength, _boundary, results);
+    }
+    InsidePlane(_bplane, _results) {
+        this.mDynamic.InsidePlane(_bplane, _results);
+    }
+    InsideBoxData(_bmin, _bmax, _results, _data) {
+        let odata = this.mOCDMap.get(_data);
+        if (odata == null)
+            return;
+        for (let i = 0; i < odata.mCol.Size(); ++i) {
+            _results(odata.mCol.Find(i));
+        }
+        this.mDynamic.InsideBox(_bmin, _bmax, _results, odata);
+        if (this.mStatic != null)
+            this.mStatic.InsideBox(_bmin, _bmax, _results);
+    }
+    InsideBox(_bmin, _bmax, _results) {
+        this.mDynamic.InsideBox(_bmin, _bmax, _results);
+        if (this.mStatic != null)
+            this.mStatic.InsideBox(_bmin, _bmax, _results);
+    }
+    Find(_st, _ed, _bound, _layerPass = null, _path, _size = 100, _loopScale = 1) {
+        return null;
+    }
+    CorrectPosition(_pos, _boundary, _size, _layerPass = null) {
+        for (let i = 0; i < 8; ++i) {
+            const pMin = CMath.V3AddV3(_pos, new CVec3(-_boundary, -_boundary, -_boundary));
+            const pMax = CMath.V3AddV3(_pos, new CVec3(_boundary, _boundary, _boundary));
+            let nearestDist = Infinity;
+            let nearestCenter = null;
+            this.InsideBox(pMin, pMax, (ocData) => {
+                if (_layerPass != null && _layerPass(ocData) == true)
+                    return;
+                const dist = CMath.V3Distance(_pos, ocData.mCenter);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestCenter = ocData.mCenter;
+                }
+            });
+            if (nearestCenter != null) {
+                const pushDir = CMath.V3Nor(CMath.V3SubV3(_pos, nearestCenter));
+                _pos = CMath.V3AddV3(_pos, CMath.V3MulFloat(pushDir, _size));
+            }
+            else
+                break;
+        }
+        return _pos;
+    }
+}
+import COctree_imple from "../geometry_imple/COctree.js";
+COctree_imple();

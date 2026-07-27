@@ -12,7 +12,7 @@ AI Chat Router
 - /AIChat/sessions/:id               GET    history.json
 - /AIChat/sessions/:id               DELETE remove session + workspace
 - /AIChat/session/config?id=         GET    세션 config 조회
-- /AIChat/session/config?id=         POST   세션 config 저장 (workingDir, mcp, allow)
+- /AIChat/session/config?id=         POST   세션 config 저장 (workingDir, mcp, write)
 - /AIChat/sessions/:id/upload?name=  POST   raw body -> uploads/<safe>
 - /AIChat/ws                         WS     streaming chat
 
@@ -27,7 +27,11 @@ Workspace layout:
 */
 
 type Role = 'user' | 'assistant';
-type Provider = CAI.eProvider;
+// 'cmd'는 CAI.eProvider가 아니라 채팅 전용 의사 프로바이더다 — CLI를 거치지 않고 셸 명령을 그대로
+// 실행해 그 출력을 답변으로 돌려준다(CAI.Cmd). eProvider에 넣지 않는 이유: CAIInfoRouter가
+// Object.values(CAI.eProvider)로 설치/인증/사용량 조회 대상을 만들기 때문에, 셸이 그 목록에 끼면 안 된다.
+// (터미널 라우터가 'cmd' | CAI.eProvider를 쓰는 것과 같은 패턴.)
+type Provider = CAI.eProvider | 'cmd';
 
 interface IAttachment { name: string; path: string; }
 interface IMessage {

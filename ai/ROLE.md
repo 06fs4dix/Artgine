@@ -28,7 +28,7 @@ node ai/tool/c_cpp_check.js [web|window|linux|mac] 파일A.cpp 파일B.cpp
 ## 제한 명령어 (Restricted Commands)
 다음 명령어는 사용자가 명시적으로 요청하거나 승인하지 않는 한 실행하지 않는다.
 
-- node 임의 실행. `ai/tool/tsc_check.js`, `ai/tool/browser.js`, `ai/tool/c_cpp_check.js`는 제외
+- node 임의 실행. `ai/tool/tsc_check.js`, `ai/tool/browser.js`, `ai/tool/c_cpp_check.js`, `ai/tool/work.js`는 제외
 - python / python3 실행
 - 라이브 페이지 디버깅 목적의 curl 직접 호출 (대신 `ai/tool/browser.js` 사용)
 - 서버 재시작 명령(`POST /File/Restart`, Control 프로젝트의 "Restart Server" 버튼) — 실행 시 현재 서버 프로세스가 즉시 종료되므로 **사용자 승인 없이 절대 실행 금지**
@@ -46,12 +46,17 @@ node ai/tool/c_cpp_check.js [web|window|linux|mac] 파일A.cpp 파일B.cpp
 ## 새 프로젝트 생성 (Create New Project)
 **`ai/ProjectSetupGuide.md`** 먼저 읽기 필수.
 
-## 원격 작업 (Remote Work & Command Execution)
-**`ai/RemoteCMDGuide.md`** 먼저 읽기 필수. 서버 재시작도 이 문서 참고.
+## 원격 작업 (Remote Work, Command Execution & Remote Desktop Control)
+원격 서버 콘솔 명령/파일 업로드·다운로드/재시작 및 원격 PC 마우스·키보드·화면 제어 전 **`ai/RemoteGuide.md`** 먼저 읽기 필수. 서버 재시작도 이 문서 참고.
 
 ## 메모 가이드 (Memo Guide)
 메모 저장/검색 관련 작업 전 **`ai/MemoGuide.md`** 먼저 읽기 필수.
 
+## 워크 가이드 (Work Guide)
+`ai/tool/work.js`로 서브 에이전트·스케줄러·워크오더를 다룰 때 **`ai/WorkGuide.md`** 먼저 읽기 필수.
+
+## 메신저 가이드 (Messenger Guide)
+`ai/tool/messenger.js`로 메신저 세션 조회/대화/발송/터미널 연결을 다룰 때 **`ai/MessengerGuide.md`** 먼저 읽기 필수.
 
 ## 프로젝트 명명 규칙 (Project Naming Convention)
 ** ai/CodeNamingGuide.md ** 먼저 읽기 필수. 
@@ -100,9 +105,6 @@ node ai/tool/c_cpp_check.js [web|window|linux|mac] 파일A.cpp 파일B.cpp
 
 ## 웹브라우저 디버깅 (Web Browser Debugging)
 라이브 페이지 콘솔 로그·JS 실행·DOM 조회 작업 전 **`ai/BrowserDebugGuide.md`** 먼저 읽기 필수.
-
-## 원격 데스크탑 제어 (Remote Desktop Control)
-원격 PC의 마우스/키보드/화면을 직접 제어하는 작업 전 **`ai/RemoteDesktopGuide.md`** 먼저 읽기 필수.
 
 ## 파일 변경 전 설명 규칙 (File Modification Explanation Rules)
 

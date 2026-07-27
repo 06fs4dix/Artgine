@@ -3,7 +3,7 @@ import { CJSON } from '../basic/CJSON.js';
 import { Request, Response } from 'express';
 import { CAuthServer } from './CAuthServer.js';
 
-@URLPatterns(["/cmd/start-term", "/cmd/start-team", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode", "/cmd/handoff", "/cmd/agents", "/cmd/agent-set", "/cmd/agent-del", "/cmd/log-sessions", "/cmd/log-session", "/cmd/log-session-del", "/cmd/log-clear", "/cmd/upload-file"])
+@URLPatterns(["/cmd/start-term", "/cmd/start-team", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode", "/cmd/handoff", "/cmd/agents", "/cmd/agent-set", "/cmd/agent-del", "/cmd/log-sessions", "/cmd/log-session", "/cmd/log-session-del", "/cmd/log-clear", "/cmd/log-term", "/cmd/upload-file"])
 export class CTerminalRouter extends CAuthServer {
     constructor() {
         super();
@@ -25,6 +25,7 @@ export class CTerminalRouter extends CAuthServer {
         this.On("/cmd/log-session", this.onLogSession.bind(this));
         this.On("/cmd/log-session-del", this.onLogSessionDel.bind(this));
         this.On("/cmd/log-clear", this.onLogClear.bind(this));
+        this.On("/cmd/log-term", this.onLogTerm.bind(this));
         this.On("/cmd/upload-file", this.onUploadFile.bind(this));
     }
 
@@ -49,6 +50,7 @@ export class CTerminalRouter extends CAuthServer {
     async onLogSession(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onLogSessionDel(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onLogClear(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
+    async onLogTerm(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onUploadFile(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
 }
 

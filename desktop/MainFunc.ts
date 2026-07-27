@@ -347,13 +347,12 @@ export function ExtractServiceWorkerConfig(source: string): Record<string, any> 
 
 //==============================================================
 
-export function LoadPluginFolder(folderPath: string): any | null 
+export function LoadPluginFolder(folderPath: string): any | null
 {
     const folderName = path.basename(folderPath);
     const jsonPath = path.join(folderPath, `${folderName}.json`);
-    const htmlPath = path.join(folderPath, `${folderName}.html`);
 
-    if (fs.existsSync(jsonPath)==false) 
+    if (fs.existsSync(jsonPath)==false)
     {
         console.warn(`File Not: ${jsonPath}`);
         return null;
@@ -366,15 +365,7 @@ export function LoadPluginFolder(folderPath: string): any | null
         console.error(`JSON 파싱 오류: ${jsonPath}`, err);
         return null;
     }
-    //console.log(htmlPath);
-    if (fs.existsSync(htmlPath)==true) 
-    {
-        //console.log("on");
-        const content = fs.readFileSync(htmlPath, 'utf8');
-        json["html"]=content;
-    }
 
-   
     return json;
 }
 export function GetSubFolderPaths(parentFolder: string): string[] {
@@ -388,8 +379,8 @@ export function GetSubFolderPaths(parentFolder: string): string[] {
 
     return folderPaths;
 }
-var gPluginMap = new Map<string, {version:number,dependencies:object,html:string}>();
-export function GetPluginArr(): any[] 
+var gPluginMap = new Map<string, {version:number,dependencies:object,client:string[],server:string[],tooltip:Record<string,string>}>();
+export function GetPluginArr(): any[]
 {
     const arr: any[] = [];
 
@@ -400,7 +391,7 @@ export function GetPluginArr(): any[]
             version: data.version || 1,
             dependencies: data.dependencies || {},
             name: name,
-            html: data.html || ""
+            tooltip: data.tooltip || {}
         });
     }
 

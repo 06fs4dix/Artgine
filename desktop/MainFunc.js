@@ -247,7 +247,6 @@ export function ExtractServiceWorkerConfig(source) {
 export function LoadPluginFolder(folderPath) {
     const folderName = path.basename(folderPath);
     const jsonPath = path.join(folderPath, `${folderName}.json`);
-    const htmlPath = path.join(folderPath, `${folderName}.html`);
     if (fs.existsSync(jsonPath) == false) {
         console.warn(`File Not: ${jsonPath}`);
         return null;
@@ -260,10 +259,6 @@ export function LoadPluginFolder(folderPath) {
     catch (err) {
         console.error(`JSON 파싱 오류: ${jsonPath}`, err);
         return null;
-    }
-    if (fs.existsSync(htmlPath) == true) {
-        const content = fs.readFileSync(htmlPath, 'utf8');
-        json["html"] = content;
     }
     return json;
 }
@@ -286,7 +281,7 @@ export function GetPluginArr() {
             version: data.version || 1,
             dependencies: data.dependencies || {},
             name: name,
-            html: data.html || ""
+            tooltip: data.tooltip || {}
         });
     }
     return arr;

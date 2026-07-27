@@ -795,7 +795,7 @@ export class CPaint extends CComponent implements IMat
 		this.mTagKey=null;
 		this.ClearCRPAuto();
 	}
-	GetDrawMesh(_meshKey : string,_shader : CShader,_ci : CMeshCreateInfo)
+	GetDrawMesh(_meshKey : string,_shader : CShader,_ci : CMeshCreateInfo,_modify=false)
 	{
 		var drawMesh = this.mOwner.GetFrame().Res().Find(_meshKey+ _shader.ObjHash()) as CMeshDrawNode;
 		if (drawMesh == null)
@@ -806,7 +806,10 @@ export class CPaint extends CComponent implements IMat
 			this.mOwner.GetFrame().Res().Push(_meshKey + _shader.ObjHash(),drawMesh);
 			drawMesh.SetKey(_meshKey + _shader.ObjHash());
 		}
-		
+		else if(_modify)//다시 생긴거는 픽스할게 없다. 
+			this.mOwner.GetFrame().Ren().BuildMeshDrawNode(drawMesh,_ci, _shader);
+			
+
 		return drawMesh;
 	}
 	GetTagKey()	

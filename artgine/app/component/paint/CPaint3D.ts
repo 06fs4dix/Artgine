@@ -9,6 +9,7 @@ import {CTree} from "../../../basic/CTree.js";
 import { CBound } from "../../../geometry/CBound.js";
 import {CMat} from "../../../geometry/CMat.js";
 import {CMath} from "../../../geometry/CMath.js";
+import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
 import { CRay } from "../../../geometry/CRay.js";
 import { CUtilMath } from "../../../geometry/CUtilMath.js";
 import {CVec1} from "../../../geometry/CVec1.js";
@@ -654,9 +655,45 @@ export class CPaint3DMerge extends CPaint
 	public mCenterPos=false;
 	public mTargetScale=0;
     mWindInfluence : CVec1 = new CVec1(0.0);
+	// Reset 발생 시 다음 Render에서 GetDrawMesh를 modify로 1회 갱신하기 위한 플래그
+	mReset = false;
+	// SkinCalc(new CMat(), mesh, mesh.meshTree)는 인스턴스 매트릭스와 무관하게
+	// 메시 리소스(트리 포즈)에만 의존해 항상 같은 결과를 낸다. 메시 키별로 캐시해 재계산을 없앤다.
+	mSkinMatCache : Map<string, CMat[]> = new Map();
+	// 메시 키별 "로컬(인스턴스=항등행렬) 위치" 캐시. Merge()의 LPMat=LMat*_PMat 결합 방식상
+	// 인스턴스 매트릭스는 항상 맨 마지막에 곱해지므로, 최종위치=로컬위치×인스턴스매트릭스로 분리된다.
+	// uv/normal/texOff/weight/weightIndex/index는 인스턴스와 무관해 이 캐시가 필요 없다.
+	mLocalPosCache : Map<string, Float32Array> = new Map();
+	// 마지막으로 구성에 실제 사용된 mMeshList(참조 스냅샷). 토폴로지 동일 여부 판별에 쓰인다.
+	mMeshListPrev : Array<string> = null;
+	// 각 mMeshList 엔트리가 병합 버퍼에서 차지하는 정점 시작 오프셋(마지막에 총 정점 수 sentinel).
+	// 토폴로지(메시 목록)가 그대로일 때만 유효 — RepositionOnly가 이 오프셋으로 position만 덮어쓴다.
+	mMeshVertexStart : number[] = [];
+	// 마지막으로 실제 정점을 굽는 데 쓰인 인스턴스 매트릭스 스냅샷(복제, 인덱스 대응).
+	// RepositionOnly에서 "이동만 바뀌었는지" 판별하는 기준선으로 쓰인다.
+	mMatListPrev : CMat[] = null;
 	override IsShould(_member: string, _type: CObject.eShould): boolean {
-		if(_member=="mMeshDataNode")	return false;
+		if(_member=="mMeshDataNode" || _member=="mReset" || _member=="mSkinMatCache" ||
+			_member=="mLocalPosCache" || _member=="mMeshListPrev" || _member=="mMeshVertexStart" ||
+			_member=="mMatListPrev")	return false;
 		return super.IsShould(_member,_type);
+	}
+	// 두 메시 목록이 원소별로 완전히 같은지(개수+순서+키 전부) 비교한다.
+	// join("|") 방식은 키에 구분자가 우연히 들어가면 오탐 가능성이 있어 원소 직접 비교로 대체.
+	static SameMeshList(_a : Array<string>,_b : Array<string>): boolean
+	{
+		if(_a==null || _b==null || _a.length!=_b.length)	return false;
+		for(let i=0;i<_a.length;++i)
+			if(_a[i]!=_b[i])	return false;
+		return true;
+	}
+	// 회전/스케일(0~11, 15번 성분)이 완전히 같고 이동(12~14번)만 다른지 확인한다.
+	static MatOnlyTranslationDiff(_a : CMat,_b : CMat): boolean
+	{
+		for(let i=0;i<12;++i)
+			if(_a.mF32A[i]!=_b.mF32A[i])	return false;
+		if(_a.mF32A[15]!=_b.mF32A[15])	return false;
+		return true;
 	}
 	override InitChk(): void 
 	{
@@ -683,21 +720,224 @@ export class CPaint3DMerge extends CPaint
 	// 	super.Update(_delay);
 	// }
 	override Start(): void {
-		this.mMeshDataNode.ci=new CMeshCreateInfo();
+		this.BuildCI();
+	}
+	// 메시 키의 SkinCalc 결과를 구해 캐시한다(메시 키별 mSkinMatCache). 항등행렬은 매번 new하지 않고
+	// CPoolGeo에서 빌려 쓰고 즉시 반납한다(SkinCalc는 결과를 skinMatList에 담을 뿐 _PMat 참조를 보유하지 않는다).
+	GetSkinMat(_meshKey : string,_mesh : CMesh): CMat[]
+	{
+		let calcSkinMat=this.mSkinMatCache.get(_meshKey);
+		if(calcSkinMat==null)
+		{
+			let identMat=CPoolGeo.ProductMat();
+			identMat.Unit();
+			calcSkinMat=this.SkinCalc(identMat, _mesh, _mesh.meshTree);
+			CPoolGeo.RecycleMat(identMat);
+			this.mSkinMatCache.set(_meshKey,calcSkinMat);
+		}
+		return calcSkinMat;
+	}
+	// 메시 키의 "로컬(인스턴스=항등행렬) 위치"를 구해 캐시한다. 트리 로컬 변환/스킨/스케일-센터
+	// 보정까지는 반영되고 인스턴스 매트릭스만 빠진 상태 — 이후 인스턴스 매트릭스만 곱하면 최종위치.
+	GetLocalPos(_meshKey : string): Float32Array
+	{
+		let cached=this.mLocalPosCache.get(_meshKey);
+		if(cached!=null)	return cached;
+
+		let mesh=this.GetOwner().GetFrame().Res().Find(_meshKey) as CMesh;
+		let calcSkinMat=this.GetSkinMat(_meshKey,mesh);
+		let tmp=new CMeshCreateInfo();
+		let dummyBound=CPoolGeo.ProductBound();
+		dummyBound.SetType(CBound.eType.Box);
+		let identMat=CPoolGeo.ProductMat();
+		identMat.Unit();
+		this.Merge(identMat, mesh, mesh.meshTree, tmp, dummyBound, calcSkinMat);	// _PMat=항등 → 로컬 위치
+		CPoolGeo.RecycleMat(identMat);
+		CPoolGeo.RecycleBound(dummyBound);
+		let posb=tmp.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+		let local=posb.bufF.GetArray().slice(0,posb.bufF.mSize);
+		this.mLocalPosCache.set(_meshKey,local);
+		return local;
+	}
+	// 현재 mMeshList/mMatList를 새 매트릭스로 병합해 _ci에 채운다(bound/texture 갱신).
+	// 토폴로지(메시 구성) 자체가 바뀔 때만 쓰는 전체 재구성 경로.
+	MergeAll(_ci : CMeshCreateInfo): void
+	{
 		this.mBound.Reset();
 		this.mBound.SetType(CBound.eType.Box);
-		this.mHash="";
+		this.mMeshVertexStart=[];
 		for(let i=0;i<this.mMeshList.length;++i)
 		{
+			this.mMeshVertexStart.push(_ci.vertexCount);
 			let mesh=this.GetOwner().GetFrame().Res().Find(this.mMeshList[i]) as CMesh;
-			this.mHash+=this.mMeshList[i];
-			this.mHash+=this.mMatList[i].ToStr();
-
-            const calcSkinMat = this.SkinCalc(new CMat(), mesh, mesh.meshTree);
-            this.Merge(this.mMatList[i], mesh, mesh.meshTree, this.mMeshDataNode.ci, this.mBound, calcSkinMat);
-
+			let calcSkinMat=this.GetSkinMat(this.mMeshList[i],mesh);
+            this.Merge(this.mMatList[i], mesh, mesh.meshTree, _ci, this.mBound, calcSkinMat);
 		}
-		this.mHash=CHash.HashCode(this.mHash)+"";
+		this.mMeshVertexStart.push(_ci.vertexCount);
+	}
+	// mMeshList/mMatList로 병합 버퍼(ci)를 처음부터 새로 구성한다.
+	BuildCI(): void {
+		this.mMeshDataNode.ci=new CMeshCreateInfo();
+		this.MergeAll(this.mMeshDataNode.ci);
+		// 해시는 버퍼 용량(정점 수) 기반. 커질 때만 바뀌어 새 키가 되고, 같거나 작으면 유지된다.
+		this.mHash=""+this.mMeshDataNode.ci.vertexCount;
+		this.mMeshListPrev=this.mMeshList.slice();
+		this.SnapshotMatList();
+	}
+	// this.mMatList의 현재 값을 mMatListPrev에 스냅샷으로 저장한다. 매번 new CMat()으로 새로
+	// 만들지 않고 CPoolGeo(Mat)로 재사용한다 — 기존 mMatListPrev 항목은 풀에 반납하고,
+	// 풀에서 꺼낸 인스턴스에 Import()로 값만 복사한다(새 Float32Array 할당 없음).
+	SnapshotMatList(): void
+	{
+		if(this.mMatListPrev!=null)
+		{
+			for(let m of this.mMatListPrev)
+				CPoolGeo.RecycleMat(m);
+		}
+		let next=new Array<CMat>(this.mMatList.length);
+		for(let i=0;i<this.mMatList.length;++i)
+		{
+			let m=CPoolGeo.ProductMat();
+			m.Import(this.mMatList[i]);
+			next[i]=m;
+		}
+		this.mMatListPrev=next;
+	}
+	// 토폴로지(메시 목록/순서)가 이전과 완전히 같을 때만 쓸 수 있는 빠른 경로.
+	// uv/normal/texOff/weight/weightIndex/index는 인스턴스 매트릭스와 무관해 손대지 않는다.
+	// 메시별로 이전 매트릭스와 비교해 회전/스케일까지 같고 이동만 다르면(MatOnlyTranslationDiff)
+	// 로컬 위치×행렬곱조차 없이 이미 구워진 정점에 이동량(dx,dy,dz)만 더하는 하드 경로를 쓴다.
+	// 회전/스케일이 바뀌었거나 이전 매트릭스가 없으면(최초) 로컬 위치×인스턴스 매트릭스로 계산한다.
+	RepositionOnly(): void
+	{
+		let ci=this.mMeshDataNode.ci;
+		let ovb=ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+		this.mBound.Reset();
+		this.mBound.SetType(CBound.eType.Box);
+		let v=CPoolGeo.ProductV3();
+		let outv=CPoolGeo.ProductV3();
+		let prevList=this.mMatListPrev;
+		for(let i=0;i<this.mMeshList.length;++i)
+		{
+			let vStart=this.mMeshVertexStart[i];
+			let vCount=this.mMeshVertexStart[i+1]-vStart;
+			let instMat=this.mMatList[i];
+			let prevMat=(prevList!=null && i<prevList.length)?prevList[i]:null;
+
+			if(prevMat!=null && CPaint3DMerge.MatOnlyTranslationDiff(prevMat,instMat))
+			{
+				// 이동만 변경 → 캐시된 로컬 위치/행렬곱 없이 기존 baked 정점에 델타만 더한다.
+				let dx=instMat.mF32A[12]-prevMat.mF32A[12];
+				let dy=instMat.mF32A[13]-prevMat.mF32A[13];
+				let dz=instMat.mF32A[14]-prevMat.mF32A[14];
+				let moved=(dx!=0 || dy!=0 || dz!=0);
+				// mBound.Reset()이 매 호출 위에서 일어나므로, 이동이 없어도(moved=false)
+				// 바운드 갱신을 위해 정점은 순회해야 한다 — 좌표 덧셈만 건너뛴다.
+				for(let j=0;j<vCount;++j)
+				{
+					let off=(vStart+j)*3;
+					if(moved)
+					{
+						ovb.bufF.mF32A[off+0]+=dx;
+						ovb.bufF.mF32A[off+1]+=dy;
+						ovb.bufF.mF32A[off+2]+=dz;
+					}
+					outv.x=ovb.bufF.mF32A[off+0];
+					outv.y=ovb.bufF.mF32A[off+1];
+					outv.z=ovb.bufF.mF32A[off+2];
+					this.mBound.InitBound(outv);
+				}
+			}
+			else
+			{
+				// 회전/스케일까지 바뀜(또는 최초) → 로컬 위치 × 인스턴스 매트릭스 풀 계산
+				let local=this.GetLocalPos(this.mMeshList[i]);
+				for(let j=0;j<vCount;++j)
+				{
+					v.x=local[j*3+0];
+					v.y=local[j*3+1];
+					v.z=local[j*3+2];
+					CMath.V3MulMatCoordi(v,instMat,outv);
+					ovb.bufF.X3(vStart+j,outv.x);
+					ovb.bufF.Y3(vStart+j,outv.y);
+					ovb.bufF.Z3(vStart+j,outv.z);
+					this.mBound.InitBound(outv);
+				}
+			}
+		}
+		CPoolGeo.RecycleV3(v);
+		CPoolGeo.RecycleV3(outv);
+		// 다음 비교를 위해 이번에 실제로 구운 매트릭스를 스냅샷으로 저장.
+		this.SnapshotMatList();
+	}
+	// 메시 목록을 통째로 교체한다.
+	// - 토폴로지(메시 목록/순서)가 이전과 완전히 같으면(=매트릭스만 바뀜, 예: shake) → RepositionOnly로
+	//   position만 재계산(uv/normal/texOff/weight/weightIndex/index/SkinCalc/텍스처 매칭 전부 스킵).
+	// - 토폴로지가 바뀌면(개수/구성 변경) → 전체 재구성.
+	//   - 정점 총량이 기존 버퍼(용량)보다 커지면 → 버퍼를 새로 구성하고 해시를 바꾼다(새 키 → 새로 빌드).
+	//   - 같거나 작아지면 → 기존 버퍼 용량을 유지한 채 앞쪽만 새로 굽고, 남는 뒤쪽 정점은 0으로 세팅해 숨긴다.
+	//     해시는 유지되어 같은 키로 GetDrawMesh가 modify 1회 갱신된다.
+	ResetMesh(_meshList : Array<string>,_matList : Array<CMat>): void {
+		let oldCI=this.mMeshDataNode.ci;
+		// 개수뿐 아니라 순서/키까지 원소 단위로 완전히 같아야 빠른 경로를 쓴다.
+		// 예: [꽃,꽃,나무,나무] → [나무,꽃,나무,나무]처럼 개수는 같아도 0번 종류가 바뀌면 false → 전체 재구성.
+		let sameTopology=(oldCI!=null && CPaint3DMerge.SameMeshList(this.mMeshListPrev,_meshList));
+
+		this.mMeshList=_meshList;
+		this.mMatList=_matList;
+		this.mMeshListPrev=this.mMeshList.slice();
+
+		if(sameTopology)
+		{
+			this.RepositionOnly();
+		}
+		else
+		{
+			let capVC=(oldCI!=null)?oldCI.vertexCount:0;	// 기존 버퍼 용량(정점 수, high-water)
+
+			// 새 매트릭스로 병합을 다시 굽는다(임시 버퍼).
+			let newCI=new CMeshCreateInfo();
+			this.MergeAll(newCI);
+			let newVC=newCI.vertexCount;
+
+			if(oldCI==null || newVC>capVC)
+			{
+				// 커짐 → 새로 구성, 해시 변경 → 새 키 → 새로 빌드
+				this.mMeshDataNode.ci=newCI;
+				this.mHash=""+newVC;
+			}
+			else
+			{
+				// 같거나 작아짐 → 기존 용량 유지, 앞쪽만 새 데이터로 덮고 뒤쪽은 0으로
+				for(let ob of oldCI.vertex)
+				{
+					if(ob.vfType==CVertexFormat.eIdentifier.Index)	continue;	// 인덱스는 그대로 두어 뒤쪽 삼각형이 0정점을 참조(붕괴)하게 한다.
+					let capF=ob.bufF.mSize;										// 기존 용량(float 수) 유지
+					let nb=newCI.GetVFType(ob.vfType);
+					if(nb.length>0)
+					{
+						let nSize=nb[0].bufF.mSize;
+						ob.bufF.mF32A.set(nb[0].bufF.mF32A.subarray(0,nSize),0);	// 앞쪽 복사
+						ob.bufF.mF32A.fill(0,nSize,capF);							// 뒤쪽 0
+					}
+					else
+					{
+						ob.bufF.mF32A.fill(0,0,capF);	// 새 구성에 없는 포맷 → 전부 0
+					}
+				}
+				// vertexCount(용량)/indexCount 및 mHash 유지 → 같은 키 → modify
+			}
+			// 다음 RepositionOnly 호출을 위한 기준선(이번에 실제로 구운 매트릭스) 스냅샷.
+			this.SnapshotMatList();
+		}
+		this.mReset=true;
+		// 배치는 한 번 만들면 캐시되어(mBatchMap) 다음 프레임에 Render()가 재실행되지 않고
+		// 캐시된 배치를 그대로 재사용한다(BatchPool). 그러면 GetDrawMesh(modify)가 다시는 안 불려
+		// 정점 갱신이 GPU에 반영되지 않는다. 이걸 막기 위해 배치 캐시만 무효화한다.
+		// ClearBatch()는 mRenPT/mCamCullUpdate까지 건드려 캔버스의 렌더패스 재계산을 매번 유발하므로
+		// (렌더패스 자체는 안 바뀌었으니 불필요) 여기서는 mBatchMap만 직접 비운다.
+		for(let key of this.mBatchMap.keys())
+			this.mBatchMap.set(key,null);
 	}
 	override Render(_vf: CShader): void {
 		
@@ -733,7 +973,11 @@ export class CPaint3DMerge extends CPaint
 		// {
 
 		// }
-		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.mHash,_vf,this.mMeshDataNode.ci);
+		// 키에 인스턴스 고유값(Key)을 포함해 다른 인스턴스와 drawMesh를 공유하지 않게 한다.
+		// (shrink 시 in-place modify로 지오메트리를 변형하므로 콘텐츠 해시 공유는 충돌을 일으킨다.)
+		// mHash는 유지 → grow 시 해시가 바뀌어 새 키로 새로 빌드, shrink 시 해시 유지로 같은 키 modify.
+		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.Key()+this.mHash,_vf,this.mMeshDataNode.ci,this.mReset);
+		this.mReset=false;
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 
 		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();

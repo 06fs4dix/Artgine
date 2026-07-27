@@ -4,12 +4,12 @@
 	{
 		"target": "ES2022",
 		"module": "esnext",
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",   // node는 TS7에서 deprecated라 bundler 권장
 		"sourceMap": false,
 		//"watch":true,
 		"strictNullChecks": false,
 		"experimentalDecorators": true,          // ❗끄기
-
+		"noImplicitOverride": true,
 		
 		
 		"forceConsistentCasingInFileNames": false,
@@ -23,7 +23,7 @@
 		"types": ["@webgpu/types","node","electron"],
 	},
 		
-	"exclude": ["external","**/*.js"],
+	"exclude": ["external","big","**/*.js","node_modules"],
 	"compileOnSave": false,
 	"buildOnSave": false
 	

@@ -2,12 +2,18 @@ export interface IAIInteractiveArgs {
     args: string[];
 }
 
+// ai/settings.json models.<provider>[] 항목과 동일한 형식.
+export interface IProviderModel {
+    value: string;
+    label: string;
+}
+
 export interface IProviderInfo {
     id: CAI.eProvider;
     installed: boolean;
     authenticated: boolean;
     version: string;
-    models: { value: string; label: string }[];
+    models: IProviderModel[];
 }
 
 // fiveHour/weekly: 남은 사용량 비율(1=가득 참, 0=소진). 조회 실패/미지원 시 -1.
@@ -31,12 +37,19 @@ export class CAI {
     static ProviderInfo(_provider: CAI.eProvider): Promise<IProviderInfo> { return Promise.resolve({ id: _provider, installed: false, authenticated: false, version: '', models: [] }); }
     static ProviderInstall(_provider: CAI.eProvider): Promise<boolean> { return Promise.resolve(false); }
     static ProviderUsage(_provider: CAI.eProvider): Promise<IProviderUsage> { return Promise.resolve({ fiveHour: -1, weekly: -1 }); }
-    static Chat(_provider: CAI.eProvider, _model: string, _cwd: string, _prompt: string, _mcp = true, _cliSessionId?: string, _isFirstCall = true): Promise<IChatResult> { return Promise.reject(new Error('CAI_imple not loaded')); }
+    /** 프로바이더가 현재 제공하는 모델 목록. ai/settings.json models 항목 형식({value,label}[])과 동일. 실패 시 []. */
+    static ProviderModels(_provider: CAI.eProvider): Promise<IProviderModel[]> { return Promise.resolve([]); }
+    static Chat(_provider: CAI.eProvider, _model: string, _cwd: string, _prompt: string, _mcp = true, _cliSessionId?: string, _isFirstCall = true, _write = true): Promise<IChatResult> { return Promise.reject(new Error('CAI_imple not loaded')); }
+    /**
+     * 셸 명령 1건을 cwd에서 실행하고 stdout+stderr를 IChatResult.text로 돌려준다.
+     * CLI 프로바이더가 아닌 'cmd' 의사 프로바이더(채팅에서 순수 셸 실행) 전용 — 대화 맥락이 없어 sessionId도 없다.
+     */
+    static Cmd(_cwd: string, _command: string, _timeoutMs?: number): Promise<IChatResult> { return Promise.reject(new Error('CAI_imple not loaded')); }
     static Terminal(_provider: CAI.eProvider, _mcp: boolean, _model?: string): Promise<IAIInteractiveArgs> { return Promise.resolve({ args: [] }); }
 }
 
 export namespace CAI {
-    export enum eProvider { claude='claude', codex='codex', manus='manus', gpt='gpt', antigravity='antigravity', opencode='opencode', grok='grok' }
+    export enum eProvider { claude='claude', codex='codex', gpt='gpt', antigravity='antigravity', opencode='opencode', grok='grok' }
 }
 
 import CAI_imple from "../util_imple/CAI.js";

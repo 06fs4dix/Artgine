@@ -1,20 +1,34 @@
 import { CORMField, CRDBMS } from "./CORM.js";
-// import { Connection, RowDataPacket } from 'mysql2/promise';
-// import * as mysql from 'mysql2/promise';
-import { CPool } from "../basic/CPool.js";
-let mysqlModule = null;
+import { CCMDMgr } from "../system/CCMDMgr.js";
+
+let mysqlModule: any = null;
+let mysqlLoad: Promise<any> = null;
 
 export class CMysql extends CRDBMS 
 {
     protected mConn;
+
+    /** mysql2 설치(NPMInstall) 후 동적 로드 (프로세스당 1회) */
+    private static EnsureModule(): Promise<any> {
+        if (mysqlModule) return Promise.resolve(mysqlModule);
+        if (!mysqlLoad) {
+            mysqlLoad = (async () => {
+                await CCMDMgr.NPMInstall(["mysql2"]);
+                // @ts-ignore optional runtime dep — NPMInstall 후 로드
+                const mod: any = await import("mysql2/promise");
+                mysqlModule = mod.default ?? mod;
+                return mysqlModule;
+            })();
+        }
+        return mysqlLoad;
+    }
+
     override async Init(): Promise<void> 
     {
         //this.mType=CRDBMS.eType.Mysql;
-        if (!mysqlModule) {
-            mysqlModule = await import("mysql2/promise");
-        }
+        const mysql = await CMysql.EnsureModule();
 
-        this.mConn = await mysqlModule.createConnection({
+        this.mConn = await mysql.createConnection({
             host: this.mAuth.mAddres,
             port: parseInt(this.mAuth.mPort, 10),
             user: this.mAuth.mID,

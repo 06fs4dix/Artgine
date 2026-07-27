@@ -1,1 +1,138 @@
-import{CObject as t}from"../../basic/CObject.js";import{CUtil as e}from"../../basic/CUtil.js";import{CVec3 as s}from"../../geometry/CVec3.js";import{CImgPro as u}from"../../render/CImgPro.js";import{CTexture as o}from"../../render/CTexture.js";export class CMapBuf extends t{mBuffer=null;mSize=0;mCount=new s(1,1,1);Reset(t,e,s=255){this.mSize=e,this.mCount=t,this.mBuffer=new Uint32Array(this.mCount.x*this.mCount.y*this.mCount.z),this.mBuffer.fill(s)}RGB(t,e=null){const s=this.GetBuf();if(null!=e){const u=(4294967040&e)>>>0;if("number"==typeof t)s[t]=(u|255&s[t])>>>0;else{if(this.IndexOut(t))return;const e=t.Offset(this.mCount);s[e]=(u|255&s[e])>>>0}return}return"number"==typeof t?(4294967040&s[t])>>>0:this.IndexOut(t)?null:(4294967040&s[t.Offset(this.mCount)])>>>0}IndexOut(t){return t.x<0||t.x>=this.mCount.x||t.y<0||t.y>=this.mCount.y||t.z<0||t.z>=this.mCount.z}SetTexture(t){let e=t.GetBuf()[0],s=t.GetWidth(),o=t.GetHeight();const n=this.mCount.z>1,i=this.mCount.x,r=n?this.mCount.y*this.mCount.z:this.mCount.y;s==i&&o==r||(e=u.SqurEnlargedReduced(s,o,e,i/s,r/o,4).GetBuf()[0],s=i,o=r);const m=this.GetBuf();if(n)for(let t=0;t<this.mCount.z;++t)for(let u=0;u<this.mCount.y;++u)for(let o=0;o<this.mCount.x;++o){const n=4*((u*this.mCount.z+t)*s+o),i=(e[n]<<24|e[n+1]<<16|e[n+2]<<8)>>>0,r=o+u*this.mCount.x+t*this.mCount.x*this.mCount.y;m[r]=(i|255&m[r])>>>0}else for(let t=0;t<this.mCount.y;++t)for(let u=0;u<this.mCount.x;++u){const o=4*((this.mCount.y-1-t)*s+u),n=(e[o]<<24|e[o+1]<<16|e[o+2]<<8)>>>0,i=u+t*this.mCount.x;this.mBuffer[i]=(n|255&this.mBuffer[i])>>>0}}ExportCJSON(){let t=super.ExportCJSON();return t.Set("mBuffer",e.ArrayToLZBase64(this.GetBuf().buffer)),t}ImportCJSON(t){const e=t.GetStr("mBuffer");return t.Set("mBuffer",null),super.ImportCJSON(t),this.mBuffer=e,this}GetBuf(){return"string"==typeof this.mBuffer&&(this.mBuffer=new Uint32Array(e.LZBase64ToArray(this.mBuffer))),this.mBuffer}GetTexture(){const t=new o;t.SetMipMap(o.eMipmap.GL);const e=this.GetBuf();if(this.mCount.z<=1){t.SetSize(this.mCount.x,this.mCount.y),t.CreateBuf();const s=t.GetBuf()[0];for(let t=0;t<this.mCount.y;++t)for(let u=0;u<this.mCount.x;++u){const o=e[u+t*this.mCount.x],n=4*((this.mCount.y-1-t)*this.mCount.x+u);s[n]=o>>>24&255,s[n+1]=o>>>16&255,s[n+2]=o>>>8&255,s[n+3]=255&o}}else{t.SetSize(this.mCount.x,this.mCount.y*this.mCount.z),t.CreateBuf();const s=t.GetBuf()[0];for(let t=0;t<this.mCount.z;++t)for(let u=0;u<this.mCount.y;++u)for(let o=0;o<this.mCount.x;++o){const n=e[o+u*this.mCount.x+t*this.mCount.x*this.mCount.y],i=4*((u*this.mCount.z+t)*this.mCount.x+o);s[i]=n>>>24&255,s[i+1]=n>>>16&255,s[i+2]=n>>>8&255,s[i+3]=255&n}}return t}}
+import { CObject } from "../../basic/CObject.js";
+import { CUtil } from "../../basic/CUtil.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CImgPro } from "../../render/CImgPro.js";
+import { CTexture } from "../../render/CTexture.js";
+export class CMapBuf extends CObject {
+    mBuffer = null;
+    mSize = 0;
+    mCount = new CVec3(1, 1, 1);
+    Reset(_count, _size, _default = 0x000000FF) {
+        this.mSize = _size;
+        this.mCount = _count;
+        this.mBuffer = new Uint32Array(this.mCount.x * this.mCount.y * this.mCount.z);
+        this.mBuffer.fill(_default);
+    }
+    RGB(_index, _data = null) {
+        const buf = this.GetBuf();
+        if (_data != null) {
+            const rgb = (_data & 0xFFFFFF00) >>> 0;
+            if (typeof _index == "number") {
+                buf[_index] = (rgb | (buf[_index] & 0xFF)) >>> 0;
+            }
+            else {
+                if (this.IndexOut(_index))
+                    return;
+                const offset = _index.Offset(this.mCount);
+                buf[offset] = (rgb | (buf[offset] & 0xFF)) >>> 0;
+            }
+            return;
+        }
+        if (typeof _index == "number")
+            return (buf[_index] & 0xFFFFFF00) >>> 0;
+        if (this.IndexOut(_index))
+            return null;
+        return (buf[_index.Offset(this.mCount)] & 0xFFFFFF00) >>> 0;
+    }
+    IndexOut(_index) {
+        if (_index.x < 0 || _index.x >= this.mCount.x || _index.y < 0 || _index.y >= this.mCount.y || _index.z < 0 || _index.z >= this.mCount.z)
+            return true;
+        return false;
+    }
+    SetTexture(_tex) {
+        let buf = _tex.GetBuf()[0];
+        let width = _tex.GetWidth();
+        let height = _tex.GetHeight();
+        const isTarget3D = this.mCount.z > 1;
+        const targetW = this.mCount.x;
+        const targetH = isTarget3D ? this.mCount.y * this.mCount.z : this.mCount.y;
+        if (width != targetW || height != targetH) {
+            const resized = CImgPro.SqurEnlargedReduced(width, height, buf, targetW / width, targetH / height, 4);
+            buf = resized.GetBuf()[0];
+            width = targetW;
+            height = targetH;
+        }
+        const mbuf = this.GetBuf();
+        if (!isTarget3D) {
+            for (let y = 0; y < this.mCount.y; ++y) {
+                for (let x = 0; x < this.mCount.x; ++x) {
+                    const srcY = (this.mCount.y - 1 - y);
+                    const pi = (srcY * width + x) * 4;
+                    const rgb = ((buf[pi] << 24) | (buf[pi + 1] << 16) | (buf[pi + 2] << 8)) >>> 0;
+                    const bi = x + y * this.mCount.x;
+                    this.mBuffer[bi] = (rgb | (this.mBuffer[bi] & 0xFF)) >>> 0;
+                }
+            }
+        }
+        else {
+            for (let z = 0; z < this.mCount.z; ++z) {
+                for (let y = 0; y < this.mCount.y; ++y) {
+                    for (let x = 0; x < this.mCount.x; ++x) {
+                        const pi = ((y * this.mCount.z + z) * width + x) * 4;
+                        const rgb = ((buf[pi] << 24) | (buf[pi + 1] << 16) | (buf[pi + 2] << 8)) >>> 0;
+                        const bi = x + y * this.mCount.x + z * this.mCount.x * this.mCount.y;
+                        mbuf[bi] = (rgb | (mbuf[bi] & 0xFF)) >>> 0;
+                    }
+                }
+            }
+        }
+    }
+    ExportCJSON() {
+        let cjson = super.ExportCJSON();
+        cjson.Set("mBuffer", CUtil.ArrayToLZBase64(this.GetBuf().buffer));
+        return cjson;
+    }
+    ImportCJSON(_json) {
+        const arrStr = _json.GetStr("mBuffer");
+        _json.Set("mBuffer", null);
+        super.ImportCJSON(_json);
+        this.mBuffer = arrStr;
+        return this;
+    }
+    GetBuf() {
+        if (typeof this.mBuffer === "string")
+            this.mBuffer = new Uint32Array(CUtil.LZBase64ToArray(this.mBuffer));
+        return this.mBuffer;
+    }
+    GetTexture() {
+        const tex = new CTexture();
+        tex.SetMipMap(CTexture.eMipmap.GL);
+        const mbuf = this.GetBuf();
+        if (this.mCount.z <= 1) {
+            tex.SetSize(this.mCount.x, this.mCount.y);
+            tex.CreateBuf();
+            const texBuf = tex.GetBuf()[0];
+            for (let y = 0; y < this.mCount.y; ++y) {
+                for (let x = 0; x < this.mCount.x; ++x) {
+                    const bi = x + y * this.mCount.x;
+                    const val = mbuf[bi];
+                    const dstY = (this.mCount.y - 1 - y);
+                    const pi = (dstY * this.mCount.x + x) * 4;
+                    texBuf[pi] = (val >>> 24) & 0xFF;
+                    texBuf[pi + 1] = (val >>> 16) & 0xFF;
+                    texBuf[pi + 2] = (val >>> 8) & 0xFF;
+                    texBuf[pi + 3] = (val) & 0xFF;
+                }
+            }
+        }
+        else {
+            tex.SetSize(this.mCount.x, this.mCount.y * this.mCount.z);
+            tex.CreateBuf();
+            const texBuf = tex.GetBuf()[0];
+            for (let z = 0; z < this.mCount.z; ++z) {
+                for (let y = 0; y < this.mCount.y; ++y) {
+                    for (let x = 0; x < this.mCount.x; ++x) {
+                        const bi = x + y * this.mCount.x + z * this.mCount.x * this.mCount.y;
+                        const val = mbuf[bi];
+                        const pi = ((y * this.mCount.z + z) * this.mCount.x + x) * 4;
+                        texBuf[pi] = (val >>> 24) & 0xFF;
+                        texBuf[pi + 1] = (val >>> 16) & 0xFF;
+                        texBuf[pi + 2] = (val >>> 8) & 0xFF;
+                        texBuf[pi + 3] = (val) & 0xFF;
+                    }
+                }
+            }
+        }
+        return tex;
+    }
+}

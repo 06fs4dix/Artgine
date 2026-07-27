@@ -1,1 +1,345 @@
-var t=this&&this.__decorate||function(t,e,o,r){var s,n=arguments.length,i=n<3?e:null===r?r=Object.getOwnPropertyDescriptor(e,o):r;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)i=Reflect.decorate(t,e,o,r);else for(var a=t.length-1;a>=0;a--)(s=t[a])&&(i=(n<3?s(i):n>3?s(e,o,i):s(e,o))||i);return n>3&&i&&Object.defineProperty(e,o,i),i};import*as e from"path";import{CUtilSystem as o}from"../system/CUtilSystem.js";import*as r from"fs";import*as s from"https";import*as n from"http";import{createRequire as i}from"module";const a=i(import.meta.url);import{URLPatterns as l}from"../network/CServerMain.js";import{CServerRouter as d}from"../network/CServerRouter.js";import{CFile as c}from"../system/CFile.js";import{CConsol as m}from"../basic/CConsol.js";import{GetAppJSON as u,GetRootPaths as f}from"../../desktop/MainFunc.js";import{CPath as p}from"../basic/CPath.js";const g=e.resolve(p.ArtgineRootPath(),"artgine","external","bin"),y=e.join(g,"yt-dlp.exe"),w=e.join(g,"ffmpeg.exe"),S=1073741824;function h(t){return e.resolve(t).replace(/\\/g,"/")}function x(t){if(!r.existsSync(t))return 0;let o=0;for(const s of r.readdirSync(t)){const n=e.join(t,s);try{const t=r.statSync(n);t.isFile()?o+=t.size:t.isDirectory()&&(o+=x(n))}catch{}}return o}async function D(){const t=await async function(){const t=await u(),o=new Date,s=`${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}-${String(o.getDate()).padStart(2,"0")}`,n=e.join(e.resolve(f(t)[0]),"Downloads",s);return r.existsSync(n)||r.mkdirSync(n,{recursive:!0}),n}(),o=x(t);return{dir:t,used:o,limit:S,remain:Math.max(0,S-o)}}function O(t){return t>=1073741824?(t/1073741824).toFixed(2)+"GB":t>=1048576?(t/1048576).toFixed(1)+"MB":t>=1024?(t/1024).toFixed(0)+"KB":t+"B"}const j=new Map;function N(t){return/^https?:\/\/(www\.)?(youtube\.com\/|youtu\.be\/)/.test(t)}let v=class extends d{constructor(){super(),(async()=>{const t=await async function(){if(r.existsSync(y))return!0;m.Log("[Download] yt-dlp.exe 없음 → GitHub 다운로드 시작"),await c.FolderCreate(g);const t=await c.Load("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe");return t?(await c.Save(t,y),m.Log("[Download] yt-dlp.exe 다운로드 완료"),!0):(m.Log("[Download] yt-dlp.exe 다운로드 실패"),!1)}();if(await async function(){if(r.existsSync(w))return!0;m.Log("[Download] ffmpeg.exe 없음 → GitHub ZIP 다운로드 시작"),await c.FolderCreate(g);const t=await c.Load("https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip");if(!t)return m.Log("[Download] ffmpeg ZIP 다운로드 실패"),!1;const e=new(a("adm-zip"))(Buffer.from(t)).getEntries().find(t=>/\/bin\/ffmpeg\.exe$/i.test(t.entryName));return e?(r.writeFileSync(w,e.getData()),m.Log("[Download] ffmpeg.exe 설치 완료"),!0):(m.Log("[Download] ZIP 안에서 ffmpeg.exe 못 찾음"),!1)}(),t){const t=await new Promise(async t=>{if(!r.existsSync(y))return void t("yt-dlp 없음");const e=await o.Spawn(y,["-U"]);let s="";e.stdout.on("data",t=>s+=t.toString()),e.stderr.on("data",t=>s+=t.toString()),e.on("close",()=>t(s.split("\n")[0]?.trim()||"yt-dlp 최신 상태")),e.on("error",()=>t("yt-dlp 업데이트 실행 실패"))});m.Log("[Download] yt-dlp: "+t)}})(),this.On("/Download/Status",async(t,e,o)=>{const s=await D();return JSON.stringify({ok:!0,ytdlp:r.existsSync(y),ffmpeg:r.existsSync(w),dailyLimit:s.limit,dailyUsed:s.used,dailyRemain:s.remain})}),this.On("/Download/Info",async(t,e,s)=>{const n=t.GetStr("url");if(!n)return JSON.stringify({ok:!1,msg:"URL이 없습니다"});if(!N(n)){const t=decodeURIComponent(n.split("/").pop()?.split("?")[0]||"file");return JSON.stringify({ok:!0,title:t,general:!0})}return r.existsSync(y)?new Promise(async t=>{const e=await o.Spawn(y,["--dump-json","--no-playlist","--js-runtimes","node",n],"pipe","",{...process.env,PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"});let r="",s="";e.stdout.on("data",t=>r+=t.toString()),e.stderr.on("data",t=>s+=t.toString()),e.on("close",()=>{try{const e=JSON.parse(r),o=Math.round(e.duration||0),s=o?`${Math.floor(o/60)}:${String(o%60).padStart(2,"0")}`:"";t(JSON.stringify({ok:!0,title:e.title,duration:s,channel:e.uploader}))}catch{t(JSON.stringify({ok:!1,msg:"정보 조회 실패: "+s.slice(0,200)}))}}),e.on("error",()=>t(JSON.stringify({ok:!1,msg:"yt-dlp 실행 오류"})))}):JSON.stringify({ok:!1,msg:"yt-dlp 설치 중입니다. 잠시 후 다시 시도하세요."})}),this.On("/Download/Start",async(t,i,a)=>{const l=t.GetStr("url"),d=t.GetStr("format");if(!l)return JSON.stringify({ok:!1,msg:"URL이 없습니다"});const c=await D();if(c.remain<=0)return JSON.stringify({ok:!1,msg:`Daily download limit (1GB) reached (${O(c.used)} / ${O(c.limit)})`,dailyLimit:c.limit,dailyUsed:c.used,dailyRemain:0});const m=Math.random().toString(36).slice(2)+Date.now().toString(36);if(j.set(m,{status:"running",progress:0,msg:"시작 중..."}),N(l))if(r.existsSync(y)){const t=c.dir,r="mp3"===d?["-x","--audio-format","mp3","--ffmpeg-location",g,"--js-runtimes","node","-o",e.join(t,"%(title)s.%(ext)s"),"--no-playlist",l]:["-f","bestvideo+bestaudio/best","--merge-output-format","mp4","--ffmpeg-location",g,"--js-runtimes","node","-o",e.join(t,"%(title)s.%(ext)s"),"--no-playlist",l],s=await o.Spawn(y,r,"pipe","",{...process.env,PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"});let n="",i=!1;const a=setInterval(()=>{if(x(t)>S){i=!0;try{s.kill()}catch{}}},2e3);s.stdout.on("data",t=>{const o=t.toString(),r=o.match(/\[download\]\s+([\d.]+)%/),s=o.match(/Destination:\s*(.+)/);if(s&&(n=e.basename(s[1].trim())),r){const t=Math.round(parseFloat(r[1]));j.set(m,{status:"running",progress:t,msg:`${t}%`,file:n})}}),s.on("close",t=>{clearInterval(a),i?j.set(m,{status:"error",progress:0,msg:"Daily download limit (1GB) exceeded",file:n}):0===t?j.set(m,{status:"done",progress:100,msg:"완료",file:n}):j.set(m,{status:"error",progress:0,msg:`다운로드 실패 (exit ${t})`})}),s.on("error",t=>{clearInterval(a),j.set(m,{status:"error",progress:0,msg:t.message})})}else j.set(m,{status:"error",progress:0,msg:"yt-dlp가 아직 설치되지 않았습니다"});else{const t=decodeURIComponent(l.split("/").pop()?.split("?")[0]||"download"),o=c.dir,i=e.join(o,t);if(!function(t,e){const o=h(t).replace(/\/+$/,""),r=h(e);return r===o||r.startsWith(o+"/")}(o,i))return j.set(m,{status:"error",progress:0,msg:"Path escapes Downloads"}),JSON.stringify({ok:!0,jobId:m});(function(e,o,i,a){return new Promise((i,l)=>{const d=()=>{try{r.existsSync(o)&&r.unlinkSync(o)}catch{}},c=e=>{(e.startsWith("https")?s:n).get(e,e=>{if(301===e.statusCode||302===e.statusCode||307===e.statusCode)return void c(e.headers.location);if(200!==e.statusCode)return void l(new Error(`HTTP ${e.statusCode}`));const s=parseInt(e.headers["content-length"]||"0",10);if(null!=a&&s>0&&s>a)return e.resume(),void l(new Error(`Daily download limit (1GB) would be exceeded (file ${O(s)}, remain ${O(a)})`));let n=0,u=!1;const f=r.createWriteStream(o);e.on("data",o=>{if(!u){if(n+=o.length,null!=a&&n>a)return u=!0,e.destroy(),f.destroy(),d(),void l(new Error("Daily download limit (1GB) exceeded"));s>0&&(r=Math.round(n/s*100),j.set(m,{status:"running",progress:r,msg:`${r}%`,file:t}))}var r}),e.pipe(f),f.on("finish",()=>{u||(f.close(),i())}),f.on("error",t=>{u||(d(),l(t))})}).on("error",l)};c(e)})})(l,i,0,c.remain).then(()=>{j.set(m,{status:"done",progress:100,msg:"완료",file:t})}).catch(t=>{j.set(m,{status:"error",progress:0,msg:t.message})})}return JSON.stringify({ok:!0,jobId:m,dailyLimit:c.limit,dailyUsed:c.used,dailyRemain:c.remain})}),this.On("/Download/Poll",async(t,e,o)=>{const r=t.GetStr("jobId"),s=j.get(r);if(!s)return JSON.stringify({ok:!1,msg:"없는 작업 ID"});const n=JSON.stringify({ok:!0,...s});return"running"!==s.status&&j.delete(r),n})}};v=t([l(["/Download/Status","/Download/Info","/Download/Start","/Download/Poll"])],v);export{v as CDownloadServer};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import * as path from 'path';
+import { CUtilSystem } from '../system/CUtilSystem.js';
+import * as fs from 'fs';
+import * as https from 'https';
+import * as http from 'http';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+import { URLPatterns } from '../network/CServerMain.js';
+import { CServerRouter } from '../network/CServerRouter.js';
+import { CFile } from '../system/CFile.js';
+import { CConsol } from '../basic/CConsol.js';
+import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
+import { CPath } from '../basic/CPath.js';
+const BIN_DIR = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external', 'bin');
+const YTDLP_PATH = path.join(BIN_DIR, 'yt-dlp.exe');
+const FFMPEG_PATH = path.join(BIN_DIR, 'ffmpeg.exe');
+const DAILY_LIMIT_BYTES = 1024 * 1024 * 1024;
+function resolveAbs(p) {
+    return path.resolve(p).replace(/\\/g, '/');
+}
+function isInsideRoot(rootPath, targetPath) {
+    const base = resolveAbs(rootPath).replace(/\/+$/, '');
+    const target = resolveAbs(targetPath);
+    return target === base || target.startsWith(base + '/');
+}
+function getDirSizeBytes(dir) {
+    if (!fs.existsSync(dir))
+        return 0;
+    let total = 0;
+    for (const name of fs.readdirSync(dir)) {
+        const p = path.join(dir, name);
+        try {
+            const st = fs.statSync(p);
+            if (st.isFile())
+                total += st.size;
+            else if (st.isDirectory())
+                total += getDirSizeBytes(p);
+        }
+        catch { }
+    }
+    return total;
+}
+async function getTodayDir() {
+    const config = await GetAppJSON();
+    const d = new Date();
+    const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const dir = path.join(path.resolve(GetRootPaths(config)[0]), 'Downloads', ymd);
+    if (!fs.existsSync(dir))
+        fs.mkdirSync(dir, { recursive: true });
+    return dir;
+}
+async function getTodayUsage() {
+    const dir = await getTodayDir();
+    const used = getDirSizeBytes(dir);
+    return { dir, used, limit: DAILY_LIMIT_BYTES, remain: Math.max(0, DAILY_LIMIT_BYTES - used) };
+}
+function formatBytes(n) {
+    if (n >= 1024 * 1024 * 1024)
+        return (n / (1024 * 1024 * 1024)).toFixed(2) + 'GB';
+    if (n >= 1024 * 1024)
+        return (n / (1024 * 1024)).toFixed(1) + 'MB';
+    if (n >= 1024)
+        return (n / 1024).toFixed(0) + 'KB';
+    return n + 'B';
+}
+const YTDLP_URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+const FFMPEG_ZIP_URL = 'https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip';
+const gJobs = new Map();
+function isYouTubeUrl(url) {
+    return /^https?:\/\/(www\.)?(youtube\.com\/|youtu\.be\/)/.test(url);
+}
+async function ensureYtdlp() {
+    if (fs.existsSync(YTDLP_PATH))
+        return true;
+    CConsol.Log('[Download] yt-dlp.exe 없음 → GitHub 다운로드 시작');
+    await CFile.FolderCreate(BIN_DIR);
+    const data = await CFile.Load(YTDLP_URL);
+    if (!data) {
+        CConsol.Log('[Download] yt-dlp.exe 다운로드 실패');
+        return false;
+    }
+    await CFile.Save(data, YTDLP_PATH);
+    CConsol.Log('[Download] yt-dlp.exe 다운로드 완료');
+    return true;
+}
+async function ensureFfmpeg() {
+    if (fs.existsSync(FFMPEG_PATH))
+        return true;
+    CConsol.Log('[Download] ffmpeg.exe 없음 → GitHub ZIP 다운로드 시작');
+    await CFile.FolderCreate(BIN_DIR);
+    const data = await CFile.Load(FFMPEG_ZIP_URL);
+    if (!data) {
+        CConsol.Log('[Download] ffmpeg ZIP 다운로드 실패');
+        return false;
+    }
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip(Buffer.from(data));
+    const entry = zip.getEntries().find((e) => /\/bin\/ffmpeg\.exe$/i.test(e.entryName));
+    if (!entry) {
+        CConsol.Log('[Download] ZIP 안에서 ffmpeg.exe 못 찾음');
+        return false;
+    }
+    fs.writeFileSync(FFMPEG_PATH, entry.getData());
+    CConsol.Log('[Download] ffmpeg.exe 설치 완료');
+    return true;
+}
+function updateYtdlp() {
+    return new Promise(async (resolve) => {
+        if (!fs.existsSync(YTDLP_PATH)) {
+            resolve('yt-dlp 없음');
+            return;
+        }
+        const proc = (await CUtilSystem.Spawn(YTDLP_PATH, ['-U']));
+        let out = '';
+        proc.stdout.on('data', (d) => out += d.toString());
+        proc.stderr.on('data', (d) => out += d.toString());
+        proc.on('close', () => resolve(out.split('\n')[0]?.trim() || 'yt-dlp 최신 상태'));
+        proc.on('error', () => resolve('yt-dlp 업데이트 실행 실패'));
+    });
+}
+function downloadDirectUrl(url, destPath, onProgress, maxBytes) {
+    return new Promise((resolve, reject) => {
+        const cleanupPartial = () => {
+            try {
+                if (fs.existsSync(destPath))
+                    fs.unlinkSync(destPath);
+            }
+            catch { }
+        };
+        const request = (targetUrl) => {
+            const proto = targetUrl.startsWith('https') ? https : http;
+            proto.get(targetUrl, (res) => {
+                if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+                    request(res.headers.location);
+                    return;
+                }
+                if (res.statusCode !== 200) {
+                    reject(new Error(`HTTP ${res.statusCode}`));
+                    return;
+                }
+                const total = parseInt(res.headers['content-length'] || '0', 10);
+                if (maxBytes != null && total > 0 && total > maxBytes) {
+                    res.resume();
+                    reject(new Error(`Daily download limit (1GB) would be exceeded (file ${formatBytes(total)}, remain ${formatBytes(maxBytes)})`));
+                    return;
+                }
+                let received = 0;
+                let aborted = false;
+                const file = fs.createWriteStream(destPath);
+                res.on('data', (chunk) => {
+                    if (aborted)
+                        return;
+                    received += chunk.length;
+                    if (maxBytes != null && received > maxBytes) {
+                        aborted = true;
+                        res.destroy();
+                        file.destroy();
+                        cleanupPartial();
+                        reject(new Error('Daily download limit (1GB) exceeded'));
+                        return;
+                    }
+                    if (total > 0)
+                        onProgress(Math.round(received / total * 100));
+                });
+                res.pipe(file);
+                file.on('finish', () => {
+                    if (aborted)
+                        return;
+                    file.close();
+                    resolve();
+                });
+                file.on('error', (e) => {
+                    if (aborted)
+                        return;
+                    cleanupPartial();
+                    reject(e);
+                });
+            }).on('error', reject);
+        };
+        request(url);
+    });
+}
+let CDownloadServer = class CDownloadServer extends CServerRouter {
+    constructor() {
+        super();
+        (async () => {
+            const ytOk = await ensureYtdlp();
+            await ensureFfmpeg();
+            if (ytOk) {
+                const result = await updateYtdlp();
+                CConsol.Log('[Download] yt-dlp: ' + result);
+            }
+        })();
+        this.On("/Download/Status", async (_json, _req, _res) => {
+            const usage = await getTodayUsage();
+            return JSON.stringify({
+                ok: true,
+                ytdlp: fs.existsSync(YTDLP_PATH),
+                ffmpeg: fs.existsSync(FFMPEG_PATH),
+                dailyLimit: usage.limit,
+                dailyUsed: usage.used,
+                dailyRemain: usage.remain,
+            });
+        });
+        this.On("/Download/Info", async (_json, _req, _res) => {
+            const url = _json.GetStr("url");
+            if (!url)
+                return JSON.stringify({ ok: false, msg: 'URL이 없습니다' });
+            if (!isYouTubeUrl(url)) {
+                const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'file');
+                return JSON.stringify({ ok: true, title: fileName, general: true });
+            }
+            if (!fs.existsSync(YTDLP_PATH))
+                return JSON.stringify({ ok: false, msg: 'yt-dlp 설치 중입니다. 잠시 후 다시 시도하세요.' });
+            return new Promise(async (resolve) => {
+                const proc = (await CUtilSystem.Spawn(YTDLP_PATH, ['--dump-json', '--no-playlist', '--js-runtimes', 'node', url], 'pipe', '', { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' }));
+                let out = '';
+                let err = '';
+                proc.stdout.on('data', (d) => out += d.toString());
+                proc.stderr.on('data', (d) => err += d.toString());
+                proc.on('close', () => {
+                    try {
+                        const info = JSON.parse(out);
+                        const sec = Math.round(info.duration || 0);
+                        const dur = sec ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '';
+                        resolve(JSON.stringify({ ok: true, title: info.title, duration: dur, channel: info.uploader }));
+                    }
+                    catch {
+                        resolve(JSON.stringify({ ok: false, msg: '정보 조회 실패: ' + err.slice(0, 200) }));
+                    }
+                });
+                proc.on('error', () => resolve(JSON.stringify({ ok: false, msg: 'yt-dlp 실행 오류' })));
+            });
+        });
+        this.On("/Download/Start", async (_json, _req, _res) => {
+            const url = _json.GetStr("url");
+            const format = _json.GetStr("format");
+            if (!url)
+                return JSON.stringify({ ok: false, msg: 'URL이 없습니다' });
+            const usage = await getTodayUsage();
+            if (usage.remain <= 0) {
+                return JSON.stringify({
+                    ok: false,
+                    msg: `Daily download limit (1GB) reached (${formatBytes(usage.used)} / ${formatBytes(usage.limit)})`,
+                    dailyLimit: usage.limit,
+                    dailyUsed: usage.used,
+                    dailyRemain: 0,
+                });
+            }
+            const jobId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+            gJobs.set(jobId, { status: 'running', progress: 0, msg: '시작 중...' });
+            if (!isYouTubeUrl(url)) {
+                const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'download');
+                const todayDir = usage.dir;
+                const destPath = path.join(todayDir, fileName);
+                if (!isInsideRoot(todayDir, destPath)) {
+                    gJobs.set(jobId, { status: 'error', progress: 0, msg: 'Path escapes Downloads' });
+                    return JSON.stringify({ ok: true, jobId });
+                }
+                downloadDirectUrl(url, destPath, (pct) => {
+                    gJobs.set(jobId, { status: 'running', progress: pct, msg: `${pct}%`, file: fileName });
+                }, usage.remain).then(() => {
+                    gJobs.set(jobId, { status: 'done', progress: 100, msg: '완료', file: fileName });
+                }).catch((e) => {
+                    gJobs.set(jobId, { status: 'error', progress: 0, msg: e.message });
+                });
+            }
+            else {
+                if (!fs.existsSync(YTDLP_PATH)) {
+                    gJobs.set(jobId, { status: 'error', progress: 0, msg: 'yt-dlp가 아직 설치되지 않았습니다' });
+                }
+                else {
+                    const todayDir = usage.dir;
+                    const args = format === 'mp3'
+                        ? ['-x', '--audio-format', 'mp3', '--ffmpeg-location', BIN_DIR,
+                            '--js-runtimes', 'node',
+                            '-o', path.join(todayDir, '%(title)s.%(ext)s'), '--no-playlist', url]
+                        : ['-f', 'bestvideo+bestaudio/best', '--merge-output-format', 'mp4',
+                            '--ffmpeg-location', BIN_DIR,
+                            '--js-runtimes', 'node',
+                            '-o', path.join(todayDir, '%(title)s.%(ext)s'), '--no-playlist', url];
+                    const proc = (await CUtilSystem.Spawn(YTDLP_PATH, args, 'pipe', '', { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' }));
+                    let lastFile = '';
+                    let killedForQuota = false;
+                    const quotaTimer = setInterval(() => {
+                        if (getDirSizeBytes(todayDir) > DAILY_LIMIT_BYTES) {
+                            killedForQuota = true;
+                            try {
+                                proc.kill();
+                            }
+                            catch { }
+                        }
+                    }, 2000);
+                    proc.stdout.on('data', (d) => {
+                        const line = d.toString();
+                        const pctMatch = line.match(/\[download\]\s+([\d.]+)%/);
+                        const fileMatch = line.match(/Destination:\s*(.+)/);
+                        if (fileMatch)
+                            lastFile = path.basename(fileMatch[1].trim());
+                        if (pctMatch) {
+                            const pct = Math.round(parseFloat(pctMatch[1]));
+                            gJobs.set(jobId, { status: 'running', progress: pct, msg: `${pct}%`, file: lastFile });
+                        }
+                    });
+                    proc.on('close', (code) => {
+                        clearInterval(quotaTimer);
+                        if (killedForQuota) {
+                            gJobs.set(jobId, { status: 'error', progress: 0, msg: 'Daily download limit (1GB) exceeded', file: lastFile });
+                            return;
+                        }
+                        if (code === 0)
+                            gJobs.set(jobId, { status: 'done', progress: 100, msg: '완료', file: lastFile });
+                        else
+                            gJobs.set(jobId, { status: 'error', progress: 0, msg: `다운로드 실패 (exit ${code})` });
+                    });
+                    proc.on('error', (e) => {
+                        clearInterval(quotaTimer);
+                        gJobs.set(jobId, { status: 'error', progress: 0, msg: e.message });
+                    });
+                }
+            }
+            return JSON.stringify({ ok: true, jobId, dailyLimit: usage.limit, dailyUsed: usage.used, dailyRemain: usage.remain });
+        });
+        this.On("/Download/Poll", async (_json, _req, _res) => {
+            const jobId = _json.GetStr("jobId");
+            const job = gJobs.get(jobId);
+            if (!job)
+                return JSON.stringify({ ok: false, msg: '없는 작업 ID' });
+            const result = JSON.stringify({ ok: true, ...job });
+            if (job.status !== 'running')
+                gJobs.delete(jobId);
+            return result;
+        });
+    }
+};
+CDownloadServer = __decorate([
+    URLPatterns(["/Download/Status", "/Download/Info", "/Download/Start", "/Download/Poll"])
+], CDownloadServer);
+export { CDownloadServer };

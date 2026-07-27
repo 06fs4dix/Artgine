@@ -1,1 +1,52 @@
-import{CMat3 as e,CVec3 as n,max as r,min as w,SaturateV3 as t,V3AddV3 as o,V3DivV3 as a,V3Mix as u,V3MulFloat as p,V3MulMat3Normal as i,V3MulV3 as v,V3SubV3 as f}from"./Shader";export var exposure=1;export var tonemappingType=0;export function Tonemap(x,c,m){return m<.5?x=p(x,c):m<1.5?x=function(e,t){e=p(e,t);var o=w(e.x,w(e.y,e.z)),a=o<.08?o-6.25*o*o:.04;e=f(e,new n(a,a,a));var i=r(e.x,r(e.y,e.z));if(i<.76)return e;var v=.24,x=1-v*v/(i+v-.76);e=p(e,x/i);var c=1-1/(.15*(i-x)+1);return u(e,new n(x,x,x),c)}(x,c):m<2.5?x=function(r,w){var u,x,c,m=new e(new n(.59719,.076,.0284),new n(.35458,.90834,.13383),new n(.04823,.01566,.83777)),y=new e(new n(1.60475,-.10208,-.00327),new n(-.53108,1.10813,-.07276),new n(-.07367,-.00605,1.07602));return r=p(r,w/.6),r=i(r,m),x=f(v(u=r,o(u,new n(.0245786,.0245786,.0245786))),new n(90537e-9,90537e-9,90537e-9)),c=o(v(u,o(p(u,.983729),new n(.432951,.432951,.432951))),new n(.238081,.238081,.238081)),r=a(x,c),r=i(r,y),t(r)}(x,c):m<3.5&&(x=function(e,r){return e=p(e,r),t(a(e,o(e,new n(1,1,1))))}(x,c)),x}
+import { CMat3, CVec3, max, min, SaturateV3, V3AddV3, V3DivV3, V3Mix, V3MulFloat, V3MulMat3Normal, V3MulV3, V3SubV3 } from "./Shader";
+export var exposure = 1.0;
+export var tonemappingType = 0.0;
+function Tonemap_Neutral(_color, _exposure) {
+    var StartCompression = 0.76;
+    var Desaturation = 0.15;
+    _color = V3MulFloat(_color, _exposure);
+    var x = min(_color.x, min(_color.y, _color.z));
+    var offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+    _color = V3SubV3(_color, new CVec3(offset, offset, offset));
+    var peak = max(_color.x, max(_color.y, _color.z));
+    if (peak < StartCompression)
+        return _color;
+    var d = 1.0 - StartCompression;
+    var nPeak = 1.0 - d * d / (peak + d - StartCompression);
+    _color = V3MulFloat(_color, nPeak / peak);
+    var g = 1.0 - 1.0 / (Desaturation * (peak - nPeak) + 1.0);
+    return V3Mix(_color, new CVec3(nPeak, nPeak, nPeak), g);
+}
+function RRTAndODTFit(_v) {
+    var a = V3SubV3(V3MulV3(_v, V3AddV3(_v, new CVec3(0.0245786, 0.0245786, 0.0245786))), new CVec3(0.000090537, 0.000090537, 0.000090537));
+    var b = V3AddV3(V3MulV3(_v, V3AddV3(V3MulFloat(_v, 0.983729), new CVec3(0.4329510, 0.4329510, 0.4329510))), new CVec3(0.238081, 0.238081, 0.238081));
+    return V3DivV3(a, b);
+}
+function Tonemap_ACES(_color, _exposure) {
+    var ACESInputMat = new CMat3(new CVec3(0.59719, 0.07600, 0.02840), new CVec3(0.35458, 0.90834, 0.13383), new CVec3(0.04823, 0.01566, 0.83777));
+    var ACESOutputMat = new CMat3(new CVec3(1.60475, -0.10208, -0.00327), new CVec3(-0.53108, 1.10813, -0.07276), new CVec3(-0.07367, -0.00605, 1.07602));
+    _color = V3MulFloat(_color, _exposure / 0.6);
+    _color = V3MulMat3Normal(_color, ACESInputMat);
+    _color = RRTAndODTFit(_color);
+    _color = V3MulMat3Normal(_color, ACESOutputMat);
+    return SaturateV3(_color);
+}
+function Reinhard(_color, _exposure) {
+    _color = V3MulFloat(_color, _exposure);
+    return SaturateV3(V3DivV3(_color, V3AddV3(_color, new CVec3(1.0, 1.0, 1.0))));
+}
+export function Tonemap(_color, _exposure, _type) {
+    if (_type < 0.5) {
+        _color = V3MulFloat(_color, _exposure);
+    }
+    else if (_type < 1.5) {
+        _color = Tonemap_Neutral(_color, _exposure);
+    }
+    else if (_type < 2.5) {
+        _color = Tonemap_ACES(_color, _exposure);
+    }
+    else if (_type < 3.5) {
+        _color = Reinhard(_color, _exposure);
+    }
+    return _color;
+}

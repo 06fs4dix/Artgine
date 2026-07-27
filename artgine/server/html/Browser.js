@@ -1,1 +1,529 @@
-import{CFecth as e}from"../../network/CFecth.js";import{CPath as t}from"../../basic/CPath.js";import{CHash as n}from"../../basic/CHash.js";import{getAuthToken as o,setAuthToken as a,removeAuthToken as i}from"../CAuthToken.js";import{CIframeMsg as r}from"./CIframeMsg.js";const s=new URLSearchParams(location.search),c=s.get("session")||"",l="1"===s.get("readonly");let d=o(t.WebRootUrl()),u=null,y=3e3,p=0,m=!1,f=75,h=!0;const g=document.getElementById("loginOverlay"),w=document.getElementById("loginPw"),b=document.getElementById("loginBtn"),v=document.getElementById("loginMsg"),x=document.getElementById("screenshot"),k=document.getElementById("logArea"),E=document.getElementById("controlsBar"),C=document.getElementById("rateSlider"),S=document.getElementById("rateLabel"),T=document.getElementById("inputToggle"),L=document.getElementById("imgWrap"),W=document.getElementById("kbBridge"),P=document.getElementById("inputModeRow");function I(e=""){g.style.setProperty("display","flex","important"),e&&(v.textContent=e)}function R(){g.style.setProperty("display","none","important")}async function j(o){v.textContent="";try{const i=await e.Exe(t.WebRootUrl()+"auth/login",{password:n.SHA256("artgine_"+o)},"json");i.ok&&i.token?(d=i.token,a(t.WebRootUrl(),d),R(),M()):v.textContent=i.msg||"Login failed"}catch(e){v.textContent="Network error: "+e.message}}let B=!1,O=!1;function N(){return!B&&!O}function U(){N()&&null===u&&D()}async function D(){if(N()){try{const e=fetch(t.WebRootUrl()+"PlayWright/screenshot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,args:[{type:"jpeg",quality:f}]})}),n=h?fetch(t.WebRootUrl()+"PlayWright/logs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,fromOffset:p})}):null,[o,a]=await Promise.all([e,n]),i=await o.json();if(i.ok&&"base64"===i.result?.type&&(x.src=`data:image/jpeg;base64,${i.result.data}`),a){const e=await a.json();if(e.ok&&e.logs?.length){for(const t of e.logs){const e=document.createElement("div");e.className="error"===t.type||"network"===t.type?"text-danger":"",e.textContent=`[${t.type}] ${t.text}`,k.appendChild(e)}k.scrollTop=k.scrollHeight}e.ok&&null!=e.nextOffset&&(p=e.nextOffset)}}catch{}u=window.setTimeout(D,y)}else u=null}function M(){if(!c)return void(document.body.innerHTML='<div class="text-center text-secondary p-5">No session specified.</div>');function e(e){const t=x.getBoundingClientRect(),n=x.naturalWidth,o=x.naturalHeight;if(!n||!o)return null;const a=Math.min(t.width/n,t.height/o),i=n*a,r=o*a,s=(t.width-i)/2,c=(t.height-r)/2,l=Math.round((e.clientX-t.left-s)/a),d=Math.round((e.clientY-t.top-c)/a);return l<0||d<0||l>n||d>o?null:{cx:l,cy:d}}async function n(e,n){await fetch(t.WebRootUrl()+"PlayWright/exec",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,fn:e,args:n})})}l&&(P.style.display="none"),C.addEventListener("input",()=>{y=1e3*parseFloat(C.value),S.textContent=`${C.value}s`}),T.addEventListener("change",()=>{m=T.checked,L.tabIndex=m?0:-1,m&&W.focus()}),W.addEventListener("keydown",async e=>{if(!m)return;if(e.isComposing||"Unidentified"===e.key||229===e.keyCode)return;if((e.ctrlKey||e.metaKey)&&"c"===e.key.toLowerCase()){e.preventDefault();try{const e=await async function(){const e=await fetch(t.WebRootUrl()+"PlayWright/eval",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,expr:"window.getSelection().toString()"})}),n=await e.json();return n.ok?n.result:null}();"string"==typeof e&&e&&(W.value=e,W.select(),document.execCommand("copy"),W.value="")}catch{}return}if((e.ctrlKey||e.metaKey)&&"v"===e.key.toLowerCase())return;if(e.preventDefault(),e.ctrlKey&&"c"===e.key.toLowerCase()){try{const e=await fetch(t.WebRootUrl()+"PlayWright/eval",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,expr:'window.getSelection()?.toString() ?? ""'})}),n=await e.json(),o="string"==typeof n.result?n.result:"";o&&await navigator.clipboard.writeText(o).catch(()=>{})}catch{}try{await fetch(t.WebRootUrl()+"PlayWright/exec",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,fn:"keyboard.press",args:["Control+C"]})})}catch{}return}if(e.ctrlKey&&"v"===e.key.toLowerCase()){try{const e=await navigator.clipboard.readText();e&&await fetch(t.WebRootUrl()+"PlayWright/exec",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,fn:"keyboard.type",args:[e]})})}catch{}return}const n=1===e.key.length?"keyboard.type":"keyboard.press";try{await fetch(t.WebRootUrl()+"PlayWright/exec",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,fn:n,args:[e.key]})})}catch{}}),W.addEventListener("paste",async e=>{if(!m)return;e.preventDefault();const t=e.clipboardData?.getData("text");if(W.value="",t)try{await n("keyboard.type",[t])}catch{}}),W.addEventListener("input",async e=>{if(!m)return;const t=e;if(t.isComposing)return;const o=t.inputType;W.value="";try{if("deleteContentBackward"===o)return void await n("keyboard.press",["Backspace"]);if("deleteContentForward"===o)return void await n("keyboard.press",["Delete"]);if("insertLineBreak"===o)return void await n("keyboard.press",["Enter"]);t.data&&await n("keyboard.type",[t.data])}catch{}}),W.addEventListener("compositionend",async e=>{if(W.value="",m&&e.data)try{await n("keyboard.type",[e.data])}catch{}}),x.addEventListener("dragstart",e=>e.preventDefault());let o=null,a=!1,i=0,r=0;async function s(){const e=o;if(o=null,e)try{await n("mouse.up",[{button:e}])}catch{}}L.addEventListener("mousedown",async t=>{if(!m)return;t.preventDefault(),W.focus();const i=e(t);if(!i)return;const c=function(e){return 0===e.button?"left":1===e.button?"middle":2===e.button?"right":null}(t);if(c){o&&await s(),o=c,a=!1,r=t.clientY;try{await n("mouse.move",[i.cx,i.cy]),await n("mouse.down",[{button:c}])}catch{}}}),L.addEventListener("mousemove",async t=>{if(!m||!o)return;t.preventDefault();const s=Date.now();if(s-i<30)return;i=s;const c=e(t);if(c){a=!0;try{if(await n("mouse.move",[c.cx,c.cy]),"middle"===o){const e=t.clientY-r;r=t.clientY,0!==e&&await n("mouse.wheel",[0,3*e])}}catch{}}}),L.addEventListener("mouseup",async t=>{if(!m||!o)return;t.preventDefault();const i=o;o=null;const r=e(t);try{r&&await n("mouse.move",[r.cx,r.cy]),!a&&r&&function(e){const t=L.getBoundingClientRect(),n=document.createElement("div");n.style.cssText=`\n            position:absolute;\n            left:${e.clientX-t.left}px;\n            top:${e.clientY-t.top}px;\n            width:24px;height:24px;\n            margin:-12px 0 0 -12px;\n            border-radius:50%;\n            border:2px solid #000;\n            background:rgba(255,120,0,0.5);\n            box-shadow:0 0 0 1.5px #ff7800;\n            pointer-events:none;\n            animation:browser-ripple 0.5s ease-out forwards;\n        `,L.appendChild(n),setTimeout(()=>n.remove(),500)}(t),await n("mouse.up",[{button:i}])}catch{}}),L.addEventListener("mouseleave",async()=>{m&&o&&await s()}),window.addEventListener("mouseup",async()=>{m&&o&&await s()}),L.addEventListener("contextmenu",e=>{m&&e.preventDefault()}),L.addEventListener("wheel",async t=>{if(!m)return;const o=e(t);if(o){t.preventDefault();try{await n("mouse.move",[o.cx,o.cy]),await n("mouse.wheel",[t.deltaX,t.deltaY])}catch{}}}),D()}document.addEventListener("visibilitychange",()=>{B=document.hidden,U()}),r.Recv({"frame-visibility":e=>{O=!e.visible,U()}}),b.addEventListener("click",()=>j(w.value)),w.addEventListener("keydown",e=>{"Enter"===e.key&&j(w.value)}),function(){if(!E)return;const e=document.createElement("div");e.className="d-flex align-items-center gap-1",e.innerHTML=`\n        <input id="qualitySlider" type="range" class="form-range" min="0" max="100" step="1" value="${f}" style="width:100px;">\n        <span id="qualityLabel" style="font-size:0.75rem;min-width:2.4rem;">${f}</span>\n    `,E.insertBefore(e,P);const t=e.querySelector("#qualitySlider"),n=e.querySelector("#qualityLabel");t.addEventListener("input",()=>{const e=Math.trunc(Number(t.value));f=Math.max(0,Math.min(100,Number.isFinite(e)?e:75)),n.textContent=String(f)})}(),function(){if(!E)return;const e=document.createElement("div");e.className="d-flex align-items-center gap-1",e.innerHTML='\n        <span>console</span>\n        <input id="consoleToggle" type="checkbox" class="form-check-input ms-1" checked>\n    ',E.insertBefore(e,P.nextSibling);const t=e.querySelector("#consoleToggle");t.addEventListener("change",()=>{h=t.checked,k.style.display=h?"":"none"})}(),function(){if(!E)return;const e=document.createElement("button");e.type="button",e.className="btn btn-sm btn-outline-secondary py-0 px-2",e.textContent="Reset",E.appendChild(e),e.addEventListener("click",async()=>{e.disabled=!0;try{const n=await fetch(t.WebRootUrl()+"PlayWright/list"),o=await n.json(),a=o.sessions?.find(e=>e.sessionId===c);if(!o.ok||!a)throw new Error("Session not found");const i=await fetch(t.WebRootUrl()+"PlayWright/reset",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:c,browser:a.browserName||"",url:a.currentUrl,ttl:a.ttl||300,logSize:a.logSize||100,width:a.width||1280,height:a.height||720})}),s=await i.json();if(!s.ok)throw new Error(s.msg||"Reset failed");e.textContent="Reset OK",window.parent&&r.Send(window.parent,"browser-sessions-changed"),setTimeout(()=>{e.textContent="Reset"},1e3)}catch{e.textContent="Failed",setTimeout(()=>{e.textContent="Reset"},1500)}finally{e.disabled=!1}})}(),async function(){if(d)try{(await e.Exe(t.WebRootUrl()+"auth/check",{token:d},"json")).authed?(R(),M()):(d="",i(t.WebRootUrl()),I("Session expired. Please sign in again."))}catch{I("Server unreachable")}else I()}();
+import { CFecth } from "../../network/CFecth.js";
+import { CPath } from "../../basic/CPath.js";
+import { CHash } from "../../basic/CHash.js";
+import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
+import { CIframeMsg } from "./CIframeMsg.js";
+const params = new URLSearchParams(location.search);
+const SESSION_ID = params.get('session') || '';
+const READONLY = params.get('readonly') === '1';
+let authToken = getAuthToken(CPath.WebRootUrl());
+let pollTimer = null;
+let pollMs = 3000;
+let logOffset = 0;
+let inputMode = false;
+let screenshotQuality = 75;
+let consoleVisible = true;
+const loginOverlay = document.getElementById('loginOverlay');
+const loginPw = document.getElementById('loginPw');
+const loginBtn = document.getElementById('loginBtn');
+const loginMsg = document.getElementById('loginMsg');
+const screenshot = document.getElementById('screenshot');
+const logArea = document.getElementById('logArea');
+const controlsBar = document.getElementById('controlsBar');
+const rateSlider = document.getElementById('rateSlider');
+const rateLabel = document.getElementById('rateLabel');
+const inputToggle = document.getElementById('inputToggle');
+const imgWrap = document.getElementById('imgWrap');
+const kbBridge = document.getElementById('kbBridge');
+const inputModeRow = document.getElementById('inputModeRow');
+function initResetControl() {
+    if (!controlsBar)
+        return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline-secondary py-0 px-2';
+    btn.textContent = 'Reset';
+    controlsBar.appendChild(btn);
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+            const listRes = await fetch(CPath.WebRootUrl() + 'PlayWright/list');
+            const listJson = await listRes.json();
+            const session = listJson.sessions?.find(s => s.sessionId === SESSION_ID);
+            if (!listJson.ok || !session)
+                throw new Error('Session not found');
+            const resetRes = await fetch(CPath.WebRootUrl() + 'PlayWright/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId: SESSION_ID,
+                    browser: session.browserName || '',
+                    url: session.currentUrl,
+                    ttl: session.ttl || 300,
+                    logSize: session.logSize || 100,
+                    width: session.width || 1280,
+                    height: session.height || 720,
+                })
+            });
+            const resetJson = await resetRes.json();
+            if (!resetJson.ok)
+                throw new Error(resetJson.msg || 'Reset failed');
+            btn.textContent = 'Reset OK';
+            if (window.parent)
+                CIframeMsg.Send(window.parent, 'browser-sessions-changed');
+            setTimeout(() => { btn.textContent = 'Reset'; }, 1000);
+        }
+        catch {
+            btn.textContent = 'Failed';
+            setTimeout(() => { btn.textContent = 'Reset'; }, 1500);
+        }
+        finally {
+            btn.disabled = false;
+        }
+    });
+}
+function initQualityControl() {
+    if (!controlsBar)
+        return;
+    const row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-1';
+    row.innerHTML = `
+        <input id="qualitySlider" type="range" class="form-range" min="0" max="100" step="1" value="${screenshotQuality}" style="width:100px;">
+        <span id="qualityLabel" style="font-size:0.75rem;min-width:2.4rem;">${screenshotQuality}</span>
+    `;
+    controlsBar.insertBefore(row, inputModeRow);
+    const slider = row.querySelector('#qualitySlider');
+    const label = row.querySelector('#qualityLabel');
+    slider.addEventListener('input', () => {
+        const quality = Math.trunc(Number(slider.value));
+        screenshotQuality = Math.max(0, Math.min(100, Number.isFinite(quality) ? quality : 75));
+        label.textContent = String(screenshotQuality);
+    });
+}
+function initConsoleControl() {
+    if (!controlsBar)
+        return;
+    const row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-1';
+    row.innerHTML = `
+        <span>console</span>
+        <input id="consoleToggle" type="checkbox" class="form-check-input ms-1" checked>
+    `;
+    controlsBar.insertBefore(row, inputModeRow.nextSibling);
+    const toggle = row.querySelector('#consoleToggle');
+    toggle.addEventListener('change', () => {
+        consoleVisible = toggle.checked;
+        logArea.style.display = consoleVisible ? '' : 'none';
+    });
+}
+function showOverlay(msg = '') {
+    loginOverlay.style.setProperty('display', 'flex', 'important');
+    if (msg)
+        loginMsg.textContent = msg;
+}
+function hideOverlay() {
+    loginOverlay.style.setProperty('display', 'none', 'important');
+}
+async function tryLogin(pw) {
+    loginMsg.textContent = '';
+    try {
+        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/login', { password: CHash.SHA256('artgine_' + pw) }, 'json');
+        if (j.ok && j.token) {
+            authToken = j.token;
+            setAuthToken(CPath.WebRootUrl(), authToken);
+            hideOverlay();
+            boot();
+        }
+        else {
+            loginMsg.textContent = j.msg || 'Login failed';
+        }
+    }
+    catch (e) {
+        loginMsg.textContent = 'Network error: ' + e.message;
+    }
+}
+async function checkAuth() {
+    if (!authToken) {
+        showOverlay();
+        return;
+    }
+    try {
+        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/check', { token: authToken }, 'json');
+        if (j.authed) {
+            hideOverlay();
+            boot();
+        }
+        else {
+            authToken = '';
+            removeAuthToken(CPath.WebRootUrl());
+            showOverlay('Session expired. Please sign in again.');
+        }
+    }
+    catch {
+        showOverlay('Server unreachable');
+    }
+}
+let pageHidden = false;
+let frameHidden = false;
+function canPoll() { return !pageHidden && !frameHidden; }
+function resumePollIfNeeded() {
+    if (canPoll() && pollTimer === null)
+        poll();
+}
+document.addEventListener('visibilitychange', () => {
+    pageHidden = document.hidden;
+    resumePollIfNeeded();
+});
+CIframeMsg.Recv({
+    'frame-visibility': (data) => {
+        frameHidden = !data.visible;
+        resumePollIfNeeded();
+    },
+});
+async function poll() {
+    if (!canPoll()) {
+        pollTimer = null;
+        return;
+    }
+    try {
+        const screenReq = fetch(CPath.WebRootUrl() + 'PlayWright/screenshot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sessionId: SESSION_ID,
+                args: [{ type: 'jpeg', quality: screenshotQuality }]
+            })
+        });
+        const logsReq = consoleVisible ? fetch(CPath.WebRootUrl() + 'PlayWright/logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: SESSION_ID, fromOffset: logOffset })
+        }) : null;
+        const [rScreen, rLogs] = await Promise.all([
+            screenReq,
+            logsReq,
+        ]);
+        const jScreen = await rScreen.json();
+        if (jScreen.ok && jScreen.result?.type === 'base64') {
+            screenshot.src = `data:image/jpeg;base64,${jScreen.result.data}`;
+        }
+        if (rLogs) {
+            const jLogs = await rLogs.json();
+            if (jLogs.ok && jLogs.logs?.length) {
+                for (const l of jLogs.logs) {
+                    const div = document.createElement('div');
+                    div.className = (l.type === 'error' || l.type === 'network') ? 'text-danger' : '';
+                    div.textContent = `[${l.type}] ${l.text}`;
+                    logArea.appendChild(div);
+                }
+                logArea.scrollTop = logArea.scrollHeight;
+            }
+            if (jLogs.ok && jLogs.nextOffset != null)
+                logOffset = jLogs.nextOffset;
+        }
+    }
+    catch { }
+    pollTimer = window.setTimeout(poll, pollMs);
+}
+function boot() {
+    if (!SESSION_ID) {
+        document.body.innerHTML = '<div class="text-center text-secondary p-5">No session specified.</div>';
+        return;
+    }
+    if (READONLY)
+        inputModeRow.style.display = 'none';
+    rateSlider.addEventListener('input', () => {
+        pollMs = parseFloat(rateSlider.value) * 1000;
+        rateLabel.textContent = `${rateSlider.value}s`;
+    });
+    inputToggle.addEventListener('change', () => {
+        inputMode = inputToggle.checked;
+        imgWrap.tabIndex = inputMode ? 0 : -1;
+        if (inputMode)
+            kbBridge.focus();
+    });
+    kbBridge.addEventListener('keydown', async (e) => {
+        if (!inputMode)
+            return;
+        if (e.isComposing || e.key === 'Unidentified' || e.keyCode === 229)
+            return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            try {
+                const text = await pwEval('window.getSelection().toString()');
+                if (typeof text === 'string' && text) {
+                    kbBridge.value = text;
+                    kbBridge.select();
+                    document.execCommand('copy');
+                    kbBridge.value = '';
+                }
+            }
+            catch { }
+            return;
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+            return;
+        }
+        e.preventDefault();
+        if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+            try {
+                const evalRes = await fetch(CPath.WebRootUrl() + 'PlayWright/eval', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: SESSION_ID, expr: 'window.getSelection()?.toString() ?? ""' })
+                });
+                const evalJson = await evalRes.json();
+                const selected = typeof evalJson.result === 'string' ? evalJson.result : '';
+                if (selected)
+                    await navigator.clipboard.writeText(selected).catch(() => { });
+            }
+            catch { }
+            try {
+                await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: SESSION_ID, fn: 'keyboard.press', args: ['Control+C'] })
+                });
+            }
+            catch { }
+            return;
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'v') {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId: SESSION_ID, fn: 'keyboard.type', args: [text] })
+                    });
+                }
+            }
+            catch { }
+            return;
+        }
+        const fn = e.key.length === 1 ? 'keyboard.type' : 'keyboard.press';
+        try {
+            await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: SESSION_ID, fn, args: [e.key] })
+            });
+        }
+        catch { }
+    });
+    kbBridge.addEventListener('paste', async (e) => {
+        if (!inputMode)
+            return;
+        e.preventDefault();
+        const text = e.clipboardData?.getData('text');
+        kbBridge.value = '';
+        if (text) {
+            try {
+                await pwExec('keyboard.type', [text]);
+            }
+            catch { }
+        }
+    });
+    kbBridge.addEventListener('input', async (e) => {
+        if (!inputMode)
+            return;
+        const ie = e;
+        if (ie.isComposing)
+            return;
+        const inputType = ie.inputType;
+        kbBridge.value = '';
+        try {
+            if (inputType === 'deleteContentBackward') {
+                await pwExec('keyboard.press', ['Backspace']);
+                return;
+            }
+            if (inputType === 'deleteContentForward') {
+                await pwExec('keyboard.press', ['Delete']);
+                return;
+            }
+            if (inputType === 'insertLineBreak') {
+                await pwExec('keyboard.press', ['Enter']);
+                return;
+            }
+            if (ie.data)
+                await pwExec('keyboard.type', [ie.data]);
+        }
+        catch { }
+    });
+    kbBridge.addEventListener('compositionend', async (e) => {
+        kbBridge.value = '';
+        if (!inputMode)
+            return;
+        if (e.data) {
+            try {
+                await pwExec('keyboard.type', [e.data]);
+            }
+            catch { }
+        }
+    });
+    screenshot.addEventListener('dragstart', e => e.preventDefault());
+    function toNativeCoords(e) {
+        const rect = screenshot.getBoundingClientRect();
+        const natW = screenshot.naturalWidth;
+        const natH = screenshot.naturalHeight;
+        if (!natW || !natH)
+            return null;
+        const scale = Math.min(rect.width / natW, rect.height / natH);
+        const dispW = natW * scale;
+        const dispH = natH * scale;
+        const ox = (rect.width - dispW) / 2;
+        const oy = (rect.height - dispH) / 2;
+        const cx = Math.round((e.clientX - rect.left - ox) / scale);
+        const cy = Math.round((e.clientY - rect.top - oy) / scale);
+        if (cx < 0 || cy < 0 || cx > natW || cy > natH)
+            return null;
+        return { cx, cy };
+    }
+    async function pwExec(fn, args) {
+        await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: SESSION_ID, fn, args })
+        });
+    }
+    async function pwEval(expr) {
+        const r = await fetch(CPath.WebRootUrl() + 'PlayWright/eval', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: SESSION_ID, expr })
+        });
+        const j = await r.json();
+        return j.ok ? j.result : null;
+    }
+    function getMouseButton(e) {
+        if (e.button === 0)
+            return 'left';
+        if (e.button === 1)
+            return 'middle';
+        if (e.button === 2)
+            return 'right';
+        return null;
+    }
+    function showRipple(e) {
+        const wrapRect = imgWrap.getBoundingClientRect();
+        const ripple = document.createElement('div');
+        ripple.style.cssText = `
+            position:absolute;
+            left:${e.clientX - wrapRect.left}px;
+            top:${e.clientY - wrapRect.top}px;
+            width:24px;height:24px;
+            margin:-12px 0 0 -12px;
+            border-radius:50%;
+            border:2px solid #000;
+            background:rgba(255,120,0,0.5);
+            box-shadow:0 0 0 1.5px #ff7800;
+            pointer-events:none;
+            animation:browser-ripple 0.5s ease-out forwards;
+        `;
+        imgWrap.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 500);
+    }
+    let _activeButton = null;
+    let _hasMoved = false;
+    let _lastMoveTime = 0;
+    let _lastMiddleY = 0;
+    const MOVE_THROTTLE_MS = 30;
+    async function releaseActiveMouse() {
+        const button = _activeButton;
+        _activeButton = null;
+        if (!button)
+            return;
+        try {
+            await pwExec('mouse.up', [{ button }]);
+        }
+        catch { }
+    }
+    imgWrap.addEventListener('mousedown', async (e) => {
+        if (!inputMode)
+            return;
+        e.preventDefault();
+        kbBridge.focus();
+        const coords = toNativeCoords(e);
+        if (!coords)
+            return;
+        const button = getMouseButton(e);
+        if (!button)
+            return;
+        if (_activeButton)
+            await releaseActiveMouse();
+        _activeButton = button;
+        _hasMoved = false;
+        _lastMiddleY = e.clientY;
+        try {
+            await pwExec('mouse.move', [coords.cx, coords.cy]);
+            await pwExec('mouse.down', [{ button }]);
+        }
+        catch { }
+    });
+    imgWrap.addEventListener('mousemove', async (e) => {
+        if (!inputMode || !_activeButton)
+            return;
+        e.preventDefault();
+        const now = Date.now();
+        if (now - _lastMoveTime < MOVE_THROTTLE_MS)
+            return;
+        _lastMoveTime = now;
+        const coords = toNativeCoords(e);
+        if (!coords)
+            return;
+        _hasMoved = true;
+        try {
+            await pwExec('mouse.move', [coords.cx, coords.cy]);
+            if (_activeButton === 'middle') {
+                const dy = e.clientY - _lastMiddleY;
+                _lastMiddleY = e.clientY;
+                if (dy !== 0)
+                    await pwExec('mouse.wheel', [0, dy * 3]);
+            }
+        }
+        catch { }
+    });
+    imgWrap.addEventListener('mouseup', async (e) => {
+        if (!inputMode || !_activeButton)
+            return;
+        e.preventDefault();
+        const button = _activeButton;
+        _activeButton = null;
+        const coords = toNativeCoords(e);
+        try {
+            if (coords)
+                await pwExec('mouse.move', [coords.cx, coords.cy]);
+            if (!_hasMoved && coords)
+                showRipple(e);
+            await pwExec('mouse.up', [{ button }]);
+        }
+        catch { }
+    });
+    imgWrap.addEventListener('mouseleave', async () => {
+        if (!inputMode || !_activeButton)
+            return;
+        await releaseActiveMouse();
+    });
+    window.addEventListener('mouseup', async () => {
+        if (!inputMode || !_activeButton)
+            return;
+        await releaseActiveMouse();
+    });
+    imgWrap.addEventListener('contextmenu', (e) => {
+        if (!inputMode)
+            return;
+        e.preventDefault();
+    });
+    imgWrap.addEventListener('wheel', async (e) => {
+        if (!inputMode)
+            return;
+        const coords = toNativeCoords(e);
+        if (!coords)
+            return;
+        e.preventDefault();
+        try {
+            await pwExec('mouse.move', [coords.cx, coords.cy]);
+            await pwExec('mouse.wheel', [e.deltaX, e.deltaY]);
+        }
+        catch { }
+    });
+    poll();
+}
+loginBtn.addEventListener('click', () => tryLogin(loginPw.value));
+loginPw.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+    tryLogin(loginPw.value); });
+initQualityControl();
+initConsoleControl();
+initResetControl();
+checkAuth();

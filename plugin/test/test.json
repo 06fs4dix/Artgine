@@ -4,6 +4,12 @@
     },
     "version":1,
     "text":"test용",
-    "include":true
-
+    "include":true,
+    "client":["test.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Artgine",
+        "Revision":"20250629",
+        "Comment":"테스트 플러그인!"
+    }
 }

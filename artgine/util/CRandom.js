@@ -1,1 +1,15 @@
-import{CMath as t}from"../geometry/CMath.js";import{CVec3 as r}from"../geometry/CVec3.js";export class CRandom{static MinMax(t,r){return Math.random()*(r-t)+t}static Int(t=268435455){return Math.trunc(Math.random()*t)}static Dir(a=!1){return a?t.V3Nor(new r(Math.random()-.5,Math.random()-.5,0)):t.V3Nor(new r(Math.random()-.5,Math.random()-.5,Math.random()-.5))}}
+import { CMath } from "../geometry/CMath.js";
+import { CVec3 } from "../geometry/CVec3.js";
+export class CRandom {
+    static MinMax(_min, _max) {
+        return Math.random() * (_max - _min) + _min;
+    }
+    static Int(_max = 268435455) {
+        return Math.trunc(Math.random() * _max);
+    }
+    static Dir(_2d = false) {
+        if (_2d)
+            return CMath.V3Nor(new CVec3(Math.random() - 0.5, Math.random() - 0.5, 0));
+        return CMath.V3Nor(new CVec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5));
+    }
+}

@@ -17,7 +17,7 @@ import {CJSON} from '../artgine/basic/CJSON.js';
 import {CAlert} from '../artgine/basic/CAlert.js';
 import {CConsol} from '../artgine/basic/CConsol.js';
 import {CAI} from '../artgine/util/CAI.js';
-import {CCMDMgr} from './CCMDMgr.js';
+import {CCMDMgr} from '../artgine/system/CCMDMgr.js';
 import {CPath} from '../artgine/basic/CPath.js';
 import {CString} from '../artgine/basic/CString.js';
 
@@ -81,6 +81,12 @@ if(gAppJSON==null)
 {
 	const port = new URL(gAppJSON.url).port || "default";
 	app.setPath('userData', app.getPath('userData') + "-" + port);
+}
+
+// developer 모드: 개발 소스 편집/타입체크에 필요한 패키지(*Dev)를 TSC·개발 UI 진입 전에 설치
+if (gAppJSON.program == "developer")
+{
+	await CCMDMgr.NPMInstall(["*Dev"]);
 }
 
 var gTSCPID=0;
@@ -191,7 +197,6 @@ async function RunServer()
 	
 	if(gAppJSON.server.indexOf("webServer")!=-1)
 	{
-		
 		const parsed = new URL(gAppJSON.url);
 		const port = parsed.port;       // "8080"
 		const pathname = parsed.pathname; // "/Artgine"
@@ -645,6 +650,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	let IStr="";
 	let MStr="";
 	let EStr="";
+	let serverScriptStr=""; // 의존 플러그인의 server 목록 파일들 - 프로젝트 js <script> 삽입 줄 바로 위에 순차적으로 들어감
 
 	let ChromeStartCreate=async ()=>{
 		// GitHub 모드일 때 start.bat 파일 생성
@@ -962,9 +968,12 @@ ipcMain.handle("NewPage", async (_event, _json: {
 			pfStr+= "\nimport {CPlugin} from \""+upFolder+"artgine/util/CPlugin.js\";\n";
 			for(let p in _json.projetJSON.dependencies)
 			{
-				//let pInfo=GetPluginMap().get(p);
+				let pInfo=GetPluginMap().get(p);
 				pfStr+="CPlugin.PushPath('"+p+"','"+upFolder+"plugin/"+p+"/');\n";
-				pfStr+="import \""+upFolder+"plugin/"+p+"/"+p+".js\"\n";
+				for(let file of pInfo.client)
+					pfStr+="import \""+upFolder+"plugin/"+p+"/"+file+"\"\n";
+				for(let file of pInfo.server)
+					serverScriptStr+="<script type=\"server\" src=\""+upFolder+"plugin/"+p+"/"+file+"\"></script>\n";
 			}
 			pfStr+= "var gAtl = new CAtelier();\n";
 			pfStr+= "gAtl.mPF = gPF;\n";
@@ -1044,6 +1053,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	if(_json.appJSON.github==true)
 	{
 		buf=await CFile.Load(savePath+".js");
+		IStr+=serverScriptStr;
 		IStr+="<script type='module'>\n";
 		IStr+=CUtil.ArrayToString(buf);
 		IStr+="</script>\n";
@@ -1054,6 +1064,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	}
 	else
 	{
+		IStr+=serverScriptStr;
 		IStr+="<script type='module' src='"+projectName+".js'></script>\n";
 	}
 	

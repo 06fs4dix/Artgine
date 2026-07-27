@@ -1,10 +1,30 @@
-import { CORMField, CRDBMS } from "./CORM.js";
-import * as mssql from "mssql";
+import { CORMCondition, CORMField, CORMOption, CRDBMS } from "./CORM.js";
+import { CCMDMgr } from "../system/CCMDMgr.js";
+import { CFileDB } from "../basic/CJSON.js";
+
+let mssqlModule: any = null;
+let mssqlLoad: Promise<any> = null;
 
 export class CMssql extends CRDBMS {
-    protected mConn: mssql.ConnectionPool;
+    protected mConn: any;
+
+    /** mssql 설치(NPMInstall) 후 동적 로드 (프로세스당 1회) */
+    private static EnsureModule(): Promise<any> {
+        if (mssqlModule) return Promise.resolve(mssqlModule);
+        if (!mssqlLoad) {
+            mssqlLoad = (async () => {
+                await CCMDMgr.NPMInstall(["mssql"]);
+                // @ts-ignore optional runtime dep — NPMInstall 후 로드
+                const mod: any = await import("mssql");
+                mssqlModule = mod.default ?? mod;
+                return mssqlModule;
+            })();
+        }
+        return mssqlLoad;
+    }
 
     override async Init(): Promise<void> {
+        const mssql = await CMssql.EnsureModule();
         this.mConn = await mssql.connect({
             user: this.mAuth.mID,
             password: this.mAuth.mPW,
@@ -18,34 +38,112 @@ export class CMssql extends CRDBMS {
         });
     }
 
+    /** CRDBMS 공통 SQL의 `?` 플레이스홀더를 mssql `@pN` 바인딩으로 변환 */
+    private prepareRequest(_query: string, _objVec: Array<any> = null): { request: any, query: string } {
+        const request = this.mConn.request();
+        let query = _query;
+        if (_objVec && _objVec.length > 0) {
+            let idx = 0;
+            query = _query.replace(/\?/g, () => {
+                const name = `p${idx}`;
+                request.input(name, _objVec[idx]);
+                idx++;
+                return `@${name}`;
+            });
+            // 쿼리에 `?`가 없고 이미 @pN 형태인 경우 그대로 바인딩
+            if (idx === 0) {
+                _objVec.forEach((val, i) => request.input(`p${i}`, val));
+            }
+        }
+        return { request, query };
+    }
+
     override async Send(_query: string, _objVec: Array<any> = null): Promise<void> {
         if (!this.mConn) throw new Error("Connection not initialized");
 
-        const request = this.mConn.request();
-        if (_objVec) {
-            _objVec.forEach((val, idx) => {
-                request.input(`p${idx}`, val);
-            });
-        }
-        await request.query(_query);
+        const { request, query } = this.prepareRequest(_query, _objVec);
+        await request.query(query);
     }
 
     override async Recv(_query: string, _objVec: Array<any> = null): Promise<any[][]> {
         if (!this.mConn) throw new Error("Connection not initialized");
 
-        const request = this.mConn.request();
-        if (_objVec) {
-            _objVec.forEach((val, idx) => {
-                request.input(`p${idx}`, val);
-            });
-        }
-        const result = await request.query(_query);
+        const { request, query } = this.prepareRequest(_query, _objVec);
+        const result = await request.query(query);
         return result.recordset.map(row => Object.values(row));
+    }
+
+    /** MSSQL은 `LIMIT offset, count` 문법을 지원하지 않아 공통 CRDBMS.Select(CORM_imple)를 그대로 못 쓴다.
+     *  OFFSET/FETCH NEXT는 ORDER BY가 필수라 정렬 지정이 없으면 `(SELECT NULL)`로 채운다. */
+    override async Select(_collection: string, _condition: Array<CORMCondition>, _projection: string[], _limit: CORMOption): Promise<object[]> {
+        if (!_projection || _projection.length === 0) _projection = await this.GetProjection(_collection);
+
+        const columns = _projection.length > 0 ? _projection.map(k => `${k}`).join(',') : '*';
+        let sql = `SELECT ${columns} FROM ${_collection}`;
+        if (_condition == null) _condition = [];
+
+        const whereClause = _condition.map((c, i) => {
+            const logic = i === 0 ? '' : ` ${c.mLogical.toUpperCase()}`;
+            if (c.mCondition == "==") return `${logic} ${c.mKey} = ?`;
+            return `${logic} ${c.mKey} ${c.mCondition} ?`;
+        }).join('');
+        const whereParams = _condition.map(c => c.mValue);
+
+        if (whereClause.length > 0) sql += ` WHERE ${whereClause}`;
+
+        const orderBy = _limit?.mOrderBy || '(SELECT NULL)';
+        sql += ` ORDER BY ${orderBy}`;
+        if (_limit?.mASC == false) sql += ` DESC`;
+        if (_limit?.mLimit > 0) sql += ` OFFSET ${_limit.mLimitOffset} ROWS FETCH NEXT ${_limit.mLimit} ROWS ONLY`;
+
+        const rows: any[][] = await this.Recv(sql, whereParams);
+        if (rows == null) return null;
+
+        const result: Record<string, any>[] = [];
+        for (const row of rows) {
+            const rowObj: Record<string, any> = {};
+            for (let i = 0; i < _projection.length; i++) {
+                rowObj[_projection[i]] = row[i];
+            }
+            result.push(rowObj);
+        }
+
+        if (this.mFileDB) {
+            const gridList: Array<CFileDB> = [];
+            for (const doc of result) {
+                for (const key of Object.keys(doc)) {
+                    if (typeof doc[key] === 'string' && doc[key].startsWith('#GridFS:')) {
+                        gridList.push({ mDoc: doc, mKey: key });
+                    }
+                }
+            }
+            await this.FileDBDownload(gridList);
+        }
+
+        return result as any;
     }
 
     override async Close() {
         await this.mConn?.close();
     }
+
+    override async IsCollection(_name: string): Promise<boolean> {
+        const rows = await this.Recv(
+            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = ?",
+            [_name]
+        );
+        return rows != null && rows.length > 0;
+    }
+
+    override async GetProjection(_table: string): Promise<string[]> {
+        const columnRows = await this.Recv(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION",
+            [_table]
+        );
+        if (!columnRows) return [];
+        return columnRows.map(row => row[0]);
+    }
+
     override async GetCollection(): Promise<string[]> {
         const rows = await this.Recv("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'");
         return rows.map(row => row[0]);

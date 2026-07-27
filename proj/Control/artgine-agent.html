@@ -227,7 +227,10 @@
   .mock-panel { background: #0d1117; padding: 10px; }
 
   /* ── Interactive Control-app shell mock (Usage tab) ── */
-  .ctrlmock-explain { background: #161b22; border: 1px solid #30363d; border-left: 3px solid #58a6ff; border-radius: 8px; padding: .75rem 1rem; color: #c9d1d9; font-size: .92rem; min-height: 2.6em; display: flex; align-items: center; }
+  /* display:block — flex(row)면 설명 HTML의 <strong>/<ul>이 가로로 나란히 붙으며 글자가 깨져 보임(경로 ⋯ 등) */
+  .ctrlmock-explain { background: #161b22; border: 1px solid #30363d; border-left: 3px solid #58a6ff; border-radius: 8px; padding: .75rem 1rem; color: #c9d1d9; font-size: .92rem; min-height: 2.6em; display: block; line-height: 1.5; }
+  .ctrlmock-explain ul { margin: .4rem 0 0; padding-left: 1.25rem; }
+  .ctrlmock-explain li { margin-bottom: .3rem; }
   .ctrlmock-explain.flash { animation: ctrlExplainFlash .6s ease-out; }
   @keyframes ctrlExplainFlash {
     0% { background: #1a2f22; border-left-color: #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,.28); transform: scale(1.01); }
@@ -242,16 +245,55 @@
   .ctrlmock-item, .ctrlmock-clickable { cursor: pointer; }
   .ctrlmock-item { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; color: #c9d1d9; padding: .4rem .6rem; font-size: .8rem; }
   .ctrlmock-item:hover, .ctrlmock-clickable:hover { border-color: #58a6ff; }
-  /* Control #ctrl-root-sel 과 동일한 Root/Working Path 셀렉트 */
-  .ctrlmock-root-sel {
-    width: 100%; background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
-    color: #c9d1d9; font-size: .8rem; padding: .35rem .5rem; cursor: pointer;
+  /* Control 좌측 Agent/Other 하위 탭(pill) */
+  .ctrlmock-subtabs { display: flex; gap: 4px; margin: 4px 0 2px; }
+  .ctrlmock-subtab {
+    flex: 1; background: transparent; border: 1px solid #30363d; border-radius: 6px;
+    color: #8b949e; font-size: .72rem; font-weight: 600; padding: .3rem .4rem; cursor: pointer;
   }
-  .ctrlmock-root-sel:hover, .ctrlmock-root-sel:focus {
-    border-color: #58a6ff; outline: none; box-shadow: 0 0 0 2px rgba(88,166,255,.15);
+  .ctrlmock-subtab:hover { color: #c9d1d9; border-color: #58a6ff; }
+  .ctrlmock-subtab.active { color: #58a6ff; background: #1a2332; border-color: #30363d; }
+  .ctrlmock-add-folder {
+    width: 100%; background: transparent; border: 1px solid #30363d; border-radius: 6px;
+    color: #8b949e; font-size: .72rem; font-weight: 600; padding: .35rem .5rem; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
   }
-  .ctrlmock-root-sel option { background: #161b22; color: #c9d1d9; }
+  .ctrlmock-add-folder:hover, .ctrlmock-add-folder.ctrlmock-clickable:hover { border-color: #58a6ff; color: #c9d1d9; }
+  /* Agent 경로 그룹 헤더(접기 + ... 생성 메뉴) */
+  .ctrlmock-agent-group { display: flex; flex-direction: column; gap: 4px; }
+  .ctrlmock-agent-head {
+    display: flex; align-items: center; gap: 4px; padding: 4px 6px; border-radius: 5px;
+    background: #21262d; border: 1px solid #30363d; box-shadow: inset 3px 0 0 #1f6feb;
+    font-size: .72rem; font-weight: 600; color: #c9d1d9; cursor: pointer; user-select: none;
+  }
+  .ctrlmock-agent-head:hover { background: #1a2332; }
+  .ctrlmock-agent-caret { font-size: .65rem; color: #58a6ff; flex-shrink: 0; }
+  .ctrlmock-agent-path { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; direction: rtl; text-align: left; }
+  .ctrlmock-agent-path > span { unicode-bidi: plaintext; }
+  .ctrlmock-agent-count { color: #6e7681; font-size: .65rem; flex-shrink: 0; }
+  .ctrlmock-agent-dots { color: #6e7681; font-size: .8rem; flex-shrink: 0; padding: 0 2px; line-height: 1; }
+  .ctrlmock-agent-body { display: flex; flex-direction: column; gap: 4px; padding-left: 6px; }
+  .ctrlmock-agent-group.collapsed .ctrlmock-agent-body { display: none; }
+  .ctrlmock-agent-group.collapsed .ctrlmock-agent-caret { transform: rotate(-90deg); display: inline-block; }
   .ctrlmock-item.active, .mock-sess.ctrlmock-clickable.active { border-color: #58a6ff; background: #1a2332; }
+  /* Multiplexer(tmux) 목업 패널 */
+  .mock-tmux { display: flex; flex-direction: column; min-height: 300px; border: 1px solid #21262d; border-radius: 6px; overflow: hidden; background: #0d1117; position: relative; }
+  .mock-tmux-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; flex: 1; min-height: 280px; }
+  .mock-tmux-pane { border: 1px solid #21262d; padding: 8px; font-size: 11px; color: #8b949e; overflow: hidden; position: relative; background: #0d1117; }
+  .mock-tmux-pane .pane-label { font-size: 10px; font-weight: 700; color: #58a6ff; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+  .mock-tmux-pane .pane-body { font-family: Consolas, monospace; font-size: 10px; line-height: 1.45; color: #c9d1d9; }
+  .mock-tmux-menu {
+    position: absolute; top: 6px; right: 6px; background: #161b22; border: 1px solid #30363d;
+    border-radius: 6px; padding: 2px 8px; font-size: 12px; color: #8b949e; z-index: 2;
+  }
+  .mock-tmux-cfg {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.15); gap: 4px;
+  }
+  .mock-tmux-cfg span {
+    background: #161b22; border: 1px solid #30363d; border-radius: 4px; padding: 2px 6px;
+    font-size: 10px; color: #c9d1d9;
+  }
   .ctrlmock-center { display: flex; flex-direction: column; }
   .ctrlmock-topbar { display: flex; align-items: center; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #21262d; flex-wrap: wrap; position: relative; }
   .ctrlmock-tabbtn { background: transparent; border: 1px solid transparent; border-radius: 6px; color: #8b949e; padding: .4rem .7rem; font-size: .8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: .35rem; }
@@ -540,7 +582,7 @@
         <div class="feature-card p-4 h-100">
           <i class="bi bi-search fs-2" style="color:#58a6ff;"></i>
           <h5 class="mt-3" data-CLan="fFileMgrTitle">File Manager / Search</h5>
-          <p class="text-muted mb-0 small" data-CLan="fFileMgrDesc">Provides File Manager and file search. Click search results to navigate to the location, and use the management menu for root selection and version control.</p>
+          <p class="text-muted mb-0 small" data-CLan="fFileMgrDesc">Full File tab for browse/edit/upload/Git. File-name search opens a modal with <strong>checkboxes for every registered path</strong> (local + authenticated remotes). <kbd>F2</kbd> checks all paths; path-group <strong>⋯ → Search</strong> checks only that path (you can toggle more). Search runs across checked scopes; files open in Editor.</p>
         </div>
       </div>
       <div class="col-md-6 col-lg-4">
@@ -561,7 +603,7 @@
         <div class="feature-card p-4 h-100">
           <i class="bi bi-clock-history fs-2" style="color:#d29922;"></i>
           <h5 class="mt-3" data-CLan="fScheduleTitle">Scheduler</h5>
-          <p class="text-muted mb-0 small" data-CLan="fScheduleDesc">Register recurring tasks and a sub agent runs them automatically at the set time. Configure interval, run count, and stop conditions.</p>
+          <p class="text-muted mb-0 small" data-CLan="fScheduleDesc">Option → Schedule dispatches work orders to a Sub Agent. <strong>Interval</strong> (delay, count, start/end offsets, auto-delete when count ends) or <strong>Time</strong> (days of week + hour:minute, optional run-once-then-delete).</p>
         </div>
       </div>
       <div class="col-md-6 col-lg-4">
@@ -594,6 +636,13 @@
       </div>
       <div class="col-md-6 col-lg-4">
         <div class="feature-card p-4 h-100">
+          <i class="bi bi-grid-3x3-gap fs-2" style="color:#d2a8ff;"></i>
+          <h5 class="mt-3" data-CLan="fTmuxTitle">Multiplexer</h5>
+          <p class="text-muted mb-0 small" data-CLan="fTmuxDesc">Split the center into panes like tmux and view Chat, Terminal, Browser, and RDP side by side. Config mode for split/merge/select; Work mode for direct interaction. Layout is remembered.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card p-4 h-100">
           <i class="bi bi-cpu fs-2" style="color:#3fb950;"></i>
           <h5 class="mt-3" data-CLan="fLocalModelTitle">Local Models</h5>
           <p class="text-muted mb-0 small" data-CLan="fLocalModelDesc">Register an Ollama or LM Studio server with a single address and the model list is detected automatically — ready to use straight away.</p>
@@ -604,6 +653,13 @@
           <i class="bi bi-journal-text fs-2" style="color:#f778ba;"></i>
           <h5 class="mt-3" data-CLan="fLogTitle">Logs</h5>
           <p class="text-muted mb-0 small" data-CLan="fLogDesc">Browse the history of every AI session — Chat, Terminal, and more — in one place. Delete individual sessions or clear all logs at once.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card p-4 h-100">
+          <i class="bi bi-chat-dots-fill fs-2" style="color:#58a6ff;"></i>
+          <h5 class="mt-3" data-CLan="fMessengerTitle">Messenger</h5>
+          <p class="text-muted mb-0 small" data-CLan="fMessengerDesc">Register Telegram or Discord bots, share a join link, link a Terminal session, send direct messages, and watch the conversation log in the Messenger panel (More → Messenger).</p>
         </div>
       </div>
     </div>
@@ -736,6 +792,17 @@
         </div>
       </div>
 
+      <div class="col-md-6 col-lg-4 scroll-reveal">
+        <div class="feature-card p-4 h-100">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-chat-dots-fill" style="color:#58a6ff;font-size:1.2rem;"></i>
+            <span class="text-muted small" data-CLan="ucTag12">Messenger + Terminal</span>
+          </div>
+          <div class="uc-msg mb-3" data-CLan="ucMsg12">Link Telegram to my coding terminal so I can ask the agent from my phone</div>
+          <p class="text-muted small mb-0" data-CLan="ucDesc12">Register a Telegram or Discord bot under More → Messenger, open the join link, then Link an open Terminal session. Chat from the messenger goes to that PTY; replies and Control direct messages show up in the live log.</p>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -749,22 +816,9 @@
 
     <!-- App shell mock -->
     <div class="ctrlmock-shell mb-3" id="ctrlMock">
-      <!-- LEFT SIDEBAR -->
+      <!-- LEFT SIDEBAR: RDP → Agent/Other 하위 탭 → (Agent: 경로 그룹 Chat/Term, Other: Browser/Editor) -->
       <div class="ctrlmock-col ctrlmock-left">
-        <div class="ctrlmock-label" data-CLan="uLeftRootLabel">Root</div>
-        <!-- Control ctrl-root-sel: File/Root 목록 + 맨 끝 Artgine (WorkingPath) -->
-        <div class="d-flex gap-1">
-          <select class="ctrlmock-root-sel" data-explain="dRootSel" aria-label="Root / Working Path">
-            <option value="E:/">E:/</option>
-            <option value="D:/git/Artgine">D:/git/Artgine</option>
-            <option value="D:/work">D:/work</option>
-            <option value="./" selected>Artgine (WorkingPath)</option>
-          </select>
-          <!-- Control ctrlRootAddFolderBtn: workFolder 모달을 여는 + 버튼 -->
-          <button type="button" class="ctrlmock-minibtn flex-shrink-0 ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dRootAddFolder" title="Add Working Folder"><i class="bi bi-plus-lg"></i></button>
-        </div>
-
-        <div class="ctrlmock-label mt-2" data-CLan="uLeftRdpLabel">RDP</div>
+        <div class="ctrlmock-label" data-CLan="uLeftRdpLabel">RDP</div>
         <!-- Control rdpRenderList(): Local = pc 아이콘+이름(+링크 버튼), Remote = 네트워크 아이콘+URL. 상태 점 없음 -->
         <div class="mock-sess active ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dRdpLocal" data-center="rdp-local">
           <div class="name"><i class="bi bi-pc-display"></i> Local <i class="bi bi-link-45deg text-secondary ms-auto" style="font-size:12px;"></i></div>
@@ -773,47 +827,80 @@
           <div class="name"><i class="bi bi-hdd-network"></i> <span class="text-truncate" style="font-size:11px;font-weight:500;">http://192.168.0.20:8050/Artgine/proj/Control/Control.html</span></div>
         </div>
 
-        <div class="ctrlmock-label mt-2" data-CLan="uLeftSessLabel">Sessions</div>
-        <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessChat" data-center="chat">
-          <div class="name"><span class="status-dot status-idle"></span> Chat · Control UI update</div>
+        <div class="ctrlmock-subtabs" id="ctrlMockSubTabs">
+          <button type="button" class="ctrlmock-subtab active" data-group="sbsub" data-explain="dSbAgent" data-sbtab="agent">Agent</button>
+          <button type="button" class="ctrlmock-subtab" data-group="sbsub" data-explain="dSbOther" data-sbtab="other">Other</button>
         </div>
-        <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessTerm" data-center="term-cmd">
-          <div class="name"><span class="status-dot status-idle"></span> cmd : local</div>
-          <div class="sub">D:/git/Artgine</div>
+
+        <!-- Agent: Add Working Folder + workingDir 경로별 그룹 -->
+        <div id="ctrlMockAgentPane">
+          <button type="button" class="ctrlmock-add-folder ctrlmock-clickable mb-1" data-group="left" tabindex="0" role="button" data-explain="dRootAddFolder" data-modal="workfolder" title="Add Working Folder">
+            <i class="bi bi-plus-lg"></i> <span data-CLan="uLeftAddFolder">Add Working Folder</span>
+          </button>
+          <div class="ctrlmock-agent-group" data-explain="dAgentGroup" tabindex="0" role="button">
+            <div class="ctrlmock-agent-head">
+              <span class="ctrlmock-agent-caret">▾</span>
+              <span class="ctrlmock-agent-path"><span>D:/git/Artgine</span></span>
+              <span class="ctrlmock-agent-count">3</span>
+              <span class="ctrlmock-agent-dots" data-explain="dAgentGroupNew" title="Chat / Terminal / Search">⋯</span>
+            </div>
+            <div class="ctrlmock-agent-body">
+              <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessChat" data-center="chat">
+                <div class="name"><span class="status-dot status-idle"></span> Chat · Control UI update</div>
+              </div>
+              <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessTerm" data-center="term-cmd">
+                <div class="name"><span class="status-dot status-idle"></span> cmd : local</div>
+              </div>
+              <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessTerm" data-center="term-claude">
+                <div class="name"><span class="status-dot status-busy"></span> claude : app</div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrlmock-agent-group mt-1" data-explain="dAgentGroup" tabindex="0" role="button">
+            <div class="ctrlmock-agent-head">
+              <span class="ctrlmock-agent-caret">▾</span>
+              <span class="ctrlmock-agent-path"><span>./</span></span>
+              <span class="ctrlmock-agent-count">1</span>
+              <span class="ctrlmock-agent-dots" data-explain="dAgentGroupNew" title="Chat / Terminal / Search">⋯</span>
+            </div>
+            <div class="ctrlmock-agent-body">
+              <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessTerm" data-center="term-grok">
+                <div class="name"><span class="status-dot status-idle"></span> grok : app</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessTerm" data-center="term-claude">
-          <div class="name"><span class="status-dot status-busy"></span> claude : app</div>
-          <div class="sub">D:/git/Artgine</div>
-        </div>
-        <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessTerm" data-center="term-grok">
-          <div class="name"><span class="status-dot status-idle"></span> grok : app</div>
-          <div class="sub">D:/git/Artgine</div>
-        </div>
-        <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessBrowser" data-center="browser">
-          <div class="name"><span class="status-dot status-idle"></span> Browser · docs preview</div>
-        </div>
-        <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessEditor" data-center="editor">
-          <div class="name"><span class="status-dot status-idle"></span> Editor · Control.ts</div>
+
+        <!-- Other: Browser/Editor 평면 최신순 -->
+        <div id="ctrlMockOtherPane" class="d-none">
+          <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessBrowser" data-center="browser">
+            <div class="name"><span class="status-dot status-idle"></span> Browser · docs preview</div>
+          </div>
+          <div class="mock-sess ctrlmock-clickable" data-group="left" tabindex="0" role="button" data-explain="dSessEditor" data-center="editor">
+            <div class="name"><span class="status-dot status-idle"></span> Editor · Control.ts</div>
+          </div>
         </div>
       </div>
 
       <!-- CENTER -->
       <div class="ctrlmock-col ctrlmock-center">
         <div class="ctrlmock-topbar">
-          <button type="button" class="ctrlmock-tabbtn active" data-group="top" data-explain="dTabFile" data-center="file"><i class="bi bi-folder-fill"></i> File</button>
-          <button type="button" class="ctrlmock-tabbtn" data-group="top" data-explain="dBtnSearch" data-modal="search"><i class="bi bi-search"></i> Search</button>
-          <!-- Terminal 탭 = New Terminal 모달만 연다(중앙 패널을 term으로 바꾸지 않음). 기존 세션은 좌측 Sessions에서 연다. -->
-          <button type="button" class="ctrlmock-tabbtn" data-explain="dTabTerm" data-modal="newterm"><i class="bi bi-terminal"></i> Terminal</button>
+          <!-- 실제 Control 상단: File / Multiplexer + More(Memo·RDP·Chat·Terminal·Browser·Team·Download·Log·Messenger·Help). Search는 좌측 경로 ⋯ 또는 F2 -->
+          <button type="button" class="ctrlmock-tabbtn" data-group="top" data-explain="dTabFile" data-center="file"><i class="bi bi-folder-fill"></i> File</button>
+          <button type="button" class="ctrlmock-tabbtn" data-group="top" data-explain="dMoreTmux" data-center="tmux"><i class="bi bi-grid-3x3-gap"></i> Multiplexer</button>
           <div class="ctrlmock-dropdown-wrap">
             <button type="button" class="ctrlmock-tabbtn" id="ctrlMoreBtn" data-group="top" data-explain="dBtnMore"><i class="bi bi-three-dots"></i> More</button>
             <div class="ctrlmock-dropdown-menu" id="ctrlMoreMenu">
               <button type="button" data-group="more" data-explain="dMoreMemo" data-center="memo"><i class="bi bi-journal-text"></i> Memo</button>
               <button type="button" data-group="more" data-explain="dMoreRdp" data-modal="addrdp"><i class="bi bi-display"></i> RDP</button>
               <button type="button" data-group="more" data-explain="dMoreChat" data-modal="newchat"><i class="bi bi-chat-dots"></i> Chat</button>
+              <button type="button" data-group="more" data-explain="dMoreTerm" data-modal="newterm"><i class="bi bi-terminal"></i> Terminal</button>
               <button type="button" data-group="more" data-explain="dMoreBrowser" data-modal="newbrowser"><i class="bi bi-browser-chrome"></i> Browser</button>
               <button type="button" data-group="more" data-explain="dMoreTeam" data-modal="newteam"><i class="bi bi-people"></i> Team</button>
               <button type="button" data-group="more" data-explain="dMoreDownload" data-center="download"><i class="bi bi-cloud-download-fill"></i> Download</button>
               <button type="button" data-group="more" data-explain="dMoreLog" data-center="log"><i class="bi bi-journal-code"></i> Log</button>
+              <button type="button" data-group="more" data-explain="dMoreMessenger" data-center="messenger"><i class="bi bi-chat-dots-fill"></i> Messenger</button>
+              <button type="button" data-group="more" data-explain="dMoreHelp" data-center="help"><i class="bi bi-question-circle"></i> Help</button>
             </div>
           </div>
         </div>
@@ -835,25 +922,32 @@
 
     <!-- Description text library (localized, hidden — copied into #ctrlExplain on click) -->
     <div class="d-none" id="ctrlDescLib">
-      <div data-key="dRootSel" data-CLan="dRootSel"><strong>Root select.</strong> Dropdown of server working folders (File/Root list) plus <em>Artgine (WorkingPath)</em> at the end. Changing it updates File, Terminal/Chat default cwd, and follows the active RDP server's roots.</div>
-      <div data-key="dRootAddFolder" data-CLan="dRootAddFolder"><strong>Add Working Folder (+).</strong> Next to the root select. Edits the server's allowed root folders (one per line). Saving restarts the server.</div>
+      <div data-key="dRootAddFolder" data-CLan="dRootAddFolder"><strong>Add Working Folder.</strong> On the Agent tab. Edits the server's allowed root folders (one path per line). Registered paths appear as empty path groups even with no sessions. Saving restarts the server.</div>
+      <div data-key="dSbAgent" data-CLan="dSbAgent"><strong>Agent tab.</strong> Chat and Terminal sessions grouped by working directory. Path headers can collapse; ⋯ creates Chat/Terminal or opens <em>Search</em> for that path. Selection auto-switches here when you open Chat/Terminal.</div>
+      <div data-key="dSbOther" data-CLan="dSbOther"><strong>Other tab.</strong> Browser and Editor sessions in a flat newest-first list (not path-grouped). Selection auto-switches here when you open Browser/Editor.</div>
+      <div data-key="dAgentGroup" data-CLan="dAgentGroup"><strong>Path group.</strong> Header shows the working directory (tail-visible if long). Click the header to collapse/expand. Empty registered folders still appear so you can start work there. From this group you can open <strong>Chat</strong>, <strong>Terminal</strong>, and <strong>Search</strong> for that path (⋯ menu).</div>
+      <div data-key="dAgentGroupNew" data-CLan="dAgentGroupNew"><strong>⋯ on a path group — Chat / Terminal / Search.</strong> Three actions from this group:<ul class="mb-0 mt-1 ps-3"><li><strong>Chat</strong> — new AI chat with this path as Working Directory (same as More → Chat with cwd set).</li><li><strong>Terminal</strong> — new CLI session (cmd/claude/codex/…) in this path (same as More → Terminal / F3 with cwd set).</li><li><strong>Search</strong> — opens the file-search modal with <strong>this path pre-checked</strong> (all registered local + remote paths still listed as checkboxes — you can turn more on). <kbd>F2</kbd> opens the same modal with <strong>every path checked</strong>.</li></ul></div>
       <div data-key="dRdpLocal" data-CLan="dRdpLocal"><strong>RDP · Local.</strong> This server's own screen — label only (no URL, no status dot). The link icon shows an accessible URL for external devices. Turn on input to control it.</div>
       <div data-key="dRdpRemote" data-CLan="dRdpRemote"><strong>RDP · Remote.</strong> A registered remote server listed by its URL (no status dot). Selecting it opens that screen and switches File root to that server.</div>
-      <div data-key="dSessChat" data-CLan="dSessChat"><strong>Session · Chat.</strong> Opens that AI chat thread in the center Chat panel. New ones start from the More menu.</div>
-      <div data-key="dSessTerm" data-CLan="dSessTerm"><strong>Session · Terminal.</strong> Opens that CLI session (cmd/claude/codex/opencode/antigravity) in the center Terminal panel.</div>
-      <div data-key="dSessBrowser" data-CLan="dSessBrowser"><strong>Session · Browser.</strong> Opens that Playwright web session in the center Browser panel for viewing/remote control.</div>
-      <div data-key="dSessEditor" data-CLan="dSessEditor"><strong>Session · Editor.</strong> Reopens a file you previously opened from the File tab, in the Monaco-based Editor panel.</div>
+      <div data-key="dSessChat" data-CLan="dSessChat"><strong>Session · Chat.</strong> Opens that AI chat thread in the center Chat panel. Listed under Agent, in its working-directory group. New ones: More → Chat or path-group ⋯.</div>
+      <div data-key="dSessTerm" data-CLan="dSessTerm"><strong>Session · Terminal.</strong> Opens that CLI session (cmd/claude/codex/opencode/antigravity/grok) in the center Terminal panel. Listed under Agent by path. New ones: More → Terminal (F3) or path-group ⋯.</div>
+      <div data-key="dSessBrowser" data-CLan="dSessBrowser"><strong>Session · Browser.</strong> Opens that Playwright web session in the center Browser panel. Listed under Other (newest first). New ones: More → Browser.</div>
+      <div data-key="dSessEditor" data-CLan="dSessEditor"><strong>Session · Editor.</strong> Reopens a file you previously opened from the File tab. Listed under Other. Open files from the File tab or right-sidebar File list.</div>
       <div data-key="dTabFile" data-CLan="dTabFile"><strong>File tab.</strong> The full file manager for the current root — browse, view, edit, share, upload, and run Git/SVN actions.</div>
-      <div data-key="dBtnSearch" data-CLan="dBtnSearch"><strong>Search button (F2).</strong> Jumps to the File tab and opens a recursive file-name search modal.</div>
-      <div data-key="dTabTerm" data-CLan="dTabTerm"><strong>Terminal tab.</strong> The tab button itself is the "New Terminal" button — clicking it always opens a dialog to pick a mode (cmd/claude/codex/antigravity/opencode/grok), key, and working directory before starting a session.</div>
-      <div data-key="dBtnMore" data-CLan="dBtnMore"><strong>More menu.</strong> A dropdown of quick actions and secondary tabs — click an item below to see what each one does.</div>
+      <div data-key="dFileSearch" data-CLan="dFileSearch"><strong>File Search.</strong> No top-bar Search tab. Modal lists every registered root as checkboxes (<code class="cmd">Local:./</code>, remotes as <code class="cmd">host:path</code>). <kbd>F2</kbd> = all checked; path <strong>⋯ → Search</strong> = that path only (toggle others anytime). Search all checked scopes (partial name, Stop, max 200). Results show server:folder; file → Editor; folder → right File list when that scope is the current File root.</div>
+      <div data-key="dTabHelp" data-CLan="dTabHelp"><strong>Help.</strong> This guide page (default on first open). Open from More → Help. When you enter with <code class="cmd">?path=</code>, File opens instead.</div>
+      <div data-key="dBtnMore" data-CLan="dBtnMore"><strong>More menu.</strong> Secondary actions and panels — Memo, new RDP/Chat/Terminal/Browser/Team, Download, Log, Messenger, Help. Multiplexer is a top-level tab next to File. Click an item below to see what each one does.</div>
       <div data-key="dMoreMemo" data-CLan="dMoreMemo"><strong>Memo.</strong> Opens the folder-scoped Memo page — left category/message sidebar, modes Write/Search/Delete/Move, provider/model for AI search, tags, and a chat-style log + composer. See Guide → Memo for commands.</div>
       <div data-key="dMoreRdp" data-CLan="dMoreRdp"><strong>RDP (add).</strong> Registers another remote Control.html server so it appears in the left sidebar's RDP list.</div>
-      <div data-key="dMoreChat" data-CLan="dMoreChat"><strong>Chat (new).</strong> Opens the New Chat dialog — set a Working Directory and options, then start a session.</div>
-      <div data-key="dMoreBrowser" data-CLan="dMoreBrowser"><strong>Browser (new).</strong> Opens the New Browser dialog — set a URL, TTL, screen size, and Stealth time.</div>
-      <div data-key="dMoreTeam" data-CLan="dMoreTeam"><strong>Team (new).</strong> Opens the New Team dialog — pick sub agents and a goal; the main terminal shows up in the Terminal panel.</div>
+      <div data-key="dMoreChat" data-CLan="dMoreChat"><strong>Chat (new).</strong> Opens the New Chat dialog — set a Working Directory and options, then start a session (appears under Agent in that path group).</div>
+      <div data-key="dMoreTerm" data-CLan="dMoreTerm"><strong>Terminal (new) · F3.</strong> Opens New Terminal — pick mode (cmd/claude/codex/agy/opencode/grok), key, working directory, MCP / Copy MD. Existing sessions open from the left Agent list, not this button.</div>
+      <div data-key="dMoreBrowser" data-CLan="dMoreBrowser"><strong>Browser (new).</strong> Opens the New Browser dialog — set a URL, TTL, screen size, and Stealth time (appears under Other).</div>
+      <div data-key="dMoreTeam" data-CLan="dMoreTeam"><strong>Team (new).</strong> Opens the New Team dialog — pick sub agents and a goal; the main terminal shows up in the Terminal panel (Agent list).</div>
       <div data-key="dMoreDownload" data-CLan="dMoreDownload"><strong>Download.</strong> Opens the download tool: yt-dlp/ffmpeg status, paste a YouTube or direct file URL, pick MP3/MP4/Direct, then Start Download and watch job progress.</div>
       <div data-key="dMoreLog" data-CLan="dMoreLog"><strong>Log.</strong> Opens a tab listing past provider (CLI) conversation logs as an accordion, with refresh/delete controls.</div>
+      <div data-key="dMoreMessenger" data-CLan="dMoreMessenger"><strong>Messenger.</strong> Register Telegram/Discord bot tokens, copy the join link, link/unlink a Terminal session, send direct messages, and poll the chat log (accordion per bot).</div>
+      <div data-key="dMoreHelp" data-CLan="dMoreHelp"><strong>Help.</strong> Opens this guide (Promo / Getting Started / Guide) in the center — same as the default first-open panel.</div>
+      <div data-key="dMoreTmux" data-CLan="dMoreTmux"><strong>Multiplexer (top tab).</strong> Split the center into a grid of panes (like tmux) and show several sessions at once — Chat, Terminal, Browser, RDP. Config mode: split/merge/select content per pane. Work mode: interact with the iframes. Menu: maximize, work/config, close.</div>
       <div data-key="dRInfo" data-CLan="dRInfo"><strong>Right sidebar · Info.</strong> Provider Status shows Node.js and each AI provider with install/auth state, version, and remaining usage (5h / Weekly). Below that, completed Chat/Terminal notifications are listed.</div>
       <div data-key="dRFile" data-CLan="dRFile"><strong>Right sidebar · File.</strong> A lightweight file browser separate from the full File tab — navigate folders and open a file straight into the Editor tab.</div>
       <div data-key="dROption" data-CLan="dROption"><strong>Right sidebar · Option.</strong> Theme, local model registration, database viewers, history cleanup, Schedule, Sub Agent, and the shortcut list — click the list items on the right to learn about each.</div>
@@ -861,7 +955,7 @@
       <div data-key="dOLocalModel" data-CLan="dOLocalModel"><strong>Add OpenCode Model / Status.</strong> Registers a local Ollama/LM Studio server and checks its connection status.</div>
       <div data-key="dODatabase" data-CLan="dODatabase"><strong>Database.</strong> SQLite viewer and a generic DB (MySQL/MSSQL/SQLite) viewer for browsing local data files.</div>
       <div data-key="dODeleteHistory" data-CLan="dODeleteHistory"><strong>Delete history.</strong> Bulk-deletes old AI conversation logs older than the given number of months.</div>
-      <div data-key="dOSchedule" data-CLan="dOSchedule"><strong>Schedule.</strong> Create and manage recurring command/prompt jobs; the list below shows saved schedules.</div>
+      <div data-key="dOSchedule" data-CLan="dOSchedule"><strong>Schedule.</strong> Create Interval or Time jobs for a Sub Agent (work orders). Interval: delay/count/start/end + auto-delete when count ends. Time: days of week + hour:minute + optional run-once-then-delete. List below: click to edit, trash to delete.</div>
       <div data-key="dOSubAgent" data-CLan="dOSubAgent"><strong>Sub Agent.</strong> Create and manage reusable AI agent presets that Team and Schedule can pick up.</div>
       <div data-key="dOShortcuts" data-CLan="dOShortcuts"><strong>Help.</strong> The same keyboard shortcut list shown below this mock.</div>
     </div>
@@ -999,7 +1093,14 @@
     <!-- Center-panel sample content library (localized, hidden — copied into #ctrlCenterBody) -->
     <div class="d-none" id="ctrlCenterLib">
       <div data-key="hint" class="d-flex align-items-center justify-content-center text-center" style="min-height:300px;">
-        <span class="text-secondary small" data-CLan="uCenterHint">The tab or session you click decides which panel shows up here — RDP, File, Terminal, Chat, Browser, Editor, Memo, Download, or Log.</span>
+        <span class="text-secondary small" data-CLan="uCenterHint">The tab or session you click decides which panel shows up here — RDP, File, Help, Terminal, Chat, Browser, Editor, Memo, Download, Log, Messenger, or Multiplexer.</span>
+      </div>
+      <div data-key="help">
+        <div class="d-flex flex-column align-items-center justify-content-center text-center gap-2" style="min-height:300px;">
+          <i class="bi bi-question-circle" style="font-size:2rem;color:#58a6ff;"></i>
+          <div class="fw-semibold" data-CLan="helpCenterTitle">Help (this guide)</div>
+          <span class="text-secondary small" data-CLan="helpCenterDesc">Default landing panel. Promo / Install / Detail tabs explain layout, shortcuts, and each Control feature.</span>
+        </div>
       </div>
       <div data-key="rdp-local">
         <div class="mock-rdp-controls mb-2">
@@ -1082,8 +1183,8 @@
         </div>
       </div>
       <div data-key="file">
-        <div class="d-flex gap-2 mb-2 flex-wrap">
-          <span class="kbd-shortcut">F2</span><span class="text-muted small me-2" data-CLan="searchLabel">Search</span>
+        <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
+          <span class="text-muted small" data-CLan="fileSearchHint">File search: F2 (all paths) · path ⋯ → Search (one path pre-checked)</span>
           <span class="text-muted small" style="margin-left:auto;">/proj/Control/</span>
         </div>
         <div class="mock-file-list">
@@ -1194,7 +1295,7 @@
               <div class="mock-browser-sub" data-CLan="browserPageSub">Artgine Agent · 5 min read</div>
               <div class="mock-browser-p" data-CLan="browserPageP1">Install dependencies, start the web server, then open Control to manage files, terminals, and AI sessions from the browser.</div>
               <div class="mock-browser-code">npm install<br>npm run start_web<br># open /proj/Control/Control.html</div>
-              <div class="mock-browser-p" data-CLan="browserPageP2">Use the left sidebar for RDP/sessions and the right sidebar for Provider Status (version &amp; usage).</div>
+              <div class="mock-browser-p" data-CLan="browserPageP2">Left sidebar: RDP + Agent/Other sessions. Right sidebar: Provider Status (version &amp; usage).</div>
             </div>
           </div>
         </div>
@@ -1366,17 +1467,90 @@
           <button type="button" class="btn btn-sm btn-outline-secondary" disabled data-CLan="logLoadMore">Load more</button>
         </div>
       </div>
+      <!-- Messenger: 봇 등록 + 세션 아코디언 (Messenger/MessengerTab.ts) -->
+      <div data-key="messenger">
+        <div class="d-flex flex-column gap-2" style="min-height:280px;">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold small text-nowrap"><i class="bi bi-chat-dots-fill"></i> Messenger</span>
+            <input type="text" class="form-control form-control-sm" placeholder="Paste bot token to register (Telegram / Discord)" disabled>
+            <button type="button" class="btn btn-sm btn-primary text-nowrap" disabled data-CLan="msgRegister">Register</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+          </div>
+          <div class="border rounded p-2 bg-body-tertiary">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-chevron-down"></i>
+              <span class="badge bg-info text-dark">Telegram</span>
+              <span class="fw-semibold small">ArtgineBot</span>
+              <span class="badge bg-success ms-auto">active</span>
+            </div>
+            <div class="small text-secondary mb-2 user-select-all" style="font-size:0.75em;word-break:break-all;" data-CLan="msgLinkSample">https://t.me/ArtgineBot?start=… · linked: chat:123 · → claude : app</div>
+            <div class="d-flex align-items-center gap-1 mb-2">
+              <span class="small text-secondary text-nowrap">Terminal:</span>
+              <select class="form-select form-select-sm" style="max-width:160px;" disabled><option>claude : app</option></select>
+              <button type="button" class="btn btn-sm btn-outline-primary" disabled data-CLan="msgLink">Link</button>
+              <button type="button" class="btn btn-sm btn-outline-danger" disabled data-CLan="msgUnlink">Unlink</button>
+            </div>
+            <div class="d-flex gap-1 mb-2">
+              <input type="text" class="form-control form-control-sm" placeholder="Direct message..." disabled>
+              <button type="button" class="btn btn-sm btn-primary" disabled data-CLan="msgSend">Send</button>
+            </div>
+            <div class="d-flex flex-column gap-1" style="font-size:0.85rem;">
+              <div class="d-flex justify-content-start"><div class="rounded p-2 bg-body-secondary" style="max-width:80%;"><div class="small text-secondary mb-1">user · 14:20</div>Deploy status?</div></div>
+              <div class="d-flex justify-content-end"><div class="rounded p-2 bg-primary text-white" style="max-width:80%;"><div class="small text-white-50 mb-1">bot · 14:21</div>All green.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Multiplexer: 분할 패널 + 우상단 메뉴 (작업/설정/최대/종료) -->
+      <div data-key="tmux">
+        <div class="mock-tmux">
+          <div class="mock-tmux-menu" title="Multiplexer Menu"><i class="bi bi-three-dots"></i></div>
+          <div class="mock-tmux-grid">
+            <div class="mock-tmux-pane">
+              <div class="pane-label"><i class="bi bi-chat-dots"></i> Chat</div>
+              <div class="pane-body">User: Fix root select…<br>Assistant: Done.</div>
+            </div>
+            <div class="mock-tmux-pane">
+              <div class="pane-label"><i class="bi bi-terminal"></i> claude : app</div>
+              <div class="pane-body">&gt; npm test<br><span style="color:#3fb950;">✓ All checks passed</span></div>
+              <div class="mock-tmux-cfg">
+                <span title="Split H"><i class="bi bi-layout-split"></i></span>
+                <span title="Split V"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></span>
+                <span title="Merge"><i class="bi bi-arrows-angle-contract"></i></span>
+                <span title="Select"><i class="bi bi-card-list"></i></span>
+              </div>
+            </div>
+            <div class="mock-tmux-pane">
+              <div class="pane-label"><i class="bi bi-display"></i> RDP Local</div>
+              <div class="pane-body" style="opacity:.7;">Desktop preview…</div>
+            </div>
+            <div class="mock-tmux-pane">
+              <div class="pane-label text-secondary"><i class="bi bi-plus-square"></i> <span data-CLan="tmuxEmptyPane">Empty — Select in Config</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Sample modal content library (localized, hidden — copied into #ctrlModal on data-modal click) -->
     <div class="d-none" id="ctrlModalLib">
       <div data-key="search">
-        <div class="modal-title-text" data-CLan="mSearchTitle">File Search</div>
+        <div class="modal-title-text"><i class="bi bi-search me-1"></i> Search</div>
         <div class="modal-body-text">
-          <input type="text" class="form-control form-control-sm mb-2" placeholder="Control.ts" disabled>
+          <p class="small text-secondary mb-2" data-CLan="mSearchScopeDesc"><strong>Path checkboxes</strong> list every registered root (local + authenticated remotes). <kbd>F2</kbd> checks all; path-group <strong>⋯ → Search</strong> checks only that path. Search runs on every checked scope (partial name, Stop, max 200). Excludes <code class="cmd">node_modules</code> and hidden folders.</p>
+          <div class="border rounded px-2 mb-2" style="max-height:100px;overflow-y:auto;font-size:12px;">
+            <label class="d-flex align-items-center gap-2 py-1 mb-0"><input type="checkbox" class="form-check-input m-0" checked disabled> Local:D:/git/Artgine</label>
+            <label class="d-flex align-items-center gap-2 py-1 mb-0"><input type="checkbox" class="form-check-input m-0" checked disabled> Local:./</label>
+            <label class="d-flex align-items-center gap-2 py-1 mb-0"><input type="checkbox" class="form-check-input m-0" disabled> 192.168.0.20:8050:./</label>
+          </div>
+          <div class="d-flex gap-2 mb-2">
+            <input type="text" class="form-control form-control-sm" placeholder="Filename (partial match)..." disabled>
+            <button type="button" class="btn btn-sm btn-primary" disabled data-CLan="mSearchBtn">Search</button>
+          </div>
+          <div class="small text-secondary mb-1" data-CLan="mSearchStatusSample">2 result(s)</div>
           <div class="mock-file-list">
-            <div class="mock-file-item"><span class="mock-file-icon">📄</span> Control.ts</div>
-            <div class="mock-file-item"><span class="mock-file-icon">📄</span> Control.html</div>
+            <div class="mock-file-item"><span class="mock-file-icon">📄</span> <strong>Control.ts</strong> <span class="text-muted" style="font-size:11px;">Local:/proj/Control/</span></div>
+            <div class="mock-file-item"><span class="mock-file-icon">📄</span> <strong>Control.html</strong> <span class="text-muted" style="font-size:11px;">Local:/proj/Control/</span></div>
           </div>
         </div>
       </div>
@@ -1503,6 +1677,11 @@
             <div class="col-6"><label class="form-label small text-secondary" data-CLan="mScheduleStart">Start offset (sec, 0=now)</label><input type="number" class="form-control form-control-sm" value="0" disabled></div>
             <div class="col-6"><label class="form-label small text-secondary" data-CLan="mScheduleEnd">End offset (sec, 0=never)</label><input type="number" class="form-control form-control-sm" value="0" disabled></div>
           </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" checked disabled>
+            <label class="form-check-label small text-secondary" data-CLan="mAutoEndInterval">Auto-delete when count is exhausted</label>
+          </div>
+          <p class="small text-secondary mb-2" data-CLan="mScheduleTimeNote"><strong>Time</strong> mode: pick days of week (Sun–Sat), hour (0–23), minute (0/5/…/55), and optional <em>Run once then delete</em>.</p>
           <label class="form-label small text-secondary" data-CLan="mCommand">Command</label>
           <textarea class="form-control form-control-sm mb-2" rows="2" disabled placeholder="e.g. node backup.js"></textarea>
           <div class="d-flex justify-content-between">
@@ -1570,6 +1749,7 @@
     <p class="section-sub text-center" data-CLan="quickStartSub">Two ways to get started right away</p>
     <div class="text-center mb-4 d-flex flex-wrap justify-content-center gap-2">
       <a href="https://github.com/06fs4dix/Artgine-Agent" class="btn btn-primary px-4" target="_blank" rel="noopener"><i class="bi bi-github"></i> <span data-CLan="btnGithub">GitHub</span></a>
+      <a href="https://06fs4dix.github.io/Artgine/help/help.html" class="btn btn-outline-info px-4" target="_blank" rel="noopener"><i class="bi bi-book"></i> <span data-CLan="btnArtgineHelp">Artgine Docs</span></a>
       <a href="https://nodejs.org/" class="btn btn-outline-success px-4" target="_blank" rel="noopener"><i class="bi bi-filetype-js"></i> <span data-CLan="btnNode">Node.js</span></a>
       <a href="https://git-scm.com/downloads" class="btn btn-outline-secondary px-4" target="_blank" rel="noopener"><i class="bi bi-git"></i> <span data-CLan="btnGit">Git</span></a>
     </div>
@@ -1666,6 +1846,56 @@
       </div>
     </div>
 
+    <!-- Artgine Electron + engine docs (separate from this Agent Control guide) -->
+    <div class="feature-card p-4 mt-4" style="max-width:960px; margin-left:auto; margin-right:auto;">
+      <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-2">
+        <h5 class="mb-0"><i class="bi bi-window-sidebar" style="color:#58a6ff;"></i> <span data-CLan="gsArtgineDocsTitle">Artgine Electron app &amp; engine docs</span></h5>
+        <a href="https://06fs4dix.github.io/Artgine/help/help.html" class="btn btn-sm btn-outline-info" target="_blank" rel="noopener">
+          <i class="bi bi-box-arrow-up-right"></i> <span data-CLan="gsArtgineDocsBtn">Open full docs</span>
+        </a>
+      </div>
+      <p class="text-muted small mb-3" data-CLan="gsArtgineDocsLead">
+        This <strong>Getting Started</strong> tab is for <strong>Artgine Agent (Control)</strong> — remote screen, files, and AI agents.
+        The linked page is the official guide for the <strong>Artgine Electron IDE + rendering engine</strong> (project create, Run, modes, PWA, plugins).
+        Use both: Agent for remote AI work; the engine docs when you develop or host Artgine projects.
+      </p>
+      <div class="row g-3 small text-muted" data-CLan="gsArtgineDocsBody">
+        <div class="col-md-6">
+          <div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-download me-1" style="color:#3fb950;"></i> Install &amp; run</div>
+          <ul class="mb-0 ps-3">
+            <li><code class="cmd">git clone</code> · <code class="cmd">npm install</code> · <code class="cmd">start.bat</code> / <code class="cmd">start.sh</code></li>
+            <li><code class="cmd">npm start</code> — Electron GUI · <code class="cmd">npm run start_web [port]</code> — web only</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-layers me-1" style="color:#d2a8ff;"></i> Three Electron modes</div>
+          <ul class="mb-0 ps-3">
+            <li><strong>developer</strong> — settings UI, Folder → Run(<kbd>F9</kbd>), generate project files</li>
+            <li><strong>server</strong> — host + URL / IP / QR connection panel</li>
+            <li><strong>client</strong> — run the finished project window (kiosk / deploy)</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-play-circle me-1" style="color:#58a6ff;"></i> Workflow</div>
+          <ul class="mb-0 ps-3">
+            <li>App tab: <code class="cmd">program</code>, <code class="cmd">server</code> (local / remote / webServer), Include, Plugin, PWA</li>
+            <li>Run(F9) creates/updates <code class="cmd">[Name].ts</code> / <code class="cmd">.html</code> / <code class="cmd">.json</code> — edit only below <strong>EntryPoint</strong></li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-link-45deg me-1" style="color:#d29922;"></i> Related repos</div>
+          <ul class="mb-0 ps-3">
+            <li><a href="https://github.com/06fs4dix/Artgine" target="_blank" rel="noopener">Artgine</a> — engine &amp; Electron app</li>
+            <li><a href="https://github.com/06fs4dix/Artgine-Project" target="_blank" rel="noopener">Artgine-Project</a> — samples · <a href="https://github.com/06fs4dix/Artgine-Agent" target="_blank" rel="noopener">Artgine-Agent</a> — this Control tool</li>
+          </ul>
+        </div>
+      </div>
+      <p class="small text-secondary mb-0 mt-3" data-CLan="gsArtgineDocsNote">
+        Full walkthrough (Install · Electron Modes · Workflow, EN/KO):
+        <a href="https://06fs4dix.github.io/Artgine/help/help.html" target="_blank" rel="noopener" style="color:#58a6ff; word-break:break-all;">https://06fs4dix.github.io/Artgine/help/help.html</a>
+      </p>
+    </div>
+
     <!-- After start: open Control -->
     <div class="feature-card p-4 mt-4" style="max-width:960px; margin-left:auto; margin-right:auto;">
       <h5 class="mb-2"><i class="bi bi-browser-chrome" style="color:#58a6ff;"></i> <span data-CLan="gsAfterTitle">After the Electron app starts</span></h5>
@@ -1735,7 +1965,7 @@
                 <div data-CLan="gsSecTipFolderBody">
                   <ul class="mb-0 ps-3">
                     <li><strong>OS level:</strong> Give the dedicated account read/write only on project/work folders it must touch. Deny or omit home documents, system dirs, other users’ data.</li>
-                    <li><strong>Artgine level:</strong> In Control, Root → Add Working Folder (<code>+</code>) list only those paths. What is not listed is not served as File/Root — keep the list minimal.</li>
+                    <li><strong>Artgine level:</strong> In Control, left <strong>Agent</strong> tab → Add Working Folder — list only those paths. What is not listed is not served as File/Root — keep the list minimal.</li>
                     <li>Do not put the whole disk (e.g. <code>C:\</code> or <code>/</code>) in the working-folder list unless you truly need it.</li>
                     <li>Use both layers together: OS ACLs stop the process; Working Folder limits what the UI exposes even when the process could reach more.</li>
                   </ul>
@@ -1774,8 +2004,8 @@
 
             <h6 class="mb-2" style="color:#3fb950;"><i class="bi bi-shield-check"></i> <span data-CLan="gsAiPermTitle">ai/settings.json permissions</span></h6>
             <div data-CLan="gsAiPermBody">
-              <p class="mb-2"><code>ai/settings.json</code> is separate from the server's root <code>settings.json</code> (login password, working folders). Besides the <strong>models</strong> list shown in Chat/Terminal dropdowns, its <code>permissions.allow</code> / <code>permissions.deny</code> arrays control auto-approval of the <em>permission prompts</em> that Claude/Codex/Grok/opencode print inside a Chat or Terminal session (e.g. "Allow this command? y/n").</p>
-              <p class="mb-2">Each rule can test <code>type</code> (<code>"read" | "write" | "reply"</code> — read vs. file-changing action), <code>tool</code> (the CLI's tool name, e.g. <code>Bash</code>, <code>Edit</code>, <code>MCPTool</code>), and/or <code>command</code> (a prefix of the actual shell command, <code>*</code> wildcard supported). On a prompt, <code>deny</code> rules are checked first, then <code>allow</code>; if neither matches, SUPER mode (<kbd>F6</kbd>) auto-approves everything else, otherwise it just waits for you to click.</p>
+              <p class="mb-2"><code>ai/settings.json</code> is separate from the server's root <code>settings.json</code> (login password, working folders). Besides the <strong>models</strong> list shown in Chat/Terminal dropdowns, its <code>permissions.allow</code> / <code>permissions.deny</code> arrays control auto-approval of the <em>permission prompts</em> that Claude/Codex/Grok/opencode print inside a <strong>Terminal</strong> PTY session (e.g. "Allow this command? y/n"). Chat UI sessions do not use this prompt auto-approve path.</p>
+              <p class="mb-2">Each rule can test <code>type</code> (<code>"read" | "write" | "reply"</code> — read vs. file-changing action), <code>tool</code> (the CLI's tool name, e.g. <code>Bash</code>, <code>Edit</code>, <code>MCPTool</code>), and/or <code>command</code> (a prefix of the actual shell command, <code>*</code> wildcard supported). On a prompt, <code>deny</code> rules are checked first, then <code>allow</code>; if neither matches, SUPER mode in that Terminal session (<kbd>F6</kbd> / <code class="cmd">/super</code> / ⌨ → ⚡ SUPER) auto-approves everything else, otherwise it just waits for you to click.</p>
               <p class="mb-1 fw-semibold" style="color:#c9d1d9;">Examples</p>
               <ul class="mb-0 ps-3">
                 <li>Auto-approve every read-only prompt (viewing/listing files can't change anything):<br><code class="cmd">{ "type": "read" }</code></li>
@@ -1823,10 +2053,11 @@
     <div class="feature-card p-4" style="max-width:640px; margin:0 auto;">
       <div class="d-flex flex-column gap-2">
         <div><span class="kbd-shortcut">F1</span> <span class="text-muted ms-2" data-CLan="scF1">Right sidebar File ↔ Info toggle (opens sidebar on small screens)</span></div>
-        <div><span class="kbd-shortcut">F2</span> <span class="text-muted ms-2" data-CLan="scF2">Open File Search</span></div>
+        <div><span class="kbd-shortcut">F2</span> <span class="text-muted ms-2" data-CLan="scF2">File Search modal — all registered paths checked (toggle checkboxes; path ⋯ → Search pre-checks one path)</span></div>
         <div><span class="kbd-shortcut">F3</span> <span class="text-muted ms-2" data-CLan="scF3">Open New Terminal</span></div>
         <div><span class="kbd-shortcut">F4</span> <span class="text-muted ms-2" data-CLan="scF4">Focus/toggle the sidebar (or double-tap <span class="kbd-shortcut">Ctrl</span>)</span></div>
-        <div><span class="kbd-shortcut">F6</span> <span class="text-muted ms-2" data-CLan="scF6">Toggle SUPER (auto-approve) + focus the input bar (Chat/Terminal)</span></div>
+        <div><span class="kbd-shortcut">F6</span> <span class="text-muted ms-2" data-CLan="scF6">Terminal: SUPER (auto-approve) + show/focus input bar. Outside Terminal: same as F4</span></div>
+        <div><span class="kbd-shortcut">F7</span> <span class="text-muted ms-2" data-CLan="scF7">Terminal: toggle Log/Terminal conversation panel (⌨ → Log/Terminal)</span></div>
         <div><span class="kbd-shortcut">↑</span> / <span class="kbd-shortcut">↓</span> <span class="text-muted ms-2" data-CLan="scUpDown">Move through the session list (sidebar open)</span></div>
       </div>
     </div>
@@ -1848,21 +2079,21 @@
         <div class="feature-card p-3 h-100 text-center">
           <i class="bi bi-layout-text-window-reverse fs-3" style="color:#58a6ff;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutTopTitle">Top</h6>
-          <p class="text-muted small mb-0" data-CLan="dLayoutTopDesc">File / Search / Terminal tabs and the More menu.</p>
+          <p class="text-muted small mb-0" data-CLan="dLayoutTopDesc">File and Multiplexer tabs, plus the More menu (Memo, Chat, Terminal, Messenger, Help, …).</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center">
           <i class="bi bi-layout-sidebar fs-3" style="color:#3fb950;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutLeftTitle">Left</h6>
-          <p class="text-muted small mb-0" data-CLan="dLayoutLeftDesc">Root select, RDP targets, and the AI session list.</p>
+          <p class="text-muted small mb-0" data-CLan="dLayoutLeftDesc">RDP targets, then Agent / Other sessions (path groups vs flat list).</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center">
           <i class="bi bi-square fs-3" style="color:#d2a8ff;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutCenterTitle">Center</h6>
-          <p class="text-muted small mb-0" data-CLan="dLayoutCenterDesc">Shows whichever tab or session you selected — RDP, File, Terminal, Chat, and more.</p>
+          <p class="text-muted small mb-0" data-CLan="dLayoutCenterDesc">Shows whichever tab or session you selected — RDP, File, Help, Terminal, Chat, Messenger, Multiplexer, and more.</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
@@ -1876,25 +2107,14 @@
 
     <!-- Left sidebar detail -->
     <h3 class="mb-2" data-CLan="dLeftHeading">Left Sidebar</h3>
-    <p class="text-muted mb-4" data-CLan="dLeftSub">The left sidebar holds the root selector, the RDP target list, and the AI session list, from top to bottom.</p>
+    <p class="text-muted mb-4" data-CLan="dLeftSub">Top to bottom: RDP list, then Agent / Other sub-tabs. Agent groups Chat/Terminal by working directory; Other lists Browser/Editor newest-first.</p>
 
     <div class="row g-4 mb-5">
       <!-- Live sample of the left sidebar -->
       <div class="col-12 col-lg-5">
         <div class="dleft-sample-wrap">
           <div class="ctrlmock-col ctrlmock-left dleft-sample">
-            <div class="ctrlmock-label" data-CLan="uLeftRootLabel">Root</div>
-            <div class="d-flex gap-1">
-              <select class="ctrlmock-root-sel" id="dSampleRoot" aria-label="Root / Working Path">
-                <option value="E:/">E:/</option>
-                <option value="D:/git/Artgine">D:/git/Artgine</option>
-                <option value="D:/work">D:/work</option>
-                <option value="./" selected>Artgine (WorkingPath)</option>
-              </select>
-              <button type="button" class="ctrlmock-minibtn flex-shrink-0" id="dSampleRootAddFolder" title="Add Working Folder"><i class="bi bi-plus-lg"></i></button>
-            </div>
-
-            <div class="ctrlmock-label mt-2" data-CLan="uLeftRdpLabel">RDP</div>
+            <div class="ctrlmock-label" data-CLan="uLeftRdpLabel">RDP</div>
             <div class="mock-sess active" id="dSampleRdpLocal">
               <div class="name"><i class="bi bi-pc-display"></i> Local <i class="bi bi-link-45deg text-secondary ms-auto" style="font-size:12px;"></i></div>
             </div>
@@ -1902,21 +2122,56 @@
               <div class="name"><i class="bi bi-hdd-network"></i> <span class="text-truncate" style="font-size:11px;font-weight:500;">http://192.168.0.20:8050/Artgine/proj/Control/Control.html</span></div>
             </div>
 
-            <div class="ctrlmock-label mt-2" data-CLan="uLeftSessLabel">Sessions</div>
-            <div class="mock-sess" id="dSampleSess1">
-              <div class="name"><span class="status-dot status-idle"></span> Chat · Control UI update</div>
+            <div class="ctrlmock-subtabs" id="dSampleSubTabs">
+              <button type="button" class="ctrlmock-subtab active" id="dSampleSbAgent">Agent</button>
+              <button type="button" class="ctrlmock-subtab" id="dSampleSbOther">Other</button>
             </div>
-            <div class="mock-sess" id="dSampleSess2">
-              <div class="name"><span class="status-dot status-idle"></span> cmd : local</div>
+
+            <div id="dSampleAgentPane">
+              <button type="button" class="ctrlmock-add-folder mb-1" id="dSampleRootAddFolder" title="Add Working Folder">
+                <i class="bi bi-plus-lg"></i> <span data-CLan="uLeftAddFolder">Add Working Folder</span>
+              </button>
+              <div class="ctrlmock-agent-group" id="dSampleAgentGroup">
+                <div class="ctrlmock-agent-head" id="dSampleAgentHead">
+                  <span class="ctrlmock-agent-caret">▾</span>
+                  <span class="ctrlmock-agent-path"><span>D:/git/Artgine</span></span>
+                  <span class="ctrlmock-agent-count">3</span>
+                  <span class="ctrlmock-agent-dots" id="dSampleAgentDots">⋯</span>
+                </div>
+                <div class="ctrlmock-agent-body">
+                  <div class="mock-sess" id="dSampleSess1">
+                    <div class="name"><span class="status-dot status-idle"></span> Chat · Control UI update</div>
+                  </div>
+                  <div class="mock-sess" id="dSampleSess2">
+                    <div class="name"><span class="status-dot status-idle"></span> cmd : local</div>
+                  </div>
+                  <div class="mock-sess" id="dSampleSessClaude">
+                    <div class="name"><span class="status-dot status-busy"></span> claude : app</div>
+                  </div>
+                </div>
+              </div>
+              <div class="ctrlmock-agent-group mt-1">
+                <div class="ctrlmock-agent-head">
+                  <span class="ctrlmock-agent-caret">▾</span>
+                  <span class="ctrlmock-agent-path"><span>./</span></span>
+                  <span class="ctrlmock-agent-count">1</span>
+                  <span class="ctrlmock-agent-dots">⋯</span>
+                </div>
+                <div class="ctrlmock-agent-body">
+                  <div class="mock-sess" id="dSampleSessGrok">
+                    <div class="name"><span class="status-dot status-idle"></span> grok : app</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="mock-sess" id="dSampleSessClaude">
-              <div class="name"><span class="status-dot status-busy"></span> claude : app</div>
-            </div>
-            <div class="mock-sess" id="dSampleSessGrok">
-              <div class="name"><span class="status-dot status-idle"></span> grok : app</div>
-            </div>
-            <div class="mock-sess" id="dSampleSess3">
-              <div class="name"><span class="status-dot status-off"></span> Browser · docs preview</div>
+
+            <div id="dSampleOtherPane" class="d-none">
+              <div class="mock-sess" id="dSampleSess3">
+                <div class="name"><span class="status-dot status-off"></span> Browser · docs preview</div>
+              </div>
+              <div class="mock-sess" id="dSampleSessEditor">
+                <div class="name"><span class="status-dot status-idle"></span> Editor · Control.ts</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1924,25 +2179,39 @@
 
       <!-- Description cards, hover/click to highlight the matching sample element -->
       <div class="col-12 col-lg-7 d-flex flex-column gap-3">
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRoot" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-hdd-stack" style="color:#58a6ff;"></i> <span data-CLan="dLeftRootHeading">Root</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dLeftRootDesc">The dropdown at the very top of the left sidebar. It switches the active root folder/server — this is the <strong>working path</strong> that both the RDP target and the File tab's folder tree follow. Selecting a different root also switches which server's screen the RDP panel shows.</p>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRdpLocal dSampleRdpRemote" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-display" style="color:#3fb950;"></i> <span data-CLan="dLeftRdpHeading">RDP</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dLeftRdpDesc">At the top of the left sidebar. <strong>Local</strong> is always present (this server's screen); below it, any <strong>Remote</strong> Control.html servers you've registered (via More → RDP). Click one to view its screen in the center; turn on Input to forward keyboard/mouse.</p>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSbAgent dSampleSbOther" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-layout-split" style="color:#58a6ff;"></i> <span data-CLan="dLeftSubTabsHeading">Agent / Other</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dLeftSubTabsDesc"><strong>Agent</strong> holds Chat and Terminal, grouped by working directory. <strong>Other</strong> holds Browser and Editor in a flat newest-first list. The active sub-tab is remembered; opening a session auto-switches to the matching tab.</p>
         </div>
 
         <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRootAddFolder" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-folder2-open" style="color:#d29922;"></i> <span data-CLan="dLeftRootAddHeading">Root → Add Working Folder</span></h5>
-          <p class="text-muted small mb-3" data-CLan="dLeftRootAddDesc">The small "+" button next to the root selector. Edits the server's allowed root folders (one per line). Saving restarts the server.</p>
+          <h5 class="mb-2"><i class="bi bi-folder2-open" style="color:#d29922;"></i> <span data-CLan="dLeftRootAddHeading">Agent → Add Working Folder</span></h5>
+          <p class="text-muted small mb-3" data-CLan="dLeftRootAddDesc">Visible on the Agent tab. Edits the server's allowed root folders (one path per line). Registered paths show as empty path groups even with no sessions. Saving restarts the server.</p>
           <div class="dtop-modal-frame" data-modal-key="workfolder"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
         </div>
 
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRdpLocal dSampleRdpRemote" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-display" style="color:#3fb950;"></i> <span data-CLan="dLeftRdpHeading">RDP</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dLeftRdpDesc">Lists the screens available for remote viewing/control. <strong>Local</strong> is always present and shows this server's own Control screen; below it, any <strong>Remote</strong> Control.html servers you've registered (via More → RDP) appear the same way. Click one to view its screen in the center panel, and turn on Input to forward your keyboard/mouse to it.</p>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleAgentGroup dSampleAgentHead dSampleAgentDots" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-folder-symlink" style="color:#d2a8ff;"></i> <span data-CLan="dLeftPathGroupHeading">Path groups</span></h5>
+          <div class="text-muted small mb-0" data-CLan="dLeftPathGroupDesc">
+            <p class="mb-2">Each group is one working directory (long paths show the tail). Click the header to collapse/expand. Empty registered folders still appear so you can start work there.</p>
+            <p class="mb-1 fw-semibold" style="color:#c9d1d9;">⋯ menu on the path group — three things you can do here:</p>
+            <ul class="mb-2 ps-3">
+              <li><strong>Chat</strong> — start a new AI chat with this path as Working Directory (same as More → Chat, cwd already filled).</li>
+              <li><strong>Terminal</strong> — start a new CLI session (cmd / claude / codex / …) in this path (same as More → Terminal / F3 with cwd set).</li>
+              <li><strong>Search</strong> — open the multi-path search modal with <strong>this path checked</strong> (other registered local/remote roots stay listed so you can check them too). <kbd>F2</kbd> opens the same modal with <strong>all paths checked</strong>.</li>
+            </ul>
+            <p class="mb-0">Sessions created from Chat/Terminal land under this same path group in the Agent list.</p>
+          </div>
         </div>
 
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRdpLocal dSampleRdpRemote dSampleSess1 dSampleSess2 dSampleSess3" tabindex="0">
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess1 dSampleSess2 dSampleSessClaude dSampleSess3 dSampleSessEditor" tabindex="0">
           <h5 class="mb-2"><i class="bi bi-palette" style="color:#d29922;"></i> <span data-CLan="dLeftColorHeading">Status Colors</span></h5>
-          <p class="text-muted small mb-2" data-CLan="dLeftColorDesc">AI sessions (Chat / Terminal / Browser / Editor) show a colored status dot. RDP items do not — Local is just a label, Remote shows its URL.</p>
+          <p class="text-muted small mb-2" data-CLan="dLeftColorDesc">Chat / Terminal / Browser / Editor show a colored status dot. RDP items do not — Local is just a label, Remote shows its URL.</p>
           <div class="d-flex flex-column gap-2">
             <div class="d-flex align-items-center gap-2"><span class="status-dot status-idle"></span> <span class="text-muted small" data-CLan="dLeftColorIdle"><strong>Green (idle)</strong> — connected and ready, or waiting for the next instruction.</span></div>
             <div class="d-flex align-items-center gap-2"><span class="status-dot status-busy"></span> <span class="text-muted small" data-CLan="dLeftColorBusy"><strong>Yellow (busy)</strong> — currently working: an AI response is being generated.</span></div>
@@ -1950,33 +2219,40 @@
           </div>
         </div>
 
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess1 dSampleSess2 dSampleSess3" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-list-ul" style="color:#f778ba;"></i> <span data-CLan="dLeftSessHeading">Sessions</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dLeftSessDesc">Below RDP, every open AI session — Chat, Terminal, Browser, Editor — is listed together in the order they were created. Click one to bring it up in the center panel; start new ones from the top bar's More menu.</p>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess1 dSampleSess2 dSampleSessClaude" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-robot" style="color:#f778ba;"></i> <span data-CLan="dLeftSessHeading">Agent sessions</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dLeftSessDesc">Chat and Terminal items live under their path group. Click to open in the center. Create new ones from More → Chat / Terminal (F3), or from a path group's ⋯ menu (Chat / Terminal / Search).</p>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess3 dSampleSessEditor" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-browser-chrome" style="color:#d29922;"></i> <span data-CLan="dLeftOtherHeading">Other sessions</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dLeftOtherDesc">Browser and Editor are listed flat under Other (newest first). New Browser: More → Browser. Editors appear when you open a file from the File tab or the right-sidebar File list.</p>
         </div>
       </div>
     </div>
 
     <!-- Top bar detail -->
     <h3 class="mb-2" data-CLan="dTopHeading">Top Bar</h3>
-    <p class="text-muted mb-3" data-CLan="dTopSub">The top bar sits above the center panel: File, Search, Terminal, and a More dropdown for everything else. Open each item below one at a time — several of them open a dialog instead of switching the panel directly, and its real content appears inline as soon as you expand it.</p>
+    <p class="text-muted mb-3" data-CLan="dTopSub">Above the center panel: <strong>File</strong>, <strong>Multiplexer</strong>, and a <strong>More</strong> dropdown (Memo, RDP, Chat, Terminal, Browser, Team, Download, Log, Messenger, Help). File search is <em>not</em> a top tab — <kbd>F2</kbd> or path <strong>⋯ → Search</strong> open a multi-path checkbox modal. Several items open a dialog first — expand below to see the real content.</p>
 
     <!-- Live sample of the top bar -->
     <div class="dtop-sample-wrap mb-4">
       <div class="ctrlmock-topbar dtop-sample">
-        <button type="button" class="ctrlmock-tabbtn active" id="dSampleFile"><i class="bi bi-folder-fill"></i> File</button>
-        <button type="button" class="ctrlmock-tabbtn" id="dSampleSearch"><i class="bi bi-search"></i> Search</button>
-        <button type="button" class="ctrlmock-tabbtn" id="dSampleTerm"><i class="bi bi-terminal"></i> Terminal</button>
+        <button type="button" class="ctrlmock-tabbtn" id="dSampleFile"><i class="bi bi-folder-fill"></i> File</button>
+        <button type="button" class="ctrlmock-tabbtn" id="dSampleTmuxTop"><i class="bi bi-grid-3x3-gap"></i> Multiplexer</button>
         <div class="ctrlmock-dropdown-wrap">
           <button type="button" class="ctrlmock-tabbtn" id="dSampleMoreBtn"><i class="bi bi-three-dots"></i> More</button>
           <div class="ctrlmock-dropdown-menu" id="dSampleMoreMenu">
             <button type="button" id="dSampleMemo"><i class="bi bi-journal-text"></i> Memo</button>
             <button type="button" id="dSampleRdpAdd" data-modal="addrdp"><i class="bi bi-display"></i> RDP</button>
             <button type="button" id="dSampleChatNew" data-modal="newchat"><i class="bi bi-chat-dots"></i> Chat</button>
+            <button type="button" id="dSampleTerm" data-modal="newterm"><i class="bi bi-terminal"></i> Terminal</button>
             <button type="button" id="dSampleBrowserNew" data-modal="newbrowser"><i class="bi bi-browser-chrome"></i> Browser</button>
             <button type="button" id="dSampleTeamNew" data-modal="newteam"><i class="bi bi-people"></i> Team</button>
             <button type="button" id="dSampleDownload"><i class="bi bi-cloud-download-fill"></i> Download</button>
             <button type="button" id="dSampleLog"><i class="bi bi-journal-code"></i> Log</button>
+            <button type="button" id="dSampleMessenger"><i class="bi bi-chat-dots-fill"></i> Messenger</button>
+            <button type="button" id="dSampleHelp"><i class="bi bi-question-circle"></i> Help</button>
           </div>
         </div>
       </div>
@@ -1997,39 +2273,15 @@
         </div>
       </div>
 
-      <div class="accordion-item dtop-acc-item" data-highlight="dSampleSearch">
+      <div class="accordion-item dtop-acc-item" data-highlight="dSampleTmuxTop">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dTopAccSearch">
-            <i class="bi bi-search me-2" style="color:#3fb950;"></i> <span data-CLan="dTopSearchHeading">Search (F2)</span>
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dTopAccTmuxTop">
+            <i class="bi bi-grid-3x3-gap me-2" style="color:#d2a8ff;"></i> <span data-CLan="dTopTmuxTopHeading">Multiplexer</span>
           </button>
         </h2>
-        <div id="dTopAccSearch" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
+        <div id="dTopAccTmuxTop" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-3" data-CLan="dTopSearchDesc">Opens a modal that recursively searches file names under the current root and jumps to a result on click.</p>
-            <div class="dtop-modal-frame" data-modal-key="search"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="accordion-item dtop-acc-item" data-highlight="dSampleTerm">
-        <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dTopAccTerm">
-            <i class="bi bi-terminal me-2" style="color:#f778ba;"></i> <span data-CLan="dTopTermHeading">Terminal</span>
-          </button>
-        </h2>
-        <div id="dTopAccTerm" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
-          <div class="accordion-body">
-            <p class="text-muted small mb-3" data-CLan="dTopTermDesc">The button itself <em>is</em> the "New Terminal" button — clicking it always opens a modal first. Pick a mode, optional Key, Working Directory, then <strong>MCP</strong> / <strong>Copy MD</strong>, and Open. Existing sessions open from the left sidebar, not this button.</p>
-            <div class="dtop-modal-frame mb-3" data-modal-key="newterm"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
-            <div class="text-muted small mb-0" data-CLan="dTopTermOpts">
-              <ul class="mb-0 ps-3">
-                <li><strong>Mode:</strong> <code class="cmd">cmd</code> (plain shell), or AI CLIs <code class="cmd">claude</code> / <code class="cmd">codex</code> / <code class="cmd">agy</code> (antigravity) / <code class="cmd">opencode</code> / <code class="cmd">grok</code>. Missing CLIs install on first open.</li>
-                <li><strong>Key:</strong> optional session label so you can tell multiple terminals apart in the sidebar.</li>
-                <li><strong>Working Directory:</strong> folder the PTY starts in (defaults from the current Root if empty).</li>
-                <li><strong>MCP (default on):</strong> when checked, the AI CLI keeps MCP tool servers (e.g. Artgine-linked tools). Uncheck to start with MCP disabled — the agent uses only its built-in tools (safer / less prompt noise).</li>
-                <li><strong>Copy MD (default on):</strong> when the working directory is <em>not</em> the server’s main Artgine path, copies that provider’s role file into the folder (<code class="cmd">CLAUDE.md</code>, <code class="cmd">AGENTS.md</code>, …) so project rules and paths apply. No-op for <code class="cmd">cmd</code> or when cwd is already the server root.</li>
-              </ul>
-            </div>
+            <p class="text-muted small mb-0" data-CLan="dTopTmuxTopDesc">Top-level tab (not under More). Opens a multi-pane layout so several sessions share the center. See Center Panel → Multiplexer for modes, split/merge, and content select.</p>
           </div>
         </div>
       </div>
@@ -2042,7 +2294,28 @@
         </h2>
         <div id="dTopAccMore" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-0" data-CLan="dTopMoreDesc">A dropdown holding everything that isn't a top-level tab — new sessions, downloads, and logs. Each one is broken down individually below.</p>
+            <p class="text-muted small mb-0" data-CLan="dTopMoreDesc">Dropdown for everything that is not File / Multiplexer — Memo, new sessions (including Terminal), Download, Log, Messenger, Help. File search is <kbd>F2</kbd> / path ⋯ → Search (multi-path checkboxes), not here. Each item is detailed below.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item dtop-acc-item ms-md-4" data-highlight="dSampleAgentDots">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dTopAccSearch">
+            <i class="bi bi-search me-2" style="color:#3fb950;"></i> <span data-CLan="dTopSearchHeading">File Search (path ⋯ / F2)</span>
+          </button>
+        </h2>
+        <div id="dTopAccSearch" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
+          <div class="accordion-body">
+            <div class="text-muted small mb-3" data-CLan="dTopSearchDesc">
+              <p class="mb-2">There is no top Search tab. Both entries open the <strong>same</strong> Control-page modal (not the File iframe):</p>
+              <ul class="mb-2 ps-3">
+                <li><kbd>F2</kbd> — all registered paths <strong>checked</strong> (local working folders + authenticated remote roots).</li>
+                <li>Path group <strong>⋯ → Search</strong> — <strong>that path only</strong> pre-checked; other paths stay listed so you can enable more.</li>
+              </ul>
+              <p class="mb-0">Checkboxes are <code class="cmd">serverLabel:rootPath</code>. Type a partial file name → Search / Stop; scans each checked root from <code class="cmd">/</code> (skips <code class="cmd">node_modules</code> / hidden), max 200 hits total. Results show <code class="cmd">server:folder</code>; click a file → Editor; click a folder → right File list only when that scope is the current File root.</p>
+            </div>
+            <div class="dtop-modal-frame" data-modal-key="search"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
           </div>
         </div>
       </div>
@@ -2089,13 +2362,36 @@
         </h2>
         <div id="dTopAccChat" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-3" data-CLan="dTopChatDesc">Opens a modal for a new AI chat session — Working Directory plus the same <strong>MCP</strong> / <strong>Copy MD</strong> switches as New Terminal, then Open.</p>
+            <p class="text-muted small mb-3" data-CLan="dTopChatDesc">Opens a modal for a new AI chat session — Working Directory plus the same <strong>MCP</strong> / <strong>Copy MD</strong> switches as New Terminal, then Open. The session appears under left <strong>Agent</strong> in that path group.</p>
             <div class="dtop-modal-frame mb-3" data-modal-key="newchat"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
             <div class="text-muted small mb-0" data-CLan="dTopChatOpts">
               <ul class="mb-0 ps-3">
                 <li><strong>Working Directory:</strong> folder context for the chat agent.</li>
                 <li><strong>MCP (default off in Chat):</strong> enable to allow MCP tool servers during the chat. Leave off for a lighter, tools-minimal session.</li>
                 <li><strong>Copy MD (default on):</strong> same as Terminal — when cwd differs from the server Artgine path, seed that folder with the provider role markdown (<code class="cmd">CLAUDE.md</code> / <code class="cmd">AGENTS.md</code> / …).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item dtop-acc-item ms-md-4" data-highlight="dSampleTerm">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dTopAccTerm">
+            <i class="bi bi-terminal me-2" style="color:#f778ba;"></i> <span data-CLan="dTopTermHeading">More → Terminal (F3)</span>
+          </button>
+        </h2>
+        <div id="dTopAccTerm" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
+          <div class="accordion-body">
+            <p class="text-muted small mb-3" data-CLan="dTopTermDesc">Always opens the New Terminal modal first (also <kbd>F3</kbd>). Pick mode, optional Key, Working Directory, then <strong>MCP</strong> / <strong>Copy MD</strong>, and Open. Existing sessions open from left <strong>Agent</strong> path groups — not this button.</p>
+            <div class="dtop-modal-frame mb-3" data-modal-key="newterm"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
+            <div class="text-muted small mb-0" data-CLan="dTopTermOpts">
+              <ul class="mb-0 ps-3">
+                <li><strong>Mode:</strong> <code class="cmd">cmd</code> (plain shell), or AI CLIs <code class="cmd">claude</code> / <code class="cmd">codex</code> / <code class="cmd">agy</code> (antigravity) / <code class="cmd">opencode</code> / <code class="cmd">grok</code>. Missing CLIs install on first open.</li>
+                <li><strong>Key:</strong> optional session label so you can tell multiple terminals apart in the sidebar.</li>
+                <li><strong>Working Directory:</strong> folder the PTY starts in (defaults from the last Agent path / server default if empty).</li>
+                <li><strong>MCP (default on):</strong> when checked, the AI CLI keeps MCP tool servers (e.g. Artgine-linked tools). Uncheck to start with MCP disabled — the agent uses only its built-in tools (safer / less prompt noise).</li>
+                <li><strong>Copy MD (default on):</strong> when the working directory is <em>not</em> the server’s main Artgine path, copies that provider’s role file into the folder (<code class="cmd">CLAUDE.md</code>, <code class="cmd">AGENTS.md</code>, …) so project rules and paths apply. No-op for <code class="cmd">cmd</code> or when cwd is already the server root.</li>
               </ul>
             </div>
           </div>
@@ -2138,7 +2434,7 @@
         </h2>
         <div id="dTopAccDownload" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-0" data-CLan="dTopDownloadDesc">No dialog — switches the center panel to a list of files the server has prepared for download.</p>
+            <p class="text-muted small mb-0" data-CLan="dTopDownloadDesc">No dialog — switches to the yt-dlp/ffmpeg download helper. Paste a YouTube or direct file URL, fetch info, pick MP3/MP4/Direct, and track job progress.</p>
           </div>
         </div>
       </div>
@@ -2152,6 +2448,40 @@
         <div id="dTopAccLog" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
             <p class="text-muted small mb-0" data-CLan="dTopLogDesc">No dialog — switches the center panel to an accordion of past provider (CLI) conversation logs, with refresh/delete controls.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item dtop-acc-item ms-md-4" data-highlight="dSampleMessenger">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dTopAccMessenger">
+            <i class="bi bi-chat-dots-fill me-2" style="color:#58a6ff;"></i> <span data-CLan="dTopMessengerHeading">More → Messenger</span>
+          </button>
+        </h2>
+        <div id="dTopAccMessenger" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
+          <div class="accordion-body">
+            <p class="text-muted small mb-2" data-CLan="dTopMessengerDesc">No dialog — opens the Messenger panel. Register a Telegram or Discord bot with its token (saved on the server). Expand a bot to copy the join link, link/unlink a running Terminal session, send a direct message, and watch the conversation log (polled while expanded).</p>
+            <div class="text-muted small mb-0" data-CLan="dTopMessengerOpts">
+              <ul class="mb-0 ps-3">
+                <li><strong>Register:</strong> paste bot token → Register. Session stays in SQLite across restarts.</li>
+                <li><strong>Join link / chat:</strong> user opens the link; state shows pending → active when linked.</li>
+                <li><strong>Terminal Link:</strong> pick an open Terminal session and Link so chat bridges to that PTY; Unlink to detach.</li>
+                <li><strong>Direct message / log:</strong> send from Control; in/out bubbles with markdown; log refreshes about every 3s while open.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item dtop-acc-item ms-md-4" data-highlight="dSampleHelp">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dTopAccHelp">
+            <i class="bi bi-question-circle me-2" style="color:#58a6ff;"></i> <span data-CLan="dTopHelpHeading">More → Help</span>
+          </button>
+        </h2>
+        <div id="dTopAccHelp" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
+          <div class="accordion-body">
+            <p class="text-muted small mb-0" data-CLan="dTopHelpDesc">Opens this guide in the center (also the default panel on first open). Entering with <code class="cmd">?path=</code> opens File instead.</p>
           </div>
         </div>
       </div>
@@ -2236,9 +2566,9 @@
           <div class="text-muted small mb-3" data-CLan="dOptScheduleDesc">
             <ul class="mb-0 ps-3">
               <li><strong>On fire:</strong> no typing into a terminal — creates a work order for the chosen Sub Agent, delivered by the same dispatch Team uses to its already-running session.</li>
-              <li><strong>Interval:</strong> runs once on save (unless Start is set), then repeats every Delay seconds. Count limits total fires and auto-deletes the schedule once reached.</li>
-              <li><strong>Time:</strong> fires once at the chosen hour:minute on each selected day of the week.</li>
-              <li><strong>Saved list:</strong> click an item to reopen it as "Edit Schedule" (same name = overwrite); the trash icon confirms before deleting.</li>
+              <li><strong>Interval:</strong> Delay (sec, ≥1), Count (0 = infinite), Start/End offsets (sec). Optional <em>Auto-delete when count is exhausted</em> (on by default). List badge shows mode + delay/×count summary.</li>
+              <li><strong>Time:</strong> pick one or more days of week, Hour (0–23), Minute (0/5/…/55). Optional <em>Run once then delete</em> (off by default).</li>
+              <li><strong>Saved list:</strong> click an item to reopen as "Edit Schedule" (same name = overwrite); trash confirms before delete. List refreshes every few seconds.</li>
             </ul>
           </div>
           <div class="dtop-modal-frame" data-modal-key="schedule"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
@@ -2306,7 +2636,7 @@
       <div class="col-12 col-lg-7">
         <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleCenterTerm" tabindex="0">
           <h5 class="mb-2"><i class="bi bi-terminal" style="color:#f778ba;"></i> <span data-CLan="dCenterTermHeading">Terminal</span></h5>
-          <p class="text-muted small mb-3" data-CLan="dCenterTermDesc">A live PTY session (xterm) in one of six modes — <code class="cmd">cmd</code>, <code class="cmd">claude</code>, <code class="cmd">codex</code>, <code class="cmd">agy</code>, <code class="cmd">opencode</code>, <code class="cmd">grok</code>. AI modes show a running transcript with a bottom input bar; plain <code class="cmd">cmd</code> is a normal shell. Open new ones from the top Terminal button; switch existing ones from the left Sessions list.</p>
+          <p class="text-muted small mb-3" data-CLan="dCenterTermDesc">A live PTY session (xterm) in one of six modes — <code class="cmd">cmd</code>, <code class="cmd">claude</code>, <code class="cmd">codex</code>, <code class="cmd">agy</code>, <code class="cmd">opencode</code>, <code class="cmd">grok</code>. AI modes show a running transcript with a bottom input bar; plain <code class="cmd">cmd</code> is a normal shell. Open new ones from <strong>More → Terminal</strong> (F3) or a path-group ⋯; switch existing ones from the left <strong>Agent</strong> list.</p>
           <div class="text-muted small mb-0" data-CLan="dCenterTermDetail">
             <p class="fw-semibold mb-1" style="color:#c9d1d9;">Layout &amp; input</p>
             <ul class="mb-3 ps-3">
@@ -2315,6 +2645,7 @@
               <li><strong>Esc</strong> sends Escape into the agent/shell and resets the input focus (helps Hangul IME glitches).</li>
               <li>With an empty input box, <strong>↑ ↓ ← →</strong> go straight to the PTY (history / menus inside the CLI).</li>
               <li><strong>F6</strong> toggles SUPER, shows the input bar if hidden, and focuses the input.</li>
+              <li><strong>F7</strong> toggles the conversation <strong>Log</strong> panel over the terminal stream (same as ⌨ → <strong>Log/Terminal</strong>).</li>
             </ul>
             <p class="fw-semibold mb-1" style="color:#c9d1d9;">SUPER (auto-approve)</p>
             <ul class="mb-3 ps-3">
@@ -2330,7 +2661,7 @@
             </ul>
             <p class="fw-semibold mb-1" style="color:#c9d1d9;">⌨ menu (mobile / precision)</p>
             <ul class="mb-3 ps-3">
-              <li><strong>View:</strong> scroll to bottom, resize cols/rows to the window, Page Up/Down, hide the input bar.</li>
+              <li><strong>View:</strong> scroll to bottom, resize cols/rows to the window, Page Up/Down, hide the input bar, toggle <strong>Log/Terminal</strong> (<strong>F7</strong>).</li>
               <li><strong>Arrows / Enter / Esc:</strong> inject those keys into the PTY without typing them.</li>
               <li><strong>Command:</strong> RESUME, MODEL (<code class="cmd">/model </code> prefill), COMPACT, CLEAR, STATUS, EXIT — mapped per provider (e.g. Gemini uses <code class="cmd">/stats</code> for status).</li>
               <li><strong>Skill:</strong> inserts a preconfigured skill prompt into the input box.</li>
@@ -2342,7 +2673,7 @@
             </ul>
             <p class="fw-semibold mb-1" style="color:#c9d1d9;">Start options (MCP / Copy MD)</p>
             <ul class="mb-0 ps-3">
-              <li>Set when creating the session (New Terminal modal). See top-bar Terminal accordion for full MCP / Copy MD behavior.</li>
+              <li>Set when creating the session (New Terminal modal). See More → Terminal accordion for full MCP / Copy MD behavior.</li>
               <li>Default for Terminal: MCP on, Copy MD on. Copy MD only copies role markdown when the working directory is different from the Artgine server root.</li>
             </ul>
           </div>
@@ -2359,7 +2690,7 @@
       <div class="col-12 col-lg-7">
         <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleCenterChat" tabindex="0">
           <h5 class="mb-2"><i class="bi bi-chat-dots" style="color:#d2a8ff;"></i> <span data-CLan="dCenterChatHeading">Chat</span></h5>
-          <p class="text-muted small mb-2" data-CLan="dCenterChatDesc">A structured AI chat thread rather than a raw terminal — user/assistant message bubbles with a composer at the bottom. Multiple chat sessions can run side by side, each tracked independently in the left sidebar's session list.</p>
+          <p class="text-muted small mb-2" data-CLan="dCenterChatDesc">A structured AI chat thread rather than a raw terminal — user/assistant message bubbles with a composer at the bottom. Multiple chat sessions can run side by side, each tracked under left <strong>Agent</strong> in its working-directory group.</p>
           <div class="text-muted small mb-0" data-CLan="dCenterChatOpts">
             <ul class="mb-0 ps-3">
               <li>Start from <strong>More → Chat</strong>: set Working Directory, then <strong>MCP</strong> / <strong>Copy MD</strong> (same meaning as Terminal — MCP enables tool servers; Copy MD seeds role <code class="cmd">*.md</code> into a non-root working folder).</li>
@@ -2451,7 +2782,7 @@
       </div>
     </div>
 
-    <div class="row g-4 mb-5">
+    <div class="row g-4 mb-4">
       <div class="col-12 col-lg-5">
         <div class="dleft-sample-wrap">
           <div class="ctrlmock-content dleft-sample p-2" id="dSampleCenterLog" style="max-width:360px;"></div>
@@ -2461,6 +2792,60 @@
         <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleCenterLog" tabindex="0">
           <h5 class="mb-2"><i class="bi bi-journal-code" style="color:#f778ba;"></i> <span data-CLan="dCenterLogHeading">Log</span></h5>
           <p class="text-muted small mb-0" data-CLan="dCenterLogDesc">An accordion of past AI conversations across every provider — Chat and Terminal sessions both log here. Each entry shows a model badge, a one-line preview, working directory, and timestamp; expand it to read the full exchange. Refresh/delete-all sit in the header, and each entry has its own delete.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-12 col-lg-5">
+        <div class="dleft-sample-wrap">
+          <div class="ctrlmock-content dleft-sample p-2" id="dSampleCenterMessenger" style="max-width:360px;"></div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-7">
+        <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleCenterMessenger" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-chat-dots-fill" style="color:#58a6ff;"></i> <span data-CLan="dCenterMessengerHeading">Messenger</span></h5>
+          <p class="text-muted small mb-3" data-CLan="dCenterMessengerDesc">Open from <strong>More → Messenger</strong>. Register Telegram/Discord bots, share join links, bridge chat to a Terminal session, and watch the live log.</p>
+          <div class="text-muted small mb-0" data-CLan="dCenterMessengerDetail">
+            <ul class="mb-0 ps-3">
+              <li><strong>Register:</strong> paste a bot token once — stored on the server; no need to re-enter after restart.</li>
+              <li><strong>Accordion per bot:</strong> platform badge, name, state (pending/active). Expanded body shows join URL, linked chat, and linked terminal key.</li>
+              <li><strong>Terminal:</strong> select an open session → Link / Unlink so messenger I/O bridges to that PTY.</li>
+              <li><strong>Direct message + log:</strong> send from Control; in/out bubbles with markdown; log polls while the item stays expanded.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+      <div class="col-12 col-lg-5">
+        <div class="dleft-sample-wrap">
+          <div class="ctrlmock-content dleft-sample p-2" id="dSampleCenterTmux" style="max-width:360px;"></div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-7">
+        <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleCenterTmux" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-grid-3x3-gap" style="color:#d2a8ff;"></i> <span data-CLan="dCenterTmuxHeading">Multiplexer</span></h5>
+          <p class="text-muted small mb-3" data-CLan="dCenterTmuxDesc">Open from the top <strong>Multiplexer</strong> tab. Split the center into panes and show several live sessions at once (Chat, Terminal, Browser, RDP). Layout persists in localStorage.</p>
+          <div class="text-muted small mb-0" data-CLan="dCenterTmuxDetail">
+            <p class="fw-semibold mb-1" style="color:#c9d1d9;">Modes</p>
+            <ul class="mb-3 ps-3">
+              <li><strong>Work:</strong> no overlays — interact with each pane's iframe directly.</li>
+              <li><strong>Config:</strong> each pane shows a toolbar: left-right split, top-bottom split, merge (if not root), and select content.</li>
+            </ul>
+            <p class="fw-semibold mb-1" style="color:#c9d1d9;">Menu (top-right ⋯)</p>
+            <ul class="mb-3 ps-3">
+              <li><strong>Maximize / Minimize:</strong> hide both sidebars for a full-width grid (tab bar stays), or restore the normal layout.</li>
+              <li><strong>Work / Config:</strong> switch modes.</li>
+              <li><strong>Close:</strong> leave the Multiplexer panel.</li>
+            </ul>
+            <p class="fw-semibold mb-1" style="color:#c9d1d9;">Content select</p>
+            <ul class="mb-0 ps-3">
+              <li>In Config mode, pick which open Chat / Terminal / Browser / RDP session fills that pane.</li>
+              <li>Empty panes prompt you to select content in Config mode.</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -2534,10 +2919,11 @@ CLan.Set({
   ko: {
     heroDesc1: '어느 기기 브라우저에서든 접속해, <strong>PC 화면·파일·AI 코딩 에이전트</strong>를 한 화면에서 원격 제어하는 로컬 웹 도구.',
     btnGithub: 'GitHub',
+    btnArtgineHelp: '아티젠 문서',
     btnNode: 'Node.js',
     btnGit: 'Git',
 
-    tabPromo: '프로모션',
+    tabPromo: '소개',
     tabInstall: '시작하기',
 
     featuresTitle: '주요 기능',
@@ -2546,13 +2932,13 @@ CLan.Set({
     fFilesTitle: 'Files',
     fFilesDesc: '허용된 서버 폴더를 탐색하고 파일 보기, 편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.',
     fFileMgrTitle: 'File Manager / Search',
-    fFileMgrDesc: 'File Manager와 파일 검색을 제공합니다. 검색 결과에서 위치로 이동하고, 관리 메뉴에서 루트 선택과 버전 관리 작업을 실행합니다.',
+    fFileMgrDesc: 'File 탭에서 탐색·편집·업로드·Git. 파일명 검색 모달은 <strong>등록된 모든 경로 체크박스</strong>(로컬 + 인증된 원격)를 보여 줍니다. <kbd>F2</kbd>는 전부 체크, 경로 그룹 <strong>⋯ → Search</strong>는 그 경로만 체크(나머지는 직접 켤 수 있음). 체크된 스코프 전체를 검색하고 파일은 Editor로 엽니다.',
     fAiChatTitle: 'AI Chat',
     fAiChatDesc: 'Working Directory와 옵션을 정한 뒤 AI 채팅 세션을 시작합니다. 여러 세션을 동시에 두고 상태 색상으로 연결 상태와 응답 상태를 확인합니다.',
     fTermTitle: '터미널',
     fTermDesc: '<code class="cmd">cmd</code>, <code class="cmd">codex</code>, <code class="cmd">claude</code>, <code class="cmd">opencode</code>, <code class="cmd">grok</code> 같은 CLI 세션을 관리합니다. 슬래시로 다른 프로바이더를 지목하면(<code class="cmd">/codex</code>, <code class="cmd">/claude</code> 등) 같은 작업 폴더에서 현재 대화를 이어받는 새 세션으로 핸드오프합니다.',
     fScheduleTitle: '스케줄러',
-    fScheduleDesc: '반복 작업을 등록하면 지정 시각마다 서브 에이전트가 자동으로 실행합니다. 시간 간격·횟수·종료 조건을 함께 설정할 수 있습니다.',
+    fScheduleDesc: 'Option → Schedule에서 Sub Agent에 work order를 보냅니다. <strong>Interval</strong>(delay·count·start/end, 횟수 소진 시 자동 삭제) 또는 <strong>Time</strong>(요일 + 시:분, 1회 후 삭제 옵션).',
     fWebTitle: '브라우저',
     fWebDesc: '확인할 URL, 유지 시간, 화면 크기를 정해 웹 화면을 열고 화면과 동작 기록을 확인합니다. 입력을 켜면 키보드와 마우스를 전달할 수 있습니다.',
     fSubAgentTitle: 'Sub Agent',
@@ -2561,10 +2947,14 @@ CLan.Set({
     fTeamDesc: '목표를 입력하고 서브 에이전트를 선택하면 메인 에이전트가 감독 역할로 작업을 분배·집계합니다. 각 에이전트는 독립 터미널에서 병렬 실행됩니다.',
     fEditorTitle: '에디터',
     fEditorDesc: '코드·텍스트 파일을 편집하고, Excel·CSV는 스프레드시트 뷰어로, SQLite 등 로컬 DB 파일은 테이블 뷰어로 바로 열고 수정할 수 있습니다.',
+    fTmuxTitle: '멀티플렉서',
+    fTmuxDesc: '센터를 tmux처럼 여러 칸으로 나눠 Chat·Terminal·Browser·RDP를 동시에 봅니다. 설정 모드에서 분할/병합/콘텐츠 선택, 작업 모드에서 직접 조작. 레이아웃은 브라우저에 저장됩니다.',
     fLocalModelTitle: '로컬 모델',
     fLocalModelDesc: 'Ollama·LM Studio 같은 로컬 LLM 서버를 주소 하나로 등록하면 모델 목록을 자동 인식해 바로 사용할 수 있습니다.',
     fLogTitle: '로그',
     fLogDesc: 'Chat·Terminal 등 모든 AI 세션의 과거 기록을 모아 확인합니다. 세션별로 삭제하거나 전체 로그를 한 번에 지울 수 있습니다.',
+    fMessengerTitle: '메신저',
+    fMessengerDesc: 'Telegram·Discord 봇 토큰을 등록하고 입장 링크를 공유한 뒤, Terminal 세션을 Link하고 직접 메시지를 보내며 대화 로그를 봅니다(More → Messenger).',
 
     useCasesTitle: '사용 예시',
     useCasesSub: 'AI에게 자연어로 지시만 하면 됩니다',
@@ -2579,11 +2969,12 @@ CLan.Set({
     ucTag9: '자동 반복 품질 개선', ucMsg9: '결과가 만족스러울 때까지 계속 개선해줘',            ucDesc9: 'Sub Agent의 Retry 설정을 켜두면 작업 완료 후 자동으로 검토·개선 지시를 반복해 품질을 높입니다.',
     ucTag10: '코드 리뷰 자동화', ucMsg10: '커밋하기 전에 코드 리뷰 에이전트한테 먼저 검토시켜줘', ucDesc10: 'reviewer 서브 에이전트를 등록해두면 커밋 전 자동으로 코드를 분석하고 개선 사항을 보고합니다.',
     ucTag11: '프로바이더 핸드오프', ucMsg11: '여기서부터는 Codex로 이어서 해줘',                ucDesc11: '터미널에서 다른 프로바이더를 슬래시로 지목하면(/codex, /claude, /agy, /opencode) 현재 대화를 요약 파일로 남기고, 같은 작업 폴더에 새 세션이 열려 그 요약을 읽고 하던 작업을 그대로 이어갑니다. 맥락을 다시 설명할 필요가 없습니다.',
+    ucTag12: '메신저 + 터미널', ucMsg12: '텔레그램을 코딩 터미널에 연결해서 폰으로 에이전트에게 지시하고 싶어', ucDesc12: 'More → Messenger에서 Telegram/Discord 봇을 등록하고 입장 링크를 연 뒤, 열린 Terminal 세션을 Link합니다. 메신저 채팅이 그 PTY로 전달되고, 응답과 Control에서 보낸 직접 메시지는 실시간 로그에 표시됩니다.',
 
     previewTitle: '화면 미리보기',
     previewSub: '실제 앱과 동일한 구조의 화면 구성입니다',
     mockRdpTitle: 'Local / 원격 Control 화면 확인',
-    mockRdpDesc: '<strong>F3</strong>으로 RDP 탭에 진입합니다. Local을 선택하거나 Remote Control.html URL을 추가해 대상 화면을 전환합니다.',
+    mockRdpDesc: '왼쪽 사이드바 RDP에서 Local을 선택하거나 More → RDP로 Remote Control.html URL을 추가해 대상 화면을 전환합니다.',
     rdpFrame: '화면',
     rdpQuality: '화질',
     rdpInputOn: '입력 가능',
@@ -2653,7 +3044,7 @@ CLan.Set({
     browserPageP1: '의존성을 설치하고 웹 서버를 실행한 뒤, 브라우저에서 Control을 열어 파일·터미널·AI 세션을 관리합니다.',
     browserPageP2: '왼쪽 사이드바에서 RDP/세션을 고르고, 오른쪽 사이드바 Provider Status에서 버전과 잔여 사용량을 확인합니다.',
     mockTermTitle: '웹 터미널',
-    mockTermDesc: '5가지 모드 지원. <strong>F6</strong> SUPER 모드 토글, <strong>F7</strong> 입력 바 포커스. 실제 명령을 실행하는 CLI 환경입니다.',
+    mockTermDesc: '6가지 모드 지원. <strong>F6</strong> SUPER 모드 토글(+입력 바 포커스), <strong>F7</strong> Log/Terminal 패널 토글. 실제 명령을 실행하는 CLI 환경입니다.',
     termWorkDir: '작업 경로: D:/git/Artgine',
     termAllPassed: 'All checks passed.',
     termBusy: '● 실행 중',
@@ -2680,6 +3071,11 @@ CLan.Set({
     gsBadge2: '방법 2',
     gsMethod2Title: '실행파일 다운로드',
     gsMethod2Note: '<div class="mb-1">압축 해제 후 실행:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">Artgine.exe</code></li><li>Linux — <code class="cmd">./Artgine --no-sandbox</code></li><li>macOS — <code class="cmd">Artgine.app</code></li></ul><div class="mb-0">OS가 막으면 아래 권한 / 보안을 확인하세요.</div>',
+    gsArtgineDocsTitle: '아티젠 일렉트론 앱 · 엔진 문서',
+    gsArtgineDocsBtn: '전체 문서 열기',
+    gsArtgineDocsLead: '이 <strong>시작하기</strong> 탭은 <strong>Artgine Agent(Control)</strong> — 원격 화면·파일·AI 에이전트용입니다. 링크된 페이지는 <strong>아티젠 Electron IDE + 렌더링 엔진</strong> 공식 가이드(프로젝트 생성, Run, 모드, PWA, 플러그인)입니다. Agent로 원격 AI 작업을, 엔진 문서로 프로젝트 개발·호스팅을 보면 됩니다.',
+    gsArtgineDocsBody: '<div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-download me-1" style="color:#3fb950;"></i> 설치 · 실행</div><ul class="mb-0 ps-3"><li><code class="cmd">git clone</code> · <code class="cmd">npm install</code> · <code class="cmd">start.bat</code> / <code class="cmd">start.sh</code></li><li><code class="cmd">npm start</code> — Electron GUI · <code class="cmd">npm run start_web [port]</code> — 웹 서버만</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-layers me-1" style="color:#d2a8ff;"></i> Electron 모드 3종</div><ul class="mb-0 ps-3"><li><strong>developer</strong> — 설정 UI, Folder → Run(<kbd>F9</kbd>), 프로젝트 파일 생성</li><li><strong>server</strong> — 호스팅 + URL / IP / QR 연결 화면</li><li><strong>client</strong> — 완성된 프로젝트 창 실행(전시·키오스크)</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-play-circle me-1" style="color:#58a6ff;"></i> 워크플로</div><ul class="mb-0 ps-3"><li>App 탭: <code class="cmd">program</code>, <code class="cmd">server</code>(local / remote / webServer), Include, Plugin, PWA</li><li>Run(F9)가 <code class="cmd">[Name].ts</code> / <code class="cmd">.html</code> / <code class="cmd">.json</code> 생성·갱신 — <strong>EntryPoint</strong> 아래만 직접 수정</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-link-45deg me-1" style="color:#d29922;"></i> 관련 저장소</div><ul class="mb-0 ps-3"><li><a href="https://github.com/06fs4dix/Artgine" target="_blank" rel="noopener">Artgine</a> — 엔진 · Electron 앱</li><li><a href="https://github.com/06fs4dix/Artgine-Project" target="_blank" rel="noopener">Artgine-Project</a> — 샘플 · <a href="https://github.com/06fs4dix/Artgine-Agent" target="_blank" rel="noopener">Artgine-Agent</a> — 이 Control 도구</li></ul></div>',
+    gsArtgineDocsNote: '전체 안내(Install · Electron Modes · Workflow, 영/한): <a href="https://06fs4dix.github.io/Artgine/help/help.html" target="_blank" rel="noopener" style="color:#58a6ff; word-break:break-all;">https://06fs4dix.github.io/Artgine/help/help.html</a>',
     gsAfterTitle: '일렉트론 앱 시작 후',
     gsAfterBody: '브라우저에서 아래 주소로 접속하세요. <code class="cmd">[port]</code>는 서버가 실제로 쓰는 포트로 바꿉니다(일렉트론 Server 패널 또는 <code class="cmd">settings.json</code> 확인):<div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">http://localhost:[port]</div>또는 일렉트론 앱에서 <strong>브라우저</strong> 버튼을 누르면 URL을 치지 않고 Control을 열 수 있습니다. 로그인 기본 비밀번호: <strong>artgine</strong>. 폰·다른 PC에서는 <code class="cmd">localhost</code> 대신 호스트 PC의 LAN IP를 사용하세요.',
     gsAfterTunnelTitle: '터널링으로 실행할지 물어본다면',
@@ -2697,7 +3093,7 @@ CLan.Set({
     gsSecTipAccountTitle: '앱(서버) 전용 계정 할당',
     gsSecTipAccountBody: '<ul class="mb-0 ps-3"><li>Artgine 전용 OS 사용자(예: <code class="cmd">artgine</code>)를 만들고, 서버를 그 계정으로 실행하세요 — 일상용 관리자/root 로그인으로 돌리지 마세요.</li><li>Control이나 Terminal 세션이 악용되더라도, 피해는 그 계정이 원래 할 수 있는 범위로 제한됩니다.</li><li>평소에는 “관리자 권한으로 실행”을 피하세요. 앱에 필요한 권한만 가진 일반 계정이 안전합니다.</li><li>Windows: 로컬 사용자를 만든 뒤 그 사용자로 로그인(또는 해당 계정으로 서비스 실행)해 Artgine을 시작합니다. Linux/macOS: 전용 사용자 + 그 사용자로 실행하거나 <code class="cmd">sudo -u …</code> 를 사용합니다.</li></ul>',
     gsSecTipFolderTitle: '폴더 접근 권한을 따로 설정',
-    gsSecTipFolderBody: '<ul class="mb-0 ps-3"><li><strong>OS 단:</strong> 전용 계정에는 꼭 필요한 프로젝트/작업 폴더에만 읽기·쓰기 권한을 줍니다. 문서 홈, 시스템 폴더, 다른 사용자 데이터는 제외하거나 거부합니다.</li><li><strong>Artgine 단:</strong> Control 왼쪽 Root → 워킹 폴더 추가(<code>+</code>)에 그 경로만 등록합니다. 목록에 없는 경로는 File/Root로 서비스되지 않으니 목록을 최소로 유지하세요.</li><li>정말 필요하지 않다면 디스크 전체(<code>C:\\</code>, <code>/</code> 등)를 워킹 폴더에 넣지 마세요.</li><li>두 층을 함께 쓰세요: OS ACL은 프로세스 자체를 막고, Working Folder는 프로세스가 더 닿을 수 있어도 UI에 노출되는 범위를 줄입니다.</li></ul>',
+    gsSecTipFolderBody: '<ul class="mb-0 ps-3"><li><strong>OS 단:</strong> 전용 계정에는 꼭 필요한 프로젝트/작업 폴더에만 읽기·쓰기 권한을 줍니다. 문서 홈, 시스템 폴더, 다른 사용자 데이터는 제외하거나 거부합니다.</li><li><strong>Artgine 단:</strong> Control 왼쪽 <strong>Agent</strong> 탭 → 워킹 폴더 추가에 그 경로만 등록합니다. 목록에 없는 경로는 File/Root로 서비스되지 않으니 목록을 최소로 유지하세요.</li><li>정말 필요하지 않다면 디스크 전체(<code>C:\\</code>, <code>/</code> 등)를 워킹 폴더에 넣지 마세요.</li><li>두 층을 함께 쓰세요: OS ACL은 프로세스 자체를 막고, Working Folder는 프로세스가 더 닿을 수 있어도 UI에 노출되는 범위를 줄입니다.</li></ul>',
     gsSecTipFooter: '기본 웹 비밀번호 변경, 가능하면 공인망에 직접 노출하지 않기, 원격이 필요하면 VPN·리버스 프록시 인증을 함께 쓰는 것도 권장합니다.',
 
     gsAiFolderTitle: 'ai 폴더 & 프로젝트 권한',
@@ -2705,7 +3101,7 @@ CLan.Set({
     gsAiFolderDocsTitle: '가이드 문서',
     gsAiFolderDocsBody: '<ul class="mb-0 ps-3"><li><strong>ROLE.md:</strong> 이 프로젝트에서 에이전트가 맡는 역할.</li><li><strong>ProjectSetupGuide.md:</strong> 새 프로젝트 생성 절차.</li><li><strong>EngineUsageGuide.md:</strong> 새 로직을 짜기 전에 엔진(<code>artgine/</code>) API를 먼저 찾아볼 위치.</li><li><strong>CodeNamingGuide.md, RemoteCMDGuide.md, MemoGuide.md, BrowserDebugGuide.md, RemoteDesktopGuide.md:</strong> 명명 규칙과 원격 명령 실행·메모 검색·브라우저 디버깅·원격 데스크톱 제어 방법.</li><li>프로젝트의 <code>CLAUDE.md</code>가 해당 작업 전 여기서 어떤 가이드를 먼저 읽어야 하는지 지정합니다.</li></ul>',
     gsAiPermTitle: 'ai/settings.json 권한 설정',
-    gsAiPermBody: '<p class="mb-2"><code>ai/settings.json</code>은 서버 루트의 <code>settings.json</code>(로그인 비밀번호, 워킹 폴더)과는 별개입니다. Chat/Terminal 드롭다운에 쓰이는 <strong>models</strong> 목록 외에, <code>permissions.allow</code> / <code>permissions.deny</code> 배열이 Chat·Terminal 세션 안에서 Claude/Codex/Grok/opencode가 띄우는 <em>승인 프롬프트</em>("이 명령을 실행할까요? y/n" 같은)를 자동 승인/거부할지 결정합니다.</p><p class="mb-2">각 규칙은 <code>type</code>(<code>"read" | "write" | "reply"</code> — 읽기냐 파일을 바꾸는 동작이냐), <code>tool</code>(CLI의 툴 이름, 예: <code>Bash</code>, <code>Edit</code>, <code>MCPTool</code>), <code>command</code>(실제 셸 명령의 접두사, <code>*</code> 와일드카드 지원) 중 원하는 조건을 검사합니다. 프롬프트가 뜨면 <code>deny</code> 규칙을 먼저 검사하고, 안 걸리면 <code>allow</code>를 검사합니다. 둘 다 안 맞으면 SUPER 모드(<kbd>F6</kbd>)가 나머지를 전부 자동 승인하고, 그것도 아니면 클릭할 때까지 대기합니다.</p><p class="mb-1 fw-semibold" style="color:#c9d1d9;">예시</p><ul class="mb-0 ps-3"><li>읽기 전용 프롬프트는 전부 자동 승인 — 파일 보기/목록 조회는 아무것도 바꾸지 않으므로 안전합니다:<br><code class="cmd">{ "type": "read" }</code></li><li>특정 안전 스크립트 하나만 경로 접두사로 자동 승인 — 해당 접두사로 끝나는 어떤 경로든 매칭되고, <code>tsc_check_bad</code> 같은 글자만 비슷한 명령은 매칭되지 않습니다:<br><code class="cmd">{ "command": "node *ai/tool/tsc_check" }</code></li><li>tool·type·command가 모두 맞아야 자동 승인 — command 단독 규칙보다 더 좁은 조건입니다:<br><code class="cmd">{ "type": "write", "tool": "Bash", "command": "npm test" }</code></li><li>위험한 명령은 SUPER 모드에서도 항상 자동 거부 — <code>deny</code>는 <code>allow</code>와 SUPER 모드보다 먼저/우선 적용됩니다:<br><code class="cmd">{ "command": "rm -rf" }</code> (<code>permissions.deny</code>에 등록)</li><li>어떤 명령을 담고 있든 MCP 툴 호출은 전부 차단:<br><code class="cmd">{ "tool": "MCPTool" }</code> (<code>permissions.deny</code>에 등록)</li></ul>',
+    gsAiPermBody: '<p class="mb-2"><code>ai/settings.json</code>은 서버 루트의 <code>settings.json</code>(로그인 비밀번호, 워킹 폴더)과는 별개입니다. Chat/Terminal 드롭다운에 쓰이는 <strong>models</strong> 목록 외에, <code>permissions.allow</code> / <code>permissions.deny</code> 배열이 <strong>Terminal</strong> PTY 세션 안에서 Claude/Codex/Grok/opencode가 띄우는 <em>승인 프롬프트</em>("이 명령을 실행할까요? y/n" 같은)를 자동 승인/거부할지 결정합니다. Chat UI 세션은 이 자동 승인 경로를 쓰지 않습니다.</p><p class="mb-2">각 규칙은 <code>type</code>(<code>"read" | "write" | "reply"</code> — 읽기냐 파일을 바꾸는 동작이냐), <code>tool</code>(CLI의 툴 이름, 예: <code>Bash</code>, <code>Edit</code>, <code>MCPTool</code>), <code>command</code>(실제 셸 명령의 접두사, <code>*</code> 와일드카드 지원) 중 원하는 조건을 검사합니다. 프롬프트가 뜨면 <code>deny</code> 규칙을 먼저 검사하고, 안 걸리면 <code>allow</code>를 검사합니다. 둘 다 안 맞으면 그 Terminal 세션의 SUPER 모드(<kbd>F6</kbd> / <code class="cmd">/super</code> / ⌨ → ⚡ SUPER)가 나머지를 전부 자동 승인하고, 그것도 아니면 클릭할 때까지 대기합니다.</p><p class="mb-1 fw-semibold" style="color:#c9d1d9;">예시</p><ul class="mb-0 ps-3"><li>읽기 전용 프롬프트는 전부 자동 승인 — 파일 보기/목록 조회는 아무것도 바꾸지 않으므로 안전합니다:<br><code class="cmd">{ "type": "read" }</code></li><li>특정 안전 스크립트 하나만 경로 접두사로 자동 승인 — 해당 접두사로 끝나는 어떤 경로든 매칭되고, <code>tsc_check_bad</code> 같은 글자만 비슷한 명령은 매칭되지 않습니다:<br><code class="cmd">{ "command": "node *ai/tool/tsc_check" }</code></li><li>tool·type·command가 모두 맞아야 자동 승인 — command 단독 규칙보다 더 좁은 조건입니다:<br><code class="cmd">{ "type": "write", "tool": "Bash", "command": "npm test" }</code></li><li>위험한 명령은 SUPER 모드에서도 항상 자동 거부 — <code>deny</code>는 <code>allow</code>와 SUPER 모드보다 먼저/우선 적용됩니다:<br><code class="cmd">{ "command": "rm -rf" }</code> (<code>permissions.deny</code>에 등록)</li><li>어떤 명령을 담고 있든 MCP 툴 호출은 전부 차단:<br><code class="cmd">{ "tool": "MCPTool" }</code> (<code>permissions.deny</code>에 등록)</li></ul>',
 
     providerTitle: 'AI 프로바이더',
     providerSub: 'Node.js가 필요하고, CLI 프로바이더는 Terminal을 열 때 자동 설치됩니다',
@@ -2718,35 +3114,45 @@ CLan.Set({
     providerNote: '팁: 설치 후 프로바이더별로 Terminal을 한 번 열어 자동 설치를 끝낸 다음, 안내에 따라 로그인하고 오른쪽 Info 탭에서 상태를 확인하세요.',
 
     uHintDefault: '아래 목업의 아무 곳이나 눌러보면 그 부분이 무엇을 하는지 여기에 나옵니다.',
-    uCenterHint: '어떤 탭이나 세션을 누르느냐에 따라 여기(RDP, File, Terminal, Chat, Browser, Editor, Memo, Download, Log 중 하나)가 바뀝니다.',
-    uLeftRootLabel: 'Root',
+    uCenterHint: '어떤 탭이나 세션을 누르느냐에 따라 여기(RDP, File, Help, Terminal, Chat, Browser, Editor, Memo, Download, Log, Messenger, Multiplexer 중 하나)가 바뀝니다.',
+    fileSearchHint: '파일 검색: F2(전체 경로 체크) · 경로 ⋯ → Search(해당 경로만 미리 체크)',
     uLeftRdpLabel: 'RDP',
-    uLeftSessLabel: 'Sessions',
+    uLeftAddFolder: '워킹 폴더 추가',
     // 우측 사이드바 탭 라벨은 Control UI와 같이 영문 고정 (Info / File / Option)
     uRightInfoTitle: 'Info',
     uRightFileTitle: 'File',
     uRightOptionTitle: 'Option',
     uNotSignedIn: '로그인 안 됨',
+    helpCenterTitle: 'Help (이 가이드)',
+    helpCenterDesc: '기본 진입 패널입니다. 소개 / 시작하기 / 설명 탭에서 레이아웃·단축키·각 기능을 안내합니다.',
+    tmuxEmptyPane: '비어 있음 — 설정 모드에서 선택',
 
-    dRootSel: '<strong>Root 선택.</strong> 서버 워킹 폴더(File/Root 목록)와 맨 끝의 Artgine (WorkingPath)를 고르는 셀렉트입니다. 바꾸면 File·Terminal/Chat 기본 작업 경로가 바뀌고, 활성 RDP 서버의 루트 목록을 따릅니다.',
-    dRootAddFolder: '<strong>워킹 폴더 추가 (+).</strong> Root 셀렉트 옆에 있습니다. 서버가 허용하는 루트 폴더 목록(한 줄에 하나씩)을 편집합니다. 저장하면 서버가 재시작됩니다.',
+    dRootAddFolder: '<strong>워킹 폴더 추가.</strong> Agent 탭에 있습니다. 서버가 허용하는 루트 폴더 목록(한 줄에 하나씩)을 편집합니다. 등록된 경로는 세션이 없어도 빈 경로 그룹으로 남습니다. 저장하면 서버가 재시작됩니다.',
+    dSbAgent: '<strong>Agent 탭.</strong> Chat·Terminal 세션을 working directory 경로별로 묶습니다. 경로 헤더는 접기/펼치기, ⋯로 Chat/Terminal 생성 또는 그 경로 <em>Search</em>. Chat·Terminal을 열면 자동으로 이 탭으로 전환됩니다.',
+    dSbOther: '<strong>Other 탭.</strong> Browser·Editor 세션을 경로 없이 최신순 평면 목록으로 표시합니다. Browser/Editor를 열면 자동으로 이 탭으로 전환됩니다.',
+    dAgentGroup: '<strong>경로 그룹.</strong> 헤더에 working directory가 표시됩니다(길면 꼬리 쪽 경로 우선). 헤더 클릭으로 접기/펼치기. 등록만 된 빈 폴더도 그룹으로 남아 그 경로에서 작업을 시작할 수 있습니다. 이 그룹에서 <strong>Chat</strong>·<strong>Terminal</strong>·<strong>Search</strong>를 바로 쓸 수 있습니다(⋯ 메뉴).',
+    dAgentGroupNew: '<strong>경로 그룹 ⋯ — Chat / Terminal / Search.</strong> 이 그룹에서 할 수 있는 세 가지:<ul class="mb-0 mt-1 ps-3"><li><strong>Chat</strong> — 이 경로를 Working Directory로 한 새 AI 채팅(More → Chat과 동일, cwd 자동).</li><li><strong>Terminal</strong> — 이 경로에서 새 CLI 세션(cmd/claude/codex/…, More → Terminal / F3과 동일, cwd 자동).</li><li><strong>Search</strong> — 파일 검색 모달을 열고 <strong>이 경로만 미리 체크</strong>(등록된 로컬·원격 경로는 모두 목록에 있어 추가로 켤 수 있음). <kbd>F2</kbd>는 같은 모달을 <strong>모든 경로 체크</strong> 상태로 엽니다.</li></ul>',
     dRdpLocal: '<strong>RDP · Local.</strong> 이 서버 자신의 화면입니다 — 이름만 표시되고 URL·상태 점은 없습니다. 링크 아이콘으로 외부 접속용 주소를 볼 수 있고, 입력을 켜면 제어할 수 있습니다.',
     dRdpRemote: '<strong>RDP · Remote.</strong> 등록된 원격 서버를 URL로 보여줍니다(상태 점 없음). 선택하면 해당 화면을 열고 File 루트도 그 서버 기준으로 바꿉니다.',
-    dSessChat: '<strong>세션 · Chat.</strong> 해당 AI 채팅 스레드를 가운데 Chat 패널에서 엽니다. 새 세션은 More 메뉴에서 시작합니다.',
-    dSessTerm: '<strong>세션 · Terminal.</strong> 해당 CLI 세션(cmd/claude/codex/opencode/antigravity)을 가운데 Terminal 패널에서 엽니다.',
-    dSessBrowser: '<strong>세션 · Browser.</strong> 해당 Playwright 웹 세션을 가운데 Browser 패널에서 열어 확인·원격 제어합니다.',
-    dSessEditor: '<strong>세션 · Editor.</strong> File 탭에서 열었던 파일을 Monaco 기반 Editor 패널에서 다시 엽니다.',
+    dSessChat: '<strong>세션 · Chat.</strong> 해당 AI 채팅 스레드를 가운데 Chat 패널에서 엽니다. Agent 탭의 해당 경로 그룹 아래에 표시됩니다. 새 세션: More → Chat 또는 경로 ⋯.',
+    dSessTerm: '<strong>세션 · Terminal.</strong> 해당 CLI 세션(cmd/claude/codex/opencode/antigravity/grok)을 가운데 Terminal 패널에서 엽니다. Agent 탭 경로 그룹에 표시. 새 세션: More → Terminal(F3) 또는 경로 ⋯.',
+    dSessBrowser: '<strong>세션 · Browser.</strong> 해당 Playwright 웹 세션을 가운데 Browser 패널에서 엽니다. Other 탭(최신순). 새 세션: More → Browser.',
+    dSessEditor: '<strong>세션 · Editor.</strong> File 탭에서 열었던 파일을 다시 엽니다. Other 탭에 표시. 파일은 File 탭 또는 오른쪽 사이드바 File 목록에서 엽니다.',
     dTabFile: '<strong>File 탭.</strong> 현재 루트의 전체 파일 관리자입니다 — 보기·편집·공유·업로드·Git/SVN 작업을 처리합니다.',
-    dBtnSearch: '<strong>Search 버튼(F2).</strong> File 탭으로 이동한 뒤 파일명 재귀 검색 모달을 엽니다.',
-    dTabTerm: '<strong>Terminal 탭.</strong> 탭 버튼 자체가 "New Terminal" 버튼입니다 — 누르면 항상 모드(cmd/claude/codex/antigravity/opencode/grok), Key, Working Directory를 고르는 대화상자가 먼저 뜨고, 그 다음에 세션이 시작됩니다.',
-    dBtnMore: '<strong>More 메뉴.</strong> 부가 기능과 보조 탭을 모아둔 드롭다운입니다 — 아래 항목을 눌러 하나씩 확인해보세요.',
+    dFileSearch: '<strong>파일 검색.</strong> 상단 Search 탭 없음. 모달에 등록 루트마다 체크박스(<code class="cmd">Local:./</code>, 원격은 <code class="cmd">host:path</code>). <kbd>F2</kbd> = 전부 체크, 경로 <strong>⋯ → Search</strong> = 그 경로만(나머지는 직접 토글). 체크된 스코프 전부 검색(부분 이름, Stop, 최대 200). 결과는 server:folder 표시, 파일 → Editor, 폴더 → 현재 File 루트와 같을 때만 오른쪽 File 목록.',
+    dTabHelp: '<strong>Help.</strong> 이 가이드 페이지입니다(최초 진입 기본 화면). More → Help로 엽니다. <code class="cmd">?path=</code>로 들어오면 File이 대신 열립니다.',
+    dBtnMore: '<strong>More 메뉴.</strong> Memo, 새 RDP/Chat/Terminal/Browser/Team, Download, Log, Messenger, Help 등 보조 기능 드롭다운입니다. Multiplexer는 File 옆 상단 탭. 아래 항목을 눌러 하나씩 확인해보세요.',
     dMoreMemo: '<strong>Memo.</strong> 폴더 단위 Memo 페이지를 엽니다 — 좌측 카테고리/메시지 사이드바, Write/Search/Delete/Move 모드, AI 검색용 프로바이더·모델, 태그, 말풍선 로그 + 입력창. 명령 상세는 Guide → Memo.',
     dMoreRdp: '<strong>RDP (추가).</strong> 다른 원격 Control.html 서버를 등록해 왼쪽 사이드바 RDP 목록에 추가합니다.',
-    dMoreChat: '<strong>Chat (새로 만들기).</strong> New Chat 대화상자를 엽니다 — Working Directory와 옵션을 정하고 세션을 시작합니다.',
-    dMoreBrowser: '<strong>Browser (새로 만들기).</strong> New Browser 대화상자를 엽니다 — URL, TTL, 화면 크기, Stealth 시간을 설정합니다.',
-    dMoreTeam: '<strong>Team (새로 만들기).</strong> New Team 대화상자를 엽니다 — 서브 에이전트와 목표를 고르면 메인 터미널이 Terminal 패널에 나타납니다.',
+    dMoreChat: '<strong>Chat (새로 만들기).</strong> New Chat 대화상자를 엽니다 — Working Directory와 옵션을 정하고 세션을 시작합니다(Agent 탭 해당 경로 그룹에 표시).',
+    dMoreTerm: '<strong>Terminal (새로 만들기) · F3.</strong> New Terminal 모달 — 모드(cmd/claude/codex/agy/opencode/grok), Key, Working Directory, MCP / Copy MD. 기존 세션은 왼쪽 Agent 목록에서 엽니다.',
+    dMoreBrowser: '<strong>Browser (새로 만들기).</strong> New Browser 대화상자를 엽니다 — URL, TTL, 화면 크기, Stealth 시간(Other 탭에 표시).',
+    dMoreTeam: '<strong>Team (새로 만들기).</strong> New Team 대화상자를 엽니다 — 서브 에이전트와 목표를 고르면 메인 터미널이 Terminal 패널(Agent 목록)에 나타납니다.',
     dMoreDownload: '<strong>Download.</strong> yt-dlp/ffmpeg 상태 확인 후 YouTube·직접 URL을 넣고 MP3/MP4/Direct 중 포맷을 고른 뒤 Start Download로 내려받습니다. 진행 중인 job 목록과 진행률이 아래에 표시됩니다.',
     dMoreLog: '<strong>Log.</strong> 지난 프로바이더(CLI) 대화 로그를 아코디언 목록으로 보여주는 탭을 엽니다. 새로고침/삭제 버튼이 있습니다.',
+    dMoreMessenger: '<strong>Messenger.</strong> Telegram/Discord 봇 토큰 등록, 입장 링크, Terminal Link/Unlink, 직접 메시지 발송, 봇별 아코디언 대화 로그.',
+    dMoreHelp: '<strong>Help.</strong> 이 가이드(소개 / 시작하기 / 화면 가이드)를 가운데에 엽니다 — 최초 진입 기본 패널과 동일.',
+    dMoreTmux: '<strong>Multiplexer (상단 탭).</strong> 센터를 그리드로 나눠 Chat·Terminal·Browser·RDP를 동시에 표시합니다(tmux 스타일). 설정 모드: 분할/병합/콘텐츠 선택. 작업 모드: iframe 직접 조작. 메뉴: 최대화, 작업/설정, 종료.',
     dRInfo: '<strong>오른쪽 사이드바 · 인포.</strong> Provider Status에 Node.js와 각 AI 프로바이더의 설치·인증 상태, 버전, 잔여 사용량(5h / Weekly)이 표시됩니다. 그 아래에는 완료된 Chat/Terminal 알림 로그가 쌓입니다.',
     dRFile: '<strong>오른쪽 사이드바 · 파일.</strong> File 탭(전체 매니저)과는 별개인 가벼운 파일 탐색기입니다 — 폴더를 이동하고 파일은 바로 Editor 탭에서 엽니다.',
     dROption: '<strong>오른쪽 사이드바 · 옵션.</strong> Theme, 로컬 모델 등록, DB 뷰어, 기록 삭제, Schedule, Sub Agent, 단축키 목록이 모여 있습니다 — 오른쪽 목록 항목을 눌러 하나씩 확인해보세요.',
@@ -2756,11 +3162,20 @@ CLan.Set({
     dOLocalModel: '<strong>Add OpenCode Model / Status.</strong> 로컬 Ollama/LM Studio 서버를 등록하고 연결 상태를 확인합니다.',
     dODatabase: '<strong>Database.</strong> 로컬 데이터 파일을 보는 SQLite 뷰어와 범용 DB(MySQL/MSSQL/SQLite) 뷰어입니다.',
     dODeleteHistory: '<strong>Delete history.</strong> 지정한 개월 수보다 오래된 AI 대화 로그를 일괄 삭제합니다.',
-    dOSchedule: '<strong>Schedule.</strong> 반복 명령/프롬프트 작업을 만들고 관리합니다. 아래 목록에 저장된 스케줄이 표시됩니다.',
+    dOSchedule: '<strong>Schedule.</strong> Sub Agent용 Interval/Time 작업(work order). Interval: delay·count·start/end + 횟수 소진 시 자동 삭제. Time: 요일 + 시:분 + 1회 후 삭제 옵션. 목록 클릭=편집, 휴지통=삭제.',
     dOSubAgent: '<strong>Sub Agent.</strong> Team과 Schedule에서 불러 쓰는 재사용 가능한 AI 에이전트 프리셋을 만들고 관리합니다.',
     dOShortcuts: '<strong>Help.</strong> 이 목업 아래에 있는 것과 같은 키보드 단축키 목록입니다.',
 
-    mSearchTitle: '파일 검색',
+    mSearchScopeDesc: '<strong>경로 체크박스</strong>에 등록된 모든 루트(로컬 + 인증된 원격)가 나옵니다. <kbd>F2</kbd>는 전부 체크, 경로 그룹 <strong>⋯ → Search</strong>는 그 경로만 체크. 체크된 스코프마다 부분 파일명 검색(Stop, 최대 200). <code class="cmd">node_modules</code>·숨김 폴더는 제외합니다.',
+    mSearchBtn: 'Search',
+    mSearchStatusSample: '2건',
+    mAutoEndInterval: '횟수가 소진되면 스케줄 자동 삭제',
+    mScheduleTimeNote: '<strong>Time</strong> 모드: 요일(일–토), 시(0–23), 분(0/5/…/55), 선택적으로 <em>1회 실행 후 삭제</em>.',
+    msgRegister: '등록',
+    msgLink: 'Link',
+    msgUnlink: 'Unlink',
+    msgSend: '보내기',
+    msgLinkSample: 'https://t.me/ArtgineBot?start=… · linked: chat:123 · → claude : app',
     mAddRdpTitle: '원격 RDP 추가',
     mAddRdpLabel: 'Remote Control.html URL',
     mAdd: '추가',
@@ -2826,10 +3241,11 @@ CLan.Set({
     shortcutsTitle: '키보드 단축키',
     shortcutsSub: '마우스 없이 모든 기능을 조작할 수 있습니다',
     scF1: '우측 사이드바 File ↔ Info 토글 (작은 화면이면 사이드바 열림)',
-    scF2: 'File Search 열기',
+    scF2: '파일 검색 모달 — 등록 경로 전부 체크(체크박스 토글 가능; 경로 ⋯ → Search는 한 경로만 미리 체크)',
     scF3: 'New Terminal 열기',
     scF4: '사이드바 포커스/토글 (또는 Ctrl 빠르게 두 번)',
-    scF6: 'SUPER(자동 승인) 토글 + 입력 바 포커스 (Chat/Terminal)',
+    scF6: 'Terminal: SUPER(자동 승인) 토글 + 입력 바 표시/포커스. Terminal 밖에서는 F4와 동일',
+    scF7: 'Terminal: Log/Terminal 대화 패널 토글 (⌨ → Log/Terminal)',
     scUpDown: '세션 목록 이동 (사이드바 열림)',
     optMonthLabel: 'month(s)',
     optKbGlobal: '전역 단축키',
@@ -2852,57 +3268,70 @@ CLan.Set({
     dLayoutHeading: '화면 구성',
     dLayoutDesc: '화면은 상단 바, 왼쪽 사이드바, 중앙 패널, 오른쪽 사이드바 네 영역으로 나뉩니다.',
     dLayoutTopTitle: '상단',
-    dLayoutTopDesc: 'File / Search / Terminal 탭과 More 메뉴가 있습니다.',
+    dLayoutTopDesc: 'File·Multiplexer 탭과 More 메뉴(Memo, Chat, Terminal, Messenger, Help 등)가 있습니다.',
     dLayoutLeftTitle: '왼쪽',
-    dLayoutLeftDesc: 'Root 선택, RDP 대상, AI 세션 목록이 있습니다.',
+    dLayoutLeftDesc: 'RDP 대상, 이어서 Agent / Other 세션(경로 그룹 vs 평면 목록)이 있습니다.',
     dLayoutCenterTitle: '중앙',
-    dLayoutCenterDesc: '선택한 탭이나 세션의 내용이 표시됩니다 — RDP, File, Terminal, Chat 등.',
+    dLayoutCenterDesc: '선택한 탭이나 세션의 내용이 표시됩니다 — RDP, File, Help, Terminal, Chat, Messenger, Multiplexer 등.',
     dLayoutRightTitle: '오른쪽',
     dLayoutRightDesc: 'Info / File / Option 서브 탭이 있습니다.',
 
     dLeftHeading: '왼쪽 사이드바',
-    dLeftSub: '왼쪽 사이드바는 위에서부터 Root 선택, RDP 대상 목록, AI 세션 목록 순으로 구성됩니다.',
-    dLeftRootHeading: 'Root',
-    dLeftRootDesc: '왼쪽 사이드바 맨 위의 드롭다운입니다. 활성 루트 폴더/서버를 전환하며, 이 값이 곧 <strong>워킹 경로(Working Path)</strong>로 RDP 대상과 File 탭의 폴더 트리가 모두 이 값을 따라갑니다. 다른 Root를 선택하면 RDP 패널에 표시되는 화면도 함께 바뀝니다.',
-    dLeftRootAddHeading: 'Root → 워킹 폴더 추가',
-    dLeftRootAddDesc: 'Root 셀렉트 옆의 작은 "+" 버튼입니다. 서버가 허용하는 루트 폴더 목록(한 줄에 하나씩)을 편집합니다. 저장하면 서버가 재시작됩니다.',
+    dLeftSub: '위에서부터 RDP 목록, 그다음 Agent / Other 하위 탭. Agent는 Chat·Terminal을 working directory 경로별로 묶고, Other는 Browser·Editor를 최신순 평면 목록으로 보여줍니다.',
     dLeftRdpHeading: 'RDP',
-    dLeftRdpDesc: '원격으로 보고 제어할 수 있는 화면 목록입니다. <strong>Local</strong>은 항상 존재하며 이 서버 자신의 Control 화면을 보여줍니다. 그 아래에는 등록한(More → RDP) <strong>Remote</strong> Control.html 서버가 같은 방식으로 표시됩니다. 클릭하면 중앙 패널에 해당 화면이 나타나며, Input을 켜면 키보드·마우스가 그 화면으로 전달됩니다.',
+    dLeftRdpDesc: '왼쪽 사이드바 맨 위입니다. <strong>Local</strong>은 항상 존재하며 이 서버 화면을 보여줍니다. 그 아래에는 등록한(More → RDP) <strong>Remote</strong> Control.html 서버가 표시됩니다. 클릭하면 중앙에 해당 화면이 나타나며, Input을 켜면 키보드·마우스가 전달됩니다.',
+    dLeftSubTabsHeading: 'Agent / Other',
+    dLeftSubTabsDesc: '<strong>Agent</strong>는 Chat·Terminal을 경로 그룹으로, <strong>Other</strong>는 Browser·Editor를 최신순 평면 목록으로 표시합니다. 선택 탭은 기억되며, 세션을 열면 해당 탭으로 자동 전환됩니다.',
+    dLeftRootAddHeading: 'Agent → 워킹 폴더 추가',
+    dLeftRootAddDesc: 'Agent 탭에 보이는 버튼입니다. 서버가 허용하는 루트 폴더 목록(한 줄에 하나씩)을 편집합니다. 등록 경로는 세션이 없어도 빈 경로 그룹으로 남습니다. 저장하면 서버가 재시작됩니다.',
+    dLeftPathGroupHeading: '경로 그룹',
+    dLeftPathGroupDesc: '<p class="mb-2">각 그룹은 working directory 하나입니다(긴 경로는 꼬리 쪽 표시). 헤더 클릭으로 접기/펼치기. 등록만 된 빈 폴더도 그룹으로 남아 그 경로에서 작업을 시작할 수 있습니다.</p><p class="mb-1 fw-semibold" style="color:#c9d1d9;">경로 그룹 ⋯ 메뉴 — 여기서 Chat · Terminal · Search 가능:</p><ul class="mb-2 ps-3"><li><strong>Chat</strong> — 이 경로를 Working Directory로 한 새 AI 채팅(More → Chat과 동일, cwd 자동 채움).</li><li><strong>Terminal</strong> — 이 경로에서 새 CLI 세션(cmd / claude / codex / …, More → Terminal / F3과 동일).</li><li><strong>Search</strong> — 다중 경로 검색 모달을 열고 <strong>이 경로만 체크</strong>(다른 로컬·원격 등록 루트도 목록에 있어 추가로 켤 수 있음). <kbd>F2</kbd>는 같은 모달을 <strong>모든 경로 체크</strong> 상태로 엽니다.</li></ul><p class="mb-0">Chat/Terminal로 만든 세션은 같은 경로 그룹 아래 Agent 목록에 쌓입니다.</p>',
     dLeftColorHeading: '상태 색상',
-    dLeftColorDesc: 'AI 세션(Chat/Terminal/Browser/Editor)만 색상 점으로 상태를 표시합니다. RDP에는 점이 없고, Local은 이름만, Remote는 URL을 보여줍니다.',
+    dLeftColorDesc: 'Chat / Terminal / Browser / Editor만 색상 점으로 상태를 표시합니다. RDP에는 점이 없고, Local은 이름만, Remote는 URL을 보여줍니다.',
     dLeftColorIdle: '<strong>초록(idle)</strong> — 연결되어 대기 중이거나, 다음 지시를 기다리는 상태입니다.',
     dLeftColorBusy: '<strong>노랑(busy)</strong> — 작업 중입니다: AI 응답을 생성 중입니다.',
     dLeftColorOff: '<strong>빨강(off)</strong> — 연결이 끊겼거나, 프로바이더/세션이 로그인되지 않은 상태입니다.',
-    dLeftSessHeading: 'Sessions',
-    dLeftSessDesc: 'RDP 아래에는 열려 있는 모든 AI 세션 — Chat, Terminal, Browser, Editor — 이 생성된 순서대로 함께 나열됩니다. 클릭하면 중앙 패널에서 열리며, 새 세션은 상단 바의 More 메뉴에서 시작합니다.',
+    dLeftSessHeading: 'Agent 세션',
+    dLeftSessDesc: 'Chat·Terminal 항목은 해당 경로 그룹 아래에 있습니다. 클릭하면 중앙에서 열립니다. 새 세션은 More → Chat / Terminal(F3), 또는 경로 그룹 ⋯ (Chat/Terminal/Search)에서 만듭니다.',
+    dLeftOtherHeading: 'Other 세션',
+    dLeftOtherDesc: 'Browser·Editor는 Other 탭에 최신순 평면 목록으로 표시됩니다. 새 Browser: More → Browser. Editor는 File 탭 또는 오른쪽 사이드바 File 목록에서 파일을 열면 나타납니다.',
 
     dTopHeading: '상단 바',
-    dTopSub: '상단 바는 중앙 패널 위에 있습니다: File, Search, Terminal, 그리고 나머지를 모은 More 드롭다운. 아래 항목을 하나씩 펼쳐보세요 — 여러 개는 패널을 바로 전환하지 않고 대화상자(모달)를 먼저 여는데, 펼치면 그 실제 내용이 바로 아래에 나타납니다.',
+    dTopSub: '중앙 패널 위: <strong>File</strong>, <strong>Multiplexer</strong>, <strong>More</strong> 드롭다운(Memo, RDP, Chat, Terminal, Browser, Team, Download, Log, Messenger, Help). 파일 검색은 상단 탭이 아니라 <kbd>F2</kbd> 또는 경로 <strong>⋯ → Search</strong>(다중 경로 체크박스 모달). 아래 항목을 하나씩 펼쳐보세요.',
     dTopFileHeading: 'File',
     dTopFileDesc: '모달 없음 — 바로 현재 루트의 전체 파일 관리자로 중앙 패널이 전환됩니다.',
-    dTopSearchHeading: 'Search (F2)',
-    dTopSearchDesc: '현재 루트 아래에서 파일명을 재귀적으로 검색하는 모달을 엽니다. 결과를 클릭하면 해당 위치로 이동합니다.',
-    dTopTermHeading: 'Terminal',
-    dTopTermDesc: '버튼 자체가 "New Terminal" 버튼입니다 — 누르면 항상 모달이 먼저 뜹니다. 모드, (선택) Key, Working Directory, 그리고 <strong>MCP</strong> / <strong>Copy MD</strong>를 정한 뒤 Open. 이미 열린 세션은 이 버튼이 아니라 왼쪽 Sessions에서 엽니다.',
-    dTopTermOpts: '<ul class="mb-0 ps-3"><li><strong>Mode:</strong> <code class="cmd">cmd</code>(일반 셸) 또는 AI CLI <code class="cmd">claude</code> / <code class="cmd">codex</code> / <code class="cmd">agy</code>(antigravity) / <code class="cmd">opencode</code> / <code class="cmd">grok</code>. 없는 CLI는 첫 실행 때 자동 설치됩니다.</li><li><strong>Key:</strong> 선택 사항. 사이드바에서 여러 터미널을 구분할 세션 라벨입니다.</li><li><strong>Working Directory:</strong> PTY가 시작되는 폴더(비우면 현재 Root 기준).</li><li><strong>MCP (기본 켜짐):</strong> 켜면 AI CLI가 MCP 툴 서버(Artgine 연동 툴 등)를 유지합니다. 끄면 MCP 비활성으로 시작 — 내장 툴만 써서 더 단순·안전합니다.</li><li><strong>Copy MD (기본 켜짐):</strong> Working Directory가 서버의 메인 Artgine 경로와 <em>다를 때</em>, 그 폴더에 프로바이더 역할 파일(<code class="cmd">CLAUDE.md</code>, <code class="cmd">AGENTS.md</code> 등)을 복사해 프로젝트 규칙·경로가 적용되게 합니다. <code class="cmd">cmd</code>이거나 cwd가 이미 서버 루트면 동작하지 않습니다.</li></ul>',
+    dTopTmuxTopHeading: 'Multiplexer',
+    dTopTmuxTopDesc: '상단 탭(More 아래 아님). 여러 세션을 한 화면에 나눠 봅니다. 모드·분할/병합은 Center Panel → Multiplexer 참고.',
+    dTopSearchHeading: '파일 검색 (경로 ⋯ / F2)',
+    dTopSearchDesc: '<p class="mb-2">상단 Search 탭은 없습니다. 두 진입 모두 Control 페이지의 <strong>같은</strong> 검색 모달입니다(File iframe 아님):</p><ul class="mb-2 ps-3"><li><kbd>F2</kbd> — 등록된 모든 경로 <strong>체크</strong>(로컬 워킹 폴더 + 인증된 원격 루트).</li><li>경로 그룹 <strong>⋯ → Search</strong> — <strong>그 경로만</strong> 미리 체크, 나머지는 목록에 두어 추가로 켤 수 있음.</li></ul><p class="mb-0">체크박스 라벨은 <code class="cmd">serverLabel:rootPath</code>. 부분 파일명 → Search/Stop, 체크된 루트마다 <code class="cmd">/</code>부터 스캔(<code class="cmd">node_modules</code>·숨김 제외), 합계 최대 200건. 결과는 <code class="cmd">server:folder</code>, 파일 → Editor, 폴더 → 현재 File 루트와 같을 때만 오른쪽 File 목록.</p>',
+    dTopHelpHeading: 'More → Help',
+    dTopHelpDesc: '이 가이드를 가운데에 엽니다(최초 진입 기본 패널). <code class="cmd">?path=</code>로 들어오면 File이 대신 열립니다.',
+    dTopTermHeading: 'More → Terminal (F3)',
+    dTopTermDesc: '항상 New Terminal 모달이 먼저 뜹니다(<kbd>F3</kbd>도 동일). 모드, (선택) Key, Working Directory, <strong>MCP</strong> / <strong>Copy MD</strong>를 정한 뒤 Open. 이미 열린 세션은 왼쪽 <strong>Agent</strong> 경로 그룹에서 엽니다.',
+    dTopTermOpts: '<ul class="mb-0 ps-3"><li><strong>Mode:</strong> <code class="cmd">cmd</code>(일반 셸) 또는 AI CLI <code class="cmd">claude</code> / <code class="cmd">codex</code> / <code class="cmd">agy</code>(antigravity) / <code class="cmd">opencode</code> / <code class="cmd">grok</code>. 없는 CLI는 첫 실행 때 자동 설치됩니다.</li><li><strong>Key:</strong> 선택 사항. 사이드바에서 여러 터미널을 구분할 세션 라벨입니다.</li><li><strong>Working Directory:</strong> PTY가 시작되는 폴더(비우면 최근 Agent 경로/서버 기본값).</li><li><strong>MCP (기본 켜짐):</strong> 켜면 AI CLI가 MCP 툴 서버(Artgine 연동 툴 등)를 유지합니다. 끄면 MCP 비활성으로 시작 — 내장 툴만 써서 더 단순·안전합니다.</li><li><strong>Copy MD (기본 켜짐):</strong> Working Directory가 서버의 메인 Artgine 경로와 <em>다를 때</em>, 그 폴더에 프로바이더 역할 파일(<code class="cmd">CLAUDE.md</code>, <code class="cmd">AGENTS.md</code> 등)을 복사해 프로젝트 규칙·경로가 적용되게 합니다. <code class="cmd">cmd</code>이거나 cwd가 이미 서버 루트면 동작하지 않습니다.</li></ul>',
     dTopMoreHeading: 'More',
-    dTopMoreDesc: '최상위 탭이 아닌 나머지 기능을 모아둔 드롭다운입니다 — 새 세션, 다운로드, 로그. 아래에 각 항목을 하나씩 자세히 설명합니다.',
+    dTopMoreDesc: 'File / Multiplexer가 아닌 나머지를 모은 드롭다운입니다 — Memo, 새 세션(Terminal 포함), Download, Log, Messenger, Help. 파일 검색은 <kbd>F2</kbd> / 경로 ⋯ → Search(다중 경로 체크박스), 여기 메뉴에는 없음. 아래에 각 항목을 자세히 설명합니다.',
     dTopMemoHeading: 'More → Memo',
     dTopMemoDesc: '모달 없음 — Artgine Memo.html과 동일한 페이지로 중앙 패널이 전환됩니다. 메모는 폴더 경로 단위이며, 카테고리·모드·입력창 슬래시 명령을 사용합니다.',
     dTopMemoOpts: '<ul class="mb-0 ps-3"><li><strong>폴더 경로:</strong> 어떤 프로젝트 폴더의 메모를 볼지 (예: <code class="cmd">proj/Control</code>).</li><li><strong>모드:</strong> Write <code class="cmd">/w</code>, Search <code class="cmd">/s</code>·<code class="cmd">/r</code>, Delete <code class="cmd">/d</code>, Move <code class="cmd">/m</code> — 드롭다운 또는 전송 시 한 번만 적용되는 접두어.</li><li><strong>프로바이더 / 모델:</strong> AI 검색 등에 사용. 도움말(?)에 전체 명령 목록이 있습니다.</li></ul>',
     dTopRdpHeading: 'More → RDP',
     dTopRdpDesc: '필드 하나짜리 모달을 엽니다 — 원격 Control.html URL을 붙여넣고 Add를 누르면 왼쪽 사이드바 RDP 목록에 등록됩니다.',
     dTopChatHeading: 'More → Chat',
-    dTopChatDesc: '새 AI 채팅 세션을 여는 모달입니다 — Working Directory와 New Terminal과 같은 <strong>MCP</strong> / <strong>Copy MD</strong> 스위치를 정한 뒤 Open.',
+    dTopChatDesc: '새 AI 채팅 세션을 여는 모달입니다 — Working Directory와 New Terminal과 같은 <strong>MCP</strong> / <strong>Copy MD</strong> 스위치를 정한 뒤 Open. 세션은 왼쪽 <strong>Agent</strong> 해당 경로 그룹에 나타납니다.',
     dTopChatOpts: '<ul class="mb-0 ps-3"><li><strong>Working Directory:</strong> 채팅 에이전트의 작업 폴더 컨텍스트.</li><li><strong>MCP (Chat 기본 꺼짐):</strong> 켜면 채팅 중 MCP 툴 서버를 허용합니다. 끄면 툴을 최소로 쓰는 가벼운 세션.</li><li><strong>Copy MD (기본 켜짐):</strong> Terminal과 동일 — cwd가 서버 Artgine 경로와 다르면 해당 폴더에 역할 마크다운(<code class="cmd">CLAUDE.md</code> / <code class="cmd">AGENTS.md</code> 등)을 심습니다.</li></ul>',
     dTopBrowserHeading: 'More → Browser',
     dTopBrowserDesc: '새 웹 세션을 여는 모달입니다 — URL, Browser(auto/chrome/msedge/firefox), TTL, 화면 크기, Stealth 시간을 설정합니다.',
     dTopTeamHeading: 'More → Team',
     dTopTeamDesc: '메인 에이전트의 Provider/Model, Goal, 발주할 서브 에이전트, 시간 제한을 고르는 모달입니다 — 실행 중인 팀은 Terminal 세션으로 나타납니다.',
     dTopDownloadHeading: 'More → Download',
-    dTopDownloadDesc: '모달 없음 — 서버가 준비한 다운로드 파일 목록으로 중앙 패널이 전환됩니다.',
+    dTopDownloadDesc: '모달 없음 — yt-dlp/ffmpeg 다운로드 도우미로 전환됩니다. YouTube·직접 URL을 넣고 정보를 조회한 뒤 MP3/MP4/Direct를 골라 진행률을 확인합니다.',
     dTopLogHeading: 'More → Log',
     dTopLogDesc: '모달 없음 — 지난 프로바이더(CLI) 대화 로그를 아코디언으로 보여주는 화면으로 전환됩니다. 새로고침/삭제 버튼이 있습니다.',
+    dTopMessengerHeading: 'More → Messenger',
+    dTopMessengerDesc: '모달 없음 — Messenger 패널을 엽니다. Telegram/Discord 봇 토큰 등록, 입장 링크, Terminal Link/Unlink, 직접 메시지, 펼친 동안 폴링되는 대화 로그.',
+    dTopMessengerOpts: '<ul class="mb-0 ps-3"><li><strong>등록:</strong> 봇 토큰 붙여넣기 → Register. 서버 SQLite에 유지됩니다.</li><li><strong>입장 링크 / 채팅:</strong> 유저가 링크를 열면 pending → active.</li><li><strong>Terminal Link:</strong> 열린 Terminal을 골라 Link하면 채팅이 그 PTY로 연결됩니다.</li><li><strong>직접 메시지 / 로그:</strong> Control에서 발송, 마크다운 말풍선, 펼침 중 약 3초 폴링.</li></ul>',
+    dTopTmuxHeading: 'Multiplexer (상단 탭)',
+    dTopTmuxDesc: '상단 File 옆 Multiplexer 탭으로 엽니다(More 아님). 여러 세션을 동시에 보는 분할 레이아웃(tmux 스타일). 레이아웃은 브라우저에 저장됩니다. 모드·분할/병합·콘텐츠 선택은 중앙 패널 → Multiplexer 설명을 보세요.',
 
     dRightHeading: '오른쪽 사이드바',
     dRightSub: '오른쪽 사이드바는 Info, File, Option 세 서브 탭으로 구성되며, 아래에서 하나씩 설명합니다. Option 하나에는 8개의 개별 컨트롤이 묶여 있어 — 각각 따로 풀어서 설명합니다.',
@@ -2918,7 +3347,7 @@ CLan.Set({
     dOptDeleteHistoryHeading: 'Option → Delete history',
     dOptDeleteHistoryDesc: '지정한 개월 수보다 오래된 AI 대화 로그를 일괄 삭제합니다.',
     dOptScheduleHeading: 'Option → Schedule',
-    dOptScheduleDesc: '<ul class="mb-0 ps-3"><li><strong>발동 시:</strong> 터미널에 직접 타이핑하지 않고, 선택한 Sub Agent 앞으로 work order(작업 의뢰서)를 하나 생성합니다 — Team이 쓰는 것과 동일한 배분 로직이 그 에이전트의 이미 실행 중인 세션으로 전달합니다.</li><li><strong>Interval:</strong> (Start 오프셋이 없으면) 저장 즉시 1회 실행된 뒤 Delay초마다 반복합니다. Count를 지정하면 그 횟수만큼 발동한 뒤 스케줄 자체가 자동 삭제됩니다.</li><li><strong>Time:</strong> 선택한 요일마다 지정한 시:분에 딱 1회 발동합니다.</li><li><strong>저장된 목록:</strong> 항목을 클릭하면 "Edit Schedule"로 값을 채운 채 다시 열리고(같은 이름=덮어쓰기), 휴지통 아이콘은 삭제 전에 확인을 한 번 더 묻습니다.</li></ul>',
+    dOptScheduleDesc: '<ul class="mb-0 ps-3"><li><strong>발동 시:</strong> 터미널에 직접 타이핑하지 않고, 선택한 Sub Agent 앞으로 work order(작업 의뢰서)를 하나 생성합니다 — Team이 쓰는 것과 동일한 배분 로직이 그 에이전트의 이미 실행 중인 세션으로 전달합니다.</li><li><strong>Interval:</strong> Delay(초, ≥1), Count(0=무한), Start/End 오프셋(초). 선택 항목 <em>횟수 소진 시 스케줄 자동 삭제</em>(기본 켜짐). 목록 배지에 mode + delay/×count 요약.</li><li><strong>Time:</strong> 요일 하나 이상, 시(0–23), 분(0/5/…/55). 선택 항목 <em>1회 실행 후 삭제</em>(기본 꺼짐).</li><li><strong>저장된 목록:</strong> 항목 클릭 → "Edit Schedule"(같은 이름=덮어쓰기), 휴지통은 삭제 전 확인. 목록은 수 초마다 갱신됩니다.</li></ul>',
     dOptSubAgentHeading: 'Option → Sub Agent',
     dOptSubAgentDesc: '<ul class="mb-0 ps-3"><li><strong>저장 시:</strong> 서버가 그 key로 터미널 세션을 영구적으로 유지합니다 — 즉시 스폰되고, 강제 종료되거나 죽어도 자동으로 다시 뜹니다.</li><li><strong>Working Directory / Super:</strong> 그 세션의 작업 폴더와, 자동 승인(SUPER) 모드로 시작할지 여부입니다.</li><li><strong>Score / Traits:</strong> 아무것도 강제하지 않는 순수 힌트로, Team 감독 에이전트(또는 Schedule)가 "이 작업엔 어떤 에이전트가 맞는지" 판단할 때만 참고합니다.</li><li><strong>Retry Text / Count:</strong> 자동 품질 개선 루프 — 이 에이전트가 idle 상태가 되면, 마지막 진짜 작업 이후 Count 횟수까지 Retry Text를 자동으로 재발주합니다.</li><li><strong>저장된 목록:</strong> 에이전트를 클릭하면 "Edit Sub Agent"로 값을 채운 채 다시 열리고, 휴지통 아이콘은 삭제 전에 확인을 한 번 더 묻습니다.</li></ul>',
     dOptShortcutsHeading: 'Option → Help',
@@ -2931,10 +3360,10 @@ CLan.Set({
     dCenterFileHeading: 'File',
     dCenterFileDesc: '현재 루트의 전체 파일 관리자입니다 — 폴더를 탐색하고 파일을 열면 종류별 뷰어(코드 에디터, Excel/CSV는 스프레드시트, SQLite는 테이블 뷰어)로 바로 열립니다. Git/SVN 배지(M/A/D/?)가 있으면 목록에서 변경 상태를 바로 보여줍니다.',
     dCenterTermHeading: 'Terminal',
-    dCenterTermDesc: 'xterm 기반 실시간 PTY 세션입니다. 모드 6종 — <code class="cmd">cmd</code>, <code class="cmd">claude</code>, <code class="cmd">codex</code>, <code class="cmd">agy</code>, <code class="cmd">opencode</code>, <code class="cmd">grok</code>. AI 모드는 진행 트랜스크립트 + 하단 입력창, <code class="cmd">cmd</code>는 일반 셸입니다. 새 세션은 상단 Terminal 버튼, 기존 세션은 왼쪽 Sessions에서 엽니다.',
-    dCenterTermDetail: '<p class="fw-semibold mb-1" style="color:#c9d1d9;">레이아웃 · 입력</p><ul class="mb-3 ps-3"><li>본문은 터미널 스트림, 하단 바는 <strong>입력창</strong> + <strong>⌨</strong> 메뉴뿐입니다 — 하단의 별도 SUPER 버튼은 없습니다.</li><li><strong>Enter</strong>로 전송(소켓이 끊겼으면 재연결). 빈 Enter도 PTY에 리턴을 보냅니다.</li><li><strong>Esc</strong>는 에이전트/셸에 Escape를 보내고 입력 포커스를 리셋합니다(한글 IME 깨짐 완화).</li><li>입력창이 비어 있을 때 <strong>↑ ↓ ← →</strong>는 PTY로 바로 전달됩니다(CLI 히스토리·메뉴).</li><li><strong>F6</strong>은 SUPER 토글 + 입력 바 표시 + 입력 포커스.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">SUPER (자동 승인)</p><ul class="mb-3 ps-3"><li>켜면 권한·툴 승인 프롬프트를 자동 수락해 에이전트가 사용자 대기 없이 계속 작업합니다.</li><li><strong>F6</strong>, 슬래시 <code class="cmd">/super</code>, 또는 ⌨ 메뉴 → <strong>⚡ SUPER</strong>로 토글. 켜진 동안 표시는 <em>입력창</em>의 빨간 테두리/배경뿐입니다(SUPER 버튼 UI 없음).</li><li>상태는 세션 단위로 서버에 저장되며 약 1분마다 다시 동기화됩니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">슬래시 명령 · 프로바이더 핸드오프</p><ul class="mb-3 ps-3"><li><code class="cmd">/</code>를 치면 자동완성: <code class="cmd">/compact</code>, <code class="cmd">/resume</code>, <code class="cmd">/model</code>, <code class="cmd">/clear</code>, <code class="cmd">/status</code>, <code class="cmd">/exit</code>, <code class="cmd">/help</code>, <code class="cmd">/super</code>, 등록된 Skill, 핸드오프 대상.</li><li><strong>핸드오프:</strong> AI 세션에서 현재와 다른 <code class="cmd">/codex</code>, <code class="cmd">/claude</code>, <code class="cmd">/agy</code>, <code class="cmd">/opencode</code>, <code class="cmd">/grok</code>을 보내면 대화를 요약(최대 약 3분)한 뒤, <em>같은 Working Directory</em>에서 그 프로바이더 터미널을 새로 엽니다. 핸드오프 중 입력은 잠깁니다. 순수 <code class="cmd">cmd</code> 모드에서는 쓰지 않습니다.</li><li><code class="cmd">/</code> 뒤 한글 입력은 영문 키로 역변환되어 슬래시 명령이 한국어 키보드에서도 맞습니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">⌨ 메뉴</p><ul class="mb-3 ps-3"><li><strong>View:</strong> 맨 아래로 스크롤, 창 크기에 맞게 resize, Page Up/Down, 입력 바 숨기기.</li><li><strong>방향키 / Enter / Esc:</strong> 키를 치지 않고 PTY에 주입.</li><li><strong>Command:</strong> RESUME, MODEL(<code class="cmd">/model </code> 미리 채움), COMPACT, CLEAR, STATUS, EXIT — 프로바이더별 매핑(예: Gemini status → <code class="cmd">/stats</code>).</li><li><strong>Skill:</strong> 미리 등록된 스킬 프롬프트를 입력창에 넣습니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">파일을 프롬프트에 넣기</p><ul class="mb-3 ps-3"><li>터미널에 파일을 드롭하면 세션 workingDir의 <code class="cmd">.uploads/</code>에 올린 뒤 경로를 따옴표로 입력창에 삽입합니다.</li><li>Control 오른쪽 사이드바 File 목록에서 경로를 드래그하면 재업로드 없이 경로만 삽입합니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">시작 옵션 (MCP / Copy MD)</p><ul class="mb-0 ps-3"><li>세션 생성 시(New Terminal 모달)에서 설정합니다. 상세는 상단 바 Terminal 아코디언의 MCP / Copy MD 설명을 보세요.</li><li>Terminal 기본값: MCP 켜짐, Copy MD 켜짐. Copy MD는 working directory가 Artgine 서버 루트와 다를 때만 역할 마크다운을 복사합니다.</li></ul>',
+    dCenterTermDesc: 'xterm 기반 실시간 PTY 세션입니다. 모드 6종 — <code class="cmd">cmd</code>, <code class="cmd">claude</code>, <code class="cmd">codex</code>, <code class="cmd">agy</code>, <code class="cmd">opencode</code>, <code class="cmd">grok</code>. AI 모드는 진행 트랜스크립트 + 하단 입력창, <code class="cmd">cmd</code>는 일반 셸입니다. 새 세션은 <strong>More → Terminal</strong>(F3) 또는 경로 그룹 ⋯, 기존 세션은 왼쪽 <strong>Agent</strong> 목록에서 엽니다.',
+    dCenterTermDetail: '<p class="fw-semibold mb-1" style="color:#c9d1d9;">레이아웃 · 입력</p><ul class="mb-3 ps-3"><li>본문은 터미널 스트림, 하단 바는 <strong>입력창</strong> + <strong>⌨</strong> 메뉴뿐입니다 — 하단의 별도 SUPER 버튼은 없습니다.</li><li><strong>Enter</strong>로 전송(소켓이 끊겼으면 재연결). 빈 Enter도 PTY에 리턴을 보냅니다.</li><li><strong>Esc</strong>는 에이전트/셸에 Escape를 보내고 입력 포커스를 리셋합니다(한글 IME 깨짐 완화).</li><li>입력창이 비어 있을 때 <strong>↑ ↓ ← →</strong>는 PTY로 바로 전달됩니다(CLI 히스토리·메뉴).</li><li><strong>F6</strong>은 SUPER 토글 + 입력 바 표시 + 입력 포커스.</li><li><strong>F7</strong>은 터미널 스트림 위 대화 <strong>Log</strong> 패널을 토글합니다(⌨ → <strong>Log/Terminal</strong>과 동일).</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">SUPER (자동 승인)</p><ul class="mb-3 ps-3"><li>켜면 권한·툴 승인 프롬프트를 자동 수락해 에이전트가 사용자 대기 없이 계속 작업합니다.</li><li><strong>F6</strong>, 슬래시 <code class="cmd">/super</code>, 또는 ⌨ 메뉴 → <strong>⚡ SUPER</strong>로 토글. 켜진 동안 표시는 <em>입력창</em>의 빨간 테두리/배경뿐입니다(SUPER 버튼 UI 없음).</li><li>상태는 세션 단위로 서버에 저장되며 약 1분마다 다시 동기화됩니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">슬래시 명령 · 프로바이더 핸드오프</p><ul class="mb-3 ps-3"><li><code class="cmd">/</code>를 치면 자동완성: <code class="cmd">/compact</code>, <code class="cmd">/resume</code>, <code class="cmd">/model</code>, <code class="cmd">/clear</code>, <code class="cmd">/status</code>, <code class="cmd">/exit</code>, <code class="cmd">/help</code>, <code class="cmd">/super</code>, 등록된 Skill, 핸드오프 대상.</li><li><strong>핸드오프:</strong> AI 세션에서 현재와 다른 <code class="cmd">/codex</code>, <code class="cmd">/claude</code>, <code class="cmd">/agy</code>, <code class="cmd">/opencode</code>, <code class="cmd">/grok</code>을 보내면 대화를 요약(최대 약 3분)한 뒤, <em>같은 Working Directory</em>에서 그 프로바이더 터미널을 새로 엽니다. 핸드오프 중 입력은 잠깁니다. 순수 <code class="cmd">cmd</code> 모드에서는 쓰지 않습니다.</li><li><code class="cmd">/</code> 뒤 한글 입력은 영문 키로 역변환되어 슬래시 명령이 한국어 키보드에서도 맞습니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">⌨ 메뉴</p><ul class="mb-3 ps-3"><li><strong>View:</strong> 맨 아래로 스크롤, 창 크기에 맞게 resize, Page Up/Down, 입력 바 숨기기, <strong>Log/Terminal</strong> 토글(<strong>F7</strong>).</li><li><strong>방향키 / Enter / Esc:</strong> 키를 치지 않고 PTY에 주입.</li><li><strong>Command:</strong> RESUME, MODEL(<code class="cmd">/model </code> 미리 채움), COMPACT, CLEAR, STATUS, EXIT — 프로바이더별 매핑(예: Gemini status → <code class="cmd">/stats</code>).</li><li><strong>Skill:</strong> 미리 등록된 스킬 프롬프트를 입력창에 넣습니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">파일을 프롬프트에 넣기</p><ul class="mb-3 ps-3"><li>터미널에 파일을 드롭하면 세션 workingDir의 <code class="cmd">.uploads/</code>에 올린 뒤 경로를 따옴표로 입력창에 삽입합니다.</li><li>Control 오른쪽 사이드바 File 목록에서 경로를 드래그하면 재업로드 없이 경로만 삽입합니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">시작 옵션 (MCP / Copy MD)</p><ul class="mb-0 ps-3"><li>세션 생성 시(New Terminal 모달)에서 설정합니다. 상세는 More → Terminal 아코디언의 MCP / Copy MD 설명을 보세요.</li><li>Terminal 기본값: MCP 켜짐, Copy MD 켜짐. Copy MD는 working directory가 Artgine 서버 루트와 다를 때만 역할 마크다운을 복사합니다.</li></ul>',
     dCenterChatHeading: 'Chat',
-    dCenterChatDesc: '터미널이 아니라 구조화된 AI 채팅 스레드입니다 — 사용자/어시스턴트 말풍선과 하단 입력창으로 구성됩니다. 여러 채팅 세션을 동시에 열어둘 수 있으며, 각각 왼쪽 사이드바 세션 목록에서 독립적으로 추적됩니다.',
+    dCenterChatDesc: '터미널이 아니라 구조화된 AI 채팅 스레드입니다 — 사용자/어시스턴트 말풍선과 하단 입력창으로 구성됩니다. 여러 채팅 세션을 동시에 열어둘 수 있으며, 각각 왼쪽 <strong>Agent</strong> 탭의 working directory 경로 그룹에서 추적됩니다.',
     dCenterChatOpts: '<ul class="mb-0 ps-3"><li><strong>More → Chat</strong>에서 시작: Working Directory와 <strong>MCP</strong> / <strong>Copy MD</strong>를 설정합니다(의미는 Terminal과 동일 — MCP는 툴 서버 허용, Copy MD는 루트가 아닌 작업 폴더에 역할 <code class="cmd">*.md</code> 심기).</li><li>Chat 기본값: MCP <em>꺼짐</em>, Copy MD <em>켜짐</em> (Terminal은 MCP 기본 <em>켜짐</em>).</li></ul>',
     dCenterBrowserHeading: 'Browser',
     dCenterBrowserDesc: 'Playwright 브라우저 세션을 원격으로 조작합니다 — 실시간 페이지 화면과 주소창을 보여줍니다. Frame/Quality는 RDP와 동일하게 스크린샷 갱신 주기와 압축률을 조절하고, Input을 켜면 키보드·마우스가 그 페이지로 전달됩니다.',
@@ -2946,7 +3375,13 @@ CLan.Set({
     dCenterDownloadHeading: 'Download',
     dCenterDownloadDesc: 'yt-dlp/ffmpeg 기반 다운로드 도우미입니다(설치 여부는 상단 배지로 표시). YouTube 또는 직접 파일 URL을 붙여넣고 정보를 조회한 뒤 MP3/MP4/Direct 중 골라 Start를 누르면, 각 작업이 진행률 바와 최종 파일명을 함께 보여줍니다.',
     dCenterLogHeading: 'Log',
-    dCenterLogDesc: '모든 프로바이더의 과거 AI 대화를 모아 보여주는 아코디언입니다 — Chat과 Terminal 세션이 모두 여기에 기록됩니다. 각 항목은 모델 배지, 한 줄 미리보기, 작업 경로, 시각을 보여주며 펼치면 전체 대화를 읽을 수 있습니다. 새로고침/전체 삭제는 헤더에, 개별 삭제는 각 항목에 있습니다.'
+    dCenterLogDesc: '모든 프로바이더의 과거 AI 대화를 모아 보여주는 아코디언입니다 — Chat과 Terminal 세션이 모두 여기에 기록됩니다. 각 항목은 모델 배지, 한 줄 미리보기, 작업 경로, 시각을 보여주며 펼치면 전체 대화를 읽을 수 있습니다. 새로고침/전체 삭제는 헤더에, 개별 삭제는 각 항목에 있습니다.',
+    dCenterTmuxHeading: 'Multiplexer',
+    dCenterMessengerHeading: 'Messenger',
+    dCenterMessengerDesc: '<strong>More → Messenger</strong>에서 엽니다. Telegram/Discord 봇 등록, 입장 링크, Terminal 브릿지, 실시간 로그.',
+    dCenterMessengerDetail: '<ul class="mb-0 ps-3"><li><strong>등록:</strong> 봇 토큰 한 번만 — 서버에 저장, 재시작 후에도 유지.</li><li><strong>봇별 아코디언:</strong> 플랫폼·이름·상태(pending/active). 펼치면 입장 URL·연결 채팅·터미널 키.</li><li><strong>Terminal:</strong> 열린 세션 선택 후 Link/Unlink.</li><li><strong>직접 메시지 + 로그:</strong> Control에서 발송, 입·출력 말풍선(마크다운), 펼침 중 폴링.</li></ul>',
+    dCenterTmuxDesc: '상단 <strong>Multiplexer</strong> 탭으로 엽니다. 센터를 여러 칸으로 나눠 Chat·Terminal·Browser·RDP 세션을 동시에 표시합니다. 레이아웃은 localStorage에 저장됩니다.',
+    dCenterTmuxDetail: '<p class="fw-semibold mb-1" style="color:#c9d1d9;">모드</p><ul class="mb-3 ps-3"><li><strong>작업:</strong> 오버레이 없음 — 각 칸 iframe을 직접 조작합니다.</li><li><strong>설정:</strong> 칸마다 도구 모음 — 좌우 분할, 상하 분할, 병합(루트가 아닐 때), 콘텐츠 선택.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">메뉴 (우상단 ⋯)</p><ul class="mb-3 ps-3"><li><strong>최대/최소:</strong> 좌우 사이드바를 숨겨 전체 폭 그리드(탭 바는 유지) 또는 일반 레이아웃으로 복귀.</li><li><strong>작업 / 설정:</strong> 모드 전환.</li><li><strong>종료:</strong> Multiplexer 패널을 닫습니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">콘텐츠 선택</p><ul class="mb-0 ps-3"><li>설정 모드에서 열린 Chat / Terminal / Browser / RDP 세션 중 무엇을 그 칸에 넣을지 고릅니다.</li><li>빈 칸은 설정 모드에서 콘텐츠를 선택하라는 안내를 보여줍니다.</li></ul>'
   }
 });
 
@@ -2999,7 +3434,7 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
     const src = centerLib.querySelector('[data-key="' + key + '"]');
     if (src) centerBody.innerHTML = src.innerHTML;
   }
-  setCenterBody('hint');
+  setCenterBody('help'); // default top tab is Help
 
   function openCtrlModal(key) {
     if (!modalEl || !modalLib || !window.bootstrap) return;
@@ -3015,17 +3450,29 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
   }
   window.ctrlOpenModalPreview = openCtrlModal;
 
+  function setMockSbTab(which) {
+    const agentPane = document.getElementById('ctrlMockAgentPane');
+    const otherPane = document.getElementById('ctrlMockOtherPane');
+    if (agentPane) agentPane.classList.toggle('d-none', which !== 'agent');
+    if (otherPane) otherPane.classList.toggle('d-none', which !== 'other');
+    mock.querySelectorAll('[data-sbtab]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.sbtab === which);
+    });
+  }
+
   function activate(el) {
     const group = el.dataset.group;
     if (group) {
       mock.querySelectorAll('[data-group="' + group + '"]').forEach(x => x.classList.remove('active'));
       el.classList.add('active');
     }
+    if (el.dataset.sbtab) setMockSbTab(el.dataset.sbtab);
     const key = el.dataset.explain;
     if (key) {
       const src = descLib.querySelector('[data-key="' + key + '"]');
       if (src) {
-        explainBox.innerHTML = src.innerHTML;
+        // 단일 wrapper로 넣어 설명 안에 ul/여러 노드가 있어도 레이아웃이 깨지지 않게 한다.
+        explainBox.innerHTML = '<div class="ctrlmock-explain-body">' + src.innerHTML + '</div>';
         explainBox.classList.remove('flash');
         void explainBox.offsetWidth; // restart the animation even if it's already mid-flash
         explainBox.classList.add('flash');
@@ -3090,15 +3537,15 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
 })();
 
 // ---- Top-bar live sample (Guide tab) ----
+// 실제 Control 상단: File / Multiplexer / More (Search·Help 상단 탭 없음)
 (function initDetailTopSample() {
   const sampleFile = document.getElementById('dSampleFile');
-  const sampleSearch = document.getElementById('dSampleSearch');
-  const sampleTerm = document.getElementById('dSampleTerm');
+  const sampleTmuxTop = document.getElementById('dSampleTmuxTop');
   const moreBtn = document.getElementById('dSampleMoreBtn');
   const moreMenu = document.getElementById('dSampleMoreMenu');
-  if (!sampleFile || !sampleSearch || !sampleTerm || !moreBtn || !moreMenu) return;
+  if (!sampleFile || !sampleTmuxTop || !moreBtn || !moreMenu) return;
 
-  const topGroup = [sampleFile, sampleSearch, sampleTerm, moreBtn];
+  const topGroup = [sampleFile, sampleTmuxTop, moreBtn];
   const setActive = btn => topGroup.forEach(b => b.classList.toggle('active', b === btn));
 
   // Clicking the live sample just opens the matching accordion item below (no popup here).
@@ -3110,8 +3557,7 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
   };
 
   sampleFile.addEventListener('click', () => { setActive(sampleFile); openAccFor('dSampleFile'); });
-  sampleSearch.addEventListener('click', () => { setActive(sampleSearch); openAccFor('dSampleSearch'); });
-  sampleTerm.addEventListener('click', () => { setActive(sampleTerm); openAccFor('dSampleTerm'); });
+  sampleTmuxTop.addEventListener('click', () => { setActive(sampleTmuxTop); openAccFor('dSampleTmuxTop'); });
   moreBtn.addEventListener('click', () => { setActive(moreBtn); moreMenu.classList.toggle('show'); });
   document.addEventListener('click', e => {
     if (!moreMenu.contains(e.target) && !e.target.closest('#dSampleMoreBtn')) moreMenu.classList.remove('show');
@@ -3121,6 +3567,36 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
       openAccFor(b.id);
       moreMenu.classList.remove('show');
     });
+  });
+})();
+
+// ---- Left-sidebar Agent/Other sample toggle (Guide tab) ----
+(function initDetailLeftSubTabs() {
+  const agentBtn = document.getElementById('dSampleSbAgent');
+  const otherBtn = document.getElementById('dSampleSbOther');
+  const agentPane = document.getElementById('dSampleAgentPane');
+  const otherPane = document.getElementById('dSampleOtherPane');
+  if (!agentBtn || !otherBtn || !agentPane || !otherPane) return;
+  const show = which => {
+    agentPane.classList.toggle('d-none', which !== 'agent');
+    otherPane.classList.toggle('d-none', which !== 'other');
+    agentBtn.classList.toggle('active', which === 'agent');
+    otherBtn.classList.toggle('active', which === 'other');
+  };
+  agentBtn.addEventListener('click', () => show('agent'));
+  otherBtn.addEventListener('click', () => show('other'));
+  // Description cards that only apply to one sub-tab: flip the sample so highlights are visible.
+  document.querySelectorAll('.dleft-desc[data-highlight]').forEach(card => {
+    const ids = (card.dataset.highlight || '').split(/\s+/);
+    const needsOther = ids.some(id => id === 'dSampleSess3' || id === 'dSampleSessEditor');
+    const needsAgent = ids.some(id => /dSampleSess1|dSampleSess2|dSampleSessClaude|dSampleSessGrok|dSampleAgent|dSampleRootAddFolder/.test(id));
+    if (!needsOther && !needsAgent) return;
+    const flip = () => {
+      if (needsOther && !needsAgent) show('other');
+      else if (needsAgent && !needsOther) show('agent');
+    };
+    card.addEventListener('mouseenter', flip);
+    card.addEventListener('focus', flip);
   });
 })();
 
@@ -3228,6 +3704,8 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
   copy('memo', 'dSampleCenterMemo');
   copy('download', 'dSampleCenterDownload');
   copy('log', 'dSampleCenterLog');
+  copy('messenger', 'dSampleCenterMessenger');
+  copy('tmux', 'dSampleCenterTmux');
 })();
 </script>
 </body>

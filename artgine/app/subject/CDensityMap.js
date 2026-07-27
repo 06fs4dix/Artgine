@@ -1,1 +1,288 @@
-import{CObject as t}from"../../basic/CObject.js";import{CTree as e}from"../../basic/CTree.js";import{CBound as o}from"../../geometry/CBound.js";import{CMat as r}from"../../geometry/CMat.js";import{CMath as n}from"../../geometry/CMath.js";import{CPoolGeo as i}from"../../geometry/CPoolGeo.js";import{CVec3 as m}from"../../geometry/CVec3.js";import{CColor as s}from"../../render/CColor.js";import{CMeshCopyNode as l}from"../../render/CMeshCopyNode.js";import{CMeshTreeUpdate as a}from"../../render/CMeshTreeUpdate.js";import{CCIndex as u}from"../canvas/CCIndex.js";import{CCollider as f}from"../component/CCollider.js";import{CPaint2DMerge as h}from"../component/paint/CPaint2D.js";import{CPaint3DMerge as c}from"../component/paint/CPaint3D.js";import{CMapBuf as d}from"./CMapBuf.js";import{CSubject as C}from"./CSubject.js";export class CDensityInfo extends t{constructor(t,e,o){if(super(),null==t||t<=0){const t=Math.floor(256*Math.random()),e=Math.floor(256*Math.random()),o=Math.floor(256*Math.random());this.mColor=(t<<24|e<<16|o<<8)>>>0}else this.mColor=(4294967040&t)>>>0;this.mSize=e,this.mRes=o}Label(){return this.mLabel}Color(){return this.mColor}Size(){return this.mSize}mLabel="";mSize;mColor;mPos=null;mSca=null;mRot=null;mRes="";mWind=0;mColorModel;mPaintTag=new Array;mPaintShaderAttr=new Array;mColliderLayer=null;mColliderBound=null}export class CDensityInfo2D extends CDensityInfo{constructor(t,e,o,r=null){super(t,e,o),this.mCodi=r}mCodi;mYSort=!1}export class CDensityInfo3D extends CDensityInfo{constructor(t,e,o){super(t,e,o)}}export class CDensityMap extends C{mBuf=new d;mDensityArr=new Array;mDiv=100;mUpdate=!0;mTerrain=null;IsShould(t,e){return"mUpdate"!=t&&super.IsShould(t,e)}MapLog(){let t={};t.countX=this.mBuf.mCount.x,t.countY=this.mBuf.mCount.y,t.countZ=this.mBuf.mCount.z,t.size=this.mBuf.mSize,t.labelArr=new Array;let e=new m(this.mBuf.mSize,this.mBuf.mSize,this.mBuf.mSize);for(let o of this.mDensityArr)t.labelArr.push({label:o.Label(),color:s.HexToRGB(o.Color(),!0).ToHex(),sizeX:e.x,sizeY:e.y,sizeZ:e.z});return JSON.stringify(t)}PushDensityInfo(t){return this.mDensityArr.push(t),t}Push(t){return t instanceof CDensityInfo&&this.PushDensityInfo(t),super.Push(t)}Update(t){if(0==this.mUpdate)return;for(let t of this.mDensityArr)if(null==this.GetFrame().Res().Find(t.mRes))return void this.GetFrame().Load().Exe(t.mRes);const m=this.mBuf.mCount.x*this.mBuf.mSize,s=this.mBuf.mCount.y*this.mBuf.mSize;for(let t of this.mDensityArr){const d=t.mSize.x,C=t.mSize.y;if(d<=0||C<=0)continue;const p=Math.floor(m/d),y=Math.floor(s/C),M=Math.max(1,this.mDiv),x=Math.ceil(p/M),S=Math.ceil(y/M),z=x*S,B=(4294967040&t.mColor)>>>0,D=Array.from({length:z},()=>[]),P=Array.from({length:z},()=>[]),R=Array.from({length:z},()=>[]),I=i.ProductV3(),T=i.ProductV3(),A=i.ProductV3(),j=i.ProductBound();j.SetType(o.eType.Box);const g=i.ProductMat(),w=i.ProductMat(),b=new o;if(b.SetType(o.eType.Box),t instanceof CDensityInfo2D)b.InitBound(.5);else{const o=this.GetFrame().Res().Find(t.mRes),n=new e;n.mData=new l,a.TreeCopy(o.meshTree,n,new r,b)}for(let e=0;e<p;e++)for(let o=0;o<y;o++){const r=(e+.5)*d,i=(o+.5)*C,m=.01,s=[[r,i],[e*d+m,o*C+m],[(e+1)*d-m,o*C+m],[e*d+m,(o+1)*C-m],[(e+1)*d-m,(o+1)*C-m]];let l=!1;for(const[t,e]of s){const o=Math.floor(t/this.mBuf.mSize),r=Math.floor(e/this.mBuf.mSize),n=new u(o,r,0);if(!this.mBuf.IndexOut(n)&&this.mBuf.RGB(n)===B){l=!0;break}}if(!l)continue;const a=Math.min(Math.floor(e/M),x-1)+Math.min(Math.floor(o/M),S-1)*x;if(I.Zero(),null!=t.mPos&&n.V3AddV3(I,t.mPos.Execute(),I),null!=t.mSca?T.Import(t.mSca.Execute()):(T.x=1,T.y=1,T.z=1),null!=t.mRot?A.Import(t.mRot.Execute()):A.Zero(),t instanceof CDensityInfo2D)null!=this.mTerrain?(I.x+=r,I.z+=i,I.y+=this.mTerrain.GetHeight(I.x,I.z)):(I.x+=r,I.y+=i);else{const e=b.GetSize(),o=n.Max(n.Max(e.x,e.y),e.z);T.x*=t.mSize.x/o,T.y*=t.mSize.y/o,T.z*=t.mSize.z/o,I.x+=r,I.z+=i,n.V3SubV3(I,b.GetCenter(),I),null!=this.mTerrain&&(I.y+=this.mTerrain.GetHeight(I.x,I.z))}const h=n.MatMul(n.MatScale(T,w),n.MatRotation(A,g));if(h.SetV3(3,I),D[a].push(h),null!=t.mColliderLayer){const e=this.PushComp(new f);e.SetLayer(t.mColliderLayer),e.SetEvent(f.eEvent.Static);const o=t.mColliderBound??b;if(n.V3MulMatCoordi(o.mMin,h,j.mMin),n.V3MulMatCoordi(o.mMax,h,j.mMax),t instanceof CDensityInfo2D){const t=.5*(j.mMax.x-j.mMin.x),e=.5*(j.mMax.y-j.mMin.y),o=Math.max(t,Math.abs(e)),r=.5*(j.mMin.z+j.mMax.z);j.mMin.z=r-o,j.mMax.z=r+o}e.InitBound(j)}t instanceof CDensityInfo2D?null!=t.mCodi&&P[a].push(t.mCodi.Execute()):R[a].push(t.mRes)}let V;i.RecycleV3(I),i.RecycleV3(T),i.RecycleV3(A),i.RecycleBound(j),i.RecycleMat(w),i.RecycleMat(g);for(let e=0;e<z;e++)if(0!=D[e].length){t instanceof CDensityInfo2D?(V=this.PushComp(new h(t.mRes,D[e],P[e])),V.SetYSort(t.mYSort)):V=this.PushComp(new c(R[e],D[e])),t.mWind>0&&V.Wind(t.mWind),null!=t.mColorModel&&V.SetColorModel(t.mColorModel);for(let e of t.mPaintTag)V.PushTag(e);for(let e of t.mPaintShaderAttr)V.PushCShaderAttr(e)}}this.mUpdate=!1}SetPos(t,e=!0){super.SetPos(t,e),this.mUpdate=!0,this.RemoveComps(h),this.RemoveComps(c),this.RemoveComps(f)}EditHTMLInit(t){super.EditHTMLInit(t);var e=document.createElement("button");e.innerText="BufferTool",e.onclick=()=>{window.BufferTool(this.mBuf.mBuffer,this.mBuf.mCount,this.mDensityArr,this.mBuf.mSize,!1,!0).then(()=>{this.SetPos(this.GetPos())})},t.append(e)}}
+import { CObject } from "../../basic/CObject.js";
+import { CTree } from "../../basic/CTree.js";
+import { CBound } from "../../geometry/CBound.js";
+import { CMat } from "../../geometry/CMat.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CPoolGeo } from "../../geometry/CPoolGeo.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CColor } from "../../render/CColor.js";
+import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
+import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
+import { CCIndex } from "../canvas/CCIndex.js";
+import { CCollider } from "../component/CCollider.js";
+import { CPaint2DMerge } from "../component/paint/CPaint2D.js";
+import { CPaint3DMerge } from "../component/paint/CPaint3D.js";
+import { CMapBuf } from "./CMapBuf.js";
+import { CSubject } from "./CSubject.js";
+export class CDensityInfo extends CObject {
+    constructor(_color, _size, _res) {
+        super();
+        if (_color == null || _color <= 0) {
+            const r = Math.floor(Math.random() * 256);
+            const g = Math.floor(Math.random() * 256);
+            const b = Math.floor(Math.random() * 256);
+            this.mColor = ((r << 24) | (g << 16) | (b << 8) | 0x00) >>> 0;
+        }
+        else {
+            this.mColor = (_color & 0xFFFFFF00) >>> 0;
+        }
+        this.mSize = _size;
+        this.mRes = _res;
+    }
+    Label() {
+        return this.mLabel;
+    }
+    Color() {
+        return this.mColor;
+    }
+    Size() {
+        return this.mSize;
+    }
+    mLabel = "";
+    mSize;
+    mColor;
+    mPos = null;
+    mSca = null;
+    mRot = null;
+    mRes = "";
+    mWind = 0;
+    mColorModel;
+    mPaintTag = new Array();
+    mPaintShaderAttr = new Array();
+    mColliderLayer = null;
+    mColliderBound = null;
+}
+export class CDensityInfo2D extends CDensityInfo {
+    constructor(_color, _size, _tex, _codi = null) {
+        super(_color, _size, _tex);
+        this.mCodi = _codi;
+    }
+    mCodi;
+    mYSort = false;
+}
+export class CDensityInfo3D extends CDensityInfo {
+    constructor(_color, _size, _mesh) {
+        super(_color, _size, _mesh);
+    }
+}
+export class CDensityMap extends CSubject {
+    mBuf = new CMapBuf();
+    mDensityArr = new Array();
+    mDiv = 100;
+    mUpdate = true;
+    mTerrain = null;
+    IsShould(_member, _type) {
+        if (_member == "mUpdate")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    MapLog() {
+        let json = {};
+        json["countX"] = this.mBuf.mCount.x;
+        json["countY"] = this.mBuf.mCount.y;
+        json["countZ"] = this.mBuf.mCount.z;
+        json["size"] = this.mBuf.mSize;
+        json["labelArr"] = new Array();
+        let size = new CVec3(this.mBuf.mSize, this.mBuf.mSize, this.mBuf.mSize);
+        for (let tile of this.mDensityArr) {
+            json["labelArr"].push({ "label": tile.Label(), "color": CColor.HexToRGB(tile.Color(), true).ToHex(), "sizeX": size.x, "sizeY": size.y, "sizeZ": size.z });
+        }
+        return JSON.stringify(json);
+    }
+    PushDensityInfo(_density) {
+        this.mDensityArr.push(_density);
+        return _density;
+    }
+    Push(_obj) {
+        if (_obj instanceof CDensityInfo)
+            this.PushDensityInfo(_obj);
+        return super.Push(_obj);
+    }
+    Update(_update) {
+        if (this.mUpdate == false)
+            return;
+        for (let density of this.mDensityArr) {
+            if (this.GetFrame().Res().Find(density.mRes) == null) {
+                this.GetFrame().Load().Exe(density.mRes);
+                return;
+            }
+        }
+        const worldW = this.mBuf.mCount.x * this.mBuf.mSize;
+        const worldH = this.mBuf.mCount.y * this.mBuf.mSize;
+        for (let density of this.mDensityArr) {
+            const cellW = density.mSize.x;
+            const cellH = density.mSize.y;
+            if (cellW <= 0 || cellH <= 0)
+                continue;
+            const countX = Math.floor(worldW / cellW);
+            const countY = Math.floor(worldH / cellH);
+            const div = Math.max(1, this.mDiv);
+            const cntX = Math.ceil(countX / div);
+            const cntY = Math.ceil(countY / div);
+            const chunkCount = cntX * cntY;
+            const targetRGB = (density.mColor & 0xFFFFFF00) >>> 0;
+            const matLists = Array.from({ length: chunkCount }, () => []);
+            const codiLists = Array.from({ length: chunkCount }, () => []);
+            const meshLists = Array.from({ length: chunkCount }, () => []);
+            const pos = CPoolGeo.ProductV3();
+            const scale = CPoolGeo.ProductV3();
+            const rotation = CPoolGeo.ProductV3();
+            const cbound = CPoolGeo.ProductBound();
+            cbound.SetType(CBound.eType.Box);
+            const rMat = CPoolGeo.ProductMat();
+            const sMat = CPoolGeo.ProductMat();
+            const bound = new CBound();
+            bound.SetType(CBound.eType.Box);
+            if (density instanceof CDensityInfo2D) {
+                bound.InitBound(0.5);
+            }
+            else {
+                const mesh = this.GetFrame().Res().Find(density.mRes);
+                const dummy = new CTree();
+                dummy.mData = new CMeshCopyNode();
+                CMeshTreeUpdate.TreeCopy(mesh.meshTree, dummy, new CMat(), bound);
+            }
+            for (let cx = 0; cx < countX; cx++) {
+                for (let cy = 0; cy < countY; cy++) {
+                    const worldX = (cx + 0.5) * cellW;
+                    const worldY = (cy + 0.5) * cellH;
+                    const eps = 0.01;
+                    const checkPoints = [
+                        [worldX, worldY],
+                        [cx * cellW + eps, cy * cellH + eps],
+                        [(cx + 1) * cellW - eps, cy * cellH + eps],
+                        [cx * cellW + eps, (cy + 1) * cellH - eps],
+                        [(cx + 1) * cellW - eps, (cy + 1) * cellH - eps],
+                    ];
+                    let anyMatch = false;
+                    for (const [wx, wy] of checkPoints) {
+                        const bx = Math.floor(wx / this.mBuf.mSize);
+                        const by = Math.floor(wy / this.mBuf.mSize);
+                        const idx = new CCIndex(bx, by, 0);
+                        if (this.mBuf.IndexOut(idx))
+                            continue;
+                        if (this.mBuf.RGB(idx) === targetRGB) {
+                            anyMatch = true;
+                            break;
+                        }
+                    }
+                    if (!anyMatch)
+                        continue;
+                    const chunkX = Math.min(Math.floor(cx / div), cntX - 1);
+                    const chunkY = Math.min(Math.floor(cy / div), cntY - 1);
+                    const chunkIdx = chunkX + chunkY * cntX;
+                    pos.Zero();
+                    if (density.mPos != null)
+                        CMath.V3AddV3(pos, density.mPos.Execute(), pos);
+                    if (density.mSca != null)
+                        scale.Import(density.mSca.Execute());
+                    else {
+                        scale.x = 1;
+                        scale.y = 1;
+                        scale.z = 1;
+                    }
+                    if (density.mRot != null)
+                        rotation.Import(density.mRot.Execute());
+                    else
+                        rotation.Zero();
+                    if (density instanceof CDensityInfo2D) {
+                        if (this.mTerrain != null) {
+                            pos.x += worldX;
+                            pos.z += worldY;
+                            pos.y += this.mTerrain.GetHeight(pos.x, pos.z);
+                        }
+                        else {
+                            pos.x += worldX;
+                            pos.y += worldY;
+                        }
+                    }
+                    else {
+                        const size = bound.GetSize();
+                        const maxSize = CMath.Max(CMath.Max(size.x, size.y), size.z);
+                        scale.x *= density.mSize.x / maxSize;
+                        scale.y *= density.mSize.y / maxSize;
+                        scale.z *= density.mSize.z / maxSize;
+                        pos.x += worldX;
+                        pos.z += worldY;
+                        CMath.V3SubV3(pos, bound.GetCenter(), pos);
+                        if (this.mTerrain != null) {
+                            pos.y += this.mTerrain.GetHeight(pos.x, pos.z);
+                        }
+                    }
+                    const trsMat = CMath.MatMul(CMath.MatScale(scale, sMat), CMath.MatRotation(rotation, rMat));
+                    trsMat.SetV3(3, pos);
+                    matLists[chunkIdx].push(trsMat);
+                    if (density.mColliderLayer != null) {
+                        const cl = this.PushComp(new CCollider());
+                        cl.SetLayer(density.mColliderLayer);
+                        cl.SetEvent(CCollider.eEvent.Static);
+                        const srcBound = density.mColliderBound ?? bound;
+                        CMath.V3MulMatCoordi(srcBound.mMin, trsMat, cbound.mMin);
+                        CMath.V3MulMatCoordi(srcBound.mMax, trsMat, cbound.mMax);
+                        if (density instanceof CDensityInfo2D) {
+                            const xHalf = (cbound.mMax.x - cbound.mMin.x) * 0.5;
+                            const yHalf = (cbound.mMax.y - cbound.mMin.y) * 0.5;
+                            const zHalf = Math.max(xHalf, Math.abs(yHalf));
+                            const zCenter = (cbound.mMin.z + cbound.mMax.z) * 0.5;
+                            cbound.mMin.z = zCenter - zHalf;
+                            cbound.mMax.z = zCenter + zHalf;
+                        }
+                        cl.InitBound(cbound);
+                    }
+                    if (density instanceof CDensityInfo2D) {
+                        if (density.mCodi != null)
+                            codiLists[chunkIdx].push(density.mCodi.Execute());
+                    }
+                    else {
+                        meshLists[chunkIdx].push(density.mRes);
+                    }
+                }
+            }
+            CPoolGeo.RecycleV3(pos);
+            CPoolGeo.RecycleV3(scale);
+            CPoolGeo.RecycleV3(rotation);
+            CPoolGeo.RecycleBound(cbound);
+            CPoolGeo.RecycleMat(sMat);
+            CPoolGeo.RecycleMat(rMat);
+            let ptMerge;
+            for (let ci = 0; ci < chunkCount; ci++) {
+                if (matLists[ci].length == 0)
+                    continue;
+                if (density instanceof CDensityInfo2D) {
+                    ptMerge = this.PushComp(new CPaint2DMerge(density.mRes, matLists[ci], codiLists[ci]));
+                    ptMerge.SetYSort(density.mYSort);
+                }
+                else {
+                    ptMerge = this.PushComp(new CPaint3DMerge(meshLists[ci], matLists[ci]));
+                }
+                if (density.mWind > 0)
+                    ptMerge.Wind(density.mWind);
+                if (density.mColorModel != null)
+                    ptMerge.SetColorModel(density.mColorModel);
+                for (let tag of density.mPaintTag)
+                    ptMerge.PushTag(tag);
+                for (let shaderAttr of density.mPaintShaderAttr)
+                    ptMerge.PushCShaderAttr(shaderAttr);
+            }
+        }
+        this.mUpdate = false;
+    }
+    SetPos(_pos, _reset = true) {
+        super.SetPos(_pos, _reset);
+        this.mUpdate = true;
+        this.RemoveComps(CPaint2DMerge);
+        this.RemoveComps(CPaint3DMerge);
+        this.RemoveComps(CCollider);
+    }
+    EditHTMLInit(_div) {
+        super.EditHTMLInit(_div);
+        var button = document.createElement("button");
+        button.innerText = "BufferTool";
+        button.onclick = () => {
+            window["BufferTool"](this.mBuf.mBuffer, this.mBuf.mCount, this.mDensityArr, this.mBuf.mSize, false, true).then(() => {
+                this.SetPos(this.GetPos());
+            });
+        };
+        _div.append(button);
+    }
+}

@@ -1,3 +1,4 @@
+"use strict";
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const url = require("url");
 console.log("[Preload] Loaded!");

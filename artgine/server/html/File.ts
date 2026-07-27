@@ -638,6 +638,10 @@ function ParseFileHomeUrl(input: string): {webRootUrl:string, path:string, RootP
 }
 
 async function ConnectFileHomeUrl(input?: string) {
+    // 서버 전환 시 이전 서버에서 고른 드롭다운 선택값이 남아있으면 computeFileRootOpts가
+    // 그 stale한 fileRootSelKey로 먼저 매칭해버려(368-397줄), 실제 로드된 RootPath와 무관한
+    // 엉뚱한 항목이 선택 표시되는 문제가 있었다. 전환 시작 시 리셋해 RootPath 기준 재매칭을 강제한다.
+    fileRootSelKey = null;
     if (!input) {
         g_fileWebRootUrl = CPath.WebRootUrl();
         RootPath = null;

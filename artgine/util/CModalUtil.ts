@@ -1662,7 +1662,7 @@ export class CORMViewer extends CModal {
     // _serverUrl: File/Memo 라우터와 동일하게, 원격 서버 브라우징 중이면 그 서버의 절대 URL(프로토콜 포함)을 넘겨
     // ORM/Exec도 로컬이 아닌 원격 서버로 가도록 한다. 비워두면 기존처럼 현재 접속된 서버(CPath.WebRootUrl())로 간다.
     // _token: 원격 서버는 세션 쿠키가 안 실리므로(cross-origin), 그 서버 기준 인증 토큰을 함께 넘겨야 CORMRouter의 IsAuth를 통과한다.
-    constructor(_auth?: CAuthInfo, _dbType?: "mysql" | "mssql" | "sqlite" | "ne", _database?: string, _serverUrl?: string, _token?: string) {
+    constructor(_auth?: CAuthInfo, _dbType?: "mysql" | "mssql" | "sqlite" | "ne" | "postgresql" | "mongodb", _database?: string, _serverUrl?: string, _token?: string) {
         super();
         this.mAuth = _auth ?? new CAuthInfo();
         this.mDbType = _dbType ?? null;
@@ -1700,6 +1700,8 @@ export class CORMViewer extends CModal {
                         <option value="mssql">mssql</option>
                         <option value="sqlite">sqlite</option>
                         <option value="ne">ne</option>
+                        <option value="postgresql">postgresql</option>
+                        <option value="mongodb">mongodb</option>
                     </select>
                 </div>
                 <div class="mb-2">
@@ -1707,7 +1709,7 @@ export class CORMViewer extends CModal {
                     <input id="${id}_conn_database" type="text" class="form-control form-control-sm">
                 </div>
                 <hr>
-                <div class="small text-secondary mb-2">Auth info (mysql/mssql only)</div>
+                <div class="small text-secondary mb-2">Auth info (mysql/mssql/postgresql/mongodb)</div>
                 <div class="mb-2">
                     <label class="form-label small text-secondary mb-1">ID</label>
                     <input id="${id}_conn_id" type="text" class="form-control form-control-sm">
@@ -1732,7 +1734,7 @@ export class CORMViewer extends CModal {
     private WireConnectForm(): void {
         const id = this.Key();
         CDOM.ID(`${id}_conn_ok`).addEventListener('click', () => {
-            const dbType = (CDOM.ID(`${id}_conn_dbType`) as HTMLSelectElement).value as "mysql" | "mssql" | "sqlite" | "ne";
+            const dbType = (CDOM.ID(`${id}_conn_dbType`) as HTMLSelectElement).value as "mysql" | "mssql" | "sqlite" | "ne" | "postgresql" | "mongodb";
             const database = (CDOM.ID(`${id}_conn_database`) as HTMLInputElement).value.trim();
             if (!database) { alert('Please enter a connection location.'); return; }
 

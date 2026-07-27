@@ -9,8 +9,5 @@
   "server": "webServer",
   "github": false,
   "tsc": true,
-  "password": "4f05cc03f695805b710ab5306a987f69909b27ee935addbddbd8938818592cd9",
-  "rootPath": [
-    "./"
-  ]
+  "password": "4f05cc03f695805b710ab5306a987f69909b27ee935addbddbd8938818592cd9"
 }

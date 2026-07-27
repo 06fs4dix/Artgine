@@ -160,7 +160,9 @@ export class CAuthServer extends CServerRouter {
             const ip = getAuthIP(_req);
             const result = await handleAuth(ip, _json.GetStr("password"));
             if (result.ok) (_req as any).session.authed = true;
-            else _res.status(403);
+            // 실패 시에도 200으로 응답한다 - 여기서 403을 쓰면 CFecth.Exe가 본문을 읽지 않고 그냥
+            // reject해버려서, 클라이언트에 실제 사유(Wrong password/잠금 메시지)가 전달되지 않고
+            // 뭉뚱그린 "Server error"만 보인다.
             _res.json(result);
             return null;
         });

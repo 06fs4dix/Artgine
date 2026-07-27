@@ -2,7 +2,8 @@
 // Talks to CAIChatRouter (/AIChat/*, /AIChat/ws)
 
 
-type Provider = 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' | 'opencode' | 'grok';
+// 'cmd'는 CLI 프로바이더가 아니라 셸 실행 의사 프로바이더다(서버의 CAIChatRouter Provider 타입과 동일한 정의).
+type Provider = 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' | 'opencode' | 'grok' | 'cmd';
 interface IAttachment { name: string; path: string; }
 interface IMessage {
     role: 'user' | 'assistant';
@@ -26,7 +27,8 @@ interface ISessionMeta {
 interface IHistory { meta: ISessionMeta; messages: IMessage[]; }
 
 // populated from GET /AIInfo/setting (ai/settings.json을 그대로 받아 models 필드만 사용)
-let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [], opencode: [], grok: [] };
+// cmd는 셸 실행 의사 프로바이더라 모델 개념이 없다 — 항상 빈 목록이고 모델 셀렉트는 비활성화된다.
+let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [], opencode: [], grok: [], cmd: [] };
 const LS_LAST_SID = 'ai.lastSessionId';
 const LS_PROVIDER = 'ai.provider';
 const LS_MODEL    = 'ai.model';
@@ -38,6 +40,7 @@ import { CHash } from "../../basic/CHash.js";
 import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
 import { CLan } from "../../basic/CLan.js";
 import { CIframeMsg } from "./CIframeMsg.js";
+import { CStorage } from "../../system/CStorage.js";
 import { marked } from "../../external/esnext/md/marked.esm.js";
 
 marked.setOptions({ gfm: true, breaks: true });
@@ -94,7 +97,7 @@ const elModelSel     = $<HTMLSelectElement>('modelSel');
 let sessionMcp = true;
 let sessionWorkingDir: string | null = null;
 let sessionMdcopy = false;
-let sessionAllow = false;
+let sessionWrite = true;
 const elStatus       = $<HTMLSpanElement>('status');
 const elMessages     = $<HTMLDivElement>('messages');
 const elComposer     = $<HTMLDivElement>('composer');
@@ -265,9 +268,9 @@ async function fetchProviders(): Promise<boolean> {
 function rebuildProviderOptions() {
     elProviderSel.innerHTML = '';
     const _providerLabels: Record<Provider, string> = {
-        claude: 'Claude', /* gemini: 'Gemini', */ codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode', grok: 'Grok',
+        claude: 'Claude', /* gemini: 'Gemini', */ codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode', grok: 'Grok', cmd: 'CMD (shell)',
     };
-    for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity', 'opencode', 'grok'] as Provider[]) {
+    for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity', 'opencode', 'grok', 'cmd'] as Provider[]) {
         const o = document.createElement('option');
         o.value = id;
         o.textContent = _providerLabels[id];
@@ -277,13 +280,16 @@ function rebuildProviderOptions() {
 function rebuildModelOptions() {
     const provider = elProviderSel.value as Provider;
     elModelSel.innerHTML = '';
+    // cmd는 모델이 없다 — 셀렉트를 비워 비활성화하고, 빈 값이 그대로 서버로 간다(라우터가 무시).
+    elModelSel.disabled = (provider === 'cmd');
+    if (provider === 'cmd') return;
     for (const m of MODELS[provider]) {
         const o = document.createElement('option');
         o.value = m.value; o.textContent = m.label;
         elModelSel.appendChild(o);
     }
     const list = MODELS[provider];
-    const savedModel = localStorage.getItem(LS_MODEL);
+    const savedModel = CStorage.Get(LS_MODEL) as string | null;
     if (savedModel && list.some(m => m.value === savedModel)) {
         elModelSel.value = savedModel;
     } else if (list.length > 0) {
@@ -292,12 +298,13 @@ function rebuildModelOptions() {
     }
 }
 elProviderSel.addEventListener('change', () => {
-    localStorage.setItem(LS_PROVIDER, elProviderSel.value);
+    CStorage.Set(LS_PROVIDER, elProviderSel.value);
     rebuildModelOptions();
-    localStorage.setItem(LS_MODEL, elModelSel.value);
+    // cmd는 모델이 빈 값이라 그대로 저장하면 직전에 쓰던 모델 기억이 지워진다 — 저장하지 않는다.
+    if (elProviderSel.value !== 'cmd') CStorage.Set(LS_MODEL, elModelSel.value);
 });
 elModelSel.addEventListener('change', () => {
-    localStorage.setItem(LS_MODEL, elModelSel.value);
+    CStorage.Set(LS_MODEL, elModelSel.value);
 });
 
 // ---- history (REST) ----
@@ -462,7 +469,7 @@ function send() {
         title: text.slice(0, 30) || 'New chat',
         ua: navigator.userAgent,
         mcp: sessionMcp,
-        allow: sessionAllow,
+        write: sessionWrite,
     };
     if (sessionWorkingDir) sendMsg.workingDir = sessionWorkingDir;
     if (sessionMdcopy) sendMsg.mdcopy = true;
@@ -642,12 +649,13 @@ async function bootChat() {
     if (paramMcp !== null && paramMcp !== undefined) sessionMcp = paramMcp !== '0';
     sessionWorkingDir = _urlParams?.get('workingDir') ?? null;
     sessionMdcopy = _urlParams?.get('mdcopy') === '1';
-    sessionAllow = _urlParams?.get('allow') === '1';
+    const paramWrite = _urlParams?.get('write');
+    if (paramWrite !== null && paramWrite !== undefined) sessionWrite = paramWrite !== '0';
 
     await fetchProviders();
     rebuildProviderOptions();
 
-    const savedProvider = localStorage.getItem(LS_PROVIDER) as Provider | null;
+    const savedProvider = CStorage.Get(LS_PROVIDER) as Provider | null;
     if (savedProvider && MODELS[savedProvider]) elProviderSel.value = savedProvider;
     rebuildModelOptions();
 

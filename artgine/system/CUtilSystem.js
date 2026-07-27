@@ -1,1 +1,126 @@
-let e=null,t=null,n=null,s=null;async function i(){if(!e){const s=await import("child_process");e=s.spawn,t=s.spawnSync,n=s.execFileSync}s||(s=await import("os"))}function o(e){return'"'+e.replace(/"/g,'""').replace(/\^/g,"^^").replace(/%/g,"%%")+'"'}export class CUtilSystem{static async Spawn(t,r=[],c="pipe",a="",d=null,l=!1,w=!0){await i();const p="win32"===s.platform(),f=d??process.env,u=a||void 0;if(l){if(p){const e=w?"/c":"/k",s=[t,...r].map(e=>/[\s"]/.test(e)?o(e):e).join(" "),i=u?`cd /d "${u}" && `:"",c=`CUtilSystemSpawn_${Date.now()}_${Math.floor(1e6*Math.random())}`;try{n("schtasks",["/create","/tn",c,"/tr",`cmd.exe ${e} "${i}${s}"`,"/sc","once","/st","00:00","/sd","2099/01/01","/f"],{stdio:"ignore",windowsHide:!0}),n("schtasks",["/run","/tn",c],{stdio:"ignore",windowsHide:!0})}finally{try{n("schtasks",["/delete","/tn",c,"/f"],{stdio:"ignore",windowsHide:!0})}catch{}}return null}if("darwin"===s.platform()){if(w){const n=e(t,r,{detached:!0,stdio:"ignore",cwd:u,env:f});return n.unref(),n}const n=`tell app "Terminal" to do script "${[t,...r].join(" ").replace(/"/g,'\\"')}"`,s=e("osascript",["-e",n],{detached:!0,stdio:"ignore",cwd:u,env:f});return s.unref(),s}{if(w){const n=e(t,r,{detached:!0,stdio:"ignore",cwd:u,env:f});return n.unref(),n}const n=[{bin:"gnome-terminal",args:["--",t,...r]},{bin:"konsole",args:["-e",t,...r]},{bin:"xterm",args:["-e",t,...r]}];for(const t of n)try{const n=e(t.bin,t.args,{detached:!0,stdio:"ignore",cwd:u,env:f});return n.unref(),n}catch{}const s=e(t,r,{detached:!0,stdio:"ignore",cwd:u,env:f});return s.unref(),s}}const h=t.replace(/.*[/\\]/,"").toLowerCase();if(/^(cmd|cmd\.exe|bash|sh|powershell|powershell\.exe)$/.test(h))return e(t,r,{stdio:c,cwd:u,env:f,windowsHide:w});if(p&&(/[^\x00-\x7F]/.test(t)||!/[/\\]/.test(t)&&!/\.\w+$/.test(t)||/\.cmd$/i.test(t))){const n=[/[\s"]/.test(t)?o(t):t,...r.map(o)].join(" ");return e(n,[],{stdio:c,cwd:u,env:f,shell:!0,windowsHide:w})}return e(t,r,{stdio:c,cwd:u,env:f,windowsHide:w})}static async KillPID(e){await i();const n="win32"===s.platform();try{if(n)t("taskkill",["/F","/T","/PID",String(e)],{windowsHide:!0});else try{process.kill(-e,"SIGTERM")}catch{process.kill(e,"SIGTERM")}}catch(t){console.warn(`[CUtilSystem] KillPID failed (pid=${e}):`,t)}}}
+let gSpawn = null;
+let gSpawnSync = null;
+let gExecFileSync = null;
+let gOs = null;
+async function EnsureNodeModules() {
+    if (!gSpawn) {
+        const cp = await import('child_process');
+        gSpawn = cp.spawn;
+        gSpawnSync = cp.spawnSync;
+        gExecFileSync = cp.execFileSync;
+    }
+    if (!gOs)
+        gOs = await import('os');
+}
+function _quoteWin(s) {
+    return '"' + s.replace(/"/g, '""').replace(/\^/g, '^^').replace(/%/g, '%%') + '"';
+}
+export class CUtilSystem {
+    static async Spawn(cmd, args = [], stdio = 'pipe', cwd = '', env = null, newWindow = false, windowsHide = true) {
+        await EnsureNodeModules();
+        const IS_WIN = gOs.platform() === 'win32';
+        const resolvedEnv = env ?? process.env;
+        const resolvedCwd = cwd || undefined;
+        if (newWindow) {
+            if (IS_WIN) {
+                const innerFlag = windowsHide ? '/c' : '/k';
+                const line = [cmd, ...args].map(a => /[\s"]/.test(a) ? _quoteWin(a) : a).join(' ');
+                const cdPrefix = resolvedCwd ? `cd /d "${resolvedCwd}" && ` : '';
+                const taskName = `CUtilSystemSpawn_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+                try {
+                    gExecFileSync('schtasks', [
+                        '/create', '/tn', taskName,
+                        '/tr', `cmd.exe ${innerFlag} "${cdPrefix}${line}"`,
+                        '/sc', 'once', '/st', '00:00', '/sd', '2099/01/01', '/f'
+                    ], { stdio: 'ignore', windowsHide: true });
+                    gExecFileSync('schtasks', ['/run', '/tn', taskName], { stdio: 'ignore', windowsHide: true });
+                }
+                finally {
+                    try {
+                        gExecFileSync('schtasks', ['/delete', '/tn', taskName, '/f'], { stdio: 'ignore', windowsHide: true });
+                    }
+                    catch { }
+                }
+                return null;
+            }
+            else if (gOs.platform() === 'darwin') {
+                if (windowsHide) {
+                    const child = gSpawn(cmd, args, {
+                        detached: true, stdio: 'ignore', cwd: resolvedCwd, env: resolvedEnv
+                    });
+                    child.unref();
+                    return child;
+                }
+                const script = `tell app "Terminal" to do script "${[cmd, ...args].join(' ').replace(/"/g, '\\"')}"`;
+                const child = gSpawn('osascript', ['-e', script], {
+                    detached: true, stdio: 'ignore', cwd: resolvedCwd, env: resolvedEnv
+                });
+                child.unref();
+                return child;
+            }
+            else {
+                if (windowsHide) {
+                    const child = gSpawn(cmd, args, {
+                        detached: true, stdio: 'ignore', cwd: resolvedCwd, env: resolvedEnv
+                    });
+                    child.unref();
+                    return child;
+                }
+                const terms = [
+                    { bin: 'gnome-terminal', args: ['--', cmd, ...args] },
+                    { bin: 'konsole', args: ['-e', cmd, ...args] },
+                    { bin: 'xterm', args: ['-e', cmd, ...args] },
+                ];
+                for (const t of terms) {
+                    try {
+                        const child = gSpawn(t.bin, t.args, {
+                            detached: true, stdio: 'ignore', cwd: resolvedCwd, env: resolvedEnv
+                        });
+                        child.unref();
+                        return child;
+                    }
+                    catch { }
+                }
+                const child = gSpawn(cmd, args, {
+                    detached: true, stdio: 'ignore', cwd: resolvedCwd, env: resolvedEnv
+                });
+                child.unref();
+                return child;
+            }
+        }
+        const cmdBase = cmd.replace(/.*[/\\]/, '').toLowerCase();
+        const isShellInterp = /^(cmd|cmd\.exe|bash|sh|powershell|powershell\.exe)$/.test(cmdBase);
+        if (isShellInterp) {
+            return gSpawn(cmd, args, { stdio, cwd: resolvedCwd, env: resolvedEnv, windowsHide });
+        }
+        const needsQuoteShell = IS_WIN && (/[^\x00-\x7F]/.test(cmd) ||
+            (!/[/\\]/.test(cmd) && !/\.\w+$/.test(cmd)) ||
+            /\.cmd$/i.test(cmd));
+        if (needsQuoteShell) {
+            const quotedCmd = /[\s"]/.test(cmd) ? _quoteWin(cmd) : cmd;
+            const line = [quotedCmd, ...args.map(_quoteWin)].join(' ');
+            return gSpawn(line, [], { stdio, cwd: resolvedCwd, env: resolvedEnv, shell: true, windowsHide });
+        }
+        return gSpawn(cmd, args, { stdio, cwd: resolvedCwd, env: resolvedEnv, windowsHide });
+    }
+    static async KillPID(pid) {
+        await EnsureNodeModules();
+        const IS_WIN = gOs.platform() === 'win32';
+        try {
+            if (IS_WIN) {
+                gSpawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { windowsHide: true });
+            }
+            else {
+                try {
+                    process.kill(-pid, 'SIGTERM');
+                }
+                catch {
+                    process.kill(pid, 'SIGTERM');
+                }
+            }
+        }
+        catch (e) {
+            console.warn(`[CUtilSystem] KillPID failed (pid=${pid}):`, e);
+        }
+    }
+}

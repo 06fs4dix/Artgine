@@ -1,1 +1,800 @@
-import{CAlert as t}from"../../../basic/CAlert.js";import{CClass as e}from"../../../basic/CClass.js";import{CDOM as i}from"../../../basic/CDOM.js";import{CHash as s}from"../../../basic/CHash.js";import{CBound as m}from"../../../geometry/CBound.js";import{CMat as h}from"../../../geometry/CMat.js";import{CMath as n}from"../../../geometry/CMath.js";import{CPoolGeo as r}from"../../../geometry/CPoolGeo.js";import{CVec1 as a}from"../../../geometry/CVec1.js";import{CVec2 as o}from"../../../geometry/CVec2.js";import{CVec3 as l}from"../../../geometry/CVec3.js";import{CVec4 as d}from"../../../geometry/CVec4.js";import{CMeshCreateInfo as u}from"../../../render/CMeshCreateInfo.js";import{CMeshDataNode as M}from"../../../render/CMeshDataNode.js";import{CRenderPass as S}from"../../../render/CRenderPass.js";import{CVertexFormat as x}from"../../../render/CShader.js";import{CShaderAttr as y}from"../../../render/CShaderAttr.js";import{CTexture as c}from"../../../render/CTexture.js";import{CUtilRender as p}from"../../../render/CUtilRender.js";import{CAtlas as P}from"../../../util/CAtlas.js";import{CFontRef as f}from"../../../util/CFont.js";import{CRPAuto as T}from"../../canvas/CRPMgr.js";import{CClipCoodi as w}from"../CAnimation.js";import{CPaint as F}from"./CPaint.js";export class CPaint2D extends F{mSize;mPos;mSca;mPivot;mYSort=!1;mYSortOrigin=0;static YSortRange=new o(-1e4,1e4);static YSortZShift=100;mBeforePos=new l;mStopPos=new l;mRemoveSpeed=1;mRevers=new o(1,1);mPosList=null;mTMat;mLastHide=!0;mWindInfluence=new a(0);IsShould(t,e){return super.IsShould(t,e)}constructor(e=null,i=null){super(),null!=i&&i instanceof o==0?t.E("CPaint2D 인자 잘못 넣음"):(this.mSize=i,null!=e&&(e instanceof f?this.SetTexture(e.mKey):this.SetTexture(e))),this.mPivot=new l,this.mPos=new l,this.mSca=new o(1,1),this.mTMat=new h,this.mBound.mMin.x=.5*-p.Mesh2DSize,this.mBound.mMin.y=.5*-p.Mesh2DSize,this.mBound.mMin.z=-.5,this.mBound.mMax.x=.5*p.Mesh2DSize,this.mBound.mMax.y=.5*p.Mesh2DSize,this.mBound.mMax.z=.5,this.mBound.mType=m.eType.Box,this.MatUpdate(),this.mShaderAttrMap.set("billboard",new y("billboard",new a(0))),this.PushTag("codi")}Reset(){super.Reset(),this.mPivot.Zero(),this.mPos.Zero(),this.mShaderAttrMap.set("billboard",new y("billboard",new a(0))),this.mBound.mMin.x=.5*-p.Mesh2DSize,this.mBound.mMin.y=.5*-p.Mesh2DSize,this.mBound.mMin.z=-.5,this.mBound.mMax.x=.5*p.Mesh2DSize,this.mBound.mMax.y=.5*p.Mesh2DSize,this.mBound.mMax.z=.5,this.mBound.mType=m.eType.Box}PushNormalMap(t){1==this.mTextureKey.length?this.mTextureKey.push(t):2==this.mTextureKey.length&&(this.mTextureKey[1]=t),this.ClearBatch(),this.PushTag("normalMap")}EditDrop(t){t instanceof c&&this.SetTexture(t.Key())}EditForm(t,e,s){if(super.EditForm(t,e,s),"mSize"==t.member&&null==this.mSize){let t=i.TagToDom("button");t.innerText="생성",t.onclick=()=>{this.mSize=new o,this.EditRefresh()},e.append(t)}}EditHTMLInit(t,s){super.EditHTMLInit(t,s);var m=i.TagToDom("button");m.className="btn btn-primary btn-sm",m.innerText="TexcodiModif",m.onclick=()=>{if(this.mTextureKey.length>0){let t=e.New("CAnimation");if(0==this.mTexCodi.Equals(new d(1,1,0,0))){const e=this.GetLeftTopRightBottom(this.mOwner.GetFrame());if(null==e)return;t.Push(new w(0,0,e.x,e.y,e.z,e.w))}window.AniTool(t,this.mTextureKey[0]),window.AniToolTexcodiEvent(this,()=>{this.EditRefresh(),this.ClearBatch()})}},t.append(m)}SetBillBoard(t){this.mShaderAttrMap.get("billboard").mData.mF32A[0]=t?1:0,this.PushTag("billboard"),this.ClearCRPAuto()}SetYSort(t){this.mYSort=t,this.mYSort&&null!=this.GetSize()&&(this.mYSortOrigin=-.5*this.GetSize().y+1)}SetYSortOrigin(t){this.mYSortOrigin=t}InitChk(){super.InitChk(),this.SizeCac(),null==this.mSize&&(this.mInit=!1)}FMatUpdate(){if(super.FMatUpdate(),1==this.mYSort){const t=this.mFMat.mF32A[13]+this.mYSortOrigin;let e=(CPaint2D.YSortRange.y-t)/(CPaint2D.YSortRange.y-CPaint2D.YSortRange.x);this.mFMat.mF32A[14]+=e*CPaint2D.YSortZShift,this.mBW.mPos.mF32A[2]+=e*CPaint2D.YSortZShift}}Update(t){if(super.Update(t),0!=this.mUpdateFMat&&!(0==this.mTag.has("tail")||t.DeltaTime()>1))if(this.mTag.has("billboard")&&null==this.mPosList){if(0==this.mRenPT.length)return;let i=r.ProductV3(),s=r.ProductV3();if(i.mF32A[0]=this.GetFMat().mF32A[12],i.mF32A[1]=this.GetFMat().mF32A[13],i.mF32A[2]=this.GetFMat().mF32A[14],i.IsZero())return r.RecycleV3(i),void r.RecycleV3(s);this.mBeforePos.IsZero()&&this.mBeforePos.Import(i),n.V3SubV3(i,this.mBeforePos,s);var e=n.V3Len(s);e>this.mSize.y?n.V3AddV3(i,n.V3MulFloat(s,-this.mSize.y/e,s),this.mBeforePos):e<.001?this.mBeforePos.Import(i):this.mStopPos.Equals(i)&&n.V3AddV3(n.V3MulFloat(i,t.DeltaTime()*this.mRemoveSpeed),n.V3MulFloat(this.mBeforePos,1-t.DeltaTime()*this.mRemoveSpeed),this.mBeforePos),this.mStopPos.Import(i),this.mTMat.SetV3(0,i),this.mTMat.SetV3(1,this.mBeforePos),this.mTMat.mF32A[8]=this.mSize.x,this.mTMat.mF32A[9]=this.mSize.y,this.mTMat.SetV3(3,this.mPos),this.mLastHide?(this.mTMat.mF32A[3]=1,this.mTMat.mF32A[7]=1,this.mTMat.mF32A[11]=0,this.mTMat.mF32A[15]=0):(this.mTMat.mF32A[3]=1,this.mTMat.mF32A[7]=1,this.mTMat.mF32A[11]=1,this.mTMat.mF32A[15]=1),r.RecycleV3(i),r.RecycleV3(s)}else{this.mTag.has("billboard")&&2!=this.mShaderAttrMap.get("billboard").mData.mF32A[0]&&(this.mShaderAttrMap.get("billboard").mData.mF32A[0]=2,this.ClearCRPAuto());let t=r.ProductV3();t.mF32A[0]=this.GetFMat().mF32A[12],t.mF32A[1]=this.GetFMat().mF32A[13],t.mF32A[2]=this.GetFMat().mF32A[14];let e=r.ProductV3();for(let i=0;i<4;++i)n.V3AddV3(this.mPosList[i],t,e),this.mTMat.SetV3(i,e);this.mTMat.mF32A[3]=1,this.mTMat.mF32A[7]=1,this.mTMat.mF32A[11]=1,this.mTMat.mF32A[15]=1,r.RecycleV3(t),r.RecycleV3(e)}}Prefab(t){super.Prefab(t),this.SizeCac()}SizeCac(){if((null==this.mSize||this.mSize.IsZero())&&null!=this.mOwner&&this.mTextureKey.length>0){var t=this.mOwner.GetFrame().Res().Find(this.mTextureKey[0]);if(t instanceof c){if(null==t||1==t.GetWidth()&&1==t.GetHeight())return;this.SetSize(new o(t.GetWidth(),t.GetHeight())),this.MatUpdate(),this.EditRefresh()}else if(t instanceof P&&(1!=this.mTexCodi.x||1!=this.mTexCodi.y||0!=this.mTexCodi.z||0!=this.mTexCodi.w)){let e=Math.round(t.GetWidth()*this.mTexCodi.x),i=Math.round(t.GetHeight()*this.mTexCodi.y);this.SetSize(new o(e,i)),this.EditRefresh()}}}EmptyRPChk(){if(0==this.mRenderPass.length){var t=new T(this.mOwner.GetFrame().Pal().Sl2D().mKey);t.mCullFace=S.eCull.None,this.mRenderPass=[t]}else""==this.mRenderPass[0].mShader&&(this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey);0==this.mTextureKey.length&&this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex())}EditChange(t,e){super.EditChange(t,e),"mYSort"==t.member||"mYSortOrigin"==t.member?("mYSort"==t.member&&this.SetYSort(this.mYSort),this.MatUpdate()):t.IsRef(this.mWindInfluence)?this.Wind(this.mWindInfluence.x):e&&(t.IsRef(this.mPos)||t.IsRef(this.mSize)||t.IsRef(this.mPivot))&&this.MatUpdate()}MatUpdate(){if(null==this.mSize)return;this.mBound.mMin.x=.5*-p.Mesh2DSize,this.mBound.mMin.y=.5*-p.Mesh2DSize,this.mBound.mMin.z=-.5,this.mBound.mMax.x=.5*p.Mesh2DSize,this.mBound.mMax.y=.5*p.Mesh2DSize,this.mBound.mMax.z=.5;let t=this.GetScale(),e=this.mPos.Export();e.x+=this.mBound.mMax.x*t.x*this.mPivot.x,e.y+=this.mBound.mMax.y*t.y*this.mPivot.y,n.MatScale(t,this.mLMat),this.mLMat.mF32A[12]=e.x,this.mLMat.mF32A[13]=e.y,this.mLMat.mF32A[14]=e.z,this.mLMat.UnitCheck(),this.mBound.MatCoordi(this.mLMat),this.mBound.mMax.z=this.mBound.GetOutRadius(),this.mBound.mMin.z=-this.mBound.mMax.z,this.mBW.mRadian=0,this.mUpdateLMat=!0}GetHalf(){var t=new l(.5*this.mSize.x*this.mPivot.x,.5*this.mSize.y*this.mPivot.y,0);return n.V3MulMatNormal(t,this.mOwner.GetMat())}GetScale(){return new l(this.mSize.x/p.Mesh2DSize*this.mRevers.x*this.mSca.x,this.mSize.y/p.Mesh2DSize*this.mRevers.y*this.mSca.y,1)}GetSize(){return this.mSize}GetPos(){return this.mPos}GetPivot(){return this.mPivot}GetTexCodi(){return this.mTexCodi}GetMesh(){return null}Start(){super.Start(),this.MatUpdate(),null!=this.mPosList?(this.mBound.Reset(),this.mBound.InitBound(this.mPosList),this.mBound.SetType(m.eType.Box)):this.mTag.has("tail")&&(this.mBound.Reset(),this.mBound.InitBound(this.mSize.y),this.mBound.SetType(m.eType.Box))}Render(t){var e=this.RenderBatch(t,1);if(null!=e)if(null!=this.mSize&&0!=this.mTextureKey.length){if(this.mOwner.GetFrame().BMgr().BatchOn(),this.Common(t),this.mTag.has("tail")){let t=new y("worldMat",this.mTMat);this.mOwner.GetFrame().BMgr().SetBatchSA(t)}else{let t=new y("worldMat",this.GetFMat());this.mWorldMatType===h.eType.Short2D&&(t.mKey="worldMatShort"),t.mType=this.mWorldMatType,this.mOwner.GetFrame().BMgr().SetBatchSA(new y("worldMatType",new a(this.mWorldMatType))),this.mOwner.GetFrame().BMgr().SetBatchSA(t)}null!=t.mUniform.get("windInfluence")&&this.mOwner.GetFrame().BMgr().SetBatchSA(new y("windInfluence",this.mWindInfluence)),this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);var i=this.GetDrawMesh("Artgine/DM/2D",t,this.mOwner.GetFrame().Pal().MCI2D());this.mOwner.GetFrame().BMgr().SetBatchMesh(i),e[0]=this.mOwner.GetFrame().BMgr().BatchOff()}else this.mBatchMap.clear()}SetPivot(t){this.mPivot=t,this.MatUpdate()}SetSize(t){null!=t&&t.IsZero()?this.mSize=null:null==this.mSize?(this.mSize=new o,this.mSize.Import(t)):this.mSize.Import(t),this.MatUpdate()}SetPos(t){this.mPos=t,this.MatUpdate()}SetSca(t){this.mSca.Equals(t)||(this.mSca=t,this.MatUpdate())}SetReverse(t,e){this.mRevers.x=t?-1:1,this.mRevers.y=e?-1:1,this.MatUpdate()}Tail(){0==this.mTag.has("tail")&&(this.PushTag("tail"),this.ClearBatch(),this.mUpdateLMat=!0)}Wind(t){this.Tail(),this.PushTag("wind"),this.mLastHide=!1,this.mWindInfluence.x=t,this.mPosList=[new l(.5*-this.mSize.x,.5*this.mSize.y,0),new l(.5*this.mSize.x,.5*this.mSize.y,0),new l(.5*-this.mSize.x,.5*-this.mSize.y,0),new l(.5*this.mSize.x,.5*-this.mSize.y,0)]}SetPosList(t){t.length>=4&&(null==this.mTMat&&(this.mTMat=new h),this.Tail(),this.mPosList=t,this.mBound.Reset(),this.mBound.InitBound(this.mPosList),this.mBound.SetType(m.eType.Box),this.mBW.mRadian=0,this.mLMat.Unit())}ResetDecal(t,e=null,i=null,s=new l(0,0,-1),m=0){super.ResetDecal(t,e,i,s,m)}}export class CPaintHTML extends CPaint2D{mElement=null;mOrgSize=new o;mParent=null;mAttach=!1;mZoomScale=!1;constructor(t,e=null,s=null){super(null,e),this.mElement=t,null==s?this.mParent=i.PaintDiv():(this.mParent=s,this.mParent.style.position="relative",this.mParent.style.overflow="hidden")}StartChk(){return super.StartChk(),this.mStartChk=!1,!0}SetEnable(t){super.SetEnable(t),this.mElement.hidden=!t}SetPos(t){this.mPos=t.Export(),this.mUpdateFMat=!0}UpdateRenPt(){for(let t=0;t<this.mRenPT.length;++t){let e=this.mRenPT[t];e.mShow=2,e.mDistance=2147483136}}SetSize(t){this.mSize=t,this.mUpdateFMat=!0,this.mAttach=!1}GetElement(){return this.mElement}EmptyRPChk(){if(0==this.mRenderPass.length){var t=new T(this.mOwner.GetFrame().Pal().Sl2D().mKey);t.mCullFace=S.eCull.None,this.mRenderPass=[t]}else""==this.mRenderPass[0].mShader&&(this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey)}Update(t){if(0==this.mRenPT.length||null==this.mElement)return;if(0==this.mRenPT[0].mCam.mUpdateMat&&0==this.mOwner.mUpdateMat&&!this.mOwner.GetFrame().Win().IsResize()&&1!=this.mUpdateFMat&&this.mElement.clientWidth==this.mOrgSize.x)return;this.mUpdateFMat=!1,0==this.mAttach&&(this.mParent.appendChild(this.mElement),this.mElement.style.position="absolute",this.mAttach=!0);let e=1/this.mRenPT[0].mCam.mZoom,i=this.GetOwner().GetMat().xyz;0!=this.mElement.offsetWidth&&(this.mOrgSize.x==this.mElement.clientWidth&&this.mOrgSize.y==this.mElement.clientHeight||(this.mOrgSize.x=this.mElement.clientWidth,this.mOrgSize.y=this.mElement.clientHeight,null==this.mSize&&(this.mBound.mMin.x=.5*-this.mOrgSize.x,this.mBound.mMin.y=.5*-this.mOrgSize.y,this.mBound.mMax.x=.5*this.mOrgSize.x,this.mBound.mMax.y=.5*this.mOrgSize.y,this.mOwner&&void 0!==this.mOwner.mUpdateAnchor&&(this.mOwner.mUpdateAnchor=!0))));let s=0,m=0;null!=this.mSize?(i.x+=this.mPivot.x*this.mSize.x*.5,i.y+=this.mPivot.y*this.mSize.y*.5,0!=this.mSize.x&&(this.mElement.style.width=this.mSize.x+"px"),0!=this.mSize.y&&(this.mElement.style.height=this.mSize.y+"px"),this.mElement.style.transform="scale("+e*this.GetOwner().GetMat().mF32A[0]+","+e*this.GetOwner().GetMat().mF32A[5]+")",s=.5*this.mOrgSize.x,m=.5*this.mOrgSize.y):(s=this.mOrgSize.x*(.5*this.mPivot.x+.5),m=this.mOrgSize.y*(.5*this.mPivot.y+.5)),i=n.V3MulMatCoordi(i,this.mRenPT[0].mCam.GetViewMat()),i=n.V3MulMatCoordi(i,this.mRenPT[0].mCam.GetProjMat());var h=(i.x+1)/2,r=(1-i.y)/2,a=this.GetOwner().GetFrame().PF().mLeft,o=this.GetOwner().GetFrame().PF().mTop;a+=h*this.mOwner.GetFrame().PF().mWidth-s+this.mPos.x,o+=r*this.mOwner.GetFrame().PF().mHeight-m-this.mPos.y,a=Math.trunc(a),o=Math.trunc(o),this.mElement.style.left=a+"px",this.mElement.style.top=o+"px"}Destroy(){super.Destroy(),null!=this.mElement&&this.mElement.remove()}}export class CPaint2DMerge extends F{mMatList;mCodiList;mTexSize=null;mMeshDataNode;mHash;mYSort=!1;mWindInfluence=new a(0);constructor(t,e,i=[]){super(),this.mMatList=e,this.mCodiList=i,null!=t&&(t instanceof f?this.SetTexture(t.mKey):this.SetTexture(t)),this.PushTag("merge")}InitChk(){if(super.InitChk(),null==this.mTexSize&&null!=this.mOwner&&this.mTextureKey.length>0){var e=this.mOwner.GetFrame().Res().Find(this.mTextureKey[0]);if(null==e)return void(this.mInit=!1);if(e instanceof c){if(null==e||1==e.GetWidth()&&1==e.GetHeight())return;this.mTexSize=new o(e.GetWidth(),e.GetHeight())}else e instanceof P?this.mTexSize=new o(e.GetWidth(),e.GetHeight()):t.E("나올수 없다!")}}Start(){this.mMeshDataNode=new M,this.mMeshDataNode.ci=new u,this.mBound.Reset(),this.mBound.SetType(m.eType.Box),this.mHash="",this.Merge()}Render(t){var e=this.RenderBatch(t,1);if(null==e)return;this.mOwner.GetFrame().BMgr().BatchOn(),this.Common(t);let i=new y("worldMat",this.GetFMat());this.mWorldMatType===h.eType.Short2D&&(i.mKey="worldMatShort"),i.mType=this.mWorldMatType,this.mOwner.GetFrame().BMgr().SetBatchSA(new y("worldMatType",new a(this.mWorldMatType))),this.mOwner.GetFrame().BMgr().SetBatchSA(i),null!=t.mUniform.get("windInfluence")&&this.mOwner.GetFrame().BMgr().SetBatchSA(new y("windInfluence",this.mWindInfluence)),this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);var s=this.GetDrawMesh("Artgine/DM/2DM"+this.mHash,t,this.mMeshDataNode.ci);this.mOwner.GetFrame().BMgr().SetBatchMesh(s),e[0]=this.mOwner.GetFrame().BMgr().BatchOff()}Wind(t){this.PushTag("wind"),this.mWindInfluence.x=t}SetYSort(t){this.mYSort=t}Merge(){let t=(t,e)=>{let i=new o(0,0);return i.x=t.x*e.x+e.z,i.y=t.y*e.y+e.w,i.x=Math.abs(i.x),i.y=Math.abs(i.y),i},e=this.mMeshDataNode.ci.GetVFType(x.eIdentifier.Position),i=this.mMeshDataNode.ci.GetVFType(x.eIdentifier.UV),m=this.mMeshDataNode.ci.GetVFType(x.eIdentifier.Normal),h=this.mMeshDataNode.ci.GetVFType(x.eIdentifier.Index);0==e.length&&(this.mMeshDataNode.ci.Create(x.eIdentifier.Position),this.mMeshDataNode.ci.Create(x.eIdentifier.Position),e=this.mMeshDataNode.ci.GetVFType(x.eIdentifier.Position)),0==i.length&&(this.mMeshDataNode.ci.Create(x.eIdentifier.UV),i=this.mMeshDataNode.ci.GetVFType(x.eIdentifier.UV)),0==m.length&&(this.mMeshDataNode.ci.Create(x.eIdentifier.Normal),m=this.mMeshDataNode.ci.GetVFType(x.eIdentifier.Normal)),0==h.length&&(this.mMeshDataNode.ci.Create(x.eIdentifier.Index),h=this.mMeshDataNode.ci.GetVFType(x.eIdentifier.Index));const r=new l(.5,.5,0),a=new l(-.5,-.5,0),u=new l(-.5,.5,0),M=new l(.5,-.5,0),S=new o(0,0),y=new o(1,0),c=new o(1,1),p=new o(0,1),P=new l(0,0,1),f=new l,T=new l,w=new l,F=new l;for(let s=e[0].bufF.Size(3);s<this.mMatList.length;s++){const o=this.mMatList[s];if(n.MatDecomposeSca(o,w),F.x=-w.x,F.y=w.y,F.z=w.z,f.x=w.x,f.y=-w.y,f.z=w.z,T.x=-w.x,T.y=-w.y,T.z=w.z,this.mYSort){const t=-.5*f.y+1,e=o.mF32A[13]+t,i=(CPaint2D.YSortRange.y-e)/(CPaint2D.YSortRange.y-CPaint2D.YSortRange.x);o.mF32A[14]+=i*CPaint2D.YSortZShift}this.mHash+=o.ToStr();const l=n.V3MulMatCoordi(a,o),x=n.V3MulMatCoordi(M,o),z=n.V3MulMatCoordi(r,o),B=n.V3MulMatCoordi(u,o);e[0].bufF.Push(l),e[0].bufF.Push(x),e[0].bufF.Push(z),e[0].bufF.Push(B),e[1].bufF.Push(T),e[1].bufF.Push(f),e[1].bufF.Push(w),e[1].bufF.Push(F),this.mBound.InitBound(l),this.mBound.InitBound(x),this.mBound.InitBound(z),this.mBound.InitBound(B);let C=new d(1,1,0,0);if(null!=this.mCodiList[s]){const t=this.mCodiList[s];t.x<=1&&t.y<=1&&t.z<=1&&t.w<=1?C.Import(t):(C.x=(t.z-t.x)/this.mTexSize.x,C.y=(t.w-t.y)/this.mTexSize.y,C.z=t.x/this.mTexSize.x,C.w=1-t.y/this.mTexSize.x-C.y)}let g=t(S,C),G=t(y,C),D=t(c,C),R=t(p,C);g.x=-g.x,g.y=-g.y,G.x=G.x,G.y=-G.y,D.x=D.x,D.y=D.y,R.x=-R.x,R.y=R.y,i[0].bufF.Push(g),i[0].bufF.Push(G),i[0].bufF.Push(D),i[0].bufF.Push(R);const A=n.V3MulMatNormal(P,o);m[0].bufF.Push(A),m[0].bufF.Push(A),m[0].bufF.Push(A),m[0].bufF.Push(A),h[0].bufI.push(this.mMeshDataNode.ci.vertexCount+0),h[0].bufI.push(this.mMeshDataNode.ci.vertexCount+1),h[0].bufI.push(this.mMeshDataNode.ci.vertexCount+2),h[0].bufI.push(this.mMeshDataNode.ci.vertexCount+2),h[0].bufI.push(this.mMeshDataNode.ci.vertexCount+3),h[0].bufI.push(this.mMeshDataNode.ci.vertexCount+0),this.mMeshDataNode.ci.vertexCount+=4,this.mMeshDataNode.ci.indexCount+=6}this.mBound.mMin.z-=.5,this.mBound.mMax.z+=.5,this.mHash=s.HashCode(this.mHash)+""}EmptyRPChk(){if(0==this.mRenderPass.length){var t=new T(this.mOwner.GetFrame().Pal().Sl2D().mKey);t.mCullFace=S.eCull.None,this.mRenderPass=[t]}else""==this.mRenderPass[0].mShader&&(this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey);0==this.mTextureKey.length&&this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex())}}
+import { CAlert } from "../../../basic/CAlert.js";
+import { CClass } from "../../../basic/CClass.js";
+import { CDOM } from "../../../basic/CDOM.js";
+import { CHash } from "../../../basic/CHash.js";
+import { CBound } from "../../../geometry/CBound.js";
+import { CMat } from "../../../geometry/CMat.js";
+import { CMath } from "../../../geometry/CMath.js";
+import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
+import { CVec1 } from "../../../geometry/CVec1.js";
+import { CVec2 } from "../../../geometry/CVec2.js";
+import { CVec3 } from "../../../geometry/CVec3.js";
+import { CVec4 } from "../../../geometry/CVec4.js";
+import { CMeshCreateInfo } from "../../../render/CMeshCreateInfo.js";
+import { CMeshDataNode } from "../../../render/CMeshDataNode.js";
+import { CRenderPass } from "../../../render/CRenderPass.js";
+import { CVertexFormat } from "../../../render/CShader.js";
+import { CShaderAttr } from "../../../render/CShaderAttr.js";
+import { CTexture } from "../../../render/CTexture.js";
+import { CUtilRender } from "../../../render/CUtilRender.js";
+import { CAtlas } from "../../../util/CAtlas.js";
+import { CFontRef } from "../../../util/CFont.js";
+import { CRPAuto } from "../../canvas/CRPMgr.js";
+import { CClipCoodi } from "../CAnimation.js";
+import { CPaint } from "./CPaint.js";
+export class CPaint2D extends CPaint {
+    mSize;
+    mPos;
+    mSca;
+    mPivot;
+    mYSort = false;
+    mYSortOrigin = 0;
+    static YSortRange = new CVec2(-10000, 10000);
+    static YSortZShift = 100;
+    mBeforePos = new CVec3;
+    mStopPos = new CVec3();
+    mRemoveSpeed = 1;
+    mRevers = new CVec2(1, 1);
+    mPosList = null;
+    mTMat;
+    mLastHide = true;
+    mWindInfluence = new CVec1(0.0);
+    IsShould(_member, _type) {
+        return super.IsShould(_member, _type);
+    }
+    constructor(_texture = null, _size = null) {
+        super();
+        if (_size != null && (_size instanceof CVec2) == false)
+            CAlert.E("CPaint2D 인자 잘못 넣음");
+        else {
+            this.mSize = _size;
+            if (_texture != null) {
+                if (_texture instanceof CFontRef) {
+                    this.SetTexture(_texture.mKey);
+                }
+                else
+                    this.SetTexture(_texture);
+            }
+        }
+        this.mPivot = new CVec3();
+        this.mPos = new CVec3();
+        this.mSca = new CVec2(1, 1);
+        this.mTMat = new CMat();
+        this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMin.z = -0.5;
+        this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMax.z = 0.5;
+        this.mBound.mType = CBound.eType.Box;
+        this.MatUpdate();
+        this.mShaderAttrMap.set("billboard", new CShaderAttr("billboard", new CVec1(0)));
+        this.PushTag("codi");
+    }
+    Reset() {
+        super.Reset();
+        this.mPivot.Zero();
+        this.mPos.Zero();
+        this.mShaderAttrMap.set("billboard", new CShaderAttr("billboard", new CVec1(0)));
+        this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMin.z = -0.5;
+        this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMax.z = 0.5;
+        this.mBound.mType = CBound.eType.Box;
+    }
+    PushNormalMap(_tex) {
+        if (this.mTextureKey.length == 1)
+            this.mTextureKey.push(_tex);
+        else if (this.mTextureKey.length == 2) {
+            this.mTextureKey[1] = _tex;
+        }
+        this.ClearBatch();
+        this.PushTag("normalMap");
+    }
+    EditDrop(_object) {
+        if (_object instanceof CTexture) {
+            this.SetTexture(_object.Key());
+        }
+    }
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
+        if (_pointer.member == "mSize" && this.mSize == null) {
+            let btn = CDOM.TagToDom("button");
+            btn.innerText = "생성";
+            btn.onclick = () => {
+                this.mSize = new CVec2();
+                this.EditRefresh();
+            };
+            _body.append(btn);
+        }
+    }
+    EditHTMLInit(_div, _pointer) {
+        super.EditHTMLInit(_div, _pointer);
+        var button = CDOM.TagToDom("button");
+        button.className = "btn btn-primary btn-sm";
+        button.innerText = "TexcodiModif";
+        button.onclick = () => {
+            if (this.mTextureKey.length > 0) {
+                let ani = CClass.New("CAnimation");
+                if (this.mTexCodi.Equals(new CVec4(1, 1, 0, 0)) == false) {
+                    const absCoords = this.GetLeftTopRightBottom(this.mOwner.GetFrame());
+                    if (absCoords == null)
+                        return;
+                    ani.Push(new CClipCoodi(0, 0, absCoords.x, absCoords.y, absCoords.z, absCoords.w));
+                }
+                window["AniTool"](ani, this.mTextureKey[0]);
+                window["AniToolTexcodiEvent"](this, () => {
+                    this.EditRefresh();
+                    this.ClearBatch();
+                });
+            }
+        };
+        _div.append(button);
+    }
+    SetBillBoard(_enabel) {
+        this.mShaderAttrMap.get("billboard").mData.mF32A[0] = _enabel ? 1.0 : 0.0;
+        this.PushTag("billboard");
+        this.ClearCRPAuto();
+    }
+    SetYSort(_enable) {
+        this.mYSort = _enable;
+        if (this.mYSort && this.GetSize() != null) {
+            this.mYSortOrigin = -0.5 * this.GetSize().y + 1;
+        }
+    }
+    SetYSortOrigin(_origin) {
+        this.mYSortOrigin = _origin;
+    }
+    InitChk() {
+        super.InitChk();
+        this.SizeCac();
+        if (this.mSize == null)
+            this.mInit = false;
+    }
+    FMatUpdate() {
+        super.FMatUpdate();
+        if (this.mYSort == true) {
+            const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
+            let yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
+            this.mFMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
+            this.mBW.mPos.mF32A[2] += yRatio * CPaint2D.YSortZShift;
+        }
+    }
+    Update(_update) {
+        super.Update(_update);
+        if (this.mUpdateFMat == false) {
+            return;
+        }
+        if (this.mTag.has("tail") == false || _update.DeltaTime() > 1)
+            return;
+        if (this.mTag.has("billboard") && this.mPosList == null) {
+            if (this.mRenPT.length == 0)
+                return;
+            let pos = CPoolGeo.ProductV3();
+            let vec = CPoolGeo.ProductV3();
+            pos.mF32A[0] = this.GetFMat().mF32A[12];
+            pos.mF32A[1] = this.GetFMat().mF32A[13];
+            pos.mF32A[2] = this.GetFMat().mF32A[14];
+            if (pos.IsZero()) {
+                CPoolGeo.RecycleV3(pos);
+                CPoolGeo.RecycleV3(vec);
+                return;
+            }
+            if (this.mBeforePos.IsZero())
+                this.mBeforePos.Import(pos);
+            CMath.V3SubV3(pos, this.mBeforePos, vec);
+            var len = CMath.V3Len(vec);
+            if (len > this.mSize.y) {
+                CMath.V3AddV3(pos, CMath.V3MulFloat(vec, -this.mSize.y / len, vec), this.mBeforePos);
+            }
+            else if (len < 0.001) {
+                this.mBeforePos.Import(pos);
+            }
+            else if (this.mStopPos.Equals(pos)) {
+                CMath.V3AddV3(CMath.V3MulFloat(pos, _update.DeltaTime() * this.mRemoveSpeed), CMath.V3MulFloat(this.mBeforePos, 1 - _update.DeltaTime() * this.mRemoveSpeed), this.mBeforePos);
+            }
+            this.mStopPos.Import(pos);
+            this.mTMat.SetV3(0, pos);
+            this.mTMat.SetV3(1, this.mBeforePos);
+            this.mTMat.mF32A[8] = this.mSize.x;
+            this.mTMat.mF32A[9] = this.mSize.y;
+            this.mTMat.SetV3(3, this.mPos);
+            if (this.mLastHide) {
+                this.mTMat.mF32A[3] = 1;
+                this.mTMat.mF32A[7] = 1;
+                this.mTMat.mF32A[11] = 0;
+                this.mTMat.mF32A[15] = 0;
+            }
+            else {
+                this.mTMat.mF32A[3] = 1;
+                this.mTMat.mF32A[7] = 1;
+                this.mTMat.mF32A[11] = 1;
+                this.mTMat.mF32A[15] = 1;
+            }
+            CPoolGeo.RecycleV3(pos);
+            CPoolGeo.RecycleV3(vec);
+        }
+        else {
+            if (this.mTag.has("billboard") && this.mShaderAttrMap.get("billboard").mData.mF32A[0] != 2.0) {
+                this.mShaderAttrMap.get("billboard").mData.mF32A[0] = 2.0;
+                this.ClearCRPAuto();
+            }
+            let pos = CPoolGeo.ProductV3();
+            pos.mF32A[0] = this.GetFMat().mF32A[12];
+            pos.mF32A[1] = this.GetFMat().mF32A[13];
+            pos.mF32A[2] = this.GetFMat().mF32A[14];
+            let v = CPoolGeo.ProductV3();
+            for (let i = 0; i < 4; ++i) {
+                CMath.V3AddV3(this.mPosList[i], pos, v);
+                this.mTMat.SetV3(i, v);
+            }
+            this.mTMat.mF32A[3] = 1;
+            this.mTMat.mF32A[7] = 1;
+            this.mTMat.mF32A[11] = 1;
+            this.mTMat.mF32A[15] = 1;
+            CPoolGeo.RecycleV3(pos);
+            CPoolGeo.RecycleV3(v);
+        }
+    }
+    Prefab(_owner) {
+        super.Prefab(_owner);
+        this.SizeCac();
+    }
+    SizeCac() {
+        if ((this.mSize == null || this.mSize.IsZero()) && this.mOwner != null && this.mTextureKey.length > 0) {
+            var tex = this.mOwner.GetFrame().Res().Find(this.mTextureKey[0]);
+            if (tex instanceof CTexture) {
+                if (tex == null || (tex.GetWidth() == 1 && tex.GetHeight() == 1))
+                    return;
+                this.SetSize(new CVec2(tex.GetWidth(), tex.GetHeight()));
+                this.MatUpdate();
+                this.EditRefresh();
+            }
+            else if (tex instanceof CAtlas) {
+                if (this.mTexCodi.x != 1 || this.mTexCodi.y != 1 || this.mTexCodi.z != 0 || this.mTexCodi.w != 0) {
+                    let width = Math.round(tex.GetWidth() * this.mTexCodi.x);
+                    let height = Math.round(tex.GetHeight() * this.mTexCodi.y);
+                    this.SetSize(new CVec2(width, height));
+                    this.EditRefresh();
+                }
+            }
+        }
+    }
+    EmptyRPChk() {
+        if (this.mRenderPass.length == 0) {
+            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
+            rp.mCullFace = CRenderPass.eCull.None;
+            this.mRenderPass = [rp];
+        }
+        else if (this.mRenderPass[0].mShader == "") {
+            this.mRenderPass[0].mShader = this.mOwner.GetFrame().Pal().Sl2D().mKey;
+        }
+        if (this.mTextureKey.length == 0) {
+            this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
+        }
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_pointer.member == "mYSort" || _pointer.member == "mYSortOrigin") {
+            if (_pointer.member == "mYSort") {
+                this.SetYSort(this.mYSort);
+            }
+            this.MatUpdate();
+        }
+        else if (_pointer.IsRef(this.mWindInfluence)) {
+            this.Wind(this.mWindInfluence.x);
+        }
+        else if (_child) {
+            if (_pointer.IsRef(this.mPos) ||
+                _pointer.IsRef(this.mSize) || _pointer.IsRef(this.mPivot)) {
+                this.MatUpdate();
+            }
+        }
+    }
+    MatUpdate() {
+        if (this.mSize == null)
+            return;
+        this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMin.z = -0.5;
+        this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMax.z = 0.5;
+        let bSca = this.GetScale();
+        let lpos = this.mPos.Export();
+        lpos.x += this.mBound.mMax.x * bSca.x * this.mPivot.x;
+        lpos.y += this.mBound.mMax.y * bSca.y * this.mPivot.y;
+        CMath.MatScale(bSca, this.mLMat);
+        this.mLMat.mF32A[12] = lpos.x;
+        this.mLMat.mF32A[13] = lpos.y;
+        this.mLMat.mF32A[14] = lpos.z;
+        this.mLMat.UnitCheck();
+        this.mBound.MatCoordi(this.mLMat);
+        this.mBound.mMax.z = this.mBound.GetOutRadius();
+        this.mBound.mMin.z = -this.mBound.mMax.z;
+        this.mBW.mRadian = 0;
+        this.mUpdateLMat = true;
+    }
+    GetHalf() {
+        var pos = new CVec3((this.mSize.x * 0.5) * this.mPivot.x, (this.mSize.y * 0.5) * this.mPivot.y, 0);
+        pos = CMath.V3MulMatNormal(pos, this.mOwner.GetMat());
+        return pos;
+    }
+    GetScale() {
+        return new CVec3(this.mSize.x / CUtilRender.Mesh2DSize * this.mRevers.x * this.mSca.x, this.mSize.y / CUtilRender.Mesh2DSize * this.mRevers.y * this.mSca.y, 1);
+    }
+    GetSize() {
+        return this.mSize;
+    }
+    ;
+    GetPos() {
+        return this.mPos;
+    }
+    GetPivot() { return this.mPivot; }
+    GetTexCodi() {
+        return this.mTexCodi;
+    }
+    GetMesh() {
+        return null;
+    }
+    Start() {
+        super.Start();
+        this.MatUpdate();
+        if (this.mPosList != null) {
+            this.mBound.Reset();
+            this.mBound.InitBound(this.mPosList);
+            this.mBound.SetType(CBound.eType.Box);
+        }
+        else if (this.mTag.has("tail")) {
+            this.mBound.Reset();
+            this.mBound.InitBound(this.mSize.y);
+            this.mBound.SetType(CBound.eType.Box);
+        }
+    }
+    Render(_vf) {
+        var barr = this.RenderBatch(_vf, 1);
+        if (barr == null)
+            return;
+        if (this.mSize == null || this.mTextureKey.length == 0) {
+            this.mBatchMap.clear();
+            return;
+        }
+        this.mOwner.GetFrame().BMgr().BatchOn();
+        this.Common(_vf);
+        if (this.mTag.has("tail")) {
+            let wsa = new CShaderAttr("worldMat", this.mTMat);
+            this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+        }
+        else {
+            let wsa = new CShaderAttr("worldMat", this.GetFMat());
+            switch (this.mWorldMatType) {
+                case CMat.eType.Short2D:
+                    wsa.mKey = "worldMatShort";
+                    break;
+            }
+            wsa.mType = this.mWorldMatType;
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType", new CVec1(this.mWorldMatType)));
+            this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+        }
+        if (_vf.mUniform.get("windInfluence") != null)
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
+        var dm = this.GetDrawMesh("Artgine/DM/2D", _vf, this.mOwner.GetFrame().Pal().MCI2D());
+        this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
+        barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
+    }
+    SetPivot(_pivot) {
+        this.mPivot = _pivot;
+        this.MatUpdate();
+    }
+    SetSize(_size) {
+        if (_size != null && _size.IsZero())
+            this.mSize = null;
+        else if (this.mSize == null) {
+            this.mSize = new CVec2();
+            this.mSize.Import(_size);
+        }
+        else
+            this.mSize.Import(_size);
+        this.MatUpdate();
+    }
+    SetPos(_pos) {
+        this.mPos = _pos;
+        this.MatUpdate();
+    }
+    SetSca(_sca) {
+        if (this.mSca.Equals(_sca))
+            return;
+        this.mSca = _sca;
+        this.MatUpdate();
+    }
+    SetReverse(_x, _y) {
+        if (_x)
+            this.mRevers.x = -1;
+        else
+            this.mRevers.x = 1;
+        if (_y)
+            this.mRevers.y = -1;
+        else
+            this.mRevers.y = 1;
+        this.MatUpdate();
+    }
+    Tail() {
+        if (this.mTag.has("tail") == false) {
+            this.PushTag("tail");
+            this.ClearBatch();
+            this.mUpdateLMat = true;
+        }
+    }
+    Wind(_influence) {
+        this.Tail();
+        this.PushTag("wind");
+        this.mLastHide = false;
+        this.mWindInfluence.x = _influence;
+        this.mPosList = [
+            new CVec3(-this.mSize.x * 0.5, this.mSize.y * 0.5, 0),
+            new CVec3(this.mSize.x * 0.5, this.mSize.y * 0.5, 0),
+            new CVec3(-this.mSize.x * 0.5, -this.mSize.y * 0.5, 0),
+            new CVec3(this.mSize.x * 0.5, -this.mSize.y * 0.5, 0)
+        ];
+    }
+    SetPosList(_array) {
+        if (_array.length >= 4) {
+            if (this.mTMat == null)
+                this.mTMat = new CMat();
+            this.Tail();
+            this.mPosList = _array;
+            this.mBound.Reset();
+            this.mBound.InitBound(this.mPosList);
+            this.mBound.SetType(CBound.eType.Box);
+            this.mBW.mRadian = 0;
+            this.mLMat.Unit();
+        }
+    }
+    ResetDecal(_slot, _pos = null, _size = null, _dir = new CVec3(0, 0, -1), _imageRot = 0) {
+        super.ResetDecal(_slot, _pos, _size, _dir, _imageRot);
+    }
+}
+export class CPaintHTML extends CPaint2D {
+    mElement = null;
+    mOrgSize = new CVec2();
+    mParent = null;
+    mAttach = false;
+    mZoomScale = false;
+    constructor(_html, _size = null, _parent = null) {
+        super(null, _size);
+        this.mElement = _html;
+        if (_parent == null)
+            this.mParent = CDOM.PaintDiv();
+        else {
+            this.mParent = _parent;
+            this.mParent.style.position = "relative";
+            this.mParent.style.overflow = "hidden";
+        }
+    }
+    StartChk() {
+        super.StartChk();
+        this.mStartChk = false;
+        return true;
+    }
+    SetEnable(_val) {
+        super.SetEnable(_val);
+        this.mElement.hidden = !_val;
+    }
+    SetPos(_pos) {
+        this.mPos = _pos.Export();
+        this.mUpdateFMat = true;
+    }
+    UpdateRenPt() {
+        for (let i = 0; i < this.mRenPT.length; ++i) {
+            let ren = this.mRenPT[i];
+            ren.mShow = 2;
+            ren.mDistance = 0x7FFFFE00;
+        }
+    }
+    SetSize(_size) {
+        this.mSize = _size;
+        this.mUpdateFMat = true;
+        this.mAttach = false;
+    }
+    GetElement() {
+        return this.mElement;
+    }
+    EmptyRPChk() {
+        if (this.mRenderPass.length == 0) {
+            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
+            rp.mCullFace = CRenderPass.eCull.None;
+            this.mRenderPass = [rp];
+        }
+        else if (this.mRenderPass[0].mShader == "") {
+            this.mRenderPass[0].mShader = this.mOwner.GetFrame().Pal().Sl2D().mKey;
+        }
+    }
+    Update(_delay) {
+        if (this.mRenPT.length == 0 || this.mElement == null)
+            return;
+        if (this.mRenPT[0].mCam.mUpdateMat != 0 || this.mOwner.mUpdateMat != 0 || this.mOwner.GetFrame().Win().IsResize() || this.mUpdateFMat == true || this.mElement.clientWidth != this.mOrgSize.x) { }
+        else
+            return;
+        this.mUpdateFMat = false;
+        if (this.mAttach == false) {
+            this.mParent.appendChild(this.mElement);
+            this.mElement.style.position = "absolute";
+            this.mAttach = true;
+        }
+        let zoom = 1 / this.mRenPT[0].mCam.mZoom;
+        let pos = this.GetOwner().GetMat().xyz;
+        if (this.mElement.offsetWidth != 0) {
+            if (this.mOrgSize.x != this.mElement.clientWidth || this.mOrgSize.y != this.mElement.clientHeight) {
+                this.mOrgSize.x = this.mElement.clientWidth;
+                this.mOrgSize.y = this.mElement.clientHeight;
+                if (this.mSize == null) {
+                    this.mBound.mMin.x = -this.mOrgSize.x * 0.5;
+                    this.mBound.mMin.y = -this.mOrgSize.y * 0.5;
+                    this.mBound.mMax.x = this.mOrgSize.x * 0.5;
+                    this.mBound.mMax.y = this.mOrgSize.y * 0.5;
+                    if (this.mOwner && this.mOwner.mUpdateAnchor !== undefined) {
+                        this.mOwner.mUpdateAnchor = true;
+                    }
+                }
+            }
+        }
+        let pivotX = 0;
+        let pivotY = 0;
+        if (this.mSize != null) {
+            pos.x += this.mPivot.x * this.mSize.x * 0.5;
+            pos.y += this.mPivot.y * this.mSize.y * 0.5;
+            if (this.mSize.x != 0)
+                this.mElement.style.width = this.mSize.x + "px";
+            if (this.mSize.y != 0)
+                this.mElement.style.height = this.mSize.y + "px";
+            this.mElement.style.transform = "scale(" + (zoom * this.GetOwner().GetMat().mF32A[0]) + "," + (zoom * this.GetOwner().GetMat().mF32A[5]) + ")";
+            pivotX = this.mOrgSize.x * 0.5;
+            pivotY = this.mOrgSize.y * 0.5;
+        }
+        else {
+            pivotX = this.mOrgSize.x * (this.mPivot.x * 0.5 + 0.5);
+            pivotY = this.mOrgSize.y * (this.mPivot.y * 0.5 + 0.5);
+        }
+        pos = CMath.V3MulMatCoordi(pos, this.mRenPT[0].mCam.GetViewMat());
+        pos = CMath.V3MulMatCoordi(pos, this.mRenPT[0].mCam.GetProjMat());
+        var x = (pos.x + 1) / 2.0;
+        var y = (-pos.y + 1) / 2.0;
+        var left = this.GetOwner().GetFrame().PF().mLeft;
+        var top = this.GetOwner().GetFrame().PF().mTop;
+        left += x * this.mOwner.GetFrame().PF().mWidth - pivotX + this.mPos.x;
+        top += y * this.mOwner.GetFrame().PF().mHeight - pivotY - this.mPos.y;
+        left = Math.trunc(left);
+        top = Math.trunc(top);
+        this.mElement.style.left = left + "px";
+        this.mElement.style.top = top + "px";
+    }
+    Destroy() {
+        super.Destroy();
+        if (this.mElement != null)
+            this.mElement.remove();
+    }
+}
+export class CPaint2DMerge extends CPaint {
+    mMatList;
+    mCodiList;
+    mTexSize = null;
+    mMeshDataNode;
+    mHash;
+    mYSort = false;
+    mWindInfluence = new CVec1(0.0);
+    constructor(_texture, _matList, _codiList = []) {
+        super();
+        this.mMatList = _matList;
+        this.mCodiList = _codiList;
+        if (_texture != null) {
+            if (_texture instanceof CFontRef)
+                this.SetTexture(_texture.mKey);
+            else
+                this.SetTexture(_texture);
+        }
+        this.PushTag("merge");
+    }
+    InitChk() {
+        super.InitChk();
+        if (this.mTexSize == null) {
+            if (this.mOwner != null && this.mTextureKey.length > 0) {
+                var tex = this.mOwner.GetFrame().Res().Find(this.mTextureKey[0]);
+                if (tex == null) {
+                    this.mInit = false;
+                    return;
+                }
+                else if (tex instanceof CTexture) {
+                    if (tex == null || (tex.GetWidth() == 1 && tex.GetHeight() == 1))
+                        return;
+                    this.mTexSize = new CVec2(tex.GetWidth(), tex.GetHeight());
+                }
+                else if (tex instanceof CAtlas) {
+                    this.mTexSize = new CVec2(tex.GetWidth(), tex.GetHeight());
+                }
+                else {
+                    CAlert.E("나올수 없다!");
+                }
+            }
+        }
+    }
+    Start() {
+        this.mMeshDataNode = new CMeshDataNode();
+        this.mMeshDataNode.ci = new CMeshCreateInfo();
+        this.mBound.Reset();
+        this.mBound.SetType(CBound.eType.Box);
+        this.mHash = "";
+        this.Merge();
+    }
+    Render(_vf) {
+        var barr = this.RenderBatch(_vf, 1);
+        if (barr == null)
+            return;
+        this.mOwner.GetFrame().BMgr().BatchOn();
+        this.Common(_vf);
+        let wsa = new CShaderAttr("worldMat", this.GetFMat());
+        switch (this.mWorldMatType) {
+            case CMat.eType.Short2D:
+                wsa.mKey = "worldMatShort";
+                break;
+        }
+        wsa.mType = this.mWorldMatType;
+        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType", new CVec1(this.mWorldMatType)));
+        this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+        if (_vf.mUniform.get("windInfluence") != null)
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
+        var dm = this.GetDrawMesh("Artgine/DM/2DM" + this.mHash, _vf, this.mMeshDataNode.ci);
+        this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
+        barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
+    }
+    Wind(_influence) {
+        this.PushTag("wind");
+        this.mWindInfluence.x = _influence;
+    }
+    SetYSort(_enable) {
+        this.mYSort = _enable;
+    }
+    Merge() {
+        let GetTexCodiedUV = (_uv, _texCodi) => {
+            let result = new CVec2(0.0, 0.0);
+            result.x = _uv.x * _texCodi.x + _texCodi.z;
+            result.y = _uv.y * _texCodi.y + _texCodi.w;
+            result.x = Math.abs(result.x);
+            result.y = Math.abs(result.y);
+            return result;
+        };
+        let posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
+        let uvb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.UV);
+        let norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+        let inb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Index);
+        if (posb.length == 0) {
+            this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);
+            this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);
+            posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
+        }
+        if (uvb.length == 0) {
+            this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.UV);
+            uvb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.UV);
+        }
+        if (norb.length == 0) {
+            this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Normal);
+            norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+        }
+        if (inb.length == 0) {
+            this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Index);
+            inb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Index);
+        }
+        const rtDir = new CVec3(0.5, 0.5, 0);
+        const lbDir = new CVec3(-0.5, -0.5, 0);
+        const ltDir = new CVec3(-0.5, 0.5, 0);
+        const rbDir = new CVec3(0.5, -0.5, 0);
+        const uv0 = new CVec2(0, 0);
+        const uv1 = new CVec2(1, 0);
+        const uv2 = new CVec2(1, 1);
+        const uv3 = new CVec2(0, 1);
+        const nor = new CVec3(0, 0, 1);
+        const scaBR = new CVec3();
+        const scaBL = new CVec3();
+        const scaTR = new CVec3();
+        const scaTL = new CVec3();
+        for (let i = posb[0].bufF.Size(3); i < this.mMatList.length; i++) {
+            const pMat = this.mMatList[i];
+            CMath.MatDecomposeSca(pMat, scaTR);
+            scaTL.x = -scaTR.x;
+            scaTL.y = scaTR.y;
+            scaTL.z = scaTR.z;
+            scaBR.x = scaTR.x;
+            scaBR.y = -scaTR.y;
+            scaBR.z = scaTR.z;
+            scaBL.x = -scaTR.x;
+            scaBL.y = -scaTR.y;
+            scaBL.z = scaTR.z;
+            if (this.mYSort) {
+                const ySortOrigin = -0.5 * scaBR.y + 1;
+                const yVal = pMat.mF32A[13] + ySortOrigin;
+                const yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
+                pMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
+            }
+            this.mHash += pMat.ToStr();
+            const lb = CMath.V3MulMatCoordi(lbDir, pMat);
+            const rb = CMath.V3MulMatCoordi(rbDir, pMat);
+            const rt = CMath.V3MulMatCoordi(rtDir, pMat);
+            const lt = CMath.V3MulMatCoordi(ltDir, pMat);
+            posb[0].bufF.Push(lb);
+            posb[0].bufF.Push(rb);
+            posb[0].bufF.Push(rt);
+            posb[0].bufF.Push(lt);
+            posb[1].bufF.Push(scaBL);
+            posb[1].bufF.Push(scaBR);
+            posb[1].bufF.Push(scaTR);
+            posb[1].bufF.Push(scaTL);
+            this.mBound.InitBound(lb);
+            this.mBound.InitBound(rb);
+            this.mBound.InitBound(rt);
+            this.mBound.InitBound(lt);
+            let codi = new CVec4(1, 1, 0, 0);
+            ;
+            ;
+            if (this.mCodiList[i] != null) {
+                const v = this.mCodiList[i];
+                if (v.x <= 1 && v.y <= 1 && v.z <= 1 && v.w <= 1) {
+                    codi.Import(v);
+                }
+                else {
+                    codi.x = (v.z - v.x) / this.mTexSize.x;
+                    codi.y = (v.w - v.y) / this.mTexSize.y;
+                    codi.z = v.x / this.mTexSize.x;
+                    codi.w = 1 - (v.y / this.mTexSize.x) - codi.y;
+                }
+            }
+            let uvLB = GetTexCodiedUV(uv0, codi);
+            let uvRB = GetTexCodiedUV(uv1, codi);
+            let uvRT = GetTexCodiedUV(uv2, codi);
+            let uvLT = GetTexCodiedUV(uv3, codi);
+            uvLB.x = -uvLB.x;
+            uvLB.y = -uvLB.y;
+            uvRB.x = uvRB.x;
+            uvRB.y = -uvRB.y;
+            uvRT.x = uvRT.x;
+            uvRT.y = uvRT.y;
+            uvLT.x = -uvLT.x;
+            uvLT.y = uvLT.y;
+            uvb[0].bufF.Push(uvLB);
+            uvb[0].bufF.Push(uvRB);
+            uvb[0].bufF.Push(uvRT);
+            uvb[0].bufF.Push(uvLT);
+            const rotatedNor = CMath.V3MulMatNormal(nor, pMat);
+            norb[0].bufF.Push(rotatedNor);
+            norb[0].bufF.Push(rotatedNor);
+            norb[0].bufF.Push(rotatedNor);
+            norb[0].bufF.Push(rotatedNor);
+            inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 0);
+            inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 1);
+            inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 2);
+            inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 2);
+            inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 3);
+            inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 0);
+            this.mMeshDataNode.ci.vertexCount += 4;
+            this.mMeshDataNode.ci.indexCount += 6;
+        }
+        this.mBound.mMin.z -= 0.5;
+        this.mBound.mMax.z += 0.5;
+        this.mHash = CHash.HashCode(this.mHash) + "";
+    }
+    EmptyRPChk() {
+        if (this.mRenderPass.length == 0) {
+            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
+            rp.mCullFace = CRenderPass.eCull.None;
+            this.mRenderPass = [rp];
+        }
+        else if (this.mRenderPass[0].mShader == "") {
+            this.mRenderPass[0].mShader = this.mOwner.GetFrame().Pal().Sl2D().mKey;
+        }
+        if (this.mTextureKey.length == 0) {
+            this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
+        }
+    }
+}

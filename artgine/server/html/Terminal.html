@@ -20,6 +20,7 @@
   #mi-dd-menu.show { display:block; }
   .mi-item { display:block;width:100%;padding:6px 10px;background:none;border:none;color:#ddd;text-align:left;cursor:pointer;font-size:0.9rem;white-space:nowrap;box-sizing:border-box; }
   .mi-item:hover { background:#3a3a3a;color:#fff; }
+  .mi-item.mi-active { color:#8ecbff;font-weight:600; }
   .mi-sep { height:1px;background:#444;margin:4px 0;list-style:none; }
   .mi-sub-wrap { position:relative; }
   .mi-sub-trigger { display:flex;justify-content:space-between;align-items:center; }
@@ -28,6 +29,57 @@
   #mi-ac { display:none;position:fixed;background:#2a2a2a;border:1px solid #555;border-radius:4px;z-index:10002;max-height:40vh;overflow-y:auto;min-width:220px;list-style:none;margin:0;padding:4px 0;box-shadow:0 4px 12px rgba(0,0,0,.6); }
   .mi-ac-item { display:block;width:100%;padding:4px 12px;background:none;border:none;color:#ddd;text-align:left;cursor:pointer;font-family:monospace;font-size:0.85rem;white-space:nowrap;box-sizing:border-box; }
   .mi-ac-item:hover,.mi-ac-item.active { background:#3a3a3a;color:#fff; }
+  /* 로그 오버레이: #xt 영역만 덮고 하단 입력바(#mi-bar z-index:10000)는 가리지 않음 */
+  #mi-log { display:none;position:fixed;top:0;left:0;right:0;bottom:50px;z-index:5000;flex-direction:column;background:#0d0d0d;color:#e8e8e8;font-family:system-ui,sans-serif;box-sizing:border-box;overflow-y:auto;padding:10px;gap:8px; }
+  #mi-log.show { display:flex; }
+  #mi-log .mi-log-empty,#mi-log .mi-log-err { color:#888;font-size:0.85rem;padding:12px 4px; }
+  #mi-log .mi-log-err { color:#f66; }
+  .mi-log-row { display:flex; }
+  .mi-log-row.user { justify-content:flex-end; }
+  .mi-log-row.assistant,.mi-log-row.tool { justify-content:flex-start; }
+  .mi-log-bubble { max-width:88%;padding:8px 10px;border-radius:8px;font-size:0.85rem;line-height:1.45;word-break:break-word; }
+  .mi-log-row.user .mi-log-bubble { background:#1a4a7a;color:#eaf4ff; }
+  .mi-log-row.assistant .mi-log-bubble { background:#2a2a2a;color:#e8e8e8;border:1px solid #3a3a3a; }
+  .mi-log-row.tool .mi-log-bubble { max-width:95%;padding:5px 8px;background:#1c1c1c;color:#b8b8b8;border:1px dashed #444;font-size:0.8rem; }
+  .mi-log-tool-name { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#d4d4d4;font-weight:600; }
+  .mi-log-bubble .mi-log-meta-line { font-size:0.68rem;opacity:0.7;margin-bottom:4px; }
+  /* Control logRenderMarkdown 과 동일 패턴(escape→marked)용 본문 스타일 */
+  .mi-log-bubble .mi-log-body { word-break:break-word; }
+  .mi-log-bubble .mi-log-body p { margin:0.35em 0; }
+  .mi-log-bubble .mi-log-body p:first-child { margin-top:0; }
+  .mi-log-bubble .mi-log-body p:last-child { margin-bottom:0; }
+  .mi-log-bubble .mi-log-body h1,.mi-log-bubble .mi-log-body h2,.mi-log-bubble .mi-log-body h3,
+  .mi-log-bubble .mi-log-body h4,.mi-log-bubble .mi-log-body h5,.mi-log-bubble .mi-log-body h6 {
+    margin:0.5em 0 0.3em;line-height:1.25;font-weight:600;
+  }
+  .mi-log-bubble .mi-log-body h1 { font-size:1.15em; }
+  .mi-log-bubble .mi-log-body h2 { font-size:1.08em; }
+  .mi-log-bubble .mi-log-body h3 { font-size:1.02em; }
+  .mi-log-bubble .mi-log-body ul,.mi-log-bubble .mi-log-body ol { margin:0.35em 0;padding-left:1.4em; }
+  .mi-log-bubble .mi-log-body pre {
+    margin:0.4em 0;padding:8px;border-radius:4px;overflow-x:auto;
+    background:rgba(0,0,0,.35);white-space:pre;font-family:ui-monospace,monospace;font-size:0.88em;
+  }
+  .mi-log-bubble .mi-log-body code {
+    font-family:ui-monospace,monospace;font-size:0.9em;
+    background:rgba(0,0,0,.25);padding:0.1em 0.35em;border-radius:3px;
+  }
+  .mi-log-bubble .mi-log-body pre code { background:none;padding:0;border-radius:0; }
+  .mi-log-bubble .mi-log-body a,
+  .mi-log-bubble .mi-log-body .mi-log-url,
+  .mi-log-bubble .mi-log-body .mi-log-path {
+    color:#7ec8ff;text-decoration:underline;cursor:pointer;word-break:break-all;
+  }
+  .mi-log-bubble .mi-log-body a:hover,
+  .mi-log-bubble .mi-log-body .mi-log-url:hover,
+  .mi-log-bubble .mi-log-body .mi-log-path:hover { color:#a8dcff; }
+  .mi-log-bubble .mi-log-body blockquote {
+    margin:0.4em 0;padding:0.2em 0.6em;border-left:3px solid #555;opacity:0.9;
+  }
+  .mi-log-bubble .mi-log-body table { border-collapse:collapse;margin:0.4em 0;font-size:0.9em; }
+  .mi-log-bubble .mi-log-body th,.mi-log-bubble .mi-log-body td {
+    border:1px solid #555;padding:3px 6px;
+  }
 </style>
 </head>
 <body>
@@ -161,6 +213,10 @@
 
   var ws = null;
   var disconnected = false;
+  // 로그 패널(마크다운 모드)은 buildInputBar 안에서만 존재하므로(읽기전용 뷰어는 buildInputBar 자체가
+  // 안 불린다), 실제 구현은 buildInputBar가 이 변수에 덮어씌운다. connect()의 ws.onmessage는 바깥
+  // 스코프라 buildInputBar 안의 함수 선언을 직접 볼 수 없어서 이렇게 바깥에 자리를 만들어둔다.
+  var _onSessionStatus = function () {};
   // 핸드오프 진행 중에는 이 세션의 모든 입력을 막는다(리드모드처럼). 하단 입력창뿐 아니라
   // xterm 화면 직접 입력(term.onData)·메뉴·방향키가 전부 sendRaw를 거치므로 여기서 한 번에 차단한다.
   var _handoffLock = false;
@@ -191,27 +247,44 @@
 
   function connect() {
     var pr = window.location.protocol === "https:" ? "wss:" : "ws:";
-    // 인증은 WS 핸드셰이크에 자동 첨부되는 세션 쿠키로 처리(서버 isAuthedUpgrade). 토큰은 세션 식별용.
+    // 인증: 로컬(same-origin)은 세션 쿠키(서버 isAuthedUpgrade)로, 원격(cross-origin iframe)은 서드파티 쿠키가
+    // 막히므로 서버가 주입한 __AUTH_TOKEN__을 &authToken= 으로 실어 인증한다. token은 세션 식별용.
     var url = pr + "//" + window.location.host + window.__CTX_PATH__ + "/cmd/term-ws?token=" + encodeURIComponent(token);
+    if (window.__AUTH_TOKEN__) url += "&authToken=" + encodeURIComponent(window.__AUTH_TOKEN__);
     ws = new WebSocket(url);
+    ws.binaryType = "arraybuffer";
     ws.onopen = function () { disconnected = false; sendResize(); };
-    ws.onmessage = function (ev) { term.write(typeof ev.data === "string" ? ev.data : ev.data); };
+    ws.onmessage = function (ev) {
+      if (typeof ev.data === "string") { term.write(ev.data); return; }
+      // 바이너리 프레임 = 상태 컨트롤 메시지(서버 CTerminalRouter _pushStatus). 원본 pty 출력은
+      // 항상 텍스트 프레임으로 오므로 이 분기와 절대 섞이지 않는다.
+      try {
+        var msg = JSON.parse(new TextDecoder("utf-8").decode(ev.data));
+        if (msg && msg.type === "status") _onSessionStatus(msg.status);
+      } catch (e) {}
+    };
     ws.onclose = function () { disconnected = true; term.write("\r\n\x1b[31m[disconnected] retry: Enter\x1b[m\r\n"); };
   }
 
   // ---- 읽기전용 판정: 저장 토큰 유무(원본 Terminal.html과 동일 소스) ----
   var _authTokenMod = null;
+  var _hashMod = null;
   function _webRootUrl() {
     var seg = window.location.pathname.split("/")[1] || "";
     return window.location.protocol + "//" + window.location.host + "/" + seg + "/";
   }
-  var _ready = import(window.location.origin + window.__ARTGINE_BASE__ + "server/CAuthToken.js")
-      .then(function (m) { _authTokenMod = m; })
-      .catch(function (e) { console.error("[terminal] CAuthToken.js load failed:", e); });
+  // 로그인 바(단독/공유링크 접속)에서 서버가 기대하는 SHA256('artgine_'+pw) 해시를 만들려면 CHash도 필요하다.
+  var _ready = Promise.all([
+    import(window.location.origin + window.__ARTGINE_BASE__ + "server/CAuthToken.js")
+      .then(function (m) { _authTokenMod = m; }),
+    import(window.location.origin + window.__ARTGINE_BASE__ + "basic/CHash.js")
+      .then(function (m) { _hashMod = m; })
+  ]).catch(function (e) { console.error("[terminal] auth module load failed:", e); });
 
   window.addEventListener("DOMContentLoaded", async function () {
     await _ready;
-    var storedToken = _authTokenMod ? _authTokenMod.getAuthToken(_webRootUrl()) : "";
+    // 원격 iframe은 서버가 주입한 __AUTH_TOKEN__을 우선 쓴다(로컬 오리진 localStorage엔 원격 토큰이 없으므로).
+    var storedToken = window.__AUTH_TOKEN__ || (_authTokenMod ? _authTokenMod.getAuthToken(_webRootUrl()) : "");
     var readOnly = !storedToken;
     window.__READ_ONLY = readOnly;
 
@@ -239,10 +312,13 @@
     document.getElementById("xt").style.bottom = "46px"; fit.fit();
     function doAuth() {
       if (!pw.value) return;
+      // 서버(handleAuth)는 SHA256('artgine_'+pw) 해시를 기대한다 — 날것 그대로 보내면 항상 "틀린 암호"가 된다
+      // (Control/Chat/Browser는 모두 이 해시를 보낸다).
+      if (!_hashMod) { msg.textContent = "Loading..."; return; }
       btn.disabled = true; msg.textContent = "";
       fetch(window.__CTX_PATH__ + "/auth/login", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pw.value })
+        body: JSON.stringify({ password: _hashMod.CHash.SHA256('artgine_' + pw.value) })
       }).then(function (r) { return r.json(); }).then(function (j) {
         if (j.ok) { if (_authTokenMod) _authTokenMod.setAuthToken(_webRootUrl(), j.token); location.reload(); }
         else { msg.textContent = j.msg || "Wrong password"; btn.disabled = false; pw.value = ""; pw.focus(); }
@@ -261,8 +337,14 @@
     var ddBtn = document.createElement("button"); ddBtn.id = "mi-dd-btn"; ddBtn.textContent = "⌨";
     var ddMenu = document.createElement("ul"); ddMenu.id = "mi-dd-menu";
 
-    function showBar() { bar.style.display = "flex"; document.getElementById("xt").style.bottom = "50px"; fit.fit(); }
-    function hideBar() { bar.style.display = "none"; document.getElementById("xt").style.bottom = "0"; fit.fit(); }
+    function showBar() {
+      bar.style.display = "flex"; document.getElementById("xt").style.bottom = "50px"; fit.fit();
+      if (typeof _logSyncBottom === "function") _logSyncBottom();
+    }
+    function hideBar() {
+      bar.style.display = "none"; document.getElementById("xt").style.bottom = "0"; fit.fit();
+      if (typeof _logSyncBottom === "function") _logSyncBottom();
+    }
     function autoHeight() { inp.style.height = "0"; inp.style.height = Math.min(inp.scrollHeight, 200) + "px"; }
 
     // super mode
@@ -280,6 +362,7 @@
     function _pageDown()  { if (MODE === "codex") { _codexDown(); return; } sendRaw("\x1b[6~"); }
 
     function agentAction(kind) {
+      _forceTerminalView();
       if (kind === "resume")  { if (MODE === "claude" || MODE === "codex" || MODE === "antigravity" || MODE === "grok") return sendRaw("/resume\r"); if (MODE === "gemini") return sendRaw("/chat resume\r"); if (MODE === "opencode") return sendRaw("/sessions\r"); }
       if (kind === "compact") { if (MODE === "claude" || MODE === "gemini" || MODE === "codex") return sendRaw("/compact\r"); }
       if (kind === "exit")    { if (MODE === "codex") return sendRaw("\x04"); if (MODE === "claude" || MODE === "gemini") return sendRaw("/exit\r"); }
@@ -296,14 +379,349 @@
     });
     document.addEventListener("click", function () { ddMenu.classList.remove("show"); closeSubs(); });
 
+    // ---- 세션 로그 오버레이 (#xt 위, 입력바는 유지 / 상단 헤더 없음) ----
+    // afterId=-1 전체 로드 후, 폴링은 afterId=maxId 로 증분만 받아 append.
+    // 마크다운: Control 로그와 동일 — escape 후 marked.parse (XSS 방지).
+    var logPanel = document.createElement("div"); logPanel.id = "mi-log";
+    logPanel.innerHTML = '<div class="mi-log-empty">Loading...</div>';
+    document.body.appendChild(logPanel);
+    var _logOpen = false;
+    var _logTimer = null;
+    var _logMaxId = -1;     // 마지막으로 반영한 최대 id → 다음 폴링 afterId
+    var _logFetchBusy = false;
+    var _logHasRows = false; // empty 플레이스홀더 여부
+    var LOG_POLL_MS = 2000;
+    var _marked = null;
+    var _markedReady = null;
+
+    function _logEsc(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+    function _logFmtTime(stamp) {
+      var s = String(stamp || "");
+      if (s.length < 14) return s;
+      return s.slice(0, 4) + "-" + s.slice(4, 6) + "-" + s.slice(6, 8) + " " + s.slice(8, 10) + ":" + s.slice(10, 12);
+    }
+    function _logSyncBottom() {
+      // #xt 와 같은 bottom을 써서 입력바(멀티라인 포함) 위에 맞춤
+      logPanel.style.bottom = document.getElementById("xt").style.bottom || "50px";
+    }
+    // Control.ts: marked.parse(aiEscapeHtml(raw), { xhtml: false })
+    function _logEnsureMarked() {
+      if (_marked) return Promise.resolve(_marked);
+      if (!_markedReady) {
+        var url = window.location.origin + window.__ARTGINE_BASE__ + "external/esnext/md/marked.esm.js";
+        _markedReady = import(url).then(function (m) {
+          var marked = m.marked || m.default;
+          if (marked && marked.setOptions) marked.setOptions({ gfm: true, breaks: true });
+          _marked = marked;
+          return marked;
+        }).catch(function (e) {
+          console.warn("[terminal] marked load failed:", e);
+          _marked = null;
+          return null;
+        });
+      }
+      return _markedReady;
+    }
+    function _logMd(raw) {
+      var text = (raw || "").trim();
+      var escaped = _logEsc(text);
+      if (!_marked) return escaped;
+      try {
+        return _marked.parse(escaped, { xhtml: false });
+      } catch (e) {
+        return escaped;
+      }
+    }
+    // xterm 경로/URL 인식과 동일 정규식 — 로그 본문 평문에서도 클릭 가능하게 후처리
+    var _logUrlRe = /(https?|HTTPS?):[/]{2}[^\s"'!*(){}|\\\^<>`]*[^\s"':,.!?{}|\\\^~\[\]`()<>]/g;
+    var _logPathRe = /(?:[A-Za-z]:[\\/])?(?:[^\s\\/:*?"<>|()\[\]]+[\\/])+[^\s\\/:*?"<>|()\[\]]+\.[A-Za-z0-9]+/g;
+
+    function _logCollectMatches(text) {
+      var out = [];
+      var m;
+      _logUrlRe.lastIndex = 0;
+      while ((m = _logUrlRe.exec(text))) out.push({ type: "url", start: m.index, end: m.index + m[0].length, text: m[0] });
+      _logPathRe.lastIndex = 0;
+      while ((m = _logPathRe.exec(text))) {
+        var s = m.index, e = m.index + m[0].length;
+        // URL 구간과 겹치면 경로로 등록하지 않음
+        if (out.some(function (u) { return u.type === "url" && s < u.end && e > u.start; })) continue;
+        out.push({ type: "path", start: s, end: e, text: m[0] });
+      }
+      out.sort(function (a, b) { return a.start - b.start; });
+      // 겹침 제거(앞 매치 우선)
+      var cleaned = [];
+      var lastEnd = 0;
+      for (var i = 0; i < out.length; i++) {
+        if (out[i].start < lastEnd) continue;
+        cleaned.push(out[i]);
+        lastEnd = out[i].end;
+      }
+      return cleaned;
+    }
+
+    function _logLinkifyTextNode(node) {
+      var text = node.nodeValue;
+      if (!text || !text.trim()) return;
+      var matches = _logCollectMatches(text);
+      if (!matches.length) return;
+      var frag = document.createDocumentFragment();
+      var last = 0;
+      for (var i = 0; i < matches.length; i++) {
+        var mt = matches[i];
+        if (mt.start > last) frag.appendChild(document.createTextNode(text.slice(last, mt.start)));
+        if (mt.type === "url") {
+          var a = document.createElement("a");
+          a.className = "mi-log-url";
+          a.href = mt.text;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = mt.text;
+          frag.appendChild(a);
+        } else {
+          var sp = document.createElement("span");
+          sp.className = "mi-log-path";
+          sp.setAttribute("data-path", mt.text);
+          sp.textContent = mt.text;
+          frag.appendChild(sp);
+        }
+        last = mt.end;
+      }
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(frag, node);
+    }
+
+    // marked 출력 후: 기존 <a> 정리 + 평문 URL/경로 링크화 (터미널 탭과 동일 UX)
+    function _logEnhanceRoot(root) {
+      if (!root) return;
+      root.querySelectorAll("a[href]").forEach(function (a) {
+        var href = a.getAttribute("href") || "";
+        if (/^https?:\/\//i.test(href)) {
+          a.setAttribute("target", "_blank");
+          a.setAttribute("rel", "noopener noreferrer");
+          a.classList.add("mi-log-url");
+        } else {
+          // 파일 경로 링크 등: Control 경로 탭으로
+          var p = (a.textContent || href).trim();
+          if (p) {
+            a.classList.add("mi-log-path");
+            a.setAttribute("data-path", p);
+            a.removeAttribute("href");
+            a.setAttribute("role", "link");
+          }
+        }
+      });
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      var nodes = [];
+      var n;
+      while ((n = walker.nextNode())) nodes.push(n);
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        var pe = node.parentElement;
+        if (!pe) continue;
+        if (pe.closest("a, .mi-log-url, .mi-log-path, .mi-log-meta-line")) continue;
+        _logLinkifyTextNode(node);
+      }
+    }
+
+    // 클릭 위임: URL → 새 탭, 경로 → 부모 Control에 terminal-path-tapped (터미널 본문과 동일)
+    logPanel.addEventListener("click", function (e) {
+      var pathEl = e.target.closest && e.target.closest(".mi-log-path");
+      if (pathEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        var p = pathEl.getAttribute("data-path") || (pathEl.textContent || "").trim();
+        if (p) sendToParent("terminal-path-tapped", { path: p, token: token });
+        return;
+      }
+      var a = e.target.closest && e.target.closest("a.mi-log-url, a[href]");
+      if (a) {
+        var href = a.getAttribute("href") || "";
+        if (/^https?:\/\//i.test(href)) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open(href, "_blank", "noopener,noreferrer");
+        }
+      }
+    });
+
+    function _logBubbleHtml(rec) {
+      var head = _logEsc(rec.provider || "") + " · " + _logEsc(_logFmtTime(rec.createdAt));
+      if (rec.model) head += " · " + _logEsc(rec.model);
+      if (rec.sessionId) head += " · " + _logEsc(String(rec.sessionId).slice(0, 12));
+      if (rec.role === "tool") {
+        var toolName = _logEsc((rec.tool || "?").trim() || "?");
+        var filePath = (rec.file || "").trim();
+        var body = '<span class="mi-log-tool-name">' + toolName + "</span>";
+        if (filePath) body += ' <span class="mi-log-path" data-path="' + _logEsc(filePath) + '">' + _logEsc(filePath) + "</span>";
+        return '<div class="mi-log-row tool"><div class="mi-log-bubble mi-log-tool">' +
+          '<div class="mi-log-meta-line">' + head + " · tool</div>" +
+          '<div class="mi-log-body">' + body + "</div>" +
+          "</div></div>";
+      }
+      var role = rec.role === "user" ? "user" : "assistant";
+      return '<div class="mi-log-row ' + role + '"><div class="mi-log-bubble">' +
+        '<div class="mi-log-meta-line">' + head + "</div>" +
+        '<div class="mi-log-body">' + _logMd(rec.text) + "</div>" +
+        "</div></div>";
+    }
+    function _logRenderFull(records) {
+      if (!records || !records.length) {
+        _logHasRows = false;
+        logPanel.innerHTML = '<div class="mi-log-empty">No conversation logs for this terminal yet.' +
+          (MODE === "cmd" ? " (cmd mode has no provider transcript.)" : "") + "</div>";
+        return;
+      }
+      _logHasRows = true;
+      var html = "";
+      for (var i = 0; i < records.length; i++) html += _logBubbleHtml(records[i]);
+      logPanel.innerHTML = html;
+      _logEnhanceRoot(logPanel);
+      logPanel.scrollTop = logPanel.scrollHeight;
+    }
+    // 증분 레코드만 하단에 붙인다. 빈 화면이었으면 empty 문구를 지운다.
+    function _logAppend(records) {
+      if (!records || !records.length) return;
+      var nearBottom = (logPanel.scrollHeight - logPanel.scrollTop - logPanel.clientHeight) < 80;
+      if (!_logHasRows) {
+        logPanel.innerHTML = "";
+        _logHasRows = true;
+      }
+      var wrap = document.createElement("div");
+      var frag = "";
+      for (var i = 0; i < records.length; i++) frag += _logBubbleHtml(records[i]);
+      wrap.innerHTML = frag;
+      _logEnhanceRoot(wrap);
+      while (wrap.firstChild) logPanel.appendChild(wrap.firstChild);
+      if (nearBottom) logPanel.scrollTop = logPanel.scrollHeight;
+    }
+    // silent=true: 폴링(afterId=maxId 증분). false: 첫 로드(afterId=-1 전체).
+    function _logLoad(silent) {
+      if (_logFetchBusy) return;
+      _logFetchBusy = true;
+      if (!silent) logPanel.innerHTML = '<div class="mi-log-empty">Loading...</div>';
+      var afterId = silent ? _logMaxId : -1;
+      // 폴링인데 아직 첫 로드 전이면 전체 로드로 폴백
+      if (silent && afterId < 0) afterId = -1;
+      var q = "token=" + encodeURIComponent(token) + "&afterId=" + encodeURIComponent(String(afterId));
+      if (storedToken) q += "&authToken=" + encodeURIComponent(storedToken);
+      fetch(window.__CTX_PATH__ + "/cmd/log-term?" + q)
+        .then(function (r) {
+          var ct = (r.headers.get("content-type") || "");
+          if (!r.ok || ct.indexOf("json") < 0) {
+            return r.text().then(function (t) {
+              throw new Error(r.ok ? "Non-JSON response" : ("HTTP " + r.status + (t ? ": " + t.slice(0, 80) : "")));
+            });
+          }
+          return r.json();
+        })
+        .then(function (j) {
+          if (!_logOpen) return;
+          if (!j.ok) {
+            if (!silent) logPanel.innerHTML = '<div class="mi-log-err">' + _logEsc(j.msg || "Failed to load logs") + "</div>";
+            return;
+          }
+          var records = j.records || [];
+          var serverMax = typeof j.maxId === "number" ? j.maxId : _logMaxId;
+          return _logEnsureMarked().then(function () {
+            if (!_logOpen) return;
+            if (!silent || afterId < 0) {
+              _logRenderFull(records);
+              _logMaxId = serverMax > 0 ? serverMax : _logMaxId;
+              return;
+            }
+            // 증분: 새 row 없으면 스킵, 있으면 append 후 커서 갱신
+            if (!records.length) return;
+            _logAppend(records);
+            if (serverMax > _logMaxId) _logMaxId = serverMax;
+          });
+        })
+        .catch(function (e) {
+          if (!_logOpen) return;
+          if (!silent) logPanel.innerHTML = '<div class="mi-log-err">' + _logEsc(e && e.message ? e.message : String(e)) + "</div>";
+        })
+        .then(function () { _logFetchBusy = false; });
+    }
+    function _logStartPoll() {
+      _logStopPoll();
+      _logTimer = setInterval(function () {
+        if (!_logOpen || document.hidden) return;
+        _logLoad(true);
+      }, LOG_POLL_MS);
+    }
+    function _logStopPoll() {
+      if (_logTimer) { clearInterval(_logTimer); _logTimer = null; }
+    }
+    function _logUpdateBtns() {
+      ddMenu.querySelectorAll("[data-log-view]").forEach(function (b) {
+        var isMd = b.getAttribute("data-log-view") === "md";
+        b.classList.toggle("mi-active", isMd === _logOpen);
+      });
+    }
+    function _logShow() {
+      _logOpen = true;
+      _logMaxId = -1;
+      _logHasRows = false;
+      _logSyncBottom();
+      logPanel.classList.add("show");
+      _logUpdateBtns();
+      _logLoad(false);
+      _logStartPoll();
+    }
+    function _logHide() {
+      _logOpen = false;
+      _logStopPoll();
+      logPanel.classList.remove("show");
+      _logUpdateBtns();
+    }
+    function _logToggle() {
+      if (_logOpen) _logHide();
+      else _logShow();
+    }
+
+    // 마크다운(로그) 모드로 보고 있는 도중 권한 승인 대기가 뜨면 잠깐 터미널 화면으로 전환해 실제
+    // 프롬프트를 보여주고, 화면이 조용해지면(status: idle) 원래 보던 마크다운 모드로 되돌린다.
+    // 사용자가 그 사이 직접 버튼으로 전환하면(_logShow/_logHide 수동 호출) autoSwitchedAway를 꺼서
+    // 자동 복귀가 사용자 선택을 덮어쓰지 않게 한다.
+    var _autoSwitchedAway = false;
+    function _switchToTerminalForPermission() {
+      if (_logOpen) { _autoSwitchedAway = true; _logHide(); }
+    }
+    // 슬래시 명령은 되돌아오지 않는다 — 강제로 터미널 화면으로 전환한 채 유지한다(마크다운 복귀 없음).
+    function _forceTerminalView() {
+      if (_logOpen) _logHide();
+    }
+    _onSessionStatus = function (status) {
+      if (status === "permission") {
+        _switchToTerminalForPermission();
+      } else if (status === "idle" && _autoSwitchedAway) {
+        _autoSwitchedAway = false;
+        if (!_logOpen) _logShow();
+      }
+    };
+
+    // 드롭다운 Upload / 파일 선택 모달 (드래그앤드롭과 동일 업로드 경로 사용)
+    var fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.multiple = true;
+    fileInput.style.display = "none";
+    document.body.appendChild(fileInput);
+
     function handleAction(seq) {
       if (seq === "__SCROLL__")       term.scrollToBottom();
       else if (seq === "__TOGGLE_INPUT__") hideBar();
       else if (seq === "__RESIZE__")  sendResize();
       else if (seq === "__PAGE_UP__") _pageUp();
       else if (seq === "__PAGE_DOWN__") _pageDown();
-      else if (seq === "__ESC__")     { sendEsc(); inp.focus(); }
+      else if (seq === "__ESC__")     { sendEsc(); _escImeReset(); }
       else if (seq === "__SUPER__")   _toggleSuper();
+      else if (seq === "__UPLOAD__")  { ddMenu.classList.remove("show"); closeSubs(); fileInput.value = ""; fileInput.click(); }
+      else if (seq === "__LOG_MD__")   { ddMenu.classList.remove("show"); closeSubs(); _autoSwitchedAway = false; _logShow(); }
+      else if (seq === "__LOG_TERM__") { ddMenu.classList.remove("show"); closeSubs(); _autoSwitchedAway = false; _logHide(); }
       else if (seq === "__RESUME__")  agentAction("resume");
       else if (seq === "__COMPACT__") agentAction("compact");
       else if (seq === "__CLEAR__")   agentAction("clear");
@@ -316,21 +734,28 @@
       } else if (seq !== null) sendRaw(seq);
     }
     function mkSep() { var li = document.createElement("li"); li.className = "mi-sep"; return li; }
-    function mkItem(label, seq) { var li = document.createElement("li"); var b = document.createElement("button"); b.className = "mi-item"; b.type = "button"; b.textContent = label; b.addEventListener("click", function (e) { e.stopPropagation(); handleAction(seq); }); li.appendChild(b); return li; }
+    function mkItem(label, seq, opts) {
+      var li = document.createElement("li"); var b = document.createElement("button"); b.className = "mi-item"; b.type = "button"; b.textContent = label;
+      if (opts && opts.logView) b.setAttribute("data-log-view", opts.logView);
+      b.addEventListener("click", function (e) { e.stopPropagation(); handleAction(seq); }); li.appendChild(b); return li;
+    }
     function mkSub(label, items) {
       var li = document.createElement("li"); li.className = "mi-sub-wrap";
       var tr = document.createElement("button"); tr.className = "mi-item mi-sub-trigger"; tr.type = "button"; tr.innerHTML = label + "<span>&#9664;</span>";
       var sub = document.createElement("ul"); sub.className = "mi-submenu";
-      items.forEach(function (a) { sub.appendChild(mkItem(a[0], a[1])); });
+      items.forEach(function (a) { sub.appendChild(mkItem(a[0], a[1], a[2])); });
       tr.addEventListener("click", function (e) { e.stopPropagation(); var open = sub.classList.contains("show"); closeSubs(); if (!open) { var r = tr.getBoundingClientRect(); sub.style.bottom = (window.innerHeight - r.bottom) + "px"; sub.style.right = (window.innerWidth - r.left + 4) + "px"; sub.classList.add("show"); } });
       li.appendChild(tr); li.appendChild(sub); return li;
     }
     ddMenu.appendChild(mkSub("View", [["⬇ Scroll to bottom", "__SCROLL__"], ["↔ Resize to window", "__RESIZE__"], ["⇞ Page Up", "__PAGE_UP__"], ["⇟ Page Down", "__PAGE_DOWN__"], ["⌨ Hide input bar", "__TOGGLE_INPUT__"]]));
     ddMenu.appendChild(mkSep());
-    ddMenu.appendChild(mkItem("↑ Up", "\x1b[A")); ddMenu.appendChild(mkItem("↓ Down", "\x1b[B"));
-    ddMenu.appendChild(mkItem("← Left", "\x1b[D")); ddMenu.appendChild(mkItem("→ Right", "\x1b[C"));
-    ddMenu.appendChild(mkSep()); ddMenu.appendChild(mkItem("⚡ SUPER", "__SUPER__")); ddMenu.appendChild(mkSep());
-    ddMenu.appendChild(mkItem("↵ Enter", "\r")); ddMenu.appendChild(mkItem("ESC", "__ESC__")); ddMenu.appendChild(mkSep());
+    ddMenu.appendChild(mkItem("📝 Markdown", "__LOG_MD__", { logView: "md" }));
+    ddMenu.appendChild(mkItem("🖥 Terminal", "__LOG_TERM__", { logView: "term" }));
+    ddMenu.appendChild(mkSep());
+    ddMenu.appendChild(mkSub("Keys", [["↑ Up", "\x1b[A"], ["↓ Down", "\x1b[B"], ["← Left", "\x1b[D"], ["→ Right", "\x1b[C"], ["↵ Enter", "\r"], ["ESC", "__ESC__"]]));
+    ddMenu.appendChild(mkSep());
+    ddMenu.appendChild(mkItem("⚡ SUPER", "__SUPER__")); ddMenu.appendChild(mkSep());
+    ddMenu.appendChild(mkItem("📁 Upload", "__UPLOAD__")); ddMenu.appendChild(mkSep());
     ddMenu.appendChild(mkSub("Command", [["⏮ RESUME", "__RESUME__"], ["🤖 MODEL", "__MODEL__"], ["🗜 COMPACT", "__COMPACT__"], ["🧹 CLEAR", "__CLEAR__"], ["📊 STATUS", "__STATUS__"], ["⏻ EXIT", "__EXIT__"]]));
     var skillItems = []; (window.__SKILLS__ || []).forEach(function (s) { var l = s.name.length > 20 ? s.name.slice(0, 18) + "…" : s.name; skillItems.push(["📝 " + l, "__SKILL__:" + s.name]); });
     ddMenu.appendChild(mkSub("Skill", skillItems));
@@ -366,6 +791,12 @@
         term.write("\r\n\x1b[31m[upload] Error: " + e + "\x1b[m\r\n");
       });
     }
+    fileInput.addEventListener("change", function () {
+      var files = fileInput.files;
+      if (!files || !files.length) return;
+      for (var i = 0; i < files.length; i++) _uploadDroppedFile(files[i]);
+      fileInput.value = "";
+    });
     document.addEventListener("dragover", function (e) { e.preventDefault(); });
     document.addEventListener("drop", function (e) {
       e.preventDefault();
@@ -462,14 +893,37 @@
         if (_htTo !== MODE) { startHandoff(_htTo); return; }
       }
       if (text) {
+        if (text[0] === "/") _forceTerminalView();
         if (MODE === "gemini" || MODE === "antigravity") sendRaw("\x1b[200~" + text + "\x1b[201~");
         else sendRaw(text);
-        if (text[0] !== "/") sendRaw("\r");
+        if (text[0] !== "/") {
+          // CLI(codex 등)는 문자 입력이 짧은 시간에 몰려 들어오면(우리처럼 한 프레임에 전송) 이를 붙여넣기로
+          // 간주해, 같은 read 청크로 뒤따라온 \r을 붙여넣기의 개행으로 흡수한다(제출 안 됨 → 사용자가
+          // 두 번째 엔터를 따로 눌러야 했던 원인). \r을 충분히 지연해 별도 이벤트로 도착시키면 단독
+          // Enter로 인식돼 한 번에 제출된다. codex는 한 줄이어도 항상, 그 외 모드(claude 등 raw 전송)는
+          // 여러 줄일 때 이 burst 흡수가 발생하므로 멀티라인일 때 동일하게 지연한다.
+          // (gemini/antigravity는 bracketed paste로 경계를 명시하므로 즉시 \r로 충분하다.)
+          var _defer = MODE === "codex" ||
+            (MODE !== "gemini" && MODE !== "antigravity" && text.indexOf("\n") >= 0);
+          if (_defer) setTimeout(function () { sendRaw("\r"); }, 150);
+          else sendRaw("\r");
+        }
       } else sendRaw("\r");
       inp.value = ""; autoHeight(); inp.focus();
     }
 
     var _imeResetting = false; // ESC 연타 시 포커스 이동 사이클이 겹치지 않게 하는 가드
+    // ESC 후 한글 IME 입력 컨텍스트가 어긋나 다음 글자가 소실되는 증상 방지.
+    // 같은 요소 blur→focus는 Chromium이 OS 입력 컨텍스트를 재생성하지 않아 효과가 없고,
+    // 실제로 다른 편집 요소(xterm의 숨겨진 textarea)로 포커스를 옮겼다 되돌려야 리셋된다
+    // (사용자가 pty를 클릭했다 입력창으로 돌아오면 복구되던 것과 동일한 원리).
+    // 키보드 ESC뿐 아니라 드롭다운 메뉴의 ESC 버튼(handleAction __ESC__)에서도 동일하게 필요하다.
+    function _escImeReset() {
+      if (_imeResetting) return;
+      _imeResetting = true;
+      term.focus();
+      setTimeout(function () { inp.focus(); _imeResetting = false; }, 0);
+    }
     inp.addEventListener("keydown", function (e) {
       var items = _acItems();
       if (acBox.style.display !== "none" && items.length) {
@@ -483,15 +937,7 @@
       if (e.key === "Escape") {
         e.preventDefault();
         sendEsc();
-        // ESC 후 한글 IME 입력 컨텍스트가 어긋나 다음 글자가 소실되는 증상 방지.
-        // 같은 요소 blur→focus는 Chromium이 OS 입력 컨텍스트를 재생성하지 않아 효과가 없고,
-        // 실제로 다른 편집 요소(xterm의 숨겨진 textarea)로 포커스를 옮겼다 되돌려야 리셋된다
-        // (사용자가 pty를 클릭했다 입력창으로 돌아오면 복구되던 것과 동일한 원리).
-        if (!_imeResetting) {
-          _imeResetting = true;
-          term.focus();
-          setTimeout(function () { inp.focus(); _imeResetting = false; }, 0);
-        }
+        _escImeReset();
         return;
       }
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendInput(); }
@@ -501,20 +947,32 @@
 
     window.addEventListener("keydown", function (e) {
       if (e.key === "F6") { e.preventDefault(); e.stopPropagation(); _toggleSuper(); showBar(); inp.focus(); }
+      if (e.key === "F7") { e.preventDefault(); e.stopPropagation(); _autoSwitchedAway = false; _logToggle(); }
     }, true);
 
     _initSuper(); setInterval(function () { if (!document.hidden) _initSuper(); }, 60000);
     setTimeout(function () { inp.focus(); }, 300);
     setTimeout(sendResize, 800);
 
+    // 로그 패널이 열려 있으면 터미널용 휠/터치 가로채기를 끄고 #mi-log 네이티브 스크롤을 살린다.
     if (MODE === "codex") {
-      document.addEventListener("wheel", function (e) { e.preventDefault(); e.stopPropagation(); if (e.deltaY < 0) _codexUp(); else _codexDown(); }, { passive: false, capture: true });
+      document.addEventListener("wheel", function (e) {
+        if (_logOpen) return;
+        e.preventDefault(); e.stopPropagation();
+        if (e.deltaY < 0) _codexUp(); else _codexDown();
+      }, { passive: false, capture: true });
     }
-    document.addEventListener("wheel", function (e) { if (MODE !== "opencode" && MODE !== "grok") return; e.preventDefault(); e.stopPropagation(); sendRaw(e.deltaY < 0 ? "\x1b[5~" : "\x1b[6~"); }, { passive: false, capture: true });
+    document.addEventListener("wheel", function (e) {
+      if (_logOpen) return;
+      if (MODE !== "opencode" && MODE !== "grok") return;
+      e.preventDefault(); e.stopPropagation();
+      sendRaw(e.deltaY < 0 ? "\x1b[5~" : "\x1b[6~");
+    }, { passive: false, capture: true });
     // codex/opencode/grok처럼 휠을 통째로 가로채지 않는 나머지 모드(claude 등)에서, 스피너/스트리밍
     // 재출력 도중 트랙패드 미세 스크롤로 xterm의 자동 하단 추적이 멈추는 경우가 있다. 아래로 휠을
     // 내리면(native 스크롤은 그대로 두고) 항상 강제로 맨 아래로 붙여 이 상태를 원상복구한다.
     document.addEventListener("wheel", function (e) {
+      if (_logOpen) return;
       if (MODE === "codex" || MODE === "opencode" || MODE === "grok") return;
       if (e.deltaY > 0) term.scrollToBottom();
     }, { passive: true });
@@ -528,11 +986,13 @@
       var _touchY = null, _touchAccum = 0;
       var TOUCH_SCROLL_STEP = 40; // px: wheel 한 노치에 대응하는 드래그 거리
       document.addEventListener("touchstart", function (e) {
+        if (_logOpen) { _touchY = null; return; }
         if (e.touches.length !== 1) { _touchY = null; return; }
         _touchY = e.touches[0].clientY;
         _touchAccum = 0;
       }, { passive: true, capture: true });
       document.addEventListener("touchmove", function (e) {
+        if (_logOpen) return;   // preventDefault 하지 않음 → 로그 패널 터치 스크롤
         if (_touchY == null || e.touches.length !== 1) return;
         var y = e.touches[0].clientY;
         var dy = y - _touchY;

@@ -8,6 +8,7 @@ import { CVec4 } from "../geometry/CVec4.js";
 import {CMeshDataNode} from "../render/CMeshDataNode.js"
 import { CAtlas } from "../util/CAtlas.js";
 import { CTexture } from "./CTexture.js";
+import { CHash } from "../basic/CHash.js";
 export class CWeightMat
 {
 	public mat : CMat;
@@ -71,7 +72,9 @@ export class CMesh extends CObject
 
 	public ik : Map<string, CMeshIK>;
 	public attacher : Map<string, CMeshAttacher>;
-	
+
+	public hash : number = null;
+
 	constructor()
 	{
 		super();
@@ -91,5 +94,37 @@ export class CMesh extends CObject
 		this.attacher = new Map<string, CMeshAttacher>;
 	}
 	override Icon(){		return "bi bi-globe";	}
+
+	HashBoneStruct() : number
+	{
+		if (this.hash != null)
+			return this.hash;
+		this.hash = CHash.HashCode(this.HashBoneStructNode(this.meshTree));
+		return this.hash;
+	}
+	private HashBoneStructNode(_node : CTree<CMeshDataNode>) : string
+	{
+		if (_node == null)
+			return "";
+		let isBone = _node.mData != null && _node.mData.ci == null;
+		let childArr : Array<CTree<CMeshDataNode>> = [];
+		let child = _node.mChild;
+		while (child != null) {
+			childArr.push(child);
+			child = child.mColleague;
+		}
+		childArr.sort((a, b) => (a.mKey < b.mKey ? -1 : (a.mKey > b.mKey ? 1 : 0)));
+		let childStr = "";
+		for (let c of childArr) {
+			childStr += this.HashBoneStructNode(c);
+		}
+		// 폴리곤 등 본이 아닌 노드는 계층에서 제외하고, 그 자식(더 깊은 본)만 이어붙여 건너뜀
+		if (!isBone)
+			return childStr;
+		let pos = _node.mData.pos;
+		// float 오차로 같은 값이 다르게 잡히지 않도록 소수점 2자리로 반올림
+		let posStr = pos.x.toFixed(2) + "," + pos.y.toFixed(2) + "," + pos.z.toFixed(2);
+		return _node.mKey + ":" + posStr + "(" + childStr + ")";
+	}
 }
 

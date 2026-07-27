@@ -9,7 +9,7 @@
 ## 빠른 사용 (ai/tool/memo.js)
 저장/검색만 필요하면 전용 도구를 쓴다. `browser.js`/`remotecmd.js`와 동일하게 `common.js`의 인증 공유 방식(쿠키 jar)을 쓰며, 쿠키는 `ai/tool/memo_cookie.txt`에 저장/로드된다.
 
-> ⚠️ `<BASE_URL>`은 CLAUDE.md "접속 정보" 섹션의 주소+포트+기본경로를 직접 읽어서 조합한다. settings.json을 열거나 포트를 추측하지 말 것.
+> ⚠️ `<BASE_URL>`은 지금 이 세션에 적용된 지침 파일의 "접속 정보" 섹션에 적힌 주소+포트+기본경로를 직접 읽어서 조합한다. settings.json을 열거나 포트를 추측하지 말 것.
 
 ```bash
 node ai/tool/memo.js <BASE_URL> login                                          # 인증(auth/login, settings.json password 자동 읽음) → "ok" 출력
@@ -34,7 +34,7 @@ node ai/tool/memo.js <BASE_URL> search [categoryId|-] <text> [--folder=<f>]    #
 ## 인증 (Authentication)
 모든 `/Memo/*` 엔드포인트는 로그인 세션이 필요하다(`401` 발생 시 미인증). 토큰(`token` 필드)이 함께 오면 토큰 기준으로, 없으면 세션 쿠키 기준으로 인증한다(cross-origin 요청은 쿠키가 전달되지 않으므로 토큰 필요).
 
-1. CLAUDE.md "접속 정보" 섹션의 주소/포트/기본경로로 `BASE_URL`을 구성한다 (settings.json을 열어 포트를 추측하지 말 것).
+1. 지금 이 세션에 적용된 지침 파일의 "접속 정보" 섹션에 적힌 주소/포트/기본경로로 `BASE_URL`을 구성한다 (settings.json을 열어 포트를 추측하지 말 것).
 2. 비밀번호는 `settings.json` → `desktop/settings.json` 순으로 찾은 파일의 `password` 필드 값(없으면 기본값 `artgine`).
 3. 쿠키 jar는 스크래치패드 디렉터리에 둔다.
 

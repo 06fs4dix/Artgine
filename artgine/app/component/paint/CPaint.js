@@ -1,1 +1,921 @@
-import{CMat as t}from"../../../geometry/CMat.js";import{CVec3 as e}from"../../../geometry/CVec3.js";import{CVec4 as a}from"../../../geometry/CVec4.js";import{CBound as s}from"../../../geometry/CBound.js";import{CMath as m}from"../../../geometry/CMath.js";import{CMeshDrawNode as r}from"../../../render/CMeshDrawNode.js";import{CRenderPass as i}from"../../../render/CRenderPass.js";import{CShaderAttr as h}from"../../../render/CShaderAttr.js";import{CTexture as l}from"../../../render/CTexture.js";import{CUpdate as o}from"../../../basic/Basic.js";import{CAlert as n}from"../../../basic/CAlert.js";import{CClass as d}from"../../../basic/CClass.js";import{CDOM as u}from"../../../basic/CDOM.js";import{CHash as M}from"../../../basic/CHash.js";import{CObject as p}from"../../../basic/CObject.js";import{CUniqueID as A}from"../../../basic/CUniqueID.js";import{CUtilObj as C}from"../../../basic/CUtilObj.js";import{CLoaderOption as c}from"../../../util/CLoader.js";import{SDF as F}from"../../../z_file/SDF.js";import{CComponent as f}from"../CComponent.js";import{CBoundWorldPaint as x}from"../CBoundWorld.js";import{CH5Canvas as T}from"../../../render/CH5Canvas.js";import{CRPAuto as y}from"../../canvas/CRPMgr.js";import{CColor as S}from"../../../render/CColor.js";import{CAlpha as g}from"../../../render/CAlpha.js";import{CVFX as w}from"../../../render/CVFX.js";import{CUtil as D}from"../../../basic/CUtil.js";import{CChecker as P}from"../../../util/CChecker.js";export class CRenPaint{mRenInfoKey=null;mCam=null;mShow=0;mPaint;mTexHash;mDistance=null;mAlpha=null}var R=new s,B=new e;B.NewWASM();export class CPaint extends f{static eTag={Light:"light",ShadowReadOnly:"shadowReadOnly",Shadow:"shadow",Wind:"Wind",Parallax:"parallax"};static eCullMask={Default:16384,Mask01:8192,Mask02:4096,Mask03:2048,Mask04:1024,Mask05:512,Mask06:256,Mask07:128,Mask08:64,Mask09:32,Mask10:16,Mask11:8,Mask12:4,Mask13:2,Mask14:1};mBW=new x;mFMat;mLMat;mShaderAttrMap=new Map;mColorModel;mAlphaModel;mVFX;mTexCodi;mAutoRPUpdate=!0;mCamCullUpdate=!0;mBound=new s;mRenderPass=new Array;mRenPT=new Array;mTextureKey=new Array;mMaterial=new a(1,-1,-1,1);mCullMask;mUpdateLMat=!0;mUpdateFMat=!0;mDefaultAttr=new Set;mTag=new Set;mTagKey=null;mBatchMap=new Map;mAutoLoad=new c;mInit=!1;mAlphaTex=!1;mWorldMatType=t.eType.PRS;constructor(){super(),this.mSysc=f.eSysn.Paint,this.mTexCodi=new a(1,1,0,0),this.mShaderAttrMap.set("texCodi",new h("texCodi",this.mTexCodi)),this.mShaderAttrMap.set("colorModel",new h("colorModel",new S(0,0,0,F.eColorModel.None))),this.mShaderAttrMap.set("alphaModel",new h("alphaModel",new g(1))),this.mShaderAttrMap.set("cullMask",new h("cullMask",new a(CPaint.eCullMask.Default))),this.mColorModel=this.mShaderAttrMap.get("colorModel").mData,this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData,this.mCullMask=this.mShaderAttrMap.get("cullMask").mData,this.mVFX=null,this.mFMat=new t(null),this.mFMat.NewWASM(),this.mLMat=new t(null),this.mLMat.NewWASM(),this.mBW.mPos.NewWASM(),this.mBound=new s,this.mBound.NewWASM(),null==B.Ptr()&&B.NewWASM()}SetWorldType(t){this.mWorldMatType=t,this.PushTag("worldType")}SetEnable(t){this.mEnable!=t&&this.ClearCRPAuto(),super.SetEnable(t)}GetColorModel(){return this.mColorModel}GetAlphaModel(){return this.mAlphaModel}Icon(){return"bi bi-paint-bucket"}RegistHeap(t){}SetTexCodi(t,e=null,s=null,m=null,r=null,i=null,h=1){this.PushTag("codi")&&this.ClearBatch(),null==t?(this.mTexCodi.x=1-e,this.mTexCodi.y=1-e,this.mTexCodi.z=.5*e,this.mTexCodi.w=.5*e):t instanceof a?(null==e&&(e=0),this.mTexCodi.x=t.x-e,this.mTexCodi.y=t.y-e,this.mTexCodi.z=t.z+.5*e,this.mTexCodi.w=t.w+.5*e):(this.mTexCodi.x=(s-t)/r-h/r,this.mTexCodi.y=(m-e)/i-h/i,this.mTexCodi.z=t/r+.5*h/r,this.mTexCodi.w=1-e/i-this.mTexCodi.y-.5*h/i)}Destroy(){if(null!=this.GetRecycleType())return this.Recycle(),void this.Reset();super.Destroy(),this.mBW.mPos.ReleaseWASM(),this.mFMat.ReleaseWASM(),this.mLMat.ReleaseWASM(),this.mBound.DeleteWASM(),this.ClearBatch()}Reset(){super.Reset(),this.mFMat.Unit(),this.mLMat.Unit(),this.ClearBatch(),this.mTextureKey.length=0,this.mBound.Reset(),this.mBound.SetType(s.eType.Box),this.mBW.mBound.Reset(),this.mBW.mRadian=0,this.mShaderAttrMap.delete("mVFX"),this.mVFX=null,this.mTag.clear(),this.mInit=!1,this.mBatchMap.clear()}IsShould(t,e){return e==p.eShould.Editer&&0==this.IsProxy()&&("mColorModel"==t||"mAlphaModel"==t||"mVFX"==t||"mBound"==t)||"mFMat"!=t&&"mUpdateLMat"!=t&&"mUpdateFMat"!=t&&"mRenPT"!=t&&"mTagKey"!=t&&"mDefaultAttr"!=t&&"mBatchMap"!=t&&"mBatchLastArr"!=t&&"mBatchLastVF"!=t&&"mBoundFMat"!=t&&"mBoundFMatC"!=t&&"mBoundFMatR"!=t&&"mBound"!=t&&"mAutoRPUpdate"!=t&&"mCamCullUpdate"!=t&&"mBW"!=t&&"mColorModel"!=t&&"mAlphaModel"!=t&&"mVFX"!=t&&super.IsShould(t,e)}ClearBatch(){for(let t of this.mRenPT)null!=t&&(t.mDistance=2147483392,t.mShow=null);this.mRenPT=[];for(let t of this.mBatchMap.keys())this.mBatchMap.set(t,null);this.mCamCullUpdate=!0}IsUpdateFMat(){return this.mUpdateFMat}UpdateLMat(){this.mUpdateLMat=!0}EditHTMLInit(t,e){super.EditHTMLInit(t,e);var a=u.TagToDom("button");a.className="btn btn-primary btn-sm",a.innerText="Refresh",a.onclick=()=>{this.ClearCRPAuto()},t.append(a)}EditForm(t,e,a){if("mVFX"==t.member&&null==this.mVFX){let t=u.TagToDom("button");t.innerText="생성",t.onclick=()=>{this.mShaderAttrMap.set("VFX",new h("VFX",new w([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]))),this.mVFX=this.mShaderAttrMap.get("VFX").mData,this.PushTag("vfx"),this.ClearBatch(),this.EditRefresh()},e.append(t)}else if("mTextureKey"==t.member||"mTag"==t.member)C.ArrayAddSelectList(t,e,a,[""],!0);else if("mShaderAttrMap"==t.member){var s=new Array;s.push({"<>":"option",text:"CVec1",value:"CVec1"}),s.push({"<>":"option",text:"CVec2",value:"CVec2"}),s.push({"<>":"option",text:"CVec3",value:"CVec3"}),s.push({"<>":"option",text:"CVec4",value:"CVec4"}),s.push({"<>":"option",text:"CMat",value:"CMat"});let t=A.GetHash();var m={"<>":"div",html:[{"<>":"input",id:t+"_txt",class:"form-control"},{"<>":"div",class:"row",html:[{"<>":"div",class:"col-8",html:[{"<>":"select",class:"form-select",id:t+"subPush",html:s}]},{"<>":"div",class:"col-4",html:[{"<>":"button",type:"button",class:"btn btn-primary",text:"Add",onclick:()=>{let e=u.IDValue(t+"subPush"),a=u.IDValue(t+"_txt");if(""==a)return void n.E("key 설정");let s=new h(a,d.New(e));this.PushCShaderAttr(s),this.EditRefresh()}}]}]}]};a.prepend(u.DataToDom(m))}else if("mCullMask"==t.member){let a=this.ObjHash(),s=d.EnumName(CPaint.eCullMask),m=this.mCullMask.x,r=document.createElement("div");r.className="border p-1 mt-1";let i=document.createElement("span");i.className="text-primary",i.innerText="CullMask",r.append(i);let h=document.createElement("span");h.className="text-secondary ms-2",h.id="cm_val_"+a,h.innerText="0b"+m.toString(2),r.append(h),r.append(document.createElement("br"));let l=document.createElement("div");l.className="row";for(let e of s){let r=document.createElement("div");r.className="col-6";let i=document.createElement("input");i.type="checkbox",i.id="cm_"+a+"_"+e,i.className="form-check-input",i.checked=0!==(m&CPaint.eCullMask[e]),i.onchange=()=>{let e=0;for(let t of s){let s=document.getElementById("cm_"+a+"_"+t);s&&s.checked&&(e|=CPaint.eCullMask[t])}this.SetCullMask(e),document.getElementById("cm_val_"+a).innerText="0b"+e.toString(2),this.EditChange(t,!1)};let h=document.createElement("label");h.className="form-check-label ms-1",h.setAttribute("for","cm_"+a+"_"+e),h.innerText=e,r.append(i),r.append(h),l.append(r)}r.append(l),e.append(r)}}SetOwner(t){super.SetOwner(t),this.ClearCRPAuto(),this.SetTexture(this.mTextureKey)}SetMaterial(t=-1,e=-1,a=1,s=1){this.mMaterial.x=s,this.mMaterial.y=t,this.mMaterial.z=e,this.mMaterial.w=a}SetCullMask(t){this.mCullMask.x=t}IsAlphaState(){return!!(this.mAlphaTex||this.GetTag().has("alphaModel")&&1!=this.mAlphaModel.x)}UpdateRenPt(){for(let t=0;t<this.mRenPT.length;++t){let e=this.mRenPT[t];if(null==e.mDistance||0!=e.mCam.mUpdateMat||this.mUpdateFMat||this.mOwner.GetFrame().Win().IsResize())if(e.mCam,e.mCam.GetPlane(),this.mRenderPass[t].mPaintSort!=i.ePaintSort.None){let t=e.mCam.GetEye(),a=e.mCam.GetView();B.x=this.mBW.mPos.x-t.x,B.y=this.mBW.mPos.y-t.y,B.z=this.mBW.mPos.z-t.z,e.mDistance=m.V3Dot(B,a),e.mDistance=Math.trunc(128*e.mDistance)<<9}else e.mDistance=0}}Refresh(){null==this.mShaderAttrMap.get("texCodi")&&this.mShaderAttrMap.set("texCodi",new h("texCodi",this.mTexCodi)),this.mColorModel=this.mShaderAttrMap.get("colorModel").mData,this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData,this.mCullMask=this.mShaderAttrMap.get("cullMask").mData,this.mColorModel.mModel!=F.eColorModel.None&&this.PushTag("colorModel"),null!=this.mShaderAttrMap.get("VFX")&&(this.mVFX=this.mShaderAttrMap.get("VFX").mData)}Export(t=!0,e=!0){let a=d.New(this);if(a.Import(this),0==t){for(let t of a.mShaderAttrMap.keys())a.mShaderAttrMap.get(t).mData=this.mShaderAttrMap.get(t).mData;for(let t=0;t<this.mRenderPass.length;++t)for(let e=0;e<this.mRenderPass[t].mShaderAttr.length;++e)a.mRenderPass[t].mShaderAttr[e].mData=this.mRenderPass[t].mShaderAttr[e].mData}return a.Refresh(),a}SetAutoLoad(t){this.mAutoLoad="boolean"==typeof t?t?new c:null:t}Import(t){super.Import(t),this.Refresh()}EditChange(e,a){if(super.EditChange(e,a),e.IsRef(this.mTextureKey))this.SetTexture(this.mTextureKey),this.ClearBatch();else if(e.IsRef(this.mTag))this.mTagKey=null,this.ClearCRPAuto();else if("mColorModel"==e.member)this.PushTag("colorModel"),this.ClearCRPAuto();else if("mAlphaModel"==e.member)this.PushTag("alphaModel"),this.ClearCRPAuto();else if("mCullMask"==e.member)this.ClearCRPAuto();else if(a)if(e.IsRef(this.mRenderPass))this.ClearCRPAuto(),e.target instanceof i?e.target.Reset():n.E("CRPAuto는 페인트 내에서 수정 불가합니다.");else if(e.IsRef(this.mAlphaModel))this.PushTag("alphaModel"),this.ClearCRPAuto();else if(e.IsRef(this.mColorModel))this.PushTag("colorModel"),this.ClearCRPAuto();else if(e.IsRef(this.mVFX)){this.PushTag("vfx");let e=this.mVFX.mF32A[0]==F.eVFX.Decal||this.mVFX.mF32A[0]==F.eVFX.DecalTexture||this.mVFX.mF32A[5]==F.eVFX.Decal||this.mVFX.mF32A[5]==F.eVFX.DecalTexture,a=this.mVFX.mF32A[5]==F.eVFX.Decal||this.mVFX.mF32A[5]==F.eVFX.DecalTexture||this.mVFX.mF32A[10]==F.eVFX.Decal||this.mVFX.mF32A[10]==F.eVFX.DecalTexture,s=e?this.FindCShaderAttr("vfxMat0")||(this.PushCShaderAttr(new h("vfxMat0",new t)),this.FindCShaderAttr("vfxMat0").mData.mF32A.fill(0),this.FindCShaderAttr("vfxMat0")):(this.mShaderAttrMap.delete("vfxMat0"),null),m=a?this.FindCShaderAttr("vfxMat1")||(this.PushCShaderAttr(new h("vfxMat1",new t)),this.FindCShaderAttr("vfxMat1").mData.mF32A.fill(0),this.FindCShaderAttr("vfxMat1")):(this.mShaderAttrMap.delete("vfxMat1"),null);this.mVFX.mF32A[0]!=F.eVFX.Decal&&this.mVFX.mF32A[0]!=F.eVFX.DecalTexture||!s?.mData.mF32A.subarray(0,10).every(t=>0===t)||this.ResetDecal(0),(this.mVFX.mF32A[5]==F.eVFX.Decal||this.mVFX.mF32A[5]==F.eVFX.DecalTexture)&&s?.mData.mF32A.subarray(10,16).every(t=>0===t)&&m?.mData.mF32A.subarray(0,4).every(t=>0===t)&&this.ResetDecal(1),this.mVFX.mF32A[10]!=F.eVFX.Decal&&this.mVFX.mF32A[10]!=F.eVFX.DecalTexture||!m?.mData.mF32A.subarray(4,14).every(t=>0===t)||this.ResetDecal(2)}}PushCRPAuto(t){var e=!0;for(var a of this.mRenderPass)a.Key()==t.Key()&&(e=!1);e&&(0==t.mCopy?this.mRenderPass.push(t):this.mRenderPass.push(t.Export()),this.mRenPT.push(null))}ClearCRPAuto(){this.ClearBatch();for(var t=0;t<this.mRenderPass.length;++t)this.mRenderPass[t]instanceof y&&(this.mRenderPass.splice(t,1),t--);this.mAutoRPUpdate=!0}EmptyRPChk(){}ClassEqual(t){return t==CPaint}GetTag(){return this.mTag}PushTag(t){return!this.mTag.has(t)&&(this.mTag.add(t),this.mTagKey=null,this.ClearCRPAuto(),!0)}RemoveTag(t){this.mTag.delete(t),this.mTagKey=null,this.ClearCRPAuto()}GetDrawMesh(t,e,a){var s=this.mOwner.GetFrame().Res().Find(t+e.ObjHash());return null==s&&(s=new r,this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(s,e,a),this.mOwner.GetFrame().Res().Push(t+e.ObjHash(),s),s.SetKey(t+e.ObjHash())),s}GetTagKey(){if(null==this.mTagKey){let e="",a=Array.from(this.mTag);for(var t of(a.sort(),a))""!=t&&(e+=t+"/");this.mTagKey=e}return this.mTagKey}GetRenderPass(){return this.mRenderPass}PushRenderPass(t,e=!0){if(this.mDefaultAttr=new Set,this.mRenderPass=new Array,this.ClearBatch(),t instanceof Array){for(let a of t)e?this.mRenderPass.push(a.Export()):this.mRenderPass.push(a);return this.mRenderPass}var a;return a=e?t.Export(e):t,this.mRenderPass.push(a),this.mRenderPass[this.mRenderPass.length-1]}PushCShaderAttr(t){let e=this.mShaderAttrMap.get(t.mKey);null==e?(this.ClearBatch(),this.mShaderAttrMap.set(t.mKey,t)):e.Import(t)}FindCShaderAttr(t){if("string"==typeof t)return this.mShaderAttrMap.get(t);for(let e of this.mShaderAttrMap.values())if(e.mEach==t)return e;return null}SetColorModel(t){this.mColorModel.mF32A[0]=t.mF32A[0],this.mColorModel.mF32A[1]=t.mF32A[1],this.mColorModel.mF32A[2]=t.mF32A[2],this.mColorModel.mF32A[3]=t.mF32A[3],0==this.mTag.has("colorModel")&&this.ClearBatch(),this.PushTag("colorModel")}SetAlphaModel(t){let e=this.IsAlphaState();this.mAlphaModel.mF32A[0]=t.mF32A[0],this.mAlphaModel.mF32A[1]=t.mF32A[1],e!=this.IsAlphaState()&&this.ClearCRPAuto(),0==this.mTag.has("alphaModel")&&this.ClearBatch(),this.PushTag("alphaModel")}SetVFX(t,e=null,a=null){if(null==this.mVFX&&(this.mShaderAttrMap.set("VFX",new h("VFX",new w([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]))),this.mVFX=this.mShaderAttrMap.get("VFX").mData,this.PushTag("vfx"),this.ClearBatch()),t instanceof w)this.mVFX.Import(t);else{let s=this.mVFX;for(let e=0;e<a.length;++e)s.mF32A[5*t+e+1]=a[e];s.mF32A[5*t]=e}this.PushTag("vfx")}GetRGBA(){return new a(this.mColorModel.x,this.mColorModel.y,this.mColorModel.z,this.mAlphaModel.x)}SetMat(t){}GetMat(){return this.mLMat}SetLMat(t){this.mLMat.Import(t),this.mUpdateLMat=!0}FMatUpdate(){m.MatMul(this.mLMat,this.mOwner.GetMat(),this.mFMat,!0),this.GetOwner().mUpdateRS==o.eType.Not&&0!=this.mBW.mRadian||(this.mTag.has("tail")?this.mBW.Init(this.mBound,null):this.mBW.Init(this.mBound,this.mOwner.GetMat())),this.mBW.UpdateMat(this.mOwner.GetMat())}Prefab(t){if(null!=this.mAutoLoad)for(let e of this.mTextureKey)-1==e.indexOf(".atl")&&t.GetFrame().Load().Exe(e,this.mAutoLoad)}Start(){this.ClearCRPAuto()}StartChk(){return this.InitChk(),1==this.mStartChk&&1==this.mInit&&(this.mStartChk=!1,!0)}Update(t){this.mUpdateFMat&&(this.mUpdateFMat=!1),(this.mUpdateLMat||0!=this.mOwner.mUpdateMat)&&(this.FMatUpdate(),this.mUpdateFMat=!0,this.mUpdateLMat=!1),this.UpdateRenPt()}SetFMat(t){this.mFMat.Import(t)}GetFMat(){return this.mFMat}SetToolCPaint(t,e){}Common(t){if(0==this.mDefaultAttr.has(t.mKey)){for(let e of t.mDefault)t.mUniform.get(e.mKey).type,null!=e.mTag&&"paint"==e.mTag&&null==this.mShaderAttrMap.get(e.mKey)&&this.mOwner.GetFrame().BMgr().SetBatchSA(e);this.mDefaultAttr.add(t.mKey)}for(let t of this.mShaderAttrMap.values())this.mOwner.GetFrame().BMgr().SetBatchSA(t)}GetBound(){return this.mBound}GetBoundFMat(){return R.Import(this.mBW.mBound),R.mMax=m.V3AddV3(R.mMax,this.GetFMat().xyz,R.mMax),R.mMin=m.V3AddV3(R.mMin,this.GetFMat().xyz,R.mMin),R}Render(t){}RenderBatch(t,e=1){let a=this.mOwner.GetFrame().BMgr().IsBatchMap(),s=this.mBatchMap.get(t);if(null==s)s=new Array(e),this.mBatchMap.set(t,s),s.length=e;else if(0==a);else if(s.length>0)return this.mOwner.GetFrame().BMgr().BatchPushArr(s);return s}BatchKeySet(t,e=null){for(let a of this.mBatchMap.values())null!=a&&(null==e?a[t].CreateKey():a[t].mKey=e)}SetTexture(t,e=null,a=null,s=null,m=null){let r=!1;if(t instanceof Array){if(t!=this.mTextureKey)for(var i=0;i<t.length;++i)t[i]!=this.mTextureKey[i]&&(r=!0,this.mTextureKey[i]=t[i])}else t!=this.mTextureKey[0]&&(r=!0,this.mTextureKey[0]=t),e!=this.mTextureKey[1]&&(r=!0,this.mTextureKey[1]=e),a!=this.mTextureKey[2]&&(r=!0,this.mTextureKey[2]=a),s!=this.mTextureKey[3]&&(r=!0,this.mTextureKey[3]=s),m!=this.mTextureKey[4]&&(r=!0,this.mTextureKey[4]=m);if(null!=this.mAutoLoad&&null!=this.mOwner&&null!=this.mOwner.GetFrame()&&0==D.IsNode())for(let t=0;t<this.mTextureKey.length;++t){let e=this.mTextureKey[t];if(-1!=e.indexOf(".atl")||-1!=e.indexOf("base64")||-1!=e.indexOf(".tex")||""==e||null==e)continue;let a=this.mOwner.GetFrame().Res().Find(e);null!=a&&a instanceof l&&0==t?a.GetAlpha()&&(this.mAlphaTex=!0):(null==a&&(this.mInit=!1),1==this.mOwner.GetFrame().Load().LoadSet().has(e)?P.Exe(async()=>0!=this.mOwner.GetFrame().Load().LoadSet().has(e)||(this.UpdateLMat(),!1)):0==this.mOwner.GetFrame().Load().IsLoad(e)&&this.mOwner.GetFrame().Load().Exe(e,this.mAutoLoad).then(()=>{this.UpdateLMat()}))}if(r)for(let t of this.mBatchMap.values())if(null!=t)for(let e=0;e<t.length;++e){let a=t[e];null!=a&&a.CreateKey()}}GetTexture(){return this.mTextureKey}GetTexHash(){let t="",e=0;for(let e of this.mTextureKey)t+=e;return e=M.HashCode(t),e&=255,e}InitChk(){this.mInit=!0,null==this.mShaderAttrMap.get("texCodi")&&this.mShaderAttrMap.set("texCodi",new h("texCodi",this.mTexCodi)),null==this.mShaderAttrMap.get("cullMask")&&this.mShaderAttrMap.set("cullMask",new h("cullMask",new a(CPaint.eCullMask.Default))),this.mColorModel=this.mShaderAttrMap.get("colorModel").mData,this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData,this.mCullMask=this.mShaderAttrMap.get("cullMask").mData,null!=this.mShaderAttrMap.get("VFX")&&(this.mVFX=this.mShaderAttrMap.get("VFX").mData),this.mTextureKey.length>0&&this.SetTexture(this.mTextureKey)}CaptureTextureToDataURL(){if(0==this.mTextureKey.length||null==this.GetOwner().GetFrame())return"";let t=this.GetOwner().GetFrame().Res().Find(this.mTextureKey[0]),e=this.GetLeftTopRightBottom(this.GetOwner().GetFrame());T.Init(e.z-e.x,e.w-e.y);let a=T.DrawBuf(t.GetBuf()[0],0,0,t.GetWidth(),t.GetHeight(),e);return T.Draw(a),T.GetDataURL()}GetLeftTopRightBottom(t){const e=t.Res().Find(this.mTextureKey[0]);if(null==e||1==e.GetWidth()&&1==e.GetHeight())return null;const s=e.GetWidth(),m=e.GetHeight(),r=(this.mTexCodi,Math.round((this.mTexCodi.z-.5/s)*s)),i=Math.round((1-this.mTexCodi.w-this.mTexCodi.y-.5/m)*m),h=Math.round((this.mTexCodi.z+this.mTexCodi.x+1/s)*s),l=Math.round((1-this.mTexCodi.w+1/m)*m);return new a(r,i,h,l)}ResetDecal(a,s=null,r=null,i=new e(0,0,-1),l=0){if(0!=this.mInit)if(null==s&&(s=this.mBW.mBound.GetCenter(),m.V3AddV3(s,this.GetFMat().xyz,s)),null==r&&((r=this.mBW.mBound.GetSize()).x=Math.max(r.x,1),r.y=Math.max(r.y,1),r.z=Math.max(r.z,1)),null==this.mVFX&&(this.mShaderAttrMap.set("VFX",new h("VFX",new w([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]))),this.mVFX=this.mShaderAttrMap.get("VFX").mData,this.PushTag("vfx"),this.ClearBatch()),0==a){let e=this.FindCShaderAttr("vfxMat0");null==e&&this.PushCShaderAttr(e=new h("vfxMat0",new t)),e&&(e.mData.mF32A[0]=i.x,e.mData.mF32A[4]=r.x,e.mData.mF32A[7]=s.x,e.mData.mF32A[1]=i.y,e.mData.mF32A[5]=r.y,e.mData.mF32A[8]=s.y,e.mData.mF32A[2]=i.z,e.mData.mF32A[6]=r.z,e.mData.mF32A[9]=s.z,e.mData.mF32A[3]=l)}else if(1==a){let e=this.FindCShaderAttr("vfxMat0");null==e&&this.PushCShaderAttr(e=new h("vfxMat0",new t));let a=this.FindCShaderAttr("vfxMat1");null==a&&this.PushCShaderAttr(a=new h("vfxMat1",new t)),e&&a&&(e.mData.mF32A[10]=i.x,e.mData.mF32A[14]=r.x,a.mData.mF32A[1]=s.x,e.mData.mF32A[11]=i.y,e.mData.mF32A[15]=r.y,a.mData.mF32A[2]=s.y,e.mData.mF32A[12]=i.z,a.mData.mF32A[0]=r.z,a.mData.mF32A[3]=s.z,e.mData.mF32A[13]=l)}else{let e=this.FindCShaderAttr("vfxMat1");null==e&&this.PushCShaderAttr(e=new h("vfxMat1",new t)),e&&(e.mData.mF32A[4]=i.x,e.mData.mF32A[8]=r.x,e.mData.mF32A[11]=s.x,e.mData.mF32A[5]=i.y,e.mData.mF32A[9]=r.y,e.mData.mF32A[12]=s.y,e.mData.mF32A[6]=i.z,e.mData.mF32A[10]=r.z,e.mData.mF32A[13]=s.z,e.mData.mF32A[7]=l)}else P.Exe(async()=>!this.mInit).then(()=>{this.ResetDecal(a,s,r,i,l)})}}
+import { CMat } from "../../../geometry/CMat.js";
+import { CVec3 } from "../../../geometry/CVec3.js";
+import { CVec4 } from "../../../geometry/CVec4.js";
+import { CBound } from "../../../geometry/CBound.js";
+import { CMath } from "../../../geometry/CMath.js";
+import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
+import { CRenderPass } from "../../../render/CRenderPass.js";
+import { CShaderAttr } from "../../../render/CShaderAttr.js";
+import { CTexture } from "../../../render/CTexture.js";
+import { CUpdate } from "../../../basic/Basic.js";
+import { CAlert } from "../../../basic/CAlert.js";
+import { CClass } from "../../../basic/CClass.js";
+import { CDOM } from "../../../basic/CDOM.js";
+import { CHash } from "../../../basic/CHash.js";
+import { CObject } from "../../../basic/CObject.js";
+import { CUniqueID } from "../../../basic/CUniqueID.js";
+import { CUtilObj } from "../../../basic/CUtilObj.js";
+import { CLoaderOption } from "../../../util/CLoader.js";
+import { SDF } from "../../../z_file/SDF.js";
+import { CComponent } from "../CComponent.js";
+import { CBoundWorldPaint } from "../CBoundWorld.js";
+import { CH5Canvas } from "../../../render/CH5Canvas.js";
+import { CRPAuto } from "../../canvas/CRPMgr.js";
+import { CColor } from "../../../render/CColor.js";
+import { CAlpha } from "../../../render/CAlpha.js";
+import { CVFX } from "../../../render/CVFX.js";
+import { CUtil } from "../../../basic/CUtil.js";
+import { CChecker } from "../../../util/CChecker.js";
+var gMargin = 1.0;
+;
+export class CRenPaint {
+    mRenInfoKey = null;
+    mCam = null;
+    mShow = 0;
+    mPaint;
+    mTexHash;
+    mDistance = null;
+    mAlpha = null;
+}
+var gBoundDummy = new CBound();
+var gPosDummy = new CVec3();
+gPosDummy.NewWASM();
+export class CPaint extends CComponent {
+    static eTag = {
+        Light: "light",
+        ShadowReadOnly: "shadowReadOnly",
+        Shadow: "shadow",
+        Wind: "Wind",
+        Parallax: "parallax",
+    };
+    static eCullMask = {
+        Default: 0b100000000000000,
+        Mask01: 0b010000000000000,
+        Mask02: 0b001000000000000,
+        Mask03: 0b000100000000000,
+        Mask04: 0b000010000000000,
+        Mask05: 0b000001000000000,
+        Mask06: 0b000000100000000,
+        Mask07: 0b000000010000000,
+        Mask08: 0b000000001000000,
+        Mask09: 0b000000000100000,
+        Mask10: 0b000000000010000,
+        Mask11: 0b000000000001000,
+        Mask12: 0b000000000000100,
+        Mask13: 0b000000000000010,
+        Mask14: 0b000000000000001
+    };
+    mBW = new CBoundWorldPaint();
+    mFMat;
+    mLMat;
+    mShaderAttrMap = new Map();
+    mColorModel;
+    mAlphaModel;
+    mVFX;
+    mTexCodi;
+    mAutoRPUpdate = true;
+    mCamCullUpdate = true;
+    mBound = new CBound();
+    mRenderPass = new Array();
+    mRenPT = new Array();
+    mTextureKey = new Array();
+    mMaterial = new CVec4(1, -1, -1, 1);
+    mCullMask;
+    mUpdateLMat = true;
+    mUpdateFMat = true;
+    mDefaultAttr = new Set();
+    mTag = new Set();
+    mTagKey = null;
+    mBatchMap = new Map();
+    mAutoLoad = new CLoaderOption();
+    mInit = false;
+    mAlphaTex = false;
+    mWorldMatType = CMat.eType.PRS;
+    constructor() {
+        super();
+        this.mSysc = CComponent.eSysn.Paint;
+        this.mTexCodi = new CVec4(1, 1, 0, 0);
+        this.mShaderAttrMap.set("texCodi", new CShaderAttr("texCodi", this.mTexCodi));
+        this.mShaderAttrMap.set("colorModel", new CShaderAttr("colorModel", new CColor(0, 0, 0, SDF.eColorModel.None)));
+        this.mShaderAttrMap.set("alphaModel", new CShaderAttr("alphaModel", new CAlpha(1)));
+        this.mShaderAttrMap.set("cullMask", new CShaderAttr("cullMask", new CVec4(CPaint.eCullMask.Default)));
+        this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
+        this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
+        this.mCullMask = this.mShaderAttrMap.get("cullMask").mData;
+        this.mVFX = null;
+        this.mFMat = new CMat(null);
+        this.mFMat.NewWASM();
+        this.mLMat = new CMat(null);
+        this.mLMat.NewWASM();
+        this.mBW.mPos.NewWASM();
+        this.mBound = new CBound();
+        this.mBound.NewWASM();
+        if (gPosDummy.Ptr() == null)
+            gPosDummy.NewWASM();
+    }
+    SetWorldType(_type) {
+        this.mWorldMatType = _type;
+        this.PushTag("worldType");
+    }
+    SetEnable(_val) {
+        if (this.mEnable != _val)
+            this.ClearCRPAuto();
+        super.SetEnable(_val);
+    }
+    GetColorModel() { return this.mColorModel; }
+    GetAlphaModel() { return this.mAlphaModel; }
+    Icon() { return "bi bi-paint-bucket"; }
+    RegistHeap(_F32A) {
+    }
+    SetTexCodi(_stX, _stY = null, _edX = null, _edY = null, _imgW = null, _imgH = null, _margin = gMargin) {
+        if (this.PushTag("codi"))
+            this.ClearBatch();
+        if (_stX == null) {
+            this.mTexCodi.x = 1 - _stY;
+            this.mTexCodi.y = 1 - _stY;
+            this.mTexCodi.z = _stY * 0.5;
+            this.mTexCodi.w = _stY * 0.5;
+        }
+        else if (_stX instanceof CVec4) {
+            if (_stY == null)
+                _stY = 0;
+            this.mTexCodi.x = _stX.x - _stY;
+            this.mTexCodi.y = _stX.y - _stY;
+            this.mTexCodi.z = _stX.z + _stY * 0.5;
+            this.mTexCodi.w = _stX.w + _stY * 0.5;
+        }
+        else {
+            this.mTexCodi.x = (_edX - _stX) / _imgW - _margin / _imgW;
+            this.mTexCodi.y = (_edY - _stY) / _imgH - _margin / _imgH;
+            this.mTexCodi.z = (_stX) / _imgW + (_margin * 0.5) / _imgW;
+            this.mTexCodi.w = 1 - (_stY / _imgH) - this.mTexCodi.y - (_margin * 0.5) / _imgH;
+        }
+    }
+    Destroy() {
+        if (this.GetRecycleType() != null) {
+            this.Recycle();
+            this.Reset();
+            return;
+        }
+        super.Destroy();
+        this.mBW.mPos.ReleaseWASM();
+        this.mFMat.ReleaseWASM();
+        this.mLMat.ReleaseWASM();
+        this.mBound.DeleteWASM();
+        this.ClearBatch();
+    }
+    Reset() {
+        super.Reset();
+        this.mFMat.Unit();
+        this.mLMat.Unit();
+        this.ClearBatch();
+        this.mTextureKey.length = 0;
+        this.mBound.Reset();
+        this.mBound.SetType(CBound.eType.Box);
+        this.mBW.mBound.Reset();
+        this.mBW.mRadian = 0;
+        this.mShaderAttrMap.delete("mVFX");
+        this.mVFX = null;
+        this.mTag.clear();
+        this.mInit = false;
+        this.mBatchMap.clear();
+    }
+    IsShould(_member, _type) {
+        if (_type == CObject.eShould.Editer && this.IsProxy() == false) {
+            if (_member == "mColorModel" || _member == "mAlphaModel" || _member == "mVFX" || _member == "mBound")
+                return true;
+        }
+        if (_member == "mFMat" || _member == "mUpdateLMat" || _member == "mUpdateFMat" ||
+            _member == "mRenPT" || _member == "mTagKey" ||
+            _member == "mDefaultAttr" || _member == "mBatchMap" || _member == "mBatchLastArr" || _member == "mBatchLastVF" ||
+            _member == "mBoundFMat" || _member == "mBoundFMatC" || _member == "mBoundFMatR" || _member == "mBound" ||
+            _member == "mAutoRPUpdate" || _member == "mCamCullUpdate" || _member == "mBW" ||
+            _member == "mColorModel" || _member == "mAlphaModel" || _member == "mVFX")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    ClearBatch() {
+        for (let ren of this.mRenPT) {
+            if (ren != null) {
+                ren.mDistance = 0x7FFFFF00;
+                ren.mShow = null;
+            }
+        }
+        this.mRenPT = [];
+        for (let key of this.mBatchMap.keys()) {
+            this.mBatchMap.set(key, null);
+        }
+        this.mCamCullUpdate = true;
+    }
+    IsUpdateFMat() { return this.mUpdateFMat; }
+    UpdateLMat() { this.mUpdateLMat = true; }
+    EditHTMLInit(_div, _pointer) {
+        super.EditHTMLInit(_div, _pointer);
+        var button = CDOM.TagToDom("button");
+        button.className = "btn btn-primary btn-sm";
+        button.innerText = "Refresh";
+        button.onclick = () => {
+            this.ClearCRPAuto();
+        };
+        _div.append(button);
+    }
+    EditForm(_pointer, _body, _input) {
+        if (_pointer.member == "mVFX" && this.mVFX == null) {
+            let btn = CDOM.TagToDom("button");
+            btn.innerText = "생성";
+            btn.onclick = () => {
+                this.mShaderAttrMap.set("VFX", new CShaderAttr("VFX", new CVFX([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])));
+                this.mVFX = this.mShaderAttrMap.get("VFX").mData;
+                this.PushTag("vfx");
+                this.ClearBatch();
+                this.EditRefresh();
+            };
+            _body.append(btn);
+        }
+        else if (_pointer.member == "mTextureKey" || _pointer.member == "mTag") {
+            CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [""], true);
+        }
+        else if (_pointer.member == "mShaderAttrMap") {
+            var subList = new Array();
+            subList.push({ "<>": "option", "text": "CVec1", "value": "CVec1" });
+            subList.push({ "<>": "option", "text": "CVec2", "value": "CVec2" });
+            subList.push({ "<>": "option", "text": "CVec3", "value": "CVec3" });
+            subList.push({ "<>": "option", "text": "CVec4", "value": "CVec4" });
+            subList.push({ "<>": "option", "text": "CMat", "value": "CMat" });
+            let ukey = CUniqueID.GetHash();
+            var pushDiv = { "<>": "div", "html": [
+                    { "<>": "input", "id": ukey + "_txt", "class": "form-control" },
+                    { "<>": "div", "class": "row", "html": [
+                            { "<>": "div", "class": "col-8", "html": [
+                                    { "<>": "select", "class": "form-select", "id": ukey + "subPush", "html": subList },
+                                ] },
+                            { "<>": "div", "class": "col-4", "html": [
+                                    { "<>": "button", "type": "button", "class": "btn btn-primary", "text": "Add",
+                                        "onclick": () => {
+                                            let sel = CDOM.IDValue(ukey + "subPush");
+                                            let key = CDOM.IDValue(ukey + "_txt");
+                                            if (key == "") {
+                                                CAlert.E("key 설정");
+                                                return;
+                                            }
+                                            let newObj = new CShaderAttr(key, CClass.New(sel));
+                                            this.PushCShaderAttr(newObj);
+                                            this.EditRefresh();
+                                        }
+                                    }
+                                ] },
+                        ] }
+                ] };
+            ;
+            _input.prepend(CDOM.DataToDom(pushDiv));
+        }
+        else if (_pointer.member == "mCullMask") {
+            let ukey = this.ObjHash();
+            let maskKeys = CClass.EnumName(CPaint.eCullMask);
+            let curMask = this.mCullMask.x;
+            let wrap = document.createElement("div");
+            wrap.className = "border p-1 mt-1";
+            let title = document.createElement("span");
+            title.className = "text-primary";
+            title.innerText = "CullMask";
+            wrap.append(title);
+            let valSpan = document.createElement("span");
+            valSpan.className = "text-secondary ms-2";
+            valSpan.id = "cm_val_" + ukey;
+            valSpan.innerText = "0b" + curMask.toString(2);
+            wrap.append(valSpan);
+            wrap.append(document.createElement("br"));
+            let grid = document.createElement("div");
+            grid.className = "row";
+            for (let key of maskKeys) {
+                let cell = document.createElement("div");
+                cell.className = "col-6";
+                let chk = document.createElement("input");
+                chk.type = "checkbox";
+                chk.id = "cm_" + ukey + "_" + key;
+                chk.className = "form-check-input";
+                chk.checked = (curMask & CPaint.eCullMask[key]) !== 0;
+                chk.onchange = () => {
+                    let newMask = 0;
+                    for (let k of maskKeys) {
+                        let c = document.getElementById("cm_" + ukey + "_" + k);
+                        if (c && c.checked)
+                            newMask |= CPaint.eCullMask[k];
+                    }
+                    this.SetCullMask(newMask);
+                    document.getElementById("cm_val_" + ukey).innerText = "0b" + newMask.toString(2);
+                    this.EditChange(_pointer, false);
+                };
+                let lbl = document.createElement("label");
+                lbl.className = "form-check-label ms-1";
+                lbl.setAttribute("for", "cm_" + ukey + "_" + key);
+                lbl.innerText = key;
+                cell.append(chk);
+                cell.append(lbl);
+                grid.append(cell);
+            }
+            wrap.append(grid);
+            _body.append(wrap);
+        }
+    }
+    SetOwner(_obj) {
+        super.SetOwner(_obj);
+        this.ClearCRPAuto();
+        this.SetTexture(this.mTextureKey);
+    }
+    SetMaterial(roughness = -1, metalric = -1, emissive = 1, ambientOcclusion = 1) {
+        this.mMaterial.x = ambientOcclusion;
+        this.mMaterial.y = roughness;
+        this.mMaterial.z = metalric;
+        this.mMaterial.w = emissive;
+    }
+    SetCullMask(_cullmask) {
+        this.mCullMask.x = _cullmask;
+    }
+    IsAlphaState() {
+        if (this.mAlphaTex || (this.GetTag().has("alphaModel") && this.mAlphaModel.x != 1))
+            return true;
+        return false;
+    }
+    UpdateRenPt() {
+        for (let i = 0; i < this.mRenPT.length; ++i) {
+            let ren = this.mRenPT[i];
+            if (ren.mDistance == null || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
+                let cam = ren.mCam;
+                let plane = ren.mCam.GetPlane();
+                if (this.mRenderPass[i].mPaintSort != CRenderPass.ePaintSort.None) {
+                    let eye = ren.mCam.GetEye();
+                    let view = ren.mCam.GetView();
+                    gPosDummy.x = this.mBW.mPos.x - eye.x;
+                    gPosDummy.y = this.mBW.mPos.y - eye.y;
+                    gPosDummy.z = this.mBW.mPos.z - eye.z;
+                    ren.mDistance = CMath.V3Dot(gPosDummy, view);
+                    ren.mDistance = Math.trunc(ren.mDistance * 128) << 9;
+                }
+                else
+                    ren.mDistance = 0;
+            }
+        }
+    }
+    Refresh() {
+        if (this.mShaderAttrMap.get("texCodi") == null)
+            this.mShaderAttrMap.set("texCodi", new CShaderAttr("texCodi", this.mTexCodi));
+        this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
+        this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
+        this.mCullMask = this.mShaderAttrMap.get("cullMask").mData;
+        if (this.mColorModel.mModel != SDF.eColorModel.None)
+            this.PushTag("colorModel");
+        if (this.mShaderAttrMap.get("VFX") != null)
+            this.mVFX = this.mShaderAttrMap.get("VFX").mData;
+    }
+    Export(_copy = true, _resetKey = true) {
+        let dummy = CClass.New(this);
+        dummy.Import(this);
+        if (_copy == false) {
+            for (let key of dummy.mShaderAttrMap.keys()) {
+                dummy.mShaderAttrMap.get(key).mData = this.mShaderAttrMap.get(key).mData;
+            }
+            for (let i = 0; i < this.mRenderPass.length; ++i) {
+                for (let j = 0; j < this.mRenderPass[i].mShaderAttr.length; ++j) {
+                    dummy.mRenderPass[i].mShaderAttr[j].mData = this.mRenderPass[i].mShaderAttr[j].mData;
+                }
+            }
+        }
+        dummy.Refresh();
+        return dummy;
+    }
+    SetAutoLoad(_option) {
+        if (typeof _option == "boolean") {
+            if (_option)
+                this.mAutoLoad = new CLoaderOption();
+            else
+                this.mAutoLoad = null;
+        }
+        else
+            this.mAutoLoad = _option;
+    }
+    Import(_target) {
+        super.Import(_target);
+        this.Refresh();
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_pointer.IsRef(this.mTextureKey)) {
+            this.SetTexture(this.mTextureKey);
+            this.ClearBatch();
+        }
+        else if (_pointer.IsRef(this.mTag)) {
+            this.mTagKey = null;
+            this.ClearCRPAuto();
+        }
+        else if (_pointer.member == "mColorModel") {
+            this.PushTag("colorModel");
+            this.ClearCRPAuto();
+        }
+        else if (_pointer.member == "mAlphaModel") {
+            this.PushTag("alphaModel");
+            this.ClearCRPAuto();
+        }
+        else if (_pointer.member == "mCullMask") {
+            this.ClearCRPAuto();
+        }
+        else if (_child) {
+            if (_pointer.IsRef(this.mRenderPass)) {
+                this.ClearCRPAuto();
+                if (_pointer.target instanceof CRenderPass)
+                    _pointer.target.Reset();
+                else
+                    CAlert.E("CRPAuto는 페인트 내에서 수정 불가합니다.");
+            }
+            else if (_pointer.IsRef(this.mAlphaModel)) {
+                this.PushTag("alphaModel");
+                this.ClearCRPAuto();
+            }
+            else if (_pointer.IsRef(this.mColorModel)) {
+                this.PushTag("colorModel");
+                this.ClearCRPAuto();
+            }
+            else if (_pointer.IsRef(this.mVFX)) {
+                this.PushTag("vfx");
+                let NeedVFXMat0 = (this.mVFX.mF32A[0] == SDF.eVFX.Decal || this.mVFX.mF32A[0] == SDF.eVFX.DecalTexture || this.mVFX.mF32A[5] == SDF.eVFX.Decal || this.mVFX.mF32A[5] == SDF.eVFX.DecalTexture);
+                let NeedVFXMat1 = (this.mVFX.mF32A[5] == SDF.eVFX.Decal || this.mVFX.mF32A[5] == SDF.eVFX.DecalTexture || this.mVFX.mF32A[10] == SDF.eVFX.Decal || this.mVFX.mF32A[10] == SDF.eVFX.DecalTexture);
+                let vfxMat0 = NeedVFXMat0
+                    ? (this.FindCShaderAttr("vfxMat0") || (this.PushCShaderAttr(new CShaderAttr("vfxMat0", new CMat())), this.FindCShaderAttr("vfxMat0").mData.mF32A.fill(0), this.FindCShaderAttr("vfxMat0")))
+                    : (this.mShaderAttrMap.delete("vfxMat0"), null);
+                let vfxMat1 = NeedVFXMat1
+                    ? (this.FindCShaderAttr("vfxMat1") || (this.PushCShaderAttr(new CShaderAttr("vfxMat1", new CMat())), this.FindCShaderAttr("vfxMat1").mData.mF32A.fill(0), this.FindCShaderAttr("vfxMat1")))
+                    : (this.mShaderAttrMap.delete("vfxMat1"), null);
+                if ((this.mVFX.mF32A[0] == SDF.eVFX.Decal || this.mVFX.mF32A[0] == SDF.eVFX.DecalTexture) && vfxMat0?.mData.mF32A.subarray(0, 10).every(v => v === 0)) {
+                    this.ResetDecal(0);
+                }
+                if ((this.mVFX.mF32A[5] == SDF.eVFX.Decal || this.mVFX.mF32A[5] == SDF.eVFX.DecalTexture) &&
+                    vfxMat0?.mData.mF32A.subarray(10, 16).every(v => v === 0) &&
+                    vfxMat1?.mData.mF32A.subarray(0, 4).every(v => v === 0)) {
+                    this.ResetDecal(1);
+                }
+                if ((this.mVFX.mF32A[10] == SDF.eVFX.Decal || this.mVFX.mF32A[10] == SDF.eVFX.DecalTexture) && vfxMat1?.mData.mF32A.subarray(4, 14).every(v => v === 0)) {
+                    this.ResetDecal(2);
+                }
+            }
+        }
+    }
+    PushCRPAuto(_rpc) {
+        var pChk = true;
+        for (var rp of this.mRenderPass) {
+            if (rp.Key() == _rpc.Key())
+                pChk = false;
+        }
+        if (pChk) {
+            if (_rpc.mCopy == false)
+                this.mRenderPass.push(_rpc);
+            else {
+                this.mRenderPass.push(_rpc.Export());
+            }
+            this.mRenPT.push(null);
+        }
+    }
+    ClearCRPAuto() {
+        this.ClearBatch();
+        for (var i = 0; i < this.mRenderPass.length; ++i) {
+            if (this.mRenderPass[i] instanceof CRPAuto) {
+                this.mRenderPass.splice(i, 1);
+                i--;
+            }
+        }
+        this.mAutoRPUpdate = true;
+    }
+    EmptyRPChk() {
+    }
+    ClassEqual(_type) { return _type == CPaint; }
+    GetTag() { return this.mTag; }
+    PushTag(_tag) {
+        if (this.mTag.has(_tag))
+            return false;
+        this.mTag.add(_tag);
+        this.mTagKey = null;
+        this.ClearCRPAuto();
+        return true;
+    }
+    RemoveTag(_tag) {
+        this.mTag.delete(_tag);
+        this.mTagKey = null;
+        this.ClearCRPAuto();
+    }
+    GetDrawMesh(_meshKey, _shader, _ci, _modify = false) {
+        var drawMesh = this.mOwner.GetFrame().Res().Find(_meshKey + _shader.ObjHash());
+        if (drawMesh == null) {
+            drawMesh = new CMeshDrawNode();
+            this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(drawMesh, _shader, _ci);
+            this.mOwner.GetFrame().Res().Push(_meshKey + _shader.ObjHash(), drawMesh);
+            drawMesh.SetKey(_meshKey + _shader.ObjHash());
+        }
+        else if (_modify)
+            this.mOwner.GetFrame().Ren().BuildMeshDrawNode(drawMesh, _ci, _shader);
+        return drawMesh;
+    }
+    GetTagKey() {
+        if (this.mTagKey == null) {
+            let key = "";
+            let sortedArr = Array.from(this.mTag);
+            sortedArr.sort();
+            for (var each0 of sortedArr) {
+                if (each0 == "")
+                    continue;
+                key += each0 + "/";
+            }
+            this.mTagKey = key;
+        }
+        return this.mTagKey;
+    }
+    GetRenderPass() { return this.mRenderPass; }
+    PushRenderPass(_rp, _copy = true) {
+        this.mDefaultAttr = new Set();
+        this.mRenderPass = new Array();
+        this.ClearBatch();
+        if (_rp instanceof Array) {
+            for (let each0 of _rp) {
+                if (_copy)
+                    this.mRenderPass.push(each0.Export());
+                else
+                    this.mRenderPass.push(each0);
+            }
+            return this.mRenderPass;
+        }
+        else {
+            var rp = null;
+            if (_copy)
+                rp = _rp.Export(_copy);
+            else
+                rp = _rp;
+            this.mRenderPass.push(rp);
+            return this.mRenderPass[this.mRenderPass.length - 1];
+        }
+        return null;
+    }
+    PushCShaderAttr(_sa) {
+        let attr = this.mShaderAttrMap.get(_sa.mKey);
+        if (attr == null) {
+            this.ClearBatch();
+            this.mShaderAttrMap.set(_sa.mKey, _sa);
+        }
+        else
+            attr.Import(_sa);
+    }
+    FindCShaderAttr(_key) {
+        if (typeof _key == "string")
+            return this.mShaderAttrMap.get(_key);
+        for (let sa of this.mShaderAttrMap.values()) {
+            if (sa.mEach == _key)
+                return sa;
+        }
+        return null;
+    }
+    SetColorModel(_color) {
+        this.mColorModel.mF32A[0] = _color.mF32A[0];
+        this.mColorModel.mF32A[1] = _color.mF32A[1];
+        this.mColorModel.mF32A[2] = _color.mF32A[2];
+        this.mColorModel.mF32A[3] = _color.mF32A[3];
+        if (this.mTag.has("colorModel") == false)
+            this.ClearBatch();
+        this.PushTag("colorModel");
+    }
+    SetAlphaModel(_alpha) {
+        let as = this.IsAlphaState();
+        this.mAlphaModel.mF32A[0] = _alpha.mF32A[0];
+        this.mAlphaModel.mF32A[1] = _alpha.mF32A[1];
+        if (as != this.IsAlphaState())
+            this.ClearCRPAuto();
+        if (this.mTag.has("alphaModel") == false)
+            this.ClearBatch();
+        this.PushTag("alphaModel");
+    }
+    SetVFX(_a, _b = null, _c = null) {
+        if (this.mVFX == null) {
+            this.mShaderAttrMap.set("VFX", new CShaderAttr("VFX", new CVFX([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])));
+            this.mVFX = this.mShaderAttrMap.get("VFX").mData;
+            this.PushTag("vfx");
+            this.ClearBatch();
+        }
+        if (_a instanceof CVFX) {
+            this.mVFX.Import(_a);
+        }
+        else {
+            let cv = this.mVFX;
+            for (let i = 0; i < _c.length; ++i)
+                cv.mF32A[_a * 5 + i + 1] = _c[i];
+            cv.mF32A[_a * 5] = _b;
+        }
+        this.PushTag("vfx");
+    }
+    GetRGBA() {
+        return new CVec4(this.mColorModel.x, this.mColorModel.y, this.mColorModel.z, this.mAlphaModel.x);
+    }
+    SetMat(_mat) {
+    }
+    GetMat() { return this.mLMat; }
+    ;
+    SetLMat(_mat) { this.mLMat.Import(_mat); this.mUpdateLMat = true; }
+    FMatUpdate() {
+        CMath.MatMul(this.mLMat, this.mOwner.GetMat(), this.mFMat, true);
+        if (this.GetOwner().mUpdateRS != CUpdate.eType.Not || this.mBW.mRadian == 0) {
+            if (this.mTag.has("tail"))
+                this.mBW.Init(this.mBound, null);
+            else
+                this.mBW.Init(this.mBound, this.mOwner.GetMat());
+        }
+        this.mBW.UpdateMat(this.mOwner.GetMat());
+    }
+    Prefab(_owner) {
+        if (this.mAutoLoad != null) {
+            for (let texKey of this.mTextureKey) {
+                if (texKey.indexOf(".atl") != -1)
+                    continue;
+                _owner.GetFrame().Load().Exe(texKey, this.mAutoLoad);
+            }
+        }
+    }
+    Start() {
+        this.ClearCRPAuto();
+    }
+    StartChk() {
+        this.InitChk();
+        if (this.mStartChk == true && this.mInit == true) {
+            this.mStartChk = false;
+            return true;
+        }
+        return false;
+    }
+    Update(_update) {
+        if (this.mUpdateFMat)
+            this.mUpdateFMat = false;
+        if (this.mUpdateLMat || this.mOwner.mUpdateMat != 0) {
+            this.FMatUpdate();
+            this.mUpdateFMat = true;
+            this.mUpdateLMat = false;
+        }
+        this.UpdateRenPt();
+    }
+    SetFMat(_fmat) {
+        this.mFMat.Import(_fmat);
+    }
+    GetFMat() { return this.mFMat; }
+    SetToolCPaint(_input, _type) {
+    }
+    Common(_vf) {
+        if (this.mDefaultAttr.has(_vf.mKey) == false) {
+            for (let each0 of _vf.mDefault) {
+                var type = _vf.mUniform.get(each0.mKey).type;
+                if (each0.mTag == null || each0.mTag != "paint")
+                    continue;
+                if (this.mShaderAttrMap.get(each0.mKey) == null)
+                    this.mOwner.GetFrame().BMgr().SetBatchSA(each0);
+            }
+            this.mDefaultAttr.add(_vf.mKey);
+        }
+        for (let each0 of this.mShaderAttrMap.values()) {
+            this.mOwner.GetFrame().BMgr().SetBatchSA(each0);
+        }
+    }
+    GetBound() {
+        return this.mBound;
+    }
+    GetBoundFMat() {
+        gBoundDummy.Import(this.mBW.mBound);
+        gBoundDummy.mMax = CMath.V3AddV3(gBoundDummy.mMax, this.GetFMat().xyz, gBoundDummy.mMax);
+        gBoundDummy.mMin = CMath.V3AddV3(gBoundDummy.mMin, this.GetFMat().xyz, gBoundDummy.mMin);
+        return gBoundDummy;
+    }
+    Render(_shader) { }
+    RenderBatch(_shader, _count = 1) {
+        let bcm = this.mOwner.GetFrame().BMgr().IsBatchMap();
+        let barr = this.mBatchMap.get(_shader);
+        if (barr == null) {
+            barr = new Array(_count);
+            this.mBatchMap.set(_shader, barr);
+            barr.length = _count;
+        }
+        else if (bcm == false) { }
+        else if (barr.length > 0) {
+            return this.mOwner.GetFrame().BMgr().BatchPushArr(barr);
+        }
+        return barr;
+    }
+    BatchKeySet(_nodeOff, _key = null) {
+        for (let batchArr of this.mBatchMap.values()) {
+            if (batchArr == null)
+                continue;
+            if (_key == null)
+                batchArr[_nodeOff].CreateKey();
+            else
+                batchArr[_nodeOff].mKey = _key;
+        }
+    }
+    SetTexture(_a, _b = null, _c = null, _d = null, _e = null) {
+        let change = false;
+        if (_a instanceof Array) {
+            if (_a != this.mTextureKey) {
+                for (var i = 0; i < _a.length; ++i) {
+                    if (_a[i] != this.mTextureKey[i]) {
+                        change = true;
+                        this.mTextureKey[i] = _a[i];
+                    }
+                }
+            }
+        }
+        else {
+            if (_a != this.mTextureKey[0]) {
+                change = true;
+                this.mTextureKey[0] = _a;
+            }
+            if (_b != this.mTextureKey[1]) {
+                change = true;
+                this.mTextureKey[1] = _b;
+            }
+            if (_c != this.mTextureKey[2]) {
+                change = true;
+                this.mTextureKey[2] = _c;
+            }
+            if (_d != this.mTextureKey[3]) {
+                change = true;
+                this.mTextureKey[3] = _d;
+            }
+            if (_e != this.mTextureKey[4]) {
+                change = true;
+                this.mTextureKey[4] = _e;
+            }
+        }
+        if (this.mAutoLoad != null && this.mOwner != null && this.mOwner.GetFrame() != null && CUtil.IsNode() == false) {
+            for (let i = 0; i < this.mTextureKey.length; ++i) {
+                let texKey = this.mTextureKey[i];
+                if (texKey.indexOf(".atl") != -1 || texKey.indexOf("base64") != -1 || texKey.indexOf(".tex") != -1 ||
+                    texKey == "" || texKey == null)
+                    continue;
+                let tex = this.mOwner.GetFrame().Res().Find(texKey);
+                if (tex != null && tex instanceof CTexture && i == 0) {
+                    if (tex.GetAlpha())
+                        this.mAlphaTex = true;
+                    continue;
+                }
+                if (tex == null)
+                    this.mInit = false;
+                if (this.mOwner.GetFrame().Load().LoadSet().has(texKey) == true) {
+                    CChecker.Exe(async () => {
+                        if (this.mOwner.GetFrame().Load().LoadSet().has(texKey) == false) {
+                            this.UpdateLMat();
+                            return false;
+                        }
+                        return true;
+                    });
+                }
+                else if (this.mOwner.GetFrame().Load().IsLoad(texKey) == false) {
+                    this.mOwner.GetFrame().Load().Exe(texKey, this.mAutoLoad).then(() => {
+                        this.UpdateLMat();
+                    });
+                }
+            }
+        }
+        if (change) {
+            for (let each0 of this.mBatchMap.values()) {
+                if (each0 != null) {
+                    for (let i = 0; i < each0.length; ++i) {
+                        let bh = each0[i];
+                        if (bh != null)
+                            bh.CreateKey();
+                    }
+                }
+            }
+        }
+    }
+    GetTexture() { return this.mTextureKey; }
+    GetTexHash() {
+        let str = "";
+        let hash = 0;
+        for (let texKey of this.mTextureKey) {
+            str += texKey;
+        }
+        hash = CHash.HashCode(str);
+        hash = 0xff & hash;
+        return hash;
+    }
+    InitChk() {
+        this.mInit = true;
+        if (this.mShaderAttrMap.get("texCodi") == null)
+            this.mShaderAttrMap.set("texCodi", new CShaderAttr("texCodi", this.mTexCodi));
+        if (this.mShaderAttrMap.get("cullMask") == null) {
+            this.mShaderAttrMap.set("cullMask", new CShaderAttr("cullMask", new CVec4(CPaint.eCullMask.Default)));
+        }
+        this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
+        this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
+        this.mCullMask = this.mShaderAttrMap.get("cullMask").mData;
+        if (this.mShaderAttrMap.get("VFX") != null)
+            this.mVFX = this.mShaderAttrMap.get("VFX").mData;
+        if (this.mTextureKey.length > 0)
+            this.SetTexture(this.mTextureKey);
+    }
+    CaptureTextureToDataURL() {
+        if (this.mTextureKey.length == 0 || this.GetOwner().GetFrame() == null)
+            return "";
+        let tex = this.GetOwner().GetFrame().Res().Find(this.mTextureKey[0]);
+        let codi = this.GetLeftTopRightBottom(this.GetOwner().GetFrame());
+        CH5Canvas.Init(codi.z - codi.x, codi.w - codi.y);
+        let cmd = CH5Canvas.DrawBuf(tex.GetBuf()[0], 0, 0, tex.GetWidth(), tex.GetHeight(), codi);
+        CH5Canvas.Draw(cmd);
+        let durl = CH5Canvas.GetDataURL();
+        return durl;
+    }
+    GetLeftTopRightBottom(_frame) {
+        const tex = _frame.Res().Find(this.mTextureKey[0]);
+        if (tex == null || (tex.GetWidth() == 1 && tex.GetHeight() == 1))
+            return null;
+        const imgW = tex.GetWidth();
+        const imgH = tex.GetHeight();
+        const uv = this.mTexCodi;
+        const startX = Math.round((this.mTexCodi.z - (gMargin * 0.5) / imgW) * imgW);
+        const startY = Math.round((1 - this.mTexCodi.w - this.mTexCodi.y - (gMargin * 0.5) / imgH) * imgH);
+        const endX = Math.round((this.mTexCodi.z + this.mTexCodi.x + gMargin / imgW) * imgW);
+        const endY = Math.round((1 - this.mTexCodi.w + gMargin / imgH) * imgH);
+        return new CVec4(startX, startY, endX, endY);
+    }
+    ResetDecal(_slot, _pos = null, _size = null, _dir = new CVec3(0, 0, -1), _imageRot = 0) {
+        if (this.mInit == false) {
+            CChecker.Exe(async () => {
+                if (this.mInit)
+                    return false;
+                return true;
+            }).then(() => {
+                this.ResetDecal(_slot, _pos, _size, _dir, _imageRot);
+            });
+            return;
+        }
+        if (_pos == null) {
+            _pos = this.mBW.mBound.GetCenter();
+            CMath.V3AddV3(_pos, this.GetFMat().xyz, _pos);
+        }
+        if (_size == null) {
+            _size = this.mBW.mBound.GetSize();
+            _size.x = Math.max(_size.x, 1);
+            _size.y = Math.max(_size.y, 1);
+            _size.z = Math.max(_size.z, 1);
+        }
+        if (this.mVFX == null) {
+            this.mShaderAttrMap.set("VFX", new CShaderAttr("VFX", new CVFX([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])));
+            this.mVFX = this.mShaderAttrMap.get("VFX").mData;
+            this.PushTag("vfx");
+            this.ClearBatch();
+        }
+        if (_slot == 0) {
+            let vfxMat0 = this.FindCShaderAttr("vfxMat0");
+            if (vfxMat0 == null)
+                this.PushCShaderAttr(vfxMat0 = new CShaderAttr("vfxMat0", new CMat()));
+            if (vfxMat0) {
+                vfxMat0.mData.mF32A[0] = _dir.x;
+                vfxMat0.mData.mF32A[4] = _size.x;
+                vfxMat0.mData.mF32A[7] = _pos.x;
+                vfxMat0.mData.mF32A[1] = _dir.y;
+                vfxMat0.mData.mF32A[5] = _size.y;
+                vfxMat0.mData.mF32A[8] = _pos.y;
+                vfxMat0.mData.mF32A[2] = _dir.z;
+                vfxMat0.mData.mF32A[6] = _size.z;
+                vfxMat0.mData.mF32A[9] = _pos.z;
+                vfxMat0.mData.mF32A[3] = _imageRot;
+            }
+        }
+        else if (_slot == 1) {
+            let vfxMat0 = this.FindCShaderAttr("vfxMat0");
+            if (vfxMat0 == null)
+                this.PushCShaderAttr(vfxMat0 = new CShaderAttr("vfxMat0", new CMat()));
+            let vfxMat1 = this.FindCShaderAttr("vfxMat1");
+            if (vfxMat1 == null)
+                this.PushCShaderAttr(vfxMat1 = new CShaderAttr("vfxMat1", new CMat()));
+            if (vfxMat0 && vfxMat1) {
+                vfxMat0.mData.mF32A[10] = _dir.x;
+                vfxMat0.mData.mF32A[14] = _size.x;
+                vfxMat1.mData.mF32A[1] = _pos.x;
+                vfxMat0.mData.mF32A[11] = _dir.y;
+                vfxMat0.mData.mF32A[15] = _size.y;
+                vfxMat1.mData.mF32A[2] = _pos.y;
+                vfxMat0.mData.mF32A[12] = _dir.z;
+                vfxMat1.mData.mF32A[0] = _size.z;
+                vfxMat1.mData.mF32A[3] = _pos.z;
+                vfxMat0.mData.mF32A[13] = _imageRot;
+            }
+        }
+        else {
+            let vfxMat1 = this.FindCShaderAttr("vfxMat1");
+            if (vfxMat1 == null)
+                this.PushCShaderAttr(vfxMat1 = new CShaderAttr("vfxMat1", new CMat()));
+            if (vfxMat1) {
+                vfxMat1.mData.mF32A[4] = _dir.x;
+                vfxMat1.mData.mF32A[8] = _size.x;
+                vfxMat1.mData.mF32A[11] = _pos.x;
+                vfxMat1.mData.mF32A[5] = _dir.y;
+                vfxMat1.mData.mF32A[9] = _size.y;
+                vfxMat1.mData.mF32A[12] = _pos.y;
+                vfxMat1.mData.mF32A[6] = _dir.z;
+                vfxMat1.mData.mF32A[10] = _size.z;
+                vfxMat1.mData.mF32A[13] = _pos.z;
+                vfxMat1.mData.mF32A[7] = _imageRot;
+            }
+        }
+    }
+}

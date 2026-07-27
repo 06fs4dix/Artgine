@@ -1,5 +1,5 @@
 import { execSync, spawn, exec } from 'child_process';
-import { CUtilSystem } from '../artgine/system/CUtilSystem.js';
+import { CUtilSystem } from './CUtilSystem.js';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -35,6 +35,318 @@ export class CCMDMgr {
         const files = fs.readdirSync(_pname);
         return files.length;
     }
+
+    /** 특정 OS에서만 설치할 npm 패키지 (키: 패키지명, 값: 허용 platform) */
+    private static readonly sNPMPlatformOnly: Record<string, NodeJS.Platform[]> = {
+        "dbus-next": ["linux"],
+    };
+
+    /**
+     * 강제 고정 버전 (키: 패키지명, 값: 설치할 버전).
+     * 여기 등록된 패키지는 호출부에서 버전을 지정하지 않았거나 다른 버전을 지정해도
+     * 항상 이 버전으로 설치한다. 목록 없는 패키지는 기존대로 최신 버전이 설치된다.
+     * 값은 현재 package.json의 dependencies/devDependencies 버전(캐럿 제거) 기준.
+     */
+    private static readonly sNPMPinnedVersion: Record<string, string> = {
+        "@nut-tree-fork/nut-js": "4.2.6",
+        "@xterm/addon-fit": "0.10.0",
+        "@xterm/addon-unicode11": "0.8.0",
+        "@xterm/addon-web-links": "0.12.0",
+        "@xterm/addon-webgl": "0.19.0",
+        "@xterm/headless": "5.5.0",
+        "@xterm/xterm": "5.5.0",
+        "adm-zip": "0.5.18",
+        "compression": "1.8.1",
+        "cors": "2.8.6",
+        "dbus-next": "0.10.2",
+        "electron": "35.2.1",
+        "express": "4.22.2",
+        "express-session": "1.19.0",
+        "image-size": "2.0.2",
+        "nedb": "1.8.0",
+        "node-pty": "1.1.0",
+        "nodemailer": "7.0.13",
+        "playwright": "1.61.1",
+        "raw-body": "3.0.2",
+        "sqlite": "5.1.1",
+        "sqlite3": "5.1.7",
+        "typescript": "7.0.2",
+        "ws": "8.21.1",
+        "@types/adm-zip": "0.5.8",
+        "@types/compression": "1.8.1",
+        "@types/electron": "1.6.12",
+        "@types/nedb": "1.8.16",
+        "@types/node": "22.20.1",
+        "@types/ws": "8.18.1",
+        "@webgpu/types": "0.1.71",
+        "del": "8.0.1",
+        "electron-packager": "17.1.2",
+        "gulp": "5.0.1",
+        "gulp-javascript-obfuscator": "1.1.6",
+        "terser": "5.49.0",
+        "through2": "4.0.2",
+        "vinyl-sourcemaps-apply": "0.2.1",
+    };
+
+    /**
+     * `*모드` 프리셋 패키지 모음.
+     * settings packages 등에 `*Basic` 형태로 넣으면 여기 목록으로 펼친다.
+     * - Basic: 로컬+웹서버 구동에 필요한 것들(Electron/tsc + HTTP/세션/WS 등). DB 미포함
+     * - DB: DB 관련 패키지만. 자동 설치 대상 아님(필요한 곳에서 명시적으로 `*DB` 지정)
+     * - Control: Control 서버 기능(원격/터미널/브라우저 자동화 등)
+     * - Dev: 컴파일·타입·소스맵/언어서버
+     * - Build: 난독화·번들·exe 추출
+     */
+    private static readonly sNPMPresets: Record<string, string[]> = {
+        "Basic": [
+            "electron",
+            "image-size",
+            "typescript",
+            "@webgpu/types",
+            "express",
+            "express-session",
+            "compression",
+            "cors",
+            "raw-body",
+            "ws",
+            "nodemailer",
+        ],
+        "DB": [
+            "sqlite",
+            "sqlite3",
+            "nedb",
+        ],
+        "Control": [
+            "playwright",
+            "@nut-tree-fork/nut-js",
+            "dbus-next",
+            "node-pty",
+            "@xterm/headless",
+            "@xterm/xterm",
+            "@xterm/addon-fit",
+            "@xterm/addon-unicode11",
+            "@xterm/addon-web-links",
+            "@xterm/addon-webgl",
+            "adm-zip",
+        ],
+        "Dev": [
+            "typescript",
+            "@types/node",
+            "@types/ws",
+            "@types/electron",
+            "@types/adm-zip",
+            "@types/compression",
+            "@types/nedb",
+        ],
+        "Build": [
+            "gulp",
+            "gulp-javascript-obfuscator",
+            "terser",
+            "through2",
+            "del",
+            "electron-packager",
+            "vinyl-sourcemaps-apply",
+        ],
+    };
+
+    /** npm 스펙(`name`, `name@version`, `@scope/name@ver`)에서 패키지명만 추출 */
+    private static GetNPMPackageName(_spec: string): string {
+        const s = _spec.trim();
+        if (s.startsWith("@")) {
+            const i = s.indexOf("@", 1);
+            return i === -1 ? s : s.slice(0, i);
+        }
+        const i = s.indexOf("@");
+        return i === -1 ? s : s.slice(0, i);
+    }
+
+    /** `*Local` 등 프리셋 키 조회 (대소문자 무시). 없으면 null */
+    private static GetNPMPreset(_token: string): string[] | null {
+        if (!_token.startsWith("*")) return null;
+        const mode = _token.slice(1).trim();
+        if (mode === "") return null;
+        const key = Object.keys(CCMDMgr.sNPMPresets).find(k => k.toLowerCase() === mode.toLowerCase());
+        return key != null ? CCMDMgr.sNPMPresets[key] : null;
+    }
+
+    /**
+     * 입력 목록을 펼친다.
+     * - `*Local` 등 `*` 접두 모드는 프리셋 패키지 배열로 치환
+     * - 일반 문자열은 그대로 유지
+     * - 패키지명 기준 중복 제거 (먼저 나온 스펙 유지)
+     */
+    private static ExpandNPMPackages(_packages: string[]): string[] {
+        const expanded: string[] = [];
+        for (const raw of _packages) {
+            const spec = (raw ?? "").trim();
+            if (spec === "") continue;
+
+            if (spec.startsWith("*")) {
+                const preset = CCMDMgr.GetNPMPreset(spec);
+                if (preset == null) {
+                    console.warn(`[NPMInstall] unknown preset: ${spec}`);
+                    continue;
+                }
+                console.log(`[NPMInstall] preset ${spec} -> ${preset.join(", ")}`);
+                expanded.push(...preset);
+                continue;
+            }
+            expanded.push(spec);
+        }
+
+        // 패키지명 기준 중복 제거 (Local+Dev 등 모드 겹침 대비)
+        const seen = new Set<string>();
+        const unique: string[] = [];
+        for (const spec of expanded) {
+            const name = CCMDMgr.GetNPMPackageName(spec);
+            if (name === "" || seen.has(name)) continue;
+            seen.add(name);
+            unique.push(spec);
+        }
+        return unique;
+    }
+
+    /**
+     * package.json의 dependencies / devDependencies를 비우고 lock 파일을 삭제한다.
+     * 이후 NPMInstall로 필요한 패키지만 다시 쌓기 위한 선행 초기화.
+     *
+     * lock 삭제 이유:
+     * - package-lock.json에 옛 dependency 트리가 남으면, package.json을 비워도
+     *   다음 npm install이 잠긴 해석/버전을 끌어와 초기화 의도와 어긋난다.
+     * - yarn.lock / pnpm-lock.yaml 이 있으면 함께 제거한다.
+     *
+     * node_modules는 삭제하지 않는다(매 기동 전체 재설치 비용). 필요 시 수동 삭제.
+     * @param _packageJsonPath 생략 시 process.cwd()/package.json
+     */
+    static NPMPackageInit(_packageJsonPath?: string): void {
+        const pkgPath = _packageJsonPath
+            ? path.resolve(_packageJsonPath)
+            : path.join(process.cwd(), "package.json");
+
+        if (!fs.existsSync(pkgPath)) {
+            console.warn(`[NPMPackageInit] package.json 없음: ${pkgPath}`);
+            return;
+        }
+
+        let pkg: any;
+        try {
+            pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+        } catch (e) {
+            console.error(`[NPMPackageInit] package.json 파싱 실패: ${pkgPath}`, e);
+            return;
+        }
+
+        const depCount = pkg.dependencies ? Object.keys(pkg.dependencies).length : 0;
+        const devCount = pkg.devDependencies ? Object.keys(pkg.devDependencies).length : 0;
+        pkg.dependencies = {};
+        pkg.devDependencies = {};
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+        console.log(`[NPMPackageInit] dependencies/devDependencies 초기화 (dep ${depCount} → 0, dev ${devCount} → 0)`);
+
+        const rootDir = path.dirname(pkgPath);
+        const lockNames = ["package-lock.json", "yarn.lock", "pnpm-lock.yaml"];
+        for (const name of lockNames) {
+            const lockPath = path.join(rootDir, name);
+            if (fs.existsSync(lockPath)) {
+                fs.unlinkSync(lockPath);
+                console.log(`[NPMPackageInit] lock 삭제: ${name}`);
+            }
+        }
+    }
+
+    /**
+     * 패키지 목록을 현재 OS에 맞게 걸러 npm install 한다.
+     * - 빈 배열이면 아무 것도 하지 않는다.
+     * - `*Local` / `*WebServer` / `*Control` / `*Dev` / `*Build` 는 프리셋으로 펼친다.
+     * - 모드·직접 지정 간 중복 패키지는 제외한다.
+     * - `dbus-next` 등 OS 전용 패키지는 해당 platform이 아니면 제외한다.
+     */
+    static async NPMInstall(_packages: string[]): Promise<void> {
+        if (_packages == null || _packages.length === 0) return;
+
+        const platform = process.platform;
+        const expanded = CCMDMgr.ExpandNPMPackages(_packages);
+        const installList: string[] = [];
+        const skipped: string[] = [];
+
+        for (const spec of expanded) {
+            const name = CCMDMgr.GetNPMPackageName(spec);
+            const allowed = CCMDMgr.sNPMPlatformOnly[name];
+            if (allowed != null && !allowed.includes(platform)) {
+                skipped.push(spec);
+                continue;
+            }
+
+            const pinned = CCMDMgr.sNPMPinnedVersion[name];
+            if (pinned != null) {
+                const pinnedSpec = `${name}@${pinned}`;
+                if (pinnedSpec !== spec) {
+                    console.log(`[NPMInstall] pin ${name} -> ${pinned} (요청: ${spec})`);
+                }
+                installList.push(pinnedSpec);
+                continue;
+            }
+            installList.push(spec);
+        }
+
+        if (skipped.length > 0) {
+            console.log(`[NPMInstall] skip (not for ${platform}): ${skipped.join(", ")}`);
+        }
+        if (installList.length === 0) {
+            console.log("[NPMInstall] nothing to install");
+            return;
+        }
+
+        // 공백/특수문자가 있는 스펙만 따옴표 (Windows npx/cmd 중첩 따옴표 이슈 최소화)
+        const args = installList.map(p => /\s/.test(p) ? `"${p}"` : p).join(" ");
+        console.log(`[NPMInstall] npm install ${args}`);
+        // RunCMD(stdio:'inherit')를 쓰지 않는다 — 부모 콘솔 핸들을 자식에게 그대로 넘기면
+        // 그 자식이 끝난 뒤 부모(Electron 메인)의 콘솔 출력이 통째로 죽는 문제가 있다
+        // (write는 에러 없이 성공하는데 화면엔 아무것도 안 나옴). 파이프로 받아서 부모가
+        // 직접 다시 찍으면 자식이 부모 콘솔을 만질 일이 없어 구조적으로 깨지지 않는다.
+        await CCMDMgr.RunCMDPiped(`npm install ${args}`);
+    }
+
+    /**
+     * 자식 출력을 파이프로 받아 부모가 콘솔에 다시 찍는다(자식에게 콘솔 핸들을 넘기지 않는다).
+     * 대화형 입력이 필요 없는 명령 전용 — stdin이 연결되지 않는다.
+     */
+    static async RunCMDPiped(_cmd: string): Promise<number | null> {
+        const platform = os.platform();
+        const env = { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' };
+        const child = (platform === 'win32'
+            ? await CUtilSystem.Spawn('cmd', ['/c', `chcp 65001 >nul && ${_cmd}`], 'pipe', '', env)
+            : await CUtilSystem.Spawn('bash', ['-c', _cmd], 'pipe', '', env))!;
+
+        // 줄 단위로 모아 찍는다 — 청크 경계에서 멀티바이트(한글)가 잘려 깨지는 걸 막는다.
+        const pump = (_stream: any) => {
+            if (_stream == null) return;
+            let rest = '';
+            _stream.setEncoding('utf8');
+            _stream.on('data', (_chunk: string) => {
+                const lines = (rest + _chunk).split(/\r?\n/);
+                rest = lines.pop() ?? '';
+                for (const line of lines) console.log(line);
+            });
+            _stream.on('end', () => { if (rest !== '') console.log(rest); });
+        };
+        pump(child.stdout);
+        pump(child.stderr);
+
+        return new Promise<number | null>((resolve, reject) => {
+            // 'exit'가 아니라 'close'를 쓴다 — 'exit'는 stdout/stderr에 남은 데이터를 다 읽기 전에
+            // 발생할 수 있어 출력 끝부분이 잘린다. 'close'는 파이프가 모두 닫힌 뒤에 온다.
+            child.on('close', (code) => {
+                console.log(`명령어 종료됨. 종료 코드: ${code}`);
+                resolve(null);
+            });
+            child.on('error', (err) => {
+                console.error("RunCMDPiped 에러:", err);
+                reject(err);
+            });
+        });
+    }
+
     static async Delay(ms: number): Promise<void> {
         await new Promise<void>(res => setTimeout(res, ms)); // ✅ 무조건 대기
     }

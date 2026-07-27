@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
 import { GetAppJSON, GetRootPaths, GetLoadedSettingsFileName } from '../../desktop/MainFunc.js';
 import { CUtilSystem } from '../system/CUtilSystem.js';
+import { CStorage } from '../system/CStorage.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as nodePath from 'path';
@@ -101,8 +102,8 @@ function isInsideRoot(rootPath: string, targetPath: string): boolean {
 }
 
 async function isInsideAnyRoot(targetPath: string): Promise<boolean> {
-    const roots = GetRootPaths(await GetAppJSON());
-    return roots.some(r => isInsideRoot(r, targetPath));
+    const roots = await getRoots();
+    return roots.some(r => isInsideRoot(r.path, targetPath));
 }
 
 // RootUrl은 RootPath에 대응하는 파생값(roots 배열 인덱스로 결정)이라 클라이언트가 보낸 값을
@@ -110,7 +111,15 @@ async function isInsideAnyRoot(targetPath: string): Promise<boolean> {
 async function getRoots(): Promise<{ path: string, url: string, name: string }[]> {
     const _cfg = await GetAppJSON();
     const serverPath = new URL(_cfg.url).pathname.replace(/\/+$/, '') || '/Artgine';
-    return GetRootPaths(_cfg).map((p, i) => ({ path: resolveAbs(p), url: serverPath + '/Root' + i, name: p }));
+    const roots = GetRootPaths(_cfg).map((p, i) => ({ path: resolveAbs(p), url: serverPath + '/Root' + i, name: p }));
+    // Artgine 작업경로(process.cwd())는 rootPath 등록 여부와 무관하게 CServerMain이 항상
+    // express.static으로 서빙 중이라, 클라이언트가 './' 같은 상대경로로 추측할 필요 없이
+    // 여기서 항상 절대경로 형태로 목록 끝에 실어 보낸다. 이미 같은 폴더가 등록돼 있으면 중복 추가 안 함.
+    const workPath = resolveAbs('./');
+    if (!roots.some(r => r.path === workPath)) {
+        roots.push({ path: workPath, url: serverPath, name: './' });
+    }
+    return roots;
 }
 
 async function validateRoot(rootParam: string | undefined): Promise<{ path: string, url: string } | null> {
@@ -236,6 +245,15 @@ export class CFileServer extends CAuthServer
     }
 
     async onList(_json: CJSON, _req: Request, _res: Response): Promise<string> {
+        // Env.json(CStorage) fileListPublic: true면 기존처럼 미인증 목록 허용(미디어 필터).
+        // 없거나 false(기본)면 인증 필수.
+        const fileListPublic = CStorage.Get("fileListPublic", "false") === "true";
+        const authed = this.IsAuth(_json, _req);
+        if (!fileListPublic && !authed) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+
         let path = _json.GetStr("path") || "/";
         const currentRoot = await validateRoot(_json.GetStr("RootPath"));
         if (currentRoot === null) {
@@ -254,7 +272,7 @@ export class CFileServer extends CAuthServer
 
         let list = await CFile.FolderList(targetPath);
 
-        if (!this.IsAuth(_json, _req)) {
+        if (!authed) {
             const mediaExts = ["png","jpg","jpeg","bmp","mp3","ogg","mp4","mov","avi"];
             list = list.filter((item: { file: boolean; name: string; ext: string }) => !item.file || mediaExts.includes(item.ext));
         }

@@ -2,6 +2,8 @@ import "../../artgine/artgine.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { MountDownloadTab } from "./Downloads/DownloadTab.js";
 CClass.Push(MountDownloadTab);
+import { MountMessengerTab } from "./Messenger/MessengerTab.js";
+CClass.Push(MountMessengerTab);
 import { CPreferences } from "../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
@@ -18,8 +20,11 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mrsjnkms_2";
+gPF.mVersion = "ms2wpghp_6";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
+import { CPlugin } from "../../artgine/util/CPlugin.js";
+CPlugin.PushPath('ControlDownload', '../../plugin/ControlDownload/');
+import "../../plugin/ControlDownload/ControlDownload.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([], "");
@@ -30,41 +35,62 @@ import { CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
-import { getAuthToken, setAuthToken } from "../../artgine/server/CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken } from "../../artgine/server/CAuthToken.js";
 import { CIframeMsg } from "../../artgine/server/html/CIframeMsg.js";
 import { CModalStackMsg } from "../../artgine/util/CModalUtil.js";
 import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
 import { CLan } from "../../artgine/basic/CLan.js";
+import { CStorage } from "../../artgine/system/CStorage.js";
+import { CEvent } from "../../artgine/basic/CEvent.js";
+import { marked } from "../../artgine/external/esnext/md/marked.esm.js";
+marked.setOptions({ gfm: true, breaks: true });
 const appSidebar = document.getElementById('app-sidebar');
 const sidebarToggleBtnWrap = document.getElementById('sidebarToggleBtnWrap');
 const mainContainer = document.querySelector('.container');
+const appSidebarRight = document.getElementById('app-sidebar-right');
+const sidebarToggleBtnWrapRight = document.getElementById('sidebarToggleBtnWrapRight');
 const SIDEBAR_WIDTH = 310;
+const SIDEBAR_WIDTH_RIGHT = 300;
+const CONTENT_MAX = 1200;
+const CONTENT_MIN_FOR_LEFT = 720;
+const SIDEBAR_BOTH_MIN = CONTENT_MAX + 325 + 325;
+const SIDEBAR_LEFT_MIN = SIDEBAR_WIDTH + CONTENT_MIN_FOR_LEFT;
 function updateSidebarMode() {
-    if (!appSidebar || !mainContainer)
+    if (!mainContainer)
         return;
-    const margin = mainContainer.getBoundingClientRect().left;
-    const docked = margin >= SIDEBAR_WIDTH;
-    appSidebar.classList.toggle('sidebar-docked', docked);
-    if (sidebarToggleBtnWrap)
-        sidebarToggleBtnWrap.style.display = docked ? 'none' : '';
+    if (document.body.classList.contains('tmux-fullscreen'))
+        return;
+    const w = window.innerWidth;
+    let leftDock = false;
+    let rightDock = false;
+    let layout = 'none';
+    if (w >= SIDEBAR_BOTH_MIN) {
+        leftDock = true;
+        rightDock = true;
+        layout = 'both';
+    }
+    else if (w >= SIDEBAR_LEFT_MIN) {
+        leftDock = true;
+        rightDock = false;
+        layout = 'left';
+    }
+    document.body.classList.toggle('sidebar-layout-both', layout === 'both');
+    document.body.classList.toggle('sidebar-layout-left', layout === 'left');
+    document.body.classList.toggle('sidebar-layout-none', layout === 'none');
+    if (appSidebar) {
+        appSidebar.classList.toggle('sidebar-docked', leftDock);
+        if (sidebarToggleBtnWrap)
+            sidebarToggleBtnWrap.style.display = leftDock ? 'none' : '';
+    }
+    if (appSidebarRight) {
+        appSidebarRight.classList.toggle('sidebar-docked', rightDock);
+        if (sidebarToggleBtnWrapRight)
+            sidebarToggleBtnWrapRight.style.display = rightDock ? 'none' : '';
+    }
 }
 updateSidebarMode();
 window.addEventListener('resize', updateSidebarMode);
-const appSidebarRight = document.getElementById('app-sidebar-right');
-const sidebarToggleBtnWrapRight = document.getElementById('sidebarToggleBtnWrapRight');
-const SIDEBAR_WIDTH_RIGHT = 300;
-function updateSidebarModeRight() {
-    if (!appSidebarRight || !mainContainer)
-        return;
-    const marginRight = window.innerWidth - mainContainer.getBoundingClientRect().right;
-    const docked = marginRight >= SIDEBAR_WIDTH_RIGHT;
-    appSidebarRight.classList.toggle('sidebar-docked', docked);
-    if (sidebarToggleBtnWrapRight)
-        sidebarToggleBtnWrapRight.style.display = docked ? 'none' : '';
-}
-updateSidebarModeRight();
-window.addEventListener('resize', updateSidebarModeRight);
 const THEME_STORAGE_KEY = 'artgine-control-theme';
 const themeSelect = document.getElementById('theme-select');
 function applyTheme(theme) {
@@ -82,10 +108,11 @@ function registerControlLan() {
             "ctrl.help": "도움말",
             "ctrl.kb.global": "전역 단축키",
             "ctrl.kb.f1": "<kbd>F1</kbd> 우측 사이드바 File ↔ Info 토글 (작은 화면이면 사이드바 열림)",
-            "ctrl.kb.f2": "<kbd>F2</kbd> 파일 검색 열기",
+            "ctrl.kb.f2": "<kbd>F2</kbd> 파일 검색(등록 경로 전부 체크 · 체크박스 토글)",
             "ctrl.kb.f3": "<kbd>F3</kbd> 새 터미널 열기",
             "ctrl.kb.f4": "<kbd>F4</kbd> / <kbd>Ctrl</kbd> 빠르게 두 번 사이드바 포커스/토글",
-            "ctrl.kb.f6": "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)",
+            "ctrl.kb.f6": "<kbd>F6</kbd> Terminal: SUPER(자동 승인) 토글 + 입력창 표시/포커스. Terminal 밖에서는 F4와 동일",
+            "ctrl.kb.f7": "<kbd>F7</kbd> Terminal: Log/Terminal 대화 패널 토글",
             "ctrl.kb.updown": "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)",
             "ctrl.failed": "실패",
             "ctrl.failedToLoad": "불러오기 실패",
@@ -131,10 +158,14 @@ function registerControlLan() {
             "ctrl.msg.noSubAgentsHint": "등록된 서브 에이전트가 없습니다. 먼저 우측 사이드바 → Sub Agent에서 등록하세요.",
             "ctrl.msg.modelsToJson": "{0}: {1}개 모델 → opencode.json",
             "ctrl.msg.ocNoProviders": "등록된 OpenCode provider가 없습니다. 먼저 \"Add OpenCode Model\"을 사용하세요.",
-            "ctrl.msg.scanningPath": "검색 중: {0}",
+            "ctrl.local": "Local",
+            "ctrl.msg.searchScopeFailed": "이 위치는 검색할 수 없습니다(서버에 등록된 워킹 폴더가 아닐 수 있습니다).",
+            "ctrl.msg.scanningPath": "검색 중: {0}:{1}",
             "ctrl.msg.cachedScanning": "캐시: {0}건... 검색 중",
             "ctrl.msg.stoppedResults": "중지됨. ({0}건)",
             "ctrl.msg.nResults": "{0}건{1}",
+            "ctrl.msg.noScopeSelected": "검색할 패스를 하나 이상 선택하세요.",
+            "ctrl.msg.noSearchScope": "검색 가능한 경로가 없습니다.",
             "ctrl.dl.enterUrl": "URL을 입력하세요",
             "ctrl.dl.failedInfo": "정보 조회 실패",
             "ctrl.dl.failedStart": "시작 실패",
@@ -223,8 +254,16 @@ async function loadAiProviderStatus() {
             const usageParts = [];
             const showUsage = p.authenticated && p.usage;
             if (showUsage) {
-                usageParts.push(p.usage.fiveHour >= 0 ? `5h ${pct(p.usage.fiveHour)}%` : `5h ?`);
-                usageParts.push(p.usage.weekly >= 0 ? `Weekly ${pct(p.usage.weekly)}%` : `Weekly ?`);
+                const fh = p.usage.fiveHour;
+                const wk = p.usage.weekly;
+                if (fh >= 0)
+                    usageParts.push(`5h ${pct(fh)}%`);
+                if (wk >= 0)
+                    usageParts.push(`Weekly ${pct(wk)}%`);
+                if (fh < 0 && wk < 0) {
+                    usageParts.push(`5h ?`);
+                    usageParts.push(`Weekly ?`);
+                }
             }
             const usageHtml = usageParts.length
                 ? `<div class="text-secondary" style="font-size:0.75em;">${usageParts.join(' · ')} remaining</div>`
@@ -258,14 +297,14 @@ setInterval(() => loadAiProviderStatus(), 5 * 60 * 1000);
 document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
 document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
 document.getElementById('aiOpencodeStatusBtn')?.addEventListener('click', () => showOpencodeStatusModal());
-document.getElementById('ctrlRootAddFolderBtn')?.addEventListener('click', () => showWorkFolderModal());
+document.getElementById('agentAddFolderBtn')?.addEventListener('click', () => showWorkFolderModal());
 document.getElementById('sqliteViewerBtn')?.addEventListener('click', () => {
-    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
-    new CORMViewer(undefined, 'sqlite', 'db/artgine.sqlite', currentRemoteBaseUrl, token).Open(CModal.ePos.Center);
+    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    new CORMViewer(undefined, 'sqlite', 'db/artgine.sqlite', currentWebRootUrl, token).Open(CModal.ePos.Center);
 });
 document.getElementById('dbViewerBtn')?.addEventListener('click', () => {
-    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
-    new CORMViewer(undefined, undefined, undefined, currentRemoteBaseUrl, token).Open(CModal.ePos.Center);
+    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    new CORMViewer(undefined, undefined, undefined, currentWebRootUrl, token).Open(CModal.ePos.Center);
 });
 document.getElementById('pruneConvBtn')?.addEventListener('click', () => {
     const input = document.getElementById('pruneConvMonths');
@@ -731,7 +770,19 @@ function showPooledFrame(ctx, key, src) {
     ctx.setActiveKey(key);
     ctx.updatePlaceholder();
     ctx.onActivate?.(key, prevKey);
+    syncSidebarTabToFrame(key);
+    renderSessionSidebar();
     return f;
+}
+function syncSidebarTabToFrame(key) {
+    const target = /^(chat:|term:|term-new:)/.test(key) ? 'agent'
+        : /^(browser:|editor:)/.test(key) ? 'other'
+            : null;
+    if (target && sbSubTab !== target) {
+        sbSubTab = target;
+        localStorage.setItem(SB_TAB_LS, target);
+        applySidebarSubTab();
+    }
 }
 const rdpFrameCtx = {
     pool: rdpIframePool,
@@ -748,10 +799,96 @@ const rdpFrameCtx = {
 function showRdpFrame(key, src) {
     return showPooledFrame(rdpFrameCtx, key, src);
 }
+function activatePaneUnlessMultiplexer(_tabId, _label) {
+    if (CDOM.ID('tmux-tab').classList.contains('active'))
+        return;
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID(_tabId)).show();
+}
 function rdpActivatePane() {
-    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('rdp-panel-tab')).show();
+    activatePaneUnlessMultiplexer('rdp-panel-tab', 'RDP');
 }
 let rdpRemotes = [];
+const rdpStatus = new Map();
+const RDP_PROBE_TIMEOUT_MS = 5000;
+const RDP_STATUS_VIEW = {
+    checking: { cls: 'text-secondary', title: L('ctrl.msg.rdpChecking', 'Checking...') },
+    online: { cls: 'text-success', title: L('ctrl.msg.rdpConnected', 'Connected') },
+    auth: { cls: 'text-success', title: L('ctrl.msg.rdpNeedsAuth', 'Authentication required') },
+    offline: { cls: 'text-danger', title: L('ctrl.msg.rdpOffline', 'Not connected') },
+};
+async function rdpLoadRemotes() {
+    if (!getAuthToken(CPath.WebRootUrl()))
+        return;
+    let list = [];
+    try {
+        const j = await CFecth.Exe(CPath.WebRootUrl() + "RemoteDesktop/remotes", {}, "json");
+        list = j?.list ?? [];
+    }
+    catch {
+        return;
+    }
+    const known = new Set(rdpRemotes.map(r => r.remoteId));
+    for (const r of list) {
+        if (!r?.remoteId || !r?.entryUrl || known.has(r.remoteId))
+            continue;
+        rdpRemotes.push({ remoteId: r.remoteId, entryUrl: r.entryUrl, saved: true, pwHash: r.pwHash });
+    }
+    if (!list.length)
+        return;
+    rdpRenderList();
+    rdpRefreshAllStatus();
+}
+async function rdpSaveRemotes() {
+    const list = rdpRemotes.filter(r => r.saved).map(r => ({ remoteId: r.remoteId, entryUrl: r.entryUrl, pwHash: r.pwHash }));
+    try {
+        await CFecth.Exe(CPath.WebRootUrl() + "RemoteDesktop/remotes-set", { list }, "json");
+    }
+    catch {
+        CAlert.Warning(L('ctrl.msg.rdpSaveFailed', 'Failed to save the remote list.'));
+    }
+}
+async function rdpProbeRemote(entryUrl) {
+    let webRootUrl;
+    try {
+        webRootUrl = rdpRemoteWebRootUrl(entryUrl);
+    }
+    catch {
+        return 'offline';
+    }
+    const token = getAuthToken(webRootUrl);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), RDP_PROBE_TIMEOUT_MS);
+    try {
+        const res = await fetch(webRootUrl + 'auth/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+            body: JSON.stringify(token ? { token } : {}),
+            signal: ctrl.signal,
+        });
+        if (!res.ok)
+            return 'auth';
+        const j = await res.json().catch(() => null);
+        return j?.authed ? 'online' : 'auth';
+    }
+    catch {
+        return 'offline';
+    }
+    finally {
+        clearTimeout(timer);
+    }
+}
+let rdpStatusSeq = 0;
+async function rdpRefreshAllStatus() {
+    const seq = ++rdpStatusSeq;
+    const targets = rdpRemotes.slice();
+    if (!targets.length)
+        return;
+    const results = await Promise.all(targets.map(r => rdpProbeRemote(r.entryUrl)));
+    if (seq !== rdpStatusSeq)
+        return;
+    targets.forEach((r, i) => rdpStatus.set(r.remoteId, results[i]));
+    rdpRenderList();
+}
 let selectedRdpKey = 'rdp:local';
 function rdpRenderList() {
     for (const el of Array.from(rdpSidebarList.children))
@@ -769,67 +906,78 @@ function rdpRenderList() {
     });
     rdpSidebarList.appendChild(localItem);
     rdpRemotes.forEach((r) => {
-        const key = `rdp:remote:${r.id}`;
+        const key = `rdp:remote:${r.remoteId}`;
+        const st = rdpStatus.get(r.remoteId) ?? 'checking';
+        const stv = RDP_STATUS_VIEW[st];
         const item = createSessionItem({
             activeClass: 'ai-session-item-active',
             isActive: selectedRdpKey === key,
-            dataAttr: { name: 'id', value: r.id },
-            leftHtml: `<i class="bi bi-hdd-network"></i>`,
-            bodyHtml: `<span class="flex-grow-1 text-truncate small">${aiEscapeHtml(r.url)}</span>`,
+            dataAttr: { name: 'id', value: r.remoteId },
+            leftHtml: `<span class="${stv.cls} small flex-shrink-0" title="${aiEscapeHtml(stv.title)}">●</span>`,
+            bodyHtml: `<span class="flex-grow-1 text-truncate small${st === 'offline' ? ' text-secondary' : ''}"`
+                + (r.saved ? ` title="${aiEscapeHtml(L('ctrl.msg.rdpSaved', 'Saved'))}"` : '')
+                + `>${aiEscapeHtml(r.entryUrl)}</span>`,
             deleteAct: 'delete',
             deleteLabel: '🗑️ Delete',
-            onClick: () => rdpOpenRemote(r.id),
-            onShare: () => rdpShowShareLink(r.url),
+            onClick: () => rdpClickRemote(r.remoteId),
+            onShare: () => rdpShowShareLink(r.entryUrl),
             onDelete: () => {
-                rdpRemotes = rdpRemotes.filter(x => x.id !== r.id);
+                const wasSaved = !!r.saved;
+                rdpRemotes = rdpRemotes.filter(x => x.remoteId !== r.remoteId);
+                rdpStatus.delete(r.remoteId);
                 if (activeRdpFrameKey === key)
                     activeRdpFrameKey = null;
                 if (selectedRdpKey === key)
                     selectedRdpKey = 'rdp:local';
                 rdpRenderList();
+                if (wasSaved)
+                    rdpSaveRemotes();
             },
-            popup: { url: () => `${rdpRemoteWebRootUrl(r.url)}artgine/server/html/RemoteDesktop.html`, title: r.url, winName: `rdp_${r.id}` },
+            popup: { url: () => `${rdpRemoteWebRootUrl(r.entryUrl)}artgine/server/html/RemoteDesktop.html`, title: r.entryUrl, winName: `rdp_${r.remoteId}` },
         });
         rdpSidebarList.appendChild(item);
     });
     const divider = document.createElement('hr');
     divider.className = 'my-2';
     rdpSidebarList.appendChild(divider);
+    refreshAllRemoteRoots();
 }
-let currentRemoteBaseUrl = '';
-const ctrlRootSel = CDOM.ID("ctrl-root-sel");
+let currentWebRootUrl = '';
 let ctrlRootOpts = [];
 let ctrlRootReqSeq = 0;
 let ctrlSelectedRootPath = '';
 let ctrlInitRootPathConsumed = false;
 const ctrlNormPath = (s) => s.replace(/\\/g, '/').replace(/\/+$/, '');
 function ctrlRenderRootOpts(roots) {
-    ctrlRootOpts = [...roots, { path: "./", name: "Artgine (WorkingPath)" }];
-    ctrlRootSel.innerHTML = ctrlRootOpts.map((r, i) => `<option value="${i}">${aiEscapeHtml(r.name)}</option>`).join('');
-    let defaultIdx = ctrlRootOpts.length - 1;
+    ctrlRootOpts = roots.map(r => r.name === './' ? { ...r, name: 'Artgine (WorkingPath)' } : r);
+    let defaultIdx = ctrlRootOpts.findIndex(r => r.name === 'Artgine (WorkingPath)');
+    if (defaultIdx < 0)
+        defaultIdx = ctrlRootOpts.length - 1;
     if (!ctrlInitRootPathConsumed && ctrlInitRootPath) {
         ctrlInitRootPathConsumed = true;
         const matchIdx = ctrlRootOpts.findIndex(r => ctrlNormPath(r.path) === ctrlNormPath(ctrlInitRootPath));
         if (matchIdx >= 0)
             defaultIdx = matchIdx;
     }
-    ctrlRootSel.selectedIndex = defaultIdx;
     ctrlSelectedRootPath = ctrlRootOpts[defaultIdx]?.path ?? '';
+    renderSessionSidebar();
 }
 async function ctrlRefreshRootSelect() {
-    const baseUrl = currentRemoteBaseUrl;
+    const baseUrl = currentWebRootUrl;
     const seq = ++ctrlRootReqSeq;
-    ctrlRootSel.innerHTML = '<option>Loading...</option>';
-    if (baseUrl && !(await rdpCheckRemoteAuth(baseUrl))) {
-        if (seq !== ctrlRootReqSeq)
-            return;
-        ctrlRootSel.innerHTML = `<option>${L('ctrl.msg.signInOption', 'Sign in required')}</option>`;
-        rdpPromptRemoteAuth(baseUrl, () => {
-            if (currentRemoteBaseUrl !== baseUrl || seq !== ctrlRootReqSeq)
+    if (baseUrl) {
+        const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === baseUrl);
+        const authed = remote?.pwHash ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
+        if (!authed) {
+            if (seq !== ctrlRootReqSeq)
                 return;
-            ctrlRefreshRootSelect();
-        });
-        return;
+            rdpPromptRemoteAuth(baseUrl, () => {
+                if (currentWebRootUrl !== baseUrl || seq !== ctrlRootReqSeq)
+                    return;
+                ctrlRefreshRootSelect();
+            });
+            return;
+        }
     }
     try {
         const token = baseUrl ? getAuthToken(baseUrl) : '';
@@ -839,48 +987,54 @@ async function ctrlRefreshRootSelect() {
         ctrlRenderRootOpts(data.roots ?? []);
         ctrlSideFileGoTo('/');
     }
-    catch (e) {
-        if (seq !== ctrlRootReqSeq)
-            return;
-        ctrlRootSel.innerHTML = `<option>${L('ctrl.failedToLoad', 'Failed to load')}</option>`;
+    catch {
     }
 }
-ctrlRootSel.addEventListener('change', () => {
-    const idx = parseInt(ctrlRootSel.value);
-    const r = ctrlRootOpts[idx];
-    if (!r)
-        return;
-    ctrlSelectedRootPath = r.path;
-    ctrlSideFileGoTo('/');
-    if (!fileIframe?.contentWindow)
-        return;
-    const selKey = idx === ctrlRootOpts.length - 1 ? 'workingpath' : r.path;
-    CIframeMsg.Send(fileIframe.contentWindow, 'set-file-root', { path: r.path, url: r.url ?? '', selKey });
-});
 function rdpOpenLocal() {
     rdpInited = true;
     rdpActivatePane();
     showRdpFrame('rdp:local', `${CPath.WebRootArtgineUrl()}artgine/server/html/RemoteDesktop.html`);
     selectedRdpKey = 'rdp:local';
     rdpRenderList();
-    currentRemoteBaseUrl = '';
+    currentWebRootUrl = '';
     if (fileIframe?.contentWindow)
         CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: '' });
     ctrlRefreshRootSelect();
+    logOnServerChanged();
 }
-function rdpOpenRemote(id) {
-    const remote = rdpRemotes.find(r => r.id === id);
+async function rdpClickRemote(remoteId) {
+    const remote = rdpRemotes.find(r => r.remoteId === remoteId);
+    if (!remote)
+        return;
+    if (rdpStatus.get(remoteId) === 'offline') {
+        rdpStatus.set(remoteId, 'checking');
+        rdpRenderList();
+        const st = await rdpProbeRemote(remote.entryUrl);
+        if (!rdpRemotes.some(x => x.remoteId === remoteId))
+            return;
+        rdpStatus.set(remoteId, st);
+        if (st === 'offline') {
+            rdpRenderList();
+            CAlert.Warning(LF('ctrl.msg.rdpStillOffline', 'Cannot reach {0}.', remote.entryUrl));
+            return;
+        }
+    }
+    rdpOpenRemote(remoteId);
+}
+function rdpOpenRemote(remoteId) {
+    const remote = rdpRemotes.find(r => r.remoteId === remoteId);
     if (!remote)
         return;
     rdpInited = true;
     rdpActivatePane();
-    showRdpFrame(`rdp:remote:${id}`, `${rdpRemoteWebRootUrl(remote.url)}artgine/server/html/RemoteDesktop.html`);
-    selectedRdpKey = `rdp:remote:${id}`;
+    showRdpFrame(`rdp:remote:${remoteId}`, `${rdpRemoteWebRootUrl(remote.entryUrl)}artgine/server/html/RemoteDesktop.html`);
+    selectedRdpKey = `rdp:remote:${remoteId}`;
     rdpRenderList();
-    currentRemoteBaseUrl = rdpRemoteWebRootUrl(remote.url);
+    currentWebRootUrl = rdpRemoteWebRootUrl(remote.entryUrl);
     if (fileIframe?.contentWindow)
-        CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: remote.url });
+        CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: remote.entryUrl });
     ctrlRefreshRootSelect();
+    logOnServerChanged();
 }
 function rdpShowShareLink(remoteUrl) {
     const shareUrl = `${rdpRemoteWebRootUrl(remoteUrl)}artgine/server/html/RemoteDesktop.html`;
@@ -954,9 +1108,18 @@ async function rdpShowLocalAccessLink() {
         setTimeout(() => { copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
     });
 }
-function rdpAddRemote(url) {
-    rdpRemotes.unshift({ id: genUuid(), url });
+function rdpAddRemote(entryUrl, save = false, pwHash) {
+    const remote = { remoteId: genUuid(), entryUrl, saved: save, pwHash };
+    rdpRemotes.unshift(remote);
     rdpRenderList();
+    if (save)
+        rdpSaveRemotes();
+    rdpProbeRemote(entryUrl).then((st) => {
+        if (!rdpRemotes.some(x => x.remoteId === remote.remoteId))
+            return;
+        rdpStatus.set(remote.remoteId, st);
+        rdpRenderList();
+    });
 }
 let rdpInited = false;
 CDOM.ID('rdp-panel-tab').addEventListener('shown.bs.tab', () => {
@@ -966,6 +1129,7 @@ CDOM.ID('rdp-panel-tab').addEventListener('shown.bs.tab', () => {
 });
 CDOM.ID('rdp-panel-tab').addEventListener('hidden.bs.tab', () => updateRdpFrameVisibility());
 rdpRenderList();
+rdpLoadRemotes();
 if (CDOM.ID('rdp-panel').classList.contains('active'))
     queueMicrotask(() => rdpOpenLocal());
 else
@@ -974,28 +1138,80 @@ function openRdpAddModal() {
     const modal = new CModal();
     modal.SetHeader('Add Remote Desktop');
     modal.SetBody(`
-        <div class="d-flex gap-1">
+        <div class="d-flex flex-column gap-1">
             <input id="rdpModalUrlInput" type="text" class="form-control form-control-sm" placeholder="Remote Control.html URL">
-            <button id="rdpModalAddBtn" class="btn btn-outline-primary btn-sm flex-shrink-0"><i class="bi bi-plus-lg"></i> Add</button>
+            <input id="rdpModalPwInput" type="password" class="form-control form-control-sm" placeholder="${L('ctrl.msg.adminPasswordOptional', 'Admin password (optional)')}">
+            <div class="form-check">
+                <input id="rdpModalSaveChk" class="form-check-input" type="checkbox" checked>
+                <label class="form-check-label small" for="rdpModalSaveChk">${L('ctrl.msg.rdpSaveRemote', 'Save this remote (restored on next visit)')}</label>
+            </div>
+            <div id="rdpModalErr" class="small text-danger" style="display:none;"></div>
+            <button id="rdpModalAddBtn" class="btn btn-outline-primary btn-sm align-self-end"><i class="bi bi-plus-lg"></i> Add</button>
         </div>
     `);
     modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetSize(420, 140);
+    modal.SetSize(420, 235);
     modal.Open(CModal.ePos.Center);
     setTimeout(() => {
         const input = document.getElementById('rdpModalUrlInput');
+        const pwInput = document.getElementById('rdpModalPwInput');
+        const errEl = document.getElementById('rdpModalErr');
         const btn = document.getElementById('rdpModalAddBtn');
         input?.focus();
-        const submit = () => {
+        const saveChk = document.getElementById('rdpModalSaveChk');
+        const submit = async () => {
             const url = input?.value.trim();
             if (!url)
                 return;
-            rdpAddRemote(url);
-            modal.Close();
+            const pw = pwInput?.value ?? '';
+            const save = saveChk?.checked ?? false;
+            if (errEl)
+                errEl.style.display = 'none';
+            if (!pw) {
+                rdpAddRemote(url, save);
+                modal.Close();
+                return;
+            }
+            let webRootUrl;
+            try {
+                webRootUrl = rdpRemoteWebRootUrl(url);
+            }
+            catch {
+                if (errEl) {
+                    errEl.textContent = L('ctrl.msg.invalidUrl', 'Invalid URL');
+                    errEl.style.display = 'block';
+                }
+                return;
+            }
+            if (btn)
+                btn.disabled = true;
+            const pwHash = CHash.SHA256('artgine_' + pw);
+            try {
+                const j = await CFecth.Exe(webRootUrl + "auth/login", { password: pwHash }, "json");
+                if (j.ok) {
+                    setAuthToken(webRootUrl, j.token);
+                    rdpAddRemote(url, save, pwHash);
+                    modal.Close();
+                }
+                else if (errEl) {
+                    errEl.textContent = LF('ctrl.msg.wrongPassword', 'Wrong password: {0}', j.msg ?? '');
+                    errEl.style.display = 'block';
+                }
+            }
+            catch {
+                if (errEl) {
+                    errEl.textContent = L('ctrl.msg.serverError', 'Server error');
+                    errEl.style.display = 'block';
+                }
+            }
+            finally {
+                if (btn)
+                    btn.disabled = false;
+            }
         };
         btn?.addEventListener('click', submit);
-        input?.addEventListener('keydown', (e) => { if (e.key === 'Enter')
-            submit(); });
+        [input, pwInput].forEach(el => el?.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            submit(); }));
     }, MODAL_DOM_DELAY);
 }
 CDOM.ID('rdp-add-btn').addEventListener('click', openRdpAddModal);
@@ -1047,75 +1263,152 @@ helpLoadFrame();
 function helpActivatePane() {
     window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('help-panel-tab')).show();
 }
+CDOM.ID('help-open-btn').addEventListener('click', () => helpActivatePane());
 if (ctrlInitRootPath)
     window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
 else
     helpActivatePane();
-CDOM.ID('help-btn').addEventListener('click', () => helpActivatePane());
+function ctrlShowFileTab() {
+    if (appSidebarRight && !appSidebarRight.classList.contains('sidebar-docked')) {
+        window.bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
+    }
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-file-tab')).show();
+}
+function ctrlServerLabel(url) {
+    if (!url)
+        return L('ctrl.local', 'Local');
+    try {
+        return new URL(url, location.href).host;
+    }
+    catch {
+        return url;
+    }
+}
+function ctrlGroupSearchScope(key) {
+    const g = parseGroupKey(key);
+    const ctx = serverCtxOf(g.remoteId);
+    if (!ctx)
+        return null;
+    return {
+        remoteId: g.remoteId,
+        webRootUrl: ctx.apiUrl,
+        rootPath: g.pathText,
+        editorBaseUrl: g.remoteId ? ctx.apiUrl : '',
+        serverLabel: ctrlServerLabel(g.remoteId ? (remoteEntryUrl(g.remoteId) || ctx.apiUrl) : ''),
+    };
+}
 const CTRL_SEARCH_EXCLUDE_DIRS = ['node_modules'];
 const ctrlIsSearchExcluded = (name) => name.startsWith('.') || CTRL_SEARCH_EXCLUDE_DIRS.includes(name);
 const ctrlEncodeUrlPath = (p) => p.split('/').map(encodeURIComponent).join('/');
-let g_ctrlSrchCache = new Map();
-let g_ctrlSrchServerKey = '';
-async function ctrlFileSearch() {
+function ctrlAllSearchScopeItems() {
+    const items = [];
+    const seen = new Set();
+    const add = (key) => {
+        if (seen.has(key))
+            return;
+        seen.add(key);
+        const scope = ctrlGroupSearchScope(key);
+        if (scope)
+            items.push({ key, scope });
+    };
+    for (const r of localRootOpts)
+        add(agentGroupKey(r.path));
+    for (const remote of rdpRemotes) {
+        const roots = remoteRootsCache.get(remote.remoteId);
+        if (!roots)
+            continue;
+        for (const ro of roots)
+            add(`remote:${remote.remoteId}:${agentGroupKey(ro.path)}`);
+    }
+    return items;
+}
+const g_ctrlSrchCache = new Map();
+async function ctrlFileSearch(onlyKey) {
     let searchCancelled = false;
     const uid = Date.now();
+    const scopeItems = ctrlAllSearchScopeItems();
+    const initialChecked = new Set(onlyKey ? [onlyKey] : scopeItems.map(s => s.key));
     const modal = new CModal();
-    modal.SetHeader(L('ctrl.hdr.fileSearch', 'File Search'));
+    modal.SetHeader(`<i class="bi bi-search me-1"></i>${L('ctrl.search', 'Search')}`);
+    const scopeRows = scopeItems.map(s => `
+        <label class="d-flex align-items-center gap-2 py-1" style="cursor:pointer;">
+            <input type="checkbox" class="form-check-input m-0 ctrl-srch-scope-cb" data-key="${aiEscapeHtml(s.key)}" ${initialChecked.has(s.key) ? 'checked' : ''}>
+            <span style="font-size:12px;">${aiEscapeHtml(s.scope.serverLabel)}:${aiEscapeHtml(s.scope.rootPath || './')}</span>
+        </label>`).join('');
     modal.SetBody(`
+        <div id="ctrlSrchScopes_${uid}" class="d-flex flex-column mb-2" style="max-height:140px;overflow-y:auto;border:1px solid var(--bs-border-color,#444);border-radius:4px;padding:0 8px;">
+            ${scopeRows || `<span class="text-secondary small py-1">${L('ctrl.msg.noSearchScope', 'No searchable path.')}</span>`}
+        </div>
         <div class="d-flex gap-2 mb-2">
             <input type="text" id="ctrlSrchInput_${uid}" class="form-control form-control-sm" placeholder="${L('ctrl.ph.filename', 'Filename (partial match)...')}">
             <button id="ctrlSrchBtn_${uid}" class="btn btn-sm btn-primary">${L('ctrl.search', 'Search')}</button>
             <button id="ctrlSrchStop_${uid}" class="btn btn-sm btn-outline-danger" style="display:none;">${L('ctrl.stop', 'Stop')}</button>
         </div>
         <div id="ctrlSrchStatus_${uid}" class="small text-secondary mb-1" style="min-height:1.2em;"></div>
-        <div id="ctrlSrchResults_${uid}" class="list-group" style="max-height:360px;overflow-y:auto;font-size:13px;"></div>
+        <div id="ctrlSrchResults_${uid}" class="list-group" style="max-height:320px;overflow-y:auto;font-size:13px;"></div>
     `);
     modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetSize(520, 520);
+    modal.SetSize(520, 620);
     modal.Open(CModal.ePos.Center);
     await new Promise(r => setTimeout(r, MODAL_DOM_DELAY));
+    const scopesEl = document.getElementById(`ctrlSrchScopes_${uid}`);
     const input = document.getElementById(`ctrlSrchInput_${uid}`);
     const btn = document.getElementById(`ctrlSrchBtn_${uid}`);
     const stopBtn = document.getElementById(`ctrlSrchStop_${uid}`);
     const status = document.getElementById(`ctrlSrchStatus_${uid}`);
     const results = document.getElementById(`ctrlSrchResults_${uid}`);
-    const apiBase = currentRemoteBaseUrl || CPath.WebRootUrl();
-    const rootPathParam = ctrlSelectedRootPath || undefined;
-    let gRoot = '';
-    let gDown = '';
-    const makeItem = (fl, dirPath) => {
+    const sameAsSideList = (scope) => scope.webRootUrl === (currentWebRootUrl || CPath.WebRootUrl())
+        && ctrlNormPath(scope.rootPath ?? '') === ctrlNormPath(ctrlSelectedRootPath ?? '');
+    const gRoot = new Map();
+    const gDown = new Map();
+    const makeItem = (scopeKey, scope, fl, dirPath) => {
         const item = document.createElement('div');
         item.className = 'list-group-item list-group-item-action py-1 px-2';
         const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
         item.innerHTML =
             `<i class="bi ${icon} me-1"></i><strong>${fl.name}</strong>` +
-                `<span class="text-muted ms-2" style="font-size:11px;">${dirPath}</span>`;
+                `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(scope.serverLabel)}:${dirPath}</span>`;
+        item.draggable = true;
+        item.addEventListener('dragstart', (e) => {
+            e.dataTransfer?.setData('text/plain', (gRoot.get(scopeKey) ?? '') + dirPath + fl.name);
+            if (e.dataTransfer)
+                e.dataTransfer.effectAllowed = 'copy';
+        });
         if (fl.file) {
             item.addEventListener('click', () => {
                 modal.Hide();
-                editorOpenFile(gRoot + dirPath + fl.name, currentRemoteBaseUrl, gDown + ctrlEncodeUrlPath(dirPath + fl.name));
+                editorOpenFile((gRoot.get(scopeKey) ?? '') + dirPath + fl.name, scope.editorBaseUrl, (gDown.get(scopeKey) ?? '') + ctrlEncodeUrlPath(dirPath + fl.name));
+            });
+        }
+        else if (sameAsSideList(scope)) {
+            item.addEventListener('click', () => {
+                modal.Hide();
+                ctrlShowFileTab();
+                ctrlSideFileGoTo(dirPath);
             });
         }
         return item;
     };
-    const keyOf = (dirPath, name) => dirPath + ' ' + name;
-    const renderFromCache = (startPath, query, shown) => {
+    const keyOf = (scopeKey, dirPath, name) => scopeKey + ' ' + dirPath + ' ' + name;
+    const renderFromCache = (activeScopes, query, shown) => {
         let found = 0;
-        for (const [dirPath, list] of g_ctrlSrchCache) {
-            if (!dirPath.startsWith(startPath))
+        for (const { key: scopeKey, scope } of activeScopes) {
+            const cache = g_ctrlSrchCache.get(scopeKey);
+            if (!cache)
                 continue;
-            for (const fl of list) {
-                if (fl.hidden || ctrlIsSearchExcluded(fl.name))
-                    continue;
-                if (fl.name.toLowerCase().includes(query)) {
-                    const key = keyOf(dirPath, fl.name);
-                    if (shown.has(key))
+            for (const [dirPath, list] of cache) {
+                for (const fl of list) {
+                    if (fl.hidden || ctrlIsSearchExcluded(fl.name))
                         continue;
-                    shown.add(key);
-                    results.appendChild(makeItem(fl, dirPath));
-                    if (++found >= 200)
-                        return found;
+                    if (fl.name.toLowerCase().includes(query)) {
+                        const key = keyOf(scopeKey, dirPath, fl.name);
+                        if (shown.has(key))
+                            continue;
+                        shown.add(key);
+                        results.appendChild(makeItem(scopeKey, scope, fl, dirPath));
+                        if (++found >= 200)
+                            return found;
+                    }
                 }
             }
         }
@@ -1125,51 +1418,72 @@ async function ctrlFileSearch() {
         const query = input.value.trim().toLowerCase();
         if (!query)
             return;
-        const startPath = "/";
-        const serverKey = apiBase + '|' + (rootPathParam ?? '');
-        if (g_ctrlSrchServerKey !== serverKey) {
-            g_ctrlSrchCache = new Map();
-            g_ctrlSrchServerKey = serverKey;
+        const checkedKeys = new Set(Array.from(scopesEl.querySelectorAll('.ctrl-srch-scope-cb'))
+            .filter(cb => cb.checked)
+            .map(cb => cb.dataset.key));
+        const activeScopes = scopeItems.filter(s => checkedKeys.has(s.key));
+        if (activeScopes.length === 0) {
+            status.textContent = L('ctrl.msg.noScopeSelected', 'Select at least one path.');
+            return;
         }
         searchCancelled = false;
         btn.disabled = true;
         stopBtn.style.display = '';
         results.innerHTML = '';
         const shown = new Set();
-        let found = renderFromCache(startPath, query, shown);
+        let found = renderFromCache(activeScopes, query, shown);
         status.textContent = found > 0 ? LF('ctrl.msg.cachedScanning', 'Cached: {0} result(s)... Scanning', found) : L('ctrl.scanning', 'Scanning...');
-        const queue = [startPath];
-        while (queue.length > 0 && !searchCancelled) {
-            const dirPath = queue.shift();
-            status.textContent = LF('ctrl.msg.scanningPath', 'Scanning: {0}', dirPath);
-            try {
-                const p2 = { path: dirPath };
-                if (rootPathParam)
-                    p2.RootPath = rootPathParam;
-                const token = getAuthToken(apiBase);
-                const data = await CFecth.Exe(apiBase + "File/List", { ...p2, token }, "json");
-                if (data.RootPath != null)
-                    gRoot = data.RootPath.replace(/\/+$/, '');
-                if (data.RootUrl != null)
-                    gDown = new URL(data.RootUrl, apiBase).href.replace(/\/+$/, '');
-                g_ctrlSrchCache.set(dirPath, data.list);
-                for (const fl of data.list) {
-                    if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name))
-                        queue.push(dirPath + fl.name + '/');
-                    if (!fl.hidden && fl.name.toLowerCase().includes(query) && found < 200) {
-                        const key = keyOf(dirPath, fl.name);
-                        if (shown.has(key))
-                            continue;
-                        shown.add(key);
-                        results.appendChild(makeItem(fl, dirPath));
-                        found++;
+        const scopeErrors = [];
+        for (const { key: scopeKey, scope } of activeScopes) {
+            if (searchCancelled || found >= 200)
+                break;
+            const webRootUrl = scope.webRootUrl;
+            const rootPathParam = scope.rootPath || undefined;
+            let cache = g_ctrlSrchCache.get(scopeKey);
+            if (!cache) {
+                cache = new Map();
+                g_ctrlSrchCache.set(scopeKey, cache);
+            }
+            const queue = ["/"];
+            while (queue.length > 0 && !searchCancelled && found < 200) {
+                const dirPath = queue.shift();
+                status.textContent = LF('ctrl.msg.scanningPath', 'Scanning: {0}:{1}', scope.serverLabel, dirPath);
+                try {
+                    const p2 = { path: dirPath };
+                    if (rootPathParam)
+                        p2.RootPath = rootPathParam;
+                    const token = getAuthToken(webRootUrl);
+                    const data = await CFecth.Exe(webRootUrl + "File/List", { ...p2, token }, "json");
+                    if (!Array.isArray(data.list)) {
+                        if (dirPath === "/")
+                            scopeErrors.push(`${scope.serverLabel}: ${data.msg || L('ctrl.msg.searchScopeFailed', 'Cannot search this location.')}`);
+                        continue;
+                    }
+                    if (data.RootPath != null)
+                        gRoot.set(scopeKey, data.RootPath.replace(/\/+$/, ''));
+                    if (data.RootUrl != null)
+                        gDown.set(scopeKey, new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, ''));
+                    cache.set(dirPath, data.list);
+                    for (const fl of data.list) {
+                        if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name))
+                            queue.push(dirPath + fl.name + '/');
+                        if (!fl.hidden && fl.name.toLowerCase().includes(query) && found < 200) {
+                            const key = keyOf(scopeKey, dirPath, fl.name);
+                            if (shown.has(key))
+                                continue;
+                            shown.add(key);
+                            results.appendChild(makeItem(scopeKey, scope, fl, dirPath));
+                            found++;
+                        }
                     }
                 }
+                catch (_) { }
             }
-            catch (_) { }
         }
         const cap = found >= 200 ? ' (capped at 200)' : '';
-        status.textContent = searchCancelled ? LF('ctrl.msg.stoppedResults', 'Stopped. ({0} result(s))', found) : found === 0 ? L('ctrl.noResults', 'No results.') : LF('ctrl.msg.nResults', '{0} result(s){1}', found, cap);
+        status.textContent = scopeErrors.length ? scopeErrors.join(' / ')
+            : searchCancelled ? LF('ctrl.msg.stoppedResults', 'Stopped. ({0} result(s))', found)
+                : found === 0 ? L('ctrl.noResults', 'No results.') : LF('ctrl.msg.nResults', '{0} result(s){1}', found, cap);
         btn.disabled = false;
         stopBtn.style.display = 'none';
     };
@@ -1189,11 +1503,11 @@ function ctrlSideFileVcsBadge(status, filePath) {
     return `<span class="badge bg-${color} ms-auto" style="font-size:0.6rem;cursor:pointer;" title="Diff" data-vcs-diff-path="${aiEscapeHtml(filePath)}">${status}</span>`;
 }
 async function ctrlOpenVcsDiff(filePath) {
-    const apiBase = currentRemoteBaseUrl || CPath.WebRootUrl();
-    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
     let res;
     try {
-        res = await CFecth.Exe(apiBase + "File/VCS", { action: "diff", path: filePath, token }, "json");
+        res = await CFecth.Exe(webRootUrl + "File/VCS", { action: "diff", path: filePath, token }, "json");
     }
     catch (e) {
         CAlert.Info(L('ctrl.msg.diffRequestFailed', 'Diff request failed'));
@@ -1290,11 +1604,11 @@ function ctrlSideFileRenderList(list) {
         item.addEventListener('click', () => {
             if (fl.file) {
                 if (ctrlSideFileKind(fl) === 'orm') {
-                    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
-                    new CORMViewer(undefined, 'sqlite', ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentRemoteBaseUrl, token).Open();
+                    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+                    new CORMViewer(undefined, 'sqlite', ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentWebRootUrl, token).Open();
                     return;
                 }
-                promptSourceAction(ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentRemoteBaseUrl, ctrlSideFileDown + ctrlEncodeUrlPath(ctrlSideFilePath + fl.name));
+                promptSourceAction(ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentWebRootUrl, ctrlSideFileDown + ctrlEncodeUrlPath(ctrlSideFilePath + fl.name));
             }
             else {
                 ctrlSideFileGoTo(ctrlSideFilePath + fl.name + '/');
@@ -1308,22 +1622,22 @@ async function ctrlSideFileGoTo(pathVal) {
     ctrlSideFilePathEl.textContent = pathVal;
     const seq = ++ctrlSideFileReqSeq;
     ctrlSideFileRenderEmpty('Loading...');
-    const apiBase = currentRemoteBaseUrl || CPath.WebRootUrl();
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
     const rootPathParam = ctrlSelectedRootPath || undefined;
     try {
-        const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+        const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
         const p = { path: pathVal };
         if (rootPathParam)
             p.RootPath = rootPathParam;
         if (token)
             p.token = token;
-        const data = await CFecth.Exe(apiBase + "File/List", p, "json");
+        const data = await CFecth.Exe(webRootUrl + "File/List", p, "json");
         if (seq !== ctrlSideFileReqSeq)
             return;
         if (data.RootPath != null)
             ctrlSideFileRoot = data.RootPath.replace(/\/+$/, '');
         if (data.RootUrl != null)
-            ctrlSideFileDown = new URL(data.RootUrl, apiBase).href.replace(/\/+$/, '');
+            ctrlSideFileDown = new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, '');
         if (data.path != null) {
             ctrlSideFilePath = data.path;
             ctrlSideFilePathEl.textContent = data.path;
@@ -1353,8 +1667,12 @@ function runControlHotkey(key) {
             }
             const fileTab = CDOM.ID('right-file-tab');
             const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
-            const targetId = onFile ? 'right-info-tab' : 'right-file-tab';
-            window.bootstrap.Tab.getOrCreateInstance(CDOM.ID(targetId)).show();
+            if (onFile) {
+                window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-info-tab')).show();
+            }
+            else {
+                ctrlShowFileTab();
+            }
             return true;
         }
         case 'F2':
@@ -1363,7 +1681,7 @@ function runControlHotkey(key) {
         case 'F3':
             if (!ctrlRequireAuthed())
                 return true;
-            termStartNew('cmd', ctrlSelectedRootPath || undefined);
+            termStartNew('cmd');
             return true;
     }
     return false;
@@ -1408,6 +1726,11 @@ function focusActiveControlFrame() {
 function runControlF4Key() {
     if (!appSidebar)
         return;
+    if (sbSubTab === 'other') {
+        sbSubTab = 'agent';
+        localStorage.setItem(SB_TAB_LS, 'agent');
+        applySidebarSubTab();
+    }
     if (!appSidebar.classList.contains('sidebar-docked')) {
         const wasShown = appSidebar.classList.contains('show');
         window.bootstrap.Offcanvas.getOrCreateInstance(appSidebar).toggle();
@@ -1433,7 +1756,8 @@ function isAppSidebarVisible() {
 function runControlArrowKey(dir) {
     if (!isAppSidebarVisible())
         return false;
-    const items = Array.from(sessionSidebarList.querySelectorAll('.ai-session-item'));
+    const listEl = sbSubTab === 'agent' ? agentSidebarList : otherSidebarList;
+    const items = Array.from(listEl.querySelectorAll('.ai-session-item')).filter(el => el.offsetParent !== null);
     if (items.length === 0)
         return false;
     const curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active'));
@@ -1528,6 +1852,9 @@ document.addEventListener('keydown', (e) => {
         if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1))
             e.preventDefault();
     }
+    if (e.key === 'F7') {
+        e.preventDefault();
+    }
 });
 wireCtrlDoubleTap(document, runControlF4Key);
 CIframeMsg.Recv({
@@ -1539,10 +1866,9 @@ CIframeMsg.Recv({
             runControlHotkey(key);
     },
 });
-CDOM.ID('file-search-btn').addEventListener('click', () => runControlHotkey('F2'));
 CIframeMsg.Recv({
     'file-remote-changed': (data) => {
-        currentRemoteBaseUrl = String(data.baseUrl ?? '');
+        currentWebRootUrl = String(data.baseUrl ?? '');
         memoSendRemoteInfo();
     },
     'file-opened': (data) => {
@@ -1582,16 +1908,131 @@ CIframeMsg.Recv({
 });
 const logAccordionList = CDOM.ID('logAccordionList');
 const logLoadMoreBtn = CDOM.ID('logLoadMoreBtn');
+const logSearchInput = CDOM.ID('logSearchInput');
+const logSourceLabel = CDOM.ID('logSourceLabel');
 let logNextBefore = null;
+let logSearchTerm = '';
+const LOG_PAGE_SIZE = 15;
+function logServerCtx() {
+    const prefix = 'rdp:remote:';
+    const remoteId = selectedRdpKey.startsWith(prefix) ? selectedRdpKey.slice(prefix.length) : '';
+    return serverCtxOf(remoteId) ?? localServerCtx();
+}
+function logUpdateSource() {
+    const ctx = logServerCtx();
+    const addr = remoteEntryUrl(ctx.remoteId);
+    logSourceLabel.className = 'small fw-normal text-truncate ' + (ctx.remoteId ? 'text-danger' : 'text-secondary');
+    logSourceLabel.title = addr || CPath.WebRootUrl();
+    logSourceLabel.textContent = ctx.remoteId ? addr : L('ctrl.local', 'Local');
+}
+function logOnServerChanged() {
+    logUpdateSource();
+    if (isPanelShown('log-panel'))
+        logLoadSessions(true);
+}
+function logRegexEscape(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function logHighlightText(raw, term) {
+    const escapedRaw = aiEscapeHtml(raw);
+    if (!term)
+        return escapedRaw;
+    const re = new RegExp(logRegexEscape(aiEscapeHtml(term)), 'gi');
+    return escapedRaw.replace(re, m => `<span class="log-search-hit">${m}</span>`);
+}
+function logRenderMarkdown(raw) {
+    return marked.parse(aiEscapeHtml(raw), { xhtml: false });
+}
+function logHighlightNode(root, term) {
+    if (!term)
+        return;
+    const re = new RegExp(logRegexEscape(term), 'gi');
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    let n;
+    while ((n = walker.nextNode()))
+        textNodes.push(n);
+    for (const node of textNodes) {
+        const text = node.textContent ?? '';
+        re.lastIndex = 0;
+        if (!re.test(text))
+            continue;
+        re.lastIndex = 0;
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        let m;
+        while ((m = re.exec(text))) {
+            if (m.index > last)
+                frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+            const span = document.createElement('span');
+            span.className = 'log-search-hit';
+            span.textContent = m[0];
+            frag.appendChild(span);
+            last = m.index + m[0].length;
+        }
+        if (last < text.length)
+            frag.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode?.replaceChild(frag, node);
+    }
+}
+function logItemMatchesTerm(item, term) {
+    if (!term)
+        return false;
+    const t = term.toLowerCase();
+    const preview = item.dataset.preview ?? '';
+    if (preview.toLowerCase().includes(t))
+        return true;
+    const bodies = item.querySelectorAll('.log-body-text');
+    for (const b of Array.from(bodies)) {
+        if ((b.dataset.raw ?? '').toLowerCase().includes(t))
+            return true;
+    }
+    return false;
+}
+function logUpdateItemMatchState(item, term) {
+    const titleSpan = item.querySelector('.log-title-text');
+    const header = item.querySelector('[data-act="toggle"]');
+    if (!titleSpan || !header)
+        return;
+    const matched = logItemMatchesTerm(item, term);
+    titleSpan.classList.toggle('text-primary', matched);
+    titleSpan.classList.toggle('fw-semibold', matched);
+    header.classList.toggle('bg-body-tertiary', !matched);
+    header.classList.toggle('bg-primary-subtle', matched);
+}
+function logApplySearch(term) {
+    logSearchTerm = term;
+    const items = logAccordionList.querySelectorAll(':scope > div');
+    items.forEach(item => {
+        const titleSpan = item.querySelector('.log-title-text');
+        if (!titleSpan)
+            return;
+        titleSpan.innerHTML = logHighlightText(item.dataset.preview ?? '', term);
+    });
+    logApplySearchToBodies(term);
+    items.forEach(item => logUpdateItemMatchState(item, term));
+}
+function logApplySearchToBodies(term) {
+    logAccordionList.querySelectorAll('.log-body-text').forEach(el => {
+        const raw = el.dataset.raw ?? '';
+        el.innerHTML = logRenderMarkdown(raw);
+        logHighlightNode(el, term);
+    });
+}
+logSearchInput.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter')
+        return;
+    logApplySearch(logSearchInput.value.trim());
+});
 function logFormatTime(stamp) {
     const s = String(stamp);
     if (s.length < 14)
         return s;
     return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}`;
 }
-async function logLoadSessionBody(sessionId, bodyEl) {
+async function logLoadSessionBody(ctx, sessionId, bodyEl) {
     try {
-        const r = await authedFetch(`${CPath.WebRootUrl()}cmd/log-session?sessionId=${encodeURIComponent(sessionId)}`);
+        const r = await ctxFetch(ctx, `cmd/log-session?sessionId=${encodeURIComponent(sessionId)}`);
         const j = await r.json();
         if (!j.ok) {
             bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(j.msg ?? L('ctrl.failed', 'failed'))}</span>`;
@@ -1603,40 +2044,62 @@ async function logLoadSessionBody(sessionId, bodyEl) {
             return;
         }
         bodyEl.innerHTML = records.map(rec => {
+            if (rec.role === 'tool') {
+                const toolName = (rec.tool || '?').trim();
+                const filePath = (rec.file || '').trim();
+                return `<div class="d-flex justify-content-start">` +
+                    `<div class="px-2 py-1 rounded border bg-body-tertiary text-secondary" style="max-width:95%;font-size:0.82em;">` +
+                    `<div style="font-size:0.68em;opacity:0.75;">${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)} &middot; tool</div>` +
+                    `<div class="log-body-text" style="word-break:break-word;font-family:var(--bs-font-monospace);">` +
+                    `<span class="badge text-bg-dark me-1">${aiEscapeHtml(toolName)}</span>` +
+                    (filePath ? `<span class="text-body-secondary">${aiEscapeHtml(filePath)}</span>` : '') +
+                    `</div></div></div>`;
+            }
             const isUser = rec.role === 'user';
             return `<div class="d-flex ${isUser ? 'justify-content-end' : 'justify-content-start'}">` +
                 `<div class="p-2 rounded ${isUser ? 'bg-primary text-white' : 'bg-secondary-subtle'}" style="max-width:85%;">` +
                 `<div style="font-size:0.68em;opacity:0.75;">${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)}</div>` +
-                `<div style="white-space:pre-wrap;word-break:break-word;">${aiEscapeHtml(rec.text.trim())}</div>` +
+                `<div class="log-body-text" style="word-break:break-word;">${logRenderMarkdown(rec.text.trim())}</div>` +
                 `</div></div>`;
         }).join('');
+        bodyEl.querySelectorAll('.log-body-text').forEach((el, i) => {
+            const rec = records[i];
+            el.dataset.raw = rec.role === 'tool'
+                ? `${(rec.tool || '').trim()} ${(rec.file || '').trim()}`.trim()
+                : rec.text.trim();
+            logHighlightNode(el, logSearchTerm);
+        });
+        const item = bodyEl.closest('[data-session-id]');
+        if (item)
+            logUpdateItemMatchState(item, logSearchTerm);
     }
     catch (e) {
         bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(e?.message ?? String(e))}</span>`;
     }
 }
-function logCreateAccordionItem(entry) {
+function logCreateAccordionItem(ctx, entry) {
     const item = document.createElement('div');
     item.className = 'border rounded';
     item.dataset.sessionId = entry.name;
     const bodyId = `logBody_${entry.offset}`;
     const preview = entry.firstText.replace(/\s+/g, ' ').trim();
+    item.dataset.preview = preview;
     item.innerHTML = `
         <div class="d-flex align-items-center gap-2 p-2 bg-body-tertiary rounded" style="cursor:pointer;" data-act="toggle">
             <i class="bi bi-chevron-right log-chevron flex-shrink-0"></i>
             <div class="flex-grow-1 overflow-hidden">
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge text-bg-secondary flex-shrink-0">${aiEscapeHtml(entry.model || '?')}</span>
-                    <span class="text-truncate small">${aiEscapeHtml(preview)}</span>
+                    <span class="text-truncate small log-title-text">${aiEscapeHtml(preview)}</span>
                 </div>
                 <div class="text-truncate text-secondary" style="font-size:0.72em;">
-                    <i class="bi bi-folder2"></i> ${aiEscapeHtml(entry.cwd || '-')} &middot; ${logFormatTime(entry.time)}
+                    <i class="bi bi-folder2"></i> ${aiEscapeHtml(entry.cwd || '-')} &middot; ${logFormatTime(entry.time)} &middot; <i class="bi bi-key"></i> ${aiEscapeHtml(entry.name)}
                 </div>
             </div>
             <button type="button" class="btn btn-sm btn-link text-danger p-0 flex-shrink-0" data-act="del" title="Delete"><i class="bi bi-x-lg"></i></button>
         </div>
         <div class="collapse" id="${bodyId}">
-            <div class="p-2 border-top d-flex flex-column gap-2" style="max-height:400px;overflow-y:auto;" data-role="body">
+            <div class="p-2 border-top d-flex flex-column gap-2" style="max-height:700px;overflow-y:auto;" data-role="body">
                 <div class="text-secondary small"><i class="bi bi-hourglass-split"></i> Loading...</div>
             </div>
         </div>
@@ -1653,7 +2116,7 @@ function logCreateAccordionItem(entry) {
         if (loaded)
             return;
         loaded = true;
-        logLoadSessionBody(entry.name, item.querySelector('[data-role="body"]'));
+        logLoadSessionBody(ctx, entry.name, item.querySelector('[data-role="body"]'));
     });
     item.querySelector('[data-act="del"]').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1661,7 +2124,7 @@ function logCreateAccordionItem(entry) {
         dlg.SetBody(LF('ctrl.msg.deleteSessionLog', 'Delete all logs for session "{0}"?', aiEscapeHtml(entry.name)));
         dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
             async () => {
-                await authedFetch(`${CPath.WebRootUrl()}cmd/log-session-del?sessionId=${encodeURIComponent(entry.name)}`);
+                await ctxFetch(ctx, `cmd/log-session-del?sessionId=${encodeURIComponent(entry.name)}`);
                 bsCollapse.dispose();
                 item.remove();
             },
@@ -1671,22 +2134,42 @@ function logCreateAccordionItem(entry) {
     });
     return item;
 }
+function logRenderAuthNotice(ctx) {
+    const addr = remoteEntryUrl(ctx.remoteId);
+    const box = document.createElement('div');
+    box.className = 'text-secondary small d-flex align-items-center gap-2';
+    box.innerHTML = `<span>${aiEscapeHtml(LF('ctrl.msg.logNeedsAuth', 'Authentication required for {0}.', addr))}</span>`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline-primary';
+    btn.textContent = L('ctrl.msg.authenticate', 'Authenticate');
+    btn.addEventListener('click', () => rdpPromptRemoteAuth(ctx.apiUrl, () => logLoadSessions(true)));
+    box.appendChild(btn);
+    logAccordionList.appendChild(box);
+}
 async function logLoadSessions(reset) {
     if (reset) {
         logAccordionList.innerHTML = '';
         logNextBefore = null;
     }
+    logUpdateSource();
+    const ctx = logServerCtx();
+    if (ctx.remoteId && !ctx.authToken) {
+        logLoadMoreBtn.style.display = 'none';
+        logRenderAuthNotice(ctx);
+        return;
+    }
     try {
-        const url = `${CPath.WebRootUrl()}cmd/log-sessions` + (logNextBefore ? `?before=${logNextBefore}` : '');
-        const r = await authedFetch(url);
+        const url = 'cmd/log-sessions' + (logNextBefore ? `?before=${logNextBefore}` : '');
+        const r = await ctxFetch(ctx, url);
         const j = await r.json();
         if (!j.ok)
             return;
         const sessions = j.sessions ?? [];
         for (const s of sessions)
-            logAccordionList.appendChild(logCreateAccordionItem(s));
+            logAccordionList.appendChild(logCreateAccordionItem(ctx, s));
         logNextBefore = sessions.length ? sessions[sessions.length - 1].offset : logNextBefore;
-        logLoadMoreBtn.style.display = sessions.length >= 30 ? '' : 'none';
+        logLoadMoreBtn.style.display = sessions.length >= LOG_PAGE_SIZE ? '' : 'none';
     }
     catch (e) {
         console.error('logLoadSessions error:', e);
@@ -1696,14 +2179,18 @@ CDOM.ID('log-tab').addEventListener('shown.bs.tab', () => logLoadSessions(true))
 if (CDOM.ID('log-panel').classList.contains('active')) {
     logLoadSessions(true);
 }
+else
+    logUpdateSource();
 CDOM.ID('logRefreshBtn').addEventListener('click', () => logLoadSessions(true));
 logLoadMoreBtn.addEventListener('click', () => logLoadSessions(false));
 CDOM.ID('logClearBtn').addEventListener('click', () => {
+    const ctx = logServerCtx();
     const dlg = new CConfirm();
-    dlg.SetBody(L('ctrl.msg.deleteAllLogs', 'Delete ALL logs? This will remove every session and cannot be undone.'));
+    dlg.SetBody(L('ctrl.msg.deleteAllLogs', 'Delete ALL logs? This will remove every session and cannot be undone.')
+        + `<div class="small text-secondary mt-1">${aiEscapeHtml(remoteEntryUrl(ctx.remoteId) || L('ctrl.local', 'Local'))}</div>`);
     dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
         async () => {
-            await authedFetch(`${CPath.WebRootUrl()}cmd/log-clear`);
+            await ctxFetch(ctx, 'cmd/log-clear');
             logLoadSessions(true);
         },
         () => { },
@@ -1742,6 +2229,15 @@ function memoTryInit() {
     memoInited = true;
     memoLoadFrame();
 }
+async function rdpSendRemoteGuide(webRootUrl, token) {
+    try {
+        const base = webRootUrl.replace(/\/+$/, '');
+        await CFecth.Exe(CPath.WebRootUrl() + "RemoteCMD/Write", { addr: base + "/proj/Control/Control.html", token }, "json");
+    }
+    catch (e) {
+        console.error("RemoteCMD/Write update failed:", e);
+    }
+}
 async function rdpCheckRemoteAuth(webRootUrl) {
     const token = getAuthToken(webRootUrl);
     if (!token)
@@ -1754,7 +2250,88 @@ async function rdpCheckRemoteAuth(webRootUrl) {
         return false;
     }
 }
+let localAuthSettled = false;
+let localAuthOk = false;
+let localAuthInFlight = null;
+async function ensureLocalAuth() {
+    if (localAuthSettled)
+        return localAuthOk;
+    if (localAuthInFlight)
+        return localAuthInFlight;
+    const origin = CPath.WebRootUrl();
+    const token = getAuthToken(origin);
+    if (!token) {
+        localAuthSettled = true;
+        localAuthOk = false;
+        return false;
+    }
+    localAuthInFlight = (async () => {
+        try {
+            const res = await fetch(origin + 'auth/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+                body: JSON.stringify({ token }),
+            });
+            if (!res.ok) {
+                removeAuthToken(origin);
+                localAuthSettled = true;
+                localAuthOk = false;
+                return false;
+            }
+            const j = await res.json().catch(() => null);
+            if (j?.authed) {
+                localAuthSettled = true;
+                localAuthOk = true;
+                return true;
+            }
+            removeAuthToken(origin);
+            localAuthSettled = true;
+            localAuthOk = false;
+            return false;
+        }
+        catch {
+            return false;
+        }
+        finally {
+            localAuthInFlight = null;
+        }
+    })();
+    return localAuthInFlight;
+}
+function markLocalAuthOk() {
+    localAuthSettled = true;
+    localAuthOk = true;
+}
+function markLocalAuthLost() {
+    localAuthSettled = true;
+    localAuthOk = false;
+}
+async function rdpEnsureRemoteAuth(remote) {
+    if (!remote.pwHash)
+        return rdpCheckRemoteAuth(rdpRemoteWebRootUrl(remote.entryUrl));
+    const webRootUrl = rdpRemoteWebRootUrl(remote.entryUrl);
+    try {
+        const j = await CFecth.Exe(webRootUrl + "auth/login", { password: remote.pwHash }, "json");
+        if (!j.ok || !j.token)
+            return false;
+        setAuthToken(webRootUrl, j.token);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+const gAuthPromptCallbacks = new Map();
 function rdpPromptRemoteAuth(webRootUrl, onSuccess) {
+    const existing = gAuthPromptCallbacks.get(webRootUrl);
+    if (existing) {
+        if (onSuccess)
+            existing.push(onSuccess);
+        return;
+    }
+    const callbacks = onSuccess ? [onSuccess] : [];
+    gAuthPromptCallbacks.set(webRootUrl, callbacks);
+    const releaseAuthPrompt = () => { gAuthPromptCallbacks.delete(webRootUrl); };
     const dlg = new CConfirm();
     dlg.SetBody(`${L('ctrl.msg.enterAdminPassword', 'Enter admin password:')}<br><input type="password" id="AuthPassword" class="form-control form-control-sm">`);
     const doAuth = () => {
@@ -1766,17 +2343,33 @@ function rdpPromptRemoteAuth(webRootUrl, onSuccess) {
                 if (pw === "artgine") {
                     CAlert.Warning(L('ctrl.msg.defaultPassword', 'You are using the default password. Please change it for security.'));
                 }
-                onSuccess?.();
+                if (webRootUrl === CPath.WebRootUrl()) {
+                    markLocalAuthOk();
+                    rdpLoadRemotes();
+                }
+                else {
+                    rdpSendRemoteGuide(webRootUrl, j.token);
+                    const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === webRootUrl);
+                    if (remote)
+                        refreshRemoteRoots(remote);
+                }
+                releaseAuthPrompt();
+                callbacks.forEach(cb => cb());
             }
             else {
+                releaseAuthPrompt();
                 CAlert.E(LF('ctrl.msg.wrongPassword', 'Wrong password: {0}', j.msg ?? ''));
             }
-        }).catch(() => { CAlert.E(L('ctrl.msg.serverError', 'Server error')); });
+        }).catch(() => {
+            releaseAuthPrompt();
+            CAlert.E(L('ctrl.msg.serverError', 'Server error'));
+        });
     };
     dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
         doAuth,
-        () => { },
+        releaseAuthPrompt,
     ], [L('ctrl.ok', 'OK'), L('ctrl.cancel', 'Cancel')]);
+    dlg.On(CEvent.eType.Close, releaseAuthPrompt);
     dlg.Open();
     setTimeout(() => {
         const input = CDOM.ID("AuthPassword");
@@ -1797,8 +2390,9 @@ function ctrlRequireAuthed() {
     CAlert.Warning(L('ctrl.msg.authRequired', 'Authentication required. Please sign in first.'));
     return false;
 }
-['rdp-panel-tab', 'chat-panel-tab', 'browser-panel-tab', 'editor-panel-tab', 'term-tab', 'memo-tab', 'download-tab', 'log-tab'].forEach((tabId) => {
-    CDOM.ID(tabId).addEventListener('show.bs.tab', (e) => {
+window.ctrlRequireAuthed = ctrlRequireAuthed;
+['rdp-panel-tab', 'chat-panel-tab', 'browser-panel-tab', 'editor-panel-tab', 'term-tab', 'memo-tab', 'log-tab', 'messenger-tab'].forEach((tabId) => {
+    CDOM.ID(tabId)?.addEventListener('show.bs.tab', (e) => {
         if (!ctrlRequireAuthed())
             e.preventDefault();
     });
@@ -1814,15 +2408,17 @@ function renderSignInPrompt(container, onSuccess) {
     });
 }
 async function memoSendRemoteInfo() {
-    const baseUrl = currentRemoteBaseUrl;
+    const baseUrl = currentWebRootUrl;
     if (!baseUrl) {
         if (memoIframe?.contentWindow)
             CIframeMsg.Send(memoIframe.contentWindow, 'set-remote', { baseUrl: '', token: '' });
         return;
     }
-    if (!(await rdpCheckRemoteAuth(baseUrl))) {
+    const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === baseUrl);
+    const authed = remote?.pwHash ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
+    if (!authed) {
         rdpPromptRemoteAuth(baseUrl, () => {
-            if (currentRemoteBaseUrl !== baseUrl)
+            if (currentWebRootUrl !== baseUrl)
                 return;
             if (memoIframe?.contentWindow)
                 CIframeMsg.Send(memoIframe.contentWindow, 'set-remote', { baseUrl, token: getAuthToken(baseUrl) });
@@ -1845,9 +2441,35 @@ memoTab.addEventListener("click", () => {
 });
 if (memoTab.classList.contains("active"))
     memoTryInit();
-const sessionSidebarList = CDOM.ID("session-sidebar-list");
+const agentSidebarList = CDOM.ID("agent-sidebar-list");
+const otherSidebarList = CDOM.ID("other-sidebar-list");
+const agentAddFolderBtn = CDOM.ID("agentAddFolderBtn");
+const SB_TAB_LS = 'ctrl.sidebar.subtab';
+const SB_COLLAPSE_LS = 'ctrl.sidebar.collapsed';
+function sbSafeArr(s) { try {
+    const a = JSON.parse(s || '[]');
+    return Array.isArray(a) ? a.map(String) : [];
+}
+catch {
+    return [];
+} }
+let sbSubTab = localStorage.getItem(SB_TAB_LS) === 'other' ? 'other' : 'agent';
+const collapsedGroups = new Set(sbSafeArr(localStorage.getItem(SB_COLLAPSE_LS)));
+function saveCollapsedGroups() { localStorage.setItem(SB_COLLAPSE_LS, JSON.stringify(Array.from(collapsedGroups))); }
+function applySidebarSubTab() {
+    agentSidebarList.classList.toggle('d-none', sbSubTab !== 'agent');
+    agentAddFolderBtn.classList.toggle('d-none', sbSubTab !== 'agent');
+    otherSidebarList.classList.toggle('d-none', sbSubTab !== 'other');
+    CDOM.ID('sb-agent-tab').classList.toggle('active', sbSubTab === 'agent');
+    CDOM.ID('sb-other-tab').classList.toggle('active', sbSubTab === 'other');
+}
+CDOM.ID('sb-agent-tab').addEventListener('click', () => { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); });
+CDOM.ID('sb-other-tab').addEventListener('click', () => { sbSubTab = 'other'; localStorage.setItem(SB_TAB_LS, 'other'); applySidebarSubTab(); });
+applySidebarSubTab();
 let sessionOrderFrozen = false;
 let frozenSessionOrder = [];
+let frozenAgentGroupOrder = [];
+let frozenAgentItemOrder = [];
 function freezeSessionOrder(on) {
     if (sessionOrderFrozen === on)
         return;
@@ -1855,9 +2477,159 @@ function freezeSessionOrder(on) {
     if (!on)
         renderSessionSidebar();
 }
-sessionSidebarList.addEventListener('pointerenter', () => freezeSessionOrder(true));
-sessionSidebarList.addEventListener('pointerleave', () => freezeSessionOrder(false));
-sessionSidebarList.addEventListener('pointerdown', () => freezeSessionOrder(true));
+for (const lst of [agentSidebarList, otherSidebarList]) {
+    lst.addEventListener('pointerenter', () => freezeSessionOrder(true));
+    lst.addEventListener('pointerleave', () => freezeSessionOrder(false));
+    lst.addEventListener('pointerdown', () => freezeSessionOrder(true));
+}
+const agentGroupEls = new Map();
+function agentGroupKey(wd) { return ctrlNormPath(wd || './') || '.'; }
+function agentGroupPathText(key) { return key === '.' ? './' : key; }
+function parseGroupKey(key) {
+    if (key.startsWith('remote:')) {
+        const rest = key.slice('remote:'.length);
+        const i = rest.indexOf(':');
+        const remoteId = i >= 0 ? rest.slice(0, i) : rest;
+        const base = i >= 0 ? rest.slice(i + 1) : '';
+        return { remoteId, pathText: agentGroupPathText(base) };
+    }
+    return { remoteId: '', pathText: agentGroupPathText(key) };
+}
+function clearAgentGroups() { for (const el of agentGroupEls.values())
+    destroyAgentGroup(el); agentGroupEls.clear(); }
+function createAgentGroup(key) {
+    const wrap = document.createElement('div');
+    wrap.className = 'agent-group';
+    wrap._key = key;
+    wrap.innerHTML = `
+        <div class="agent-group-head d-flex align-items-center gap-1 px-1 py-1 rounded">
+            <i class="bi bi-chevron-down agent-group-caret flex-shrink-0"></i>
+            <span class="flex-grow-1" style="min-width:0;overflow:hidden;display:flex;flex-direction:column;">
+                <span class="agent-group-addr" style="display:none;"></span>
+                <span class="agent-group-path"><span></span></span>
+            </span>
+            <span class="agent-group-count text-secondary flex-shrink-0" style="font-size:0.7rem;"></span>
+            <div class="dropdown flex-shrink-0">
+                <button class="agent-group-add btn btn-sm btn-link text-secondary p-0 px-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="New"><i class="bi bi-three-dots"></i></button>
+                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                    <li><button class="dropdown-item" data-new="chat"><i class="bi bi-chat-dots"></i> Chat</button></li>
+                    <li><button class="dropdown-item" data-new="term"><i class="bi bi-terminal"></i> Terminal</button></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button class="dropdown-item" data-new="search"><i class="bi bi-search"></i> Search</button></li>
+                </ul>
+            </div>
+        </div>
+        <div class="agent-group-body d-flex flex-column gap-1"></div>`;
+    const head = wrap.querySelector('.agent-group-head');
+    head.addEventListener('click', (e) => {
+        if (e.target.closest('.dropdown'))
+            return;
+        if (collapsedGroups.has(wrap._key))
+            collapsedGroups.delete(wrap._key);
+        else
+            collapsedGroups.add(wrap._key);
+        saveCollapsedGroups();
+        wrap.classList.toggle('agent-group-collapsed', collapsedGroups.has(wrap._key));
+    });
+    const addBtn = wrap.querySelector('[data-bs-toggle="dropdown"]');
+    new window.bootstrap.Dropdown(addBtn, { popperConfig: { strategy: 'fixed' } });
+    wrap.querySelector('[data-new="chat"]').addEventListener('click', () => { const g = parseGroupKey(wrap._key); chatStartNew(g.pathText, g.remoteId); });
+    wrap.querySelector('[data-new="term"]').addEventListener('click', () => { const g = parseGroupKey(wrap._key); termStartNew('cmd', g.pathText, g.remoteId); });
+    wrap.querySelector('[data-new="search"]').addEventListener('click', () => {
+        if (ctrlGroupSearchScope(wrap._key))
+            ctrlFileSearch(wrap._key);
+    });
+    return wrap;
+}
+function destroyAgentGroup(el) {
+    const toggle = el.querySelector('[data-bs-toggle="dropdown"]');
+    if (toggle)
+        window.bootstrap.Dropdown.getInstance(toggle)?.dispose();
+    el.remove();
+}
+function updateAgentGroupHeader(el, meta) {
+    const head = el.querySelector('.agent-group-head');
+    head.classList.toggle('agent-group-remote', !!meta.remoteLabel);
+    const addrEl = el.querySelector('.agent-group-addr');
+    addrEl.style.display = meta.remoteLabel ? 'block' : 'none';
+    addrEl.textContent = meta.remoteLabel ?? '';
+    el.querySelector('.agent-group-path > span').textContent = meta.pathText;
+}
+let localRootOpts = [];
+const remoteRootsCache = new Map();
+async function refreshLocalRoots() {
+    try {
+        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json");
+        localRootOpts = (data.roots ?? []).map(r => r.name === './' ? { ...r, name: 'Artgine (WorkingPath)' } : r);
+        renderSessionSidebar();
+    }
+    catch { }
+}
+async function refreshRemoteRoots(r) {
+    const webRootUrl = rdpRemoteWebRootUrl(r.entryUrl);
+    if (!(await rdpEnsureRemoteAuth(r))) {
+        if (remoteRootsCache.delete(r.remoteId))
+            renderSessionSidebar();
+        return;
+    }
+    try {
+        const token = getAuthToken(webRootUrl);
+        const data = await CFecth.Exe(webRootUrl + "File/Root", token ? { token } : {}, "json");
+        remoteRootsCache.set(r.remoteId, data.roots ?? []);
+        renderSessionSidebar();
+    }
+    catch { }
+}
+function refreshAllRemoteRoots() { refreshLocalRoots(); rdpRemotes.forEach(refreshRemoteRoots); }
+function localServerCtx() {
+    return { remoteId: '', apiUrl: CPath.WebRootUrl(), artgineUrl: CPath.WebRootArtgineUrl(), authToken: '' };
+}
+function remoteServerCtx(r) {
+    const base = rdpRemoteWebRootUrl(r.entryUrl);
+    return { remoteId: r.remoteId, apiUrl: base, artgineUrl: base, authToken: getAuthToken(base) };
+}
+function serverCtxOf(remoteId) {
+    if (!remoteId)
+        return localServerCtx();
+    const r = rdpRemotes.find(x => x.remoteId === remoteId);
+    return r ? remoteServerCtx(r) : null;
+}
+function remoteEntryUrl(remoteId) {
+    return remoteId ? (rdpRemotes.find(r => r.remoteId === remoteId)?.entryUrl || '') : '';
+}
+function sessionServerCtxs() {
+    return [localServerCtx(), ...rdpRemotes.map(remoteServerCtx).filter(c => !!c.authToken)];
+}
+function ctxApiUrl(ctx, apiPath) {
+    const url = ctx.apiUrl + apiPath;
+    if (!ctx.authToken)
+        return url;
+    return url + (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(ctx.authToken);
+}
+const REMOTE_FETCH_TIMEOUT_MS = 8000;
+function ctxFetch(ctx, apiPath, init) {
+    const url = ctxApiUrl(ctx, apiPath);
+    if (!ctx.remoteId)
+        return fetch(url, init);
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), REMOTE_FETCH_TIMEOUT_MS);
+    return fetch(url, { ...init, signal: ac.signal }).finally(() => clearTimeout(timer));
+}
+function sessKey(prefix, remoteId, id) {
+    return remoteId ? `${prefix}:${remoteId}:${id}` : `${prefix}:${id}`;
+}
+function keyRemoteId(key) {
+    const parts = key.split(':');
+    return parts.length >= 3 ? parts[1] : '';
+}
+function parseSessKey(key) {
+    const parts = key.split(':');
+    return parts.length >= 3 ? { remoteId: parts[1], id: parts.slice(2).join(':') } : { remoteId: '', id: parts.slice(1).join(':') };
+}
+function sessionGroupKey(remoteId, workingDir) {
+    const base = agentGroupKey(workingDir);
+    return remoteId ? `remote:${remoteId}:${base}` : base;
+}
 let _activeNotifCallback = null;
 function _showModalStackMsg(label, content, onClick) {
     const m = new CModalStackMsg(CModal.ePos.TopRight);
@@ -1962,44 +2734,157 @@ function flushSessionSidebar() {
         if (!sessionSidebarSignedOut) {
             sessionSidebarSignedOut = true;
             clearSessionItems();
-            renderSignInPrompt(sessionSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
+            clearAgentGroups();
+            otherSidebarList.innerHTML = '';
+            renderSignInPrompt(agentSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
         }
         return;
     }
     if (sessionSidebarSignedOut) {
         sessionSidebarSignedOut = false;
-        sessionSidebarList.innerHTML = '';
+        agentSidebarList.innerHTML = '';
+        otherSidebarList.innerHTML = '';
     }
     const activeKey = activeSessionKey();
-    const entries = [];
+    const agentEntries = [];
     if (lastChatSessions)
         for (const s of lastChatSessions)
-            entries.push({ key: `chat:${s.sessionId}`, sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s, activeKey) });
+            agentEntries.push({ key: sessKey('chat', s.remoteId, s.sessionId), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s, activeKey) });
     if (lastTermSessions)
         for (const s of lastTermSessions)
-            entries.push({ key: `term:${s.token}`, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+            agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+    const otherEntries = [];
     for (const s of browserSessions.values())
-        entries.push({ key: `browser:${s.sessionId}`, sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s, activeKey) });
+        otherEntries.push({ key: `browser:${s.sessionId}`, sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s, activeKey) });
     for (const s of editorSessions.values())
-        entries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s, activeKey) });
-    entries.sort((a, b) => b.sortKey - a.sortKey);
-    const frozen = sessionOrderFrozen || !!sessionSidebarList.querySelector('.dropdown-menu.show');
-    if (frozen) {
-        const rank = new Map(frozenSessionOrder.map((k, i) => [k, i]));
-        entries.sort((a, b) => (rank.get(a.key) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.key) ?? Number.MAX_SAFE_INTEGER));
-    }
-    else {
-        frozenSessionOrder = entries.map(e => e.key);
-    }
-    const live = new Set(entries.map(e => e.key));
+        otherEntries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s, activeKey) });
+    otherEntries.sort((a, b) => b.sortKey - a.sortKey);
+    const live = new Set();
+    for (const e of agentEntries)
+        live.add(e.key);
+    for (const e of otherEntries)
+        live.add(e.key);
     for (const [key, el] of Array.from(sessionItemEls)) {
         if (!live.has(key)) {
             destroySessionItem(el);
             sessionItemEls.delete(key);
         }
     }
-    let cursor = sessionSidebarList.firstElementChild;
+    const frozen = sessionOrderFrozen
+        || !!agentSidebarList.querySelector('.dropdown-menu.show')
+        || !!otherSidebarList.querySelector('.dropdown-menu.show');
+    renderAgentGroups(agentEntries, frozen);
+    renderOtherList(otherEntries, frozen);
+}
+function renderAgentGroups(entries, frozen) {
+    const byGroup = new Map();
     for (const e of entries) {
+        let arr = byGroup.get(e.groupKey);
+        if (!arr) {
+            arr = [];
+            byGroup.set(e.groupKey, arr);
+        }
+        arr.push(e);
+    }
+    const regSet = new Set();
+    const registered = [];
+    const groupMeta = new Map();
+    for (const r of localRootOpts) {
+        const k = agentGroupKey(r.path);
+        if (!regSet.has(k)) {
+            regSet.add(k);
+            registered.push(k);
+            groupMeta.set(k, { pathText: agentGroupPathText(k) });
+        }
+    }
+    for (const remote of rdpRemotes) {
+        const roots = remoteRootsCache.get(remote.remoteId);
+        if (!roots)
+            continue;
+        for (const ro of roots) {
+            const base = agentGroupKey(ro.path);
+            const k = `remote:${remote.remoteId}:${base}`;
+            if (!regSet.has(k)) {
+                regSet.add(k);
+                registered.push(k);
+                groupMeta.set(k, { pathText: agentGroupPathText(base), remoteLabel: remote.entryUrl });
+            }
+        }
+    }
+    const adhoc = Array.from(byGroup.keys()).filter(k => !regSet.has(k));
+    adhoc.sort((a, b) => (byGroup.get(b)[0]?.sortKey ?? 0) - (byGroup.get(a)[0]?.sortKey ?? 0));
+    let groupOrder = [...registered, ...adhoc];
+    const naturalItemOrder = [];
+    for (const arr of byGroup.values()) {
+        arr.sort((a, b) => b.sortKey - a.sortKey);
+        for (const e of arr)
+            naturalItemOrder.push(e.key);
+    }
+    if (frozen) {
+        const grank = new Map(frozenAgentGroupOrder.map((k, i) => [k, i]));
+        groupOrder = groupOrder.slice().sort((a, b) => (grank.get(a) ?? Number.MAX_SAFE_INTEGER) - (grank.get(b) ?? Number.MAX_SAFE_INTEGER));
+        const irank = new Map(frozenAgentItemOrder.map((k, i) => [k, i]));
+        for (const arr of byGroup.values())
+            arr.sort((a, b) => (irank.get(a.key) ?? Number.MAX_SAFE_INTEGER) - (irank.get(b.key) ?? Number.MAX_SAFE_INTEGER));
+    }
+    else {
+        frozenAgentGroupOrder = groupOrder.slice();
+        frozenAgentItemOrder = naturalItemOrder;
+    }
+    for (const [k, el] of Array.from(agentGroupEls)) {
+        if (!regSet.has(k) && !byGroup.has(k)) {
+            destroyAgentGroup(el);
+            agentGroupEls.delete(k);
+        }
+    }
+    let gcursor = agentSidebarList.firstElementChild;
+    for (const k of groupOrder) {
+        let g = agentGroupEls.get(k);
+        if (!g) {
+            g = createAgentGroup(k);
+            agentGroupEls.set(k, g);
+        }
+        let meta = groupMeta.get(k);
+        if (!meta) {
+            const pg = parseGroupKey(k);
+            meta = { pathText: pg.pathText, remoteLabel: pg.remoteId ? remoteEntryUrl(pg.remoteId) : undefined };
+        }
+        updateAgentGroupHeader(g, meta);
+        const items = byGroup.get(k) ?? [];
+        g.querySelector('.agent-group-count').textContent = items.length ? String(items.length) : '';
+        g.classList.toggle('agent-group-collapsed', collapsedGroups.has(k));
+        if (g === gcursor)
+            gcursor = gcursor.nextElementSibling;
+        else
+            agentSidebarList.insertBefore(g, gcursor);
+        const body = g.querySelector('.agent-group-body');
+        let icursor = body.firstElementChild;
+        for (const e of items) {
+            let el = sessionItemEls.get(e.key);
+            if (!el) {
+                el = createSessionItem(e.spec);
+                sessionItemEls.set(e.key, el);
+            }
+            else
+                updateSessionItem(el, e.spec);
+            if (el === icursor)
+                icursor = icursor.nextElementSibling;
+            else
+                body.insertBefore(el, icursor);
+        }
+    }
+}
+function renderOtherList(entries, frozen) {
+    let ordered = entries;
+    if (frozen) {
+        const rank = new Map(frozenSessionOrder.map((k, i) => [k, i]));
+        ordered = entries.slice().sort((a, b) => (rank.get(a.key) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.key) ?? Number.MAX_SAFE_INTEGER));
+    }
+    else {
+        frozenSessionOrder = entries.map(e => e.key);
+    }
+    let cursor = otherSidebarList.firstElementChild;
+    for (const e of ordered) {
         let el = sessionItemEls.get(e.key);
         if (!el) {
             el = createSessionItem(e.spec);
@@ -2010,7 +2895,7 @@ function flushSessionSidebar() {
         if (el === cursor)
             cursor = cursor.nextElementSibling;
         else
-            sessionSidebarList.insertBefore(el, cursor);
+            otherSidebarList.insertBefore(el, cursor);
     }
 }
 function authedFetch(url, init) {
@@ -2058,7 +2943,7 @@ function showChatFrame(key, src) {
     return showPooledFrame(chatFrameCtx, key, src);
 }
 function chatActivatePane() {
-    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('chat-panel-tab')).show();
+    activatePaneUnlessMultiplexer('chat-panel-tab', 'Chat');
 }
 const editorFrameContainer = CDOM.ID("editor-frame-container");
 const editorFramePlaceholder = CDOM.ID("editor-frame-placeholder");
@@ -2078,7 +2963,7 @@ function showEditorFrame(key, src) {
     return showPooledFrame(editorFrameCtx, key, src);
 }
 function editorActivatePane() {
-    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('editor-panel-tab')).show();
+    activatePaneUnlessMultiplexer('editor-panel-tab', 'Editor');
 }
 const editorSessions = new Map();
 function editorFrameSrc(s) {
@@ -2167,14 +3052,16 @@ function editorItemSpec(s, activeKey) {
     const dot = s.dirty
         ? `<span class="text-warning small" title="${L('ctrl.st.modified', 'Modified (unsaved)')}">●</span>`
         : `<span class="text-success small" title="${L('ctrl.st.saved', 'Saved')}">●</span>`;
+    const isRemote = !!s.baseUrl;
     return {
-        activeClass: 'ai-session-item-active',
+        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
         isActive: activeKey === s.key,
         dataAttr: { name: 'key', value: s.key },
-        leftHtml: `<i class="bi bi-file-earmark-code"></i>${dot}`,
+        leftHtml: `${dot}`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.path)}">
-            <span class="text-truncate small">${aiEscapeHtml(name)}</span>
+            <span class="text-truncate small"><i class="bi bi-file-earmark-code"></i> ${aiEscapeHtml(name)}</span>
+            ${isRemote ? `<span class="text-secondary" style="font-size:0.68rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${aiEscapeHtml(s.baseUrl)}</span>` : ''}
             ${dir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(dir)}</span>` : ''}
         </span>`,
         deleteAct: 'delete',
@@ -2210,13 +3097,13 @@ function genUuid() {
         return v.toString(16);
     });
 }
-function chatStartNew(initialWorkingDir) {
+function chatStartNew(initialWorkingDir, remoteId = '') {
     const container = document.createElement('div');
     container.innerHTML = `
         <p class="fw-semibold mb-3">${L('ctrl.hdr.newChat', 'New Chat')}</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
-            <input id="chat-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/MyProject" autocomplete="off">
+            <input id="chat-opt-workingdir" type="text" class="form-control form-control-sm" placeholder="./" autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-4">
             <div class="form-check">
@@ -2226,6 +3113,10 @@ function chatStartNew(initialWorkingDir) {
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="chat-opt-mdcopy" checked>
                 <label class="form-check-label small text-secondary" for="chat-opt-mdcopy">Copy MD</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chat-opt-write">
+                <label class="form-check-label small text-secondary" for="chat-opt-write">${L('ctrl.chat.write', 'Write')}</label>
             </div>
         </div>
         <div class="d-flex justify-content-between">
@@ -2239,10 +3130,15 @@ function chatStartNew(initialWorkingDir) {
     setTimeout(() => {
         const mcpCheck = container.querySelector('#chat-opt-mcp');
         const mdcopyCheck = container.querySelector('#chat-opt-mdcopy');
-        const workingDirInput = container.querySelector('#chat-opt-workingDir');
-        if (initialWorkingDir)
-            workingDirInput.value = initialWorkingDir;
+        const writeCheck = container.querySelector('#chat-opt-write');
+        const workingDirInput = container.querySelector('#chat-opt-workingdir');
+        workingDirInput.value = (initialWorkingDir ?? '').trim();
         const doOpen = () => {
+            const ctx = serverCtxOf(remoteId);
+            if (!ctx) {
+                modal.Close();
+                return;
+            }
             const sid = genUuid();
             const workingDir = workingDirInput.value.trim();
             const params = new URLSearchParams({ session: sid });
@@ -2252,8 +3148,10 @@ function chatStartNew(initialWorkingDir) {
                 params.set('workingDir', workingDir);
             if (mdcopyCheck.checked)
                 params.set('mdcopy', '1');
+            if (!writeCheck.checked)
+                params.set('write', '0');
             chatActivatePane();
-            showChatFrame(`chat:${sid}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?${params.toString()}`);
+            showChatFrame(sessKey('chat', remoteId, sid), `${ctx.artgineUrl}artgine/server/html/Chat.html?${params.toString()}`);
             chatRenderList();
             setTimeout(chatRenderList, 1500);
             setTimeout(chatRenderList, 4000);
@@ -2261,22 +3159,26 @@ function chatStartNew(initialWorkingDir) {
         };
         container.querySelector('#chat-modal-open').addEventListener('click', doOpen);
         container.querySelector('#chat-modal-cancel').addEventListener('click', () => modal.Close());
-        workingDirInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
-            doOpen(); });
     }, MODAL_DOM_DELAY);
 }
-CDOM.ID('chat-new-btn').addEventListener('click', () => chatStartNew(ctrlSelectedRootPath || undefined));
-function chatLoadSession(sid) {
+CDOM.ID('chat-new-btn').addEventListener('click', () => chatStartNew());
+function chatLoadSession(s) {
+    const ctx = serverCtxOf(s.remoteId);
+    if (!ctx)
+        return;
     chatActivatePane();
-    showChatFrame(`chat:${sid}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`);
+    showChatFrame(sessKey('chat', s.remoteId, s.sessionId), `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`);
     renderSessionSidebar();
 }
-function chatShowShareLink(sid, title) {
-    const shareUrl = `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`;
+function chatShowShareLink(ctx, sid, title) {
+    const shareUrl = `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`;
     showShareLinkModal('Chat Share Link', `Anyone with this link can access the chat: <strong>${aiEscapeHtml(title)}</strong>`, shareUrl);
 }
 function chatItemSpec(s, activeKey) {
-    const key = `chat:${s.sessionId}`;
+    const ctx = serverCtxOf(s.remoteId);
+    const key = sessKey('chat', s.remoteId, s.sessionId);
+    const isRemote = !!s.remoteId;
+    const addr = remoteEntryUrl(s.remoteId);
     const rel = chatFormatRelative(s.updatedAt);
     const isLoaded = chatIframePool.has(key);
     const st = !isLoaded ? 'off' : s.busy ? 'busy' : 'idle';
@@ -2284,7 +3186,7 @@ function chatItemSpec(s, activeKey) {
         : st === 'busy' ? `<span class="ai-busy-dot text-warning small" title="${L('ctrl.st.busy', 'Busy')}">●</span>`
             : `<span class="text-success small" title="${L('ctrl.st.idle', 'Idle')}">●</span>`;
     return {
-        activeClass: 'ai-session-item-active',
+        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
         isActive: activeKey === key,
         dataAttr: { name: 'key', value: key },
         leftHtml: `
@@ -2294,42 +3196,36 @@ function chatItemSpec(s, activeKey) {
         </span>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            ${isRemote && addr ? `<span class="text-truncate text-danger" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
             <span class="text-truncate text-secondary" style="font-size:0.65rem;font-family:monospace;">${aiEscapeHtml(s.sessionId)}</span>
-            <span class="text-truncate small">${aiEscapeHtml(s.title)}</span>
-            ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
+            <span class="text-truncate small">${aiEscapeHtml(s.lastMsg || s.title)}</span>
         </span>`,
         deleteAct: 'delete',
         deleteLabel: '🗑️ Delete',
-        onClick: () => chatLoadSession(s.sessionId),
-        onShare: () => chatShowShareLink(s.sessionId, s.title),
-        onDelete: () => {
-            const delConfirm = new CConfirm();
-            delConfirm.SetBody(LF('ctrl.msg.deleteNamed', 'Delete "{0}"?', aiEscapeHtml(s.title)));
-            delConfirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-                async () => {
-                    await authedFetch(`${CPath.WebRootUrl()}AIChat/session?id=${s.sessionId}`, { method: 'DELETE' });
-                    const f = chatIframePool.get(key);
-                    if (f) {
-                        f.remove();
-                        chatIframePool.delete(key);
-                    }
-                    if (activeChatFrameKey === key) {
-                        activeChatFrameKey = null;
-                        updateChatFramePlaceholder();
-                    }
-                    chatRenderList();
-                },
-                () => { },
-            ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
-            delConfirm.Open();
+        onClick: () => chatLoadSession(s),
+        onShare: () => { if (ctx)
+            chatShowShareLink(ctx, s.sessionId, s.title); },
+        onDelete: async () => {
+            if (ctx)
+                await fetch(ctxApiUrl(ctx, `AIChat/session?id=${s.sessionId}`), { method: 'DELETE' });
+            const f = chatIframePool.get(key);
+            if (f) {
+                f.remove();
+                chatIframePool.delete(key);
+            }
+            if (activeChatFrameKey === key) {
+                activeChatFrameKey = null;
+                updateChatFramePlaceholder();
+            }
+            chatRenderList();
         },
-        popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.sessionId}` },
+        popup: { url: () => `${ctx?.artgineUrl ?? CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.remoteId}_${s.sessionId}` },
     };
 }
 let chatListInFlight = false;
 async function chatRenderList() {
-    const token = getAuthToken(CPath.WebRootUrl());
-    if (!token) {
+    await ensureLocalAuth();
+    if (!getAuthToken(CPath.WebRootUrl())) {
         chatAuthState = 'signin';
         lastChatSessions = null;
         renderSessionSidebar();
@@ -2339,30 +3235,46 @@ async function chatRenderList() {
         return;
     chatListInFlight = true;
     try {
-        const r = await authedFetch(CPath.WebRootUrl() + 'AIChat/sessions?limit=30');
-        if (r.status === 401) {
-            chatAuthState = 'signin';
-            lastChatSessions = null;
+        const ctxs = sessionServerCtxs();
+        let merged = (lastChatSessions ?? []).slice();
+        await Promise.all(ctxs.map(async (ctx) => {
+            const remoteId = ctx.remoteId;
+            let sessions = null;
+            let unauthed = false;
+            try {
+                const r = await ctxFetch(ctx, 'AIChat/sessions?limit=30');
+                if (r.status === 401)
+                    unauthed = true;
+                else if (r.ok) {
+                    const j = await r.json();
+                    sessions = j.ok ? j.sessions : null;
+                }
+            }
+            catch { }
+            if (unauthed && !remoteId) {
+                removeAuthToken(CPath.WebRootUrl());
+                markLocalAuthLost();
+                chatAuthState = 'signin';
+                lastChatSessions = null;
+                renderSessionSidebar();
+                return;
+            }
+            if (!sessions)
+                return;
+            chatAuthState = 'ok';
+            merged = merged.filter(s => s.remoteId !== remoteId).concat(sessions.map(raw => ({ ...raw, remoteId })));
+            for (const s of sessions) {
+                const full = { ...s, remoteId };
+                const key = sessKey('chat', remoteId, full.sessionId);
+                const st = full.busy ? 'busy' : 'idle';
+                syncSessState(key, st, () => {
+                    const suppressToast = activeChatFrameKey === key && document.hasFocus();
+                    _showDoneNotification(aiEscapeHtml(full.title), full.lastMsg ? aiEscapeHtml(full.lastMsg) : undefined, () => chatLoadSession(full), aiEscapeHtml(full.sessionId), suppressToast);
+                });
+            }
+            lastChatSessions = merged;
             renderSessionSidebar();
-            return;
-        }
-        if (!r.ok)
-            return;
-        const j = await r.json();
-        if (!j.ok)
-            return;
-        chatAuthState = 'ok';
-        const sessions = j.sessions;
-        for (const s of sessions) {
-            const key = `chat:${s.sessionId}`;
-            const st = s.busy ? 'busy' : 'idle';
-            syncSessState(key, st, () => {
-                const suppressToast = activeChatFrameKey === key && document.hasFocus();
-                _showDoneNotification(aiEscapeHtml(s.title), s.lastMsg ? aiEscapeHtml(s.lastMsg) : undefined, () => chatLoadSession(s.sessionId), aiEscapeHtml(s.sessionId), suppressToast);
-            });
-        }
-        lastChatSessions = sessions;
-        renderSessionSidebar();
+        }));
     }
     catch (e) {
         console.error('Chat session list error:', e);
@@ -2371,7 +3283,6 @@ async function chatRenderList() {
         chatListInFlight = false;
     }
 }
-chatRenderList();
 const termFrameContainer = CDOM.ID("term-frame-container");
 const termFramePlaceholder = CDOM.ID("term-frame-placeholder");
 const termIframePool = new Map();
@@ -2396,28 +3307,34 @@ function showTermFrame(key, src) {
     return showPooledFrame(termFrameCtx, key, src);
 }
 function termActivatePane() {
-    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('term-tab')).show();
+    activatePaneUnlessMultiplexer('term-tab', 'Terminal');
 }
-async function termConnectSession(token) {
+async function termConnectSession(s) {
+    const ctx = serverCtxOf(s.remoteId);
+    if (!ctx)
+        return;
     termActivatePane();
-    const key = `term:${token}`;
+    const key = sessKey('term', s.remoteId, s.token);
     if (termIframePool.has(key)) {
         showTermFrame(key, '');
     }
     else {
-        showTermFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${token}`);
+        showTermFrame(key, ctxApiUrl(ctx, `cmd/terminal-proxy?token=${s.token}`));
     }
     renderSessionSidebar();
 }
-async function termKillSession(token) {
+async function termKillSession(s) {
+    const ctx = serverCtxOf(s.remoteId);
+    if (!ctx)
+        return;
     try {
-        const r = await authedFetch(`${CPath.WebRootUrl()}cmd/kill-session?token=${token}`);
+        const r = await fetch(ctxApiUrl(ctx, `cmd/kill-session?token=${s.token}`));
         const j = await r.json();
         if (!j.ok) {
             CAlert.E(LF('ctrl.msg.deleteFailed', 'Delete failed: {0}', j.msg || 'unknown error'));
             return;
         }
-        const key = `term:${token}`;
+        const key = sessKey('term', s.remoteId, s.token);
         const f = termIframePool.get(key);
         if (f) {
             f.remove();
@@ -2433,20 +3350,14 @@ async function termKillSession(token) {
         console.error('termKillSession error:', e);
     }
 }
-function termConfirmKillSession(token, label) {
-    const confirm = new CConfirm();
-    confirm.SetBody(LF('ctrl.msg.deleteNamed', 'Delete "{0}"?', aiEscapeHtml(label)));
-    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-        () => { termKillSession(token); },
-        () => { },
-    ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
-    confirm.Open();
-}
-function termShowShareLink(token) {
-    showShareLinkModal(L('ctrl.share.termTitle', 'Terminal Share Link'), L('ctrl.share.term', 'Anyone with this link can view the terminal in read-only mode.'), `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${token}`);
+function termShowShareLink(ctx, token) {
+    showShareLinkModal(L('ctrl.share.termTitle', 'Terminal Share Link'), L('ctrl.share.term', 'Anyone with this link can view the terminal in read-only mode.'), `${ctx.apiUrl}cmd/terminal-proxy?token=${token}`);
 }
 function termItemSpec(s, activeKey) {
-    const key = `term:${s.token}`;
+    const ctx = serverCtxOf(s.remoteId);
+    const key = sessKey('term', s.remoteId, s.token);
+    const isRemote = !!s.remoteId;
+    const addr = remoteEntryUrl(s.remoteId);
     const isActive = activeKey === key;
     const isLoaded = termIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
@@ -2463,7 +3374,7 @@ function termItemSpec(s, activeKey) {
             : st === 'busy' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
                 : `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
     return {
-        activeClass: 'ai-session-item-active',
+        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
         isActive,
         dataAttr: { name: 'key', value: key },
         leftHtml: `
@@ -2473,115 +3384,164 @@ function termItemSpec(s, activeKey) {
         </span>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            ${isRemote && addr ? `<span class="text-truncate text-danger" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
             <span class="text-truncate text-secondary" style="font-size:0.65rem;font-family:monospace;">${aiEscapeHtml(s.token)}</span>
             ${s.key ? `<span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.key)}</span>` : ''}
             <span class="text-truncate small">${preview}</span>
-            ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
         </span>`,
         deleteAct: 'kill',
         deleteLabel: '🗑️ Delete',
-        onClick: () => termConnectSession(s.token),
-        onShare: () => termShowShareLink(s.token),
-        onDelete: () => termConfirmKillSession(s.token, s.key || s.mode || 'Terminal'),
-        popup: { url: () => `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${s.token}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.token.slice(0, 8)}` },
+        onClick: () => termConnectSession(s),
+        onShare: () => { if (ctx)
+            termShowShareLink(ctx, s.token); },
+        onDelete: () => termKillSession(s),
+        popup: { url: () => `${ctx?.apiUrl ?? CPath.WebRootUrl()}cmd/terminal-proxy?token=${s.token}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.remoteId}_${s.token.slice(0, 8)}` },
     };
 }
 let termListInFlight = false;
+let termListPending = false;
 async function termRenderList() {
+    await ensureLocalAuth();
     if (!getAuthToken(CPath.WebRootUrl())) {
         termAuthState = 'signin';
         lastTermSessions = null;
         renderSessionSidebar();
         return;
     }
-    if (termListInFlight)
+    if (termListInFlight) {
+        termListPending = true;
         return;
+    }
     termListInFlight = true;
     try {
-        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/sessions');
-        if (r.status === 401) {
-            termAuthState = 'signin';
-            lastTermSessions = null;
-            renderSessionSidebar();
-            return;
-        }
-        const j = await r.json();
-        if (!j.ok)
-            return;
-        termAuthState = 'ok';
-        const sessions = j.sessions;
-        const serverTokens = new Set(sessions.map(s => s.token));
-        for (const key of Array.from(termIframePool.keys())) {
-            if (!key.startsWith('term:'))
-                continue;
-            if (!serverTokens.has(key.slice(5))) {
-                const f = termIframePool.get(key);
-                if (f) {
-                    f.remove();
-                    termIframePool.delete(key);
-                }
-                if (activeTermFrameKey === key) {
-                    activeTermFrameKey = null;
-                    updateTermFramePlaceholder();
+        const ctxs = sessionServerCtxs();
+        let merged = (lastTermSessions ?? []).slice();
+        await Promise.all(ctxs.map(async (ctx) => {
+            const remoteId = ctx.remoteId;
+            let sessions = null;
+            let unauthed = false;
+            try {
+                const r = await ctxFetch(ctx, 'cmd/sessions');
+                if (r.status === 401)
+                    unauthed = true;
+                else if (r.ok) {
+                    const j = await r.json();
+                    sessions = j.ok ? j.sessions : null;
                 }
             }
-        }
-        for (const newKey of Array.from(termIframePool.keys())) {
-            if (!newKey.startsWith('term-new:'))
-                continue;
-            const token = newKey.slice('term-new:'.length, newKey.lastIndexOf(':'));
-            if (!serverTokens.has(token))
-                continue;
-            const key = `term:${token}`;
-            const f = termIframePool.get(newKey);
-            termIframePool.delete(newKey);
-            termIframePool.set(key, f);
-            if (activeTermFrameKey === newKey)
-                activeTermFrameKey = key;
-        }
-        for (const s of sessions) {
-            const key = `term:${s.token}`;
-            const st = !s.alive ? 'off'
-                : s.permPending ? 'wait'
-                    : s.busy ? 'busy'
-                        : 'idle';
-            syncSessState(key, st, () => {
-                const rawPreview = s.lastMsg || '';
-                const suppressToast = activeTermFrameKey === key && document.hasFocus();
-                _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? aiEscapeHtml(rawPreview) : undefined, () => termConnectSession(s.token), aiEscapeHtml(s.token), suppressToast);
-            }, () => {
-                const suppressToast = activeTermFrameKey === key && document.hasFocus();
-                _showDoneNotification(LF('ctrl.msg.approvalRequired', '⚠️ {0}: Approval required', s.key || s.mode), s.lastMsg || undefined, () => termConnectSession(s.token), aiEscapeHtml(s.token), suppressToast);
-            });
-        }
-        lastTermSessions = sessions;
-        renderSessionSidebar();
+            catch { }
+            if (unauthed && !remoteId) {
+                removeAuthToken(CPath.WebRootUrl());
+                markLocalAuthLost();
+                termAuthState = 'signin';
+                lastTermSessions = null;
+                renderSessionSidebar();
+                return;
+            }
+            if (!sessions)
+                return;
+            termAuthState = 'ok';
+            const withRemote = sessions.map(x => ({ ...x, remoteId }));
+            const serverTokens = new Set(withRemote.map(s => s.token));
+            const liveKeys = new Set(withRemote.map(s => sessKey('term', remoteId, s.token)));
+            const newPrefix = remoteId ? `term-new:${remoteId}:` : 'term-new:';
+            for (const newKey of Array.from(termIframePool.keys())) {
+                if (!newKey.startsWith(newPrefix))
+                    continue;
+                const tok = newKey.slice(newPrefix.length, newKey.lastIndexOf(':'));
+                if (!serverTokens.has(tok))
+                    continue;
+                const key = sessKey('term', remoteId, tok);
+                const f = termIframePool.get(newKey);
+                termIframePool.delete(newKey);
+                termIframePool.set(key, f);
+                if (activeTermFrameKey === newKey)
+                    activeTermFrameKey = key;
+            }
+            for (const s of withRemote) {
+                const key = sessKey('term', remoteId, s.token);
+                const st = !s.alive ? 'off'
+                    : s.permPending ? 'wait'
+                        : s.busy ? 'busy'
+                            : 'idle';
+                syncSessState(key, st, () => {
+                    const rawPreview = s.lastMsg || '';
+                    const suppressToast = activeTermFrameKey === key && document.hasFocus();
+                    _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? aiEscapeHtml(rawPreview) : undefined, () => termConnectSession(s), aiEscapeHtml(s.token), suppressToast);
+                }, () => {
+                    const suppressToast = activeTermFrameKey === key && document.hasFocus();
+                    _showDoneNotification(LF('ctrl.msg.approvalRequired', '⚠️ {0}: Approval required', s.key || s.mode), s.lastMsg || undefined, () => termConnectSession(s), aiEscapeHtml(s.token), suppressToast);
+                });
+            }
+            merged = merged.filter(s => s.remoteId !== remoteId).concat(withRemote);
+            for (const key of Array.from(termIframePool.keys())) {
+                if (!key.startsWith('term:'))
+                    continue;
+                if (keyRemoteId(key) !== remoteId)
+                    continue;
+                if (!liveKeys.has(key)) {
+                    const f = termIframePool.get(key);
+                    if (f) {
+                        f.remove();
+                        termIframePool.delete(key);
+                    }
+                    if (activeTermFrameKey === key) {
+                        activeTermFrameKey = null;
+                        updateTermFramePlaceholder();
+                    }
+                }
+            }
+            lastTermSessions = merged;
+            renderSessionSidebar();
+        }));
     }
     catch (e) {
         console.error('Terminal session list error:', e);
     }
     finally {
         termListInFlight = false;
+        if (termListPending) {
+            termListPending = false;
+            termRenderList();
+        }
     }
 }
-function termStartNew(mode = 'cmd', initialWorkingDir) {
+async function termStartNew(mode = 'cmd', initialWorkingDir, remoteId = '') {
+    const modelMap = await agentFetchModels(remoteId);
+    const modelsFor = (providerId) => modelMap[providerId] ?? [];
+    const savedProvider = getLastProvider();
+    const termProviders = ['cmd', ...AGENT_PROVIDER_IDS];
+    const initialProvider = (mode !== 'cmd')
+        ? mode
+        : (savedProvider && termProviders.includes(savedProvider) ? savedProvider : 'cmd');
+    const buildModelOptions = (providerId, selectedModel = '') => {
+        const models = modelsFor(providerId);
+        const sel = (selectedModel && models.some(m => m.value === selectedModel)) ? selectedModel : '';
+        return `<option value="" ${sel === '' ? 'selected' : ''}>${L('ctrl.opt.defaultModel', '(default)')}</option>` +
+            models.map(m => `<option value="${aiEscapeHtml(m.value)}" ${m.value === sel ? 'selected' : ''}>${aiEscapeHtml(m.label)}</option>`).join('');
+    };
     const container = document.createElement('div');
     container.innerHTML = `
-        <div class="mb-3 d-flex gap-2 flex-wrap">
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="cmd"><i class="bi bi-terminal"></i>cmd</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="claude"><i class="bi bi-chat-dots"></i>claude</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="codex"><i class="bi bi-code-slash"></i>codex</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="antigravity"><i class="bi bi-rocket-takeoff"></i>agy</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="opencode"><i class="bi bi-braces"></i>opencode</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="grok"><i class="bi bi-lightning-charge"></i>grok</button>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.provider', 'Provider')}</label>
+            <select id="term-opt-provider" class="form-select form-select-sm">
+                <option value="cmd" ${initialProvider === 'cmd' ? 'selected' : ''}>cmd</option>
+                ${AGENT_PROVIDER_IDS.map(id => `<option value="${id}" ${id === initialProvider ? 'selected' : ''}>${AGENT_PROVIDER_LABELS[id]}</option>`).join('')}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.model', 'Model')}</label>
+            <select id="term-opt-model" class="form-select form-select-sm">
+                ${buildModelOptions(initialProvider, '')}
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
+            <input id="term-opt-workingdir" type="text" class="form-control form-control-sm" placeholder="./" autocomplete="off">
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.key', 'Key')}</label>
             <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="${L('ctrl.ph.sessionKey', 'Session key (optional)')}" autocomplete="off">
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
-            <input id="term-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-4">
             <div class="form-check">
@@ -2604,23 +3564,22 @@ function termStartNew(mode = 'cmd', initialWorkingDir) {
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
     setTimeout(() => {
-        let selectedMode = mode;
-        const modeButtons = container.querySelectorAll('.term-mode-btn');
+        const providerSelect = container.querySelector('#term-opt-provider');
+        const modelSelect = container.querySelector('#term-opt-model');
         const mcpCheck = container.querySelector('#term-opt-mcp');
         const mdcopyCheck = container.querySelector('#term-opt-mdcopy');
-        const updateModeUI = (m) => {
-            selectedMode = m;
-            modeButtons.forEach(b => {
-                b.classList.toggle('btn-primary', b.dataset.mode === m);
-                b.classList.toggle('btn-outline-secondary', b.dataset.mode !== m);
-            });
+        const updateModeUI = () => {
+            const isCmd = providerSelect.value === 'cmd';
+            modelSelect.innerHTML = buildModelOptions(providerSelect.value, '');
+            modelSelect.disabled = isCmd;
+            mcpCheck.disabled = isCmd;
+            mdcopyCheck.disabled = isCmd;
         };
-        modeButtons.forEach(b => b.addEventListener('click', () => updateModeUI(b.dataset.mode)));
-        updateModeUI(selectedMode);
+        providerSelect.addEventListener('change', updateModeUI);
+        updateModeUI();
         const keyInput = container.querySelector('#term-opt-key');
-        const workingDirInput = container.querySelector('#term-opt-workingDir');
-        if (initialWorkingDir)
-            workingDirInput.value = initialWorkingDir;
+        const workingDirInput = container.querySelector('#term-opt-workingdir');
+        workingDirInput.value = (initialWorkingDir ?? '').trim();
         const openBtn = container.querySelector('#term-modal-open');
         const cancelBtn = container.querySelector('#term-modal-cancel');
         let opening = false;
@@ -2635,16 +3594,26 @@ function termStartNew(mode = 'cmd', initialWorkingDir) {
             try {
                 const key = keyInput.value.trim();
                 const workingDir = workingDirInput.value.trim();
+                const selectedMode = providerSelect.value;
+                const selectedModel = selectedMode === 'cmd' ? '' : modelSelect.value.trim();
+                saveLastProviderModel(selectedMode, selectedModel);
                 const params = new URLSearchParams({ mode: selectedMode });
                 if (key)
                     params.set('key', key);
                 if (workingDir)
                     params.set('workingDir', workingDir);
+                if (selectedModel)
+                    params.set('model', selectedModel);
                 if (!mcpCheck.checked)
                     params.set('mcp', '0');
                 if (mdcopyCheck.checked)
                     params.set('mdcopy', '1');
-                const r = await authedFetch(CPath.WebRootUrl() + 'cmd/start-term?' + params.toString());
+                const ctx = serverCtxOf(remoteId);
+                if (!ctx) {
+                    CAlert.E(L('ctrl.msg.failedStartTerm', 'Failed to start terminal'));
+                    return;
+                }
+                const r = await fetch(ctxApiUrl(ctx, 'cmd/start-term?' + params.toString()));
                 const j = await r.json();
                 if (!j.ok) {
                     CAlert.E(j.msg || L('ctrl.msg.failedStartTerm', 'Failed to start terminal'));
@@ -2652,7 +3621,7 @@ function termStartNew(mode = 'cmd', initialWorkingDir) {
                 }
                 modal.Close();
                 termActivatePane();
-                showTermFrame(`term-new:${j.token}:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
+                showTermFrame(sessKey('term-new', remoteId, `${j.token}:${Date.now()}`), ctxApiUrl(ctx, `cmd/terminal-proxy?token=${j.token}`));
                 termRenderList();
                 setTimeout(termRenderList, 1500);
                 setTimeout(termRenderList, 4000);
@@ -2670,19 +3639,18 @@ function termStartNew(mode = 'cmd', initialWorkingDir) {
         };
         openBtn.addEventListener('click', doOpen);
         cancelBtn.addEventListener('click', () => modal.Close());
-        workingDirInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+        keyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
             doOpen(); });
     }, MODAL_DOM_DELAY);
 }
 const termTab = CDOM.ID('term-tab');
-termTab.addEventListener('click', () => {
+CDOM.ID('term-new-btn').addEventListener('click', () => {
     if (!ctrlRequireAuthed())
         return;
-    termStartNew('cmd', ctrlSelectedRootPath || undefined);
+    termStartNew('cmd');
 });
 termTab.addEventListener('shown.bs.tab', () => { termRenderList(); updateTermFrameVisibility(); });
 termTab.addEventListener('hidden.bs.tab', () => updateTermFrameVisibility());
-termRenderList();
 const browserFrameContainer = CDOM.ID("browser-frame-container");
 const browserFramePlaceholder = CDOM.ID("browser-frame-placeholder");
 const browserIframePool = new Map();
@@ -2723,7 +3691,7 @@ function destroyBrowserFrame(key) {
     updateBrowserFramePlaceholder();
 }
 function browserActivatePane() {
-    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('browser-panel-tab')).show();
+    activatePaneUnlessMultiplexer('browser-panel-tab', 'Browser');
 }
 const browserSessions = new Map();
 function browserLoadSession(sessionId) {
@@ -2794,6 +3762,7 @@ async function browserRemoveSession(sessionId) {
 }
 let browserListInFlight = false;
 async function browserRefreshList() {
+    await ensureLocalAuth();
     if (!getAuthToken(CPath.WebRootUrl())) {
         browserAuthState = 'signin';
         browserSessions.clear();
@@ -2806,6 +3775,8 @@ async function browserRefreshList() {
     try {
         const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/list`);
         if (r.status === 401) {
+            removeAuthToken(CPath.WebRootUrl());
+            markLocalAuthLost();
             browserAuthState = 'signin';
             browserSessions.clear();
             renderSessionSidebar();
@@ -2841,6 +3812,7 @@ async function browserRefreshList() {
 function browserShowShareLink(sessionId, url) {
     showShareLinkModal(L('ctrl.share.browserTitle', 'Browser Share Link'), LF('ctrl.share.browser', 'Anyone with this link can view the session in read-only mode: <strong>{0}</strong>', aiEscapeHtml(url)), `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`);
 }
+CDOM.ID('search-open-btn').addEventListener('click', () => ctrlFileSearch());
 CDOM.ID('browser-new-btn').addEventListener('click', () => {
     const container = document.createElement('div');
     container.innerHTML = `
@@ -2930,7 +3902,7 @@ CDOM.ID('browser-new-btn').addEventListener('click', () => {
 CDOM.ID('browser-panel-tab').addEventListener('shown.bs.tab', () => updateBrowserFrameVisibility());
 CDOM.ID('browser-panel-tab').addEventListener('hidden.bs.tab', () => updateBrowserFrameVisibility());
 setInterval(() => {
-    sessionSidebarList.querySelectorAll('[data-key^="browser:"]').forEach(el => {
+    otherSidebarList.querySelectorAll('[data-key^="browser:"]').forEach(el => {
         const sid = el.dataset.key.slice('browser:'.length);
         const s = browserSessions.get(sid);
         const ttlEl = el.querySelector('.browser-ttl-label');
@@ -2938,14 +3910,13 @@ setInterval(() => {
             ttlEl.textContent = s.expiresAt ? browserFmtTtl(s.expiresAt) : '';
     });
 }, 1000);
-browserRefreshList();
 async function sessionPollOnce() {
     await Promise.allSettled([chatRenderList(), termRenderList(), browserRefreshList()]);
 }
 (async function sessionPollLoop() {
     for (;;) {
-        await new Promise(r => setTimeout(r, 5000));
         await sessionPollOnce();
+        await new Promise(r => setTimeout(r, 5000));
     }
 })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden)
@@ -2954,6 +3925,330 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden)
     const tabEl = CDOM.ID(tabId);
     tabEl.addEventListener('shown.bs.tab', () => renderSessionSidebar());
     tabEl.addEventListener('hidden.bs.tab', () => renderSessionSidebar());
+});
+const TMUX_LS_KEY = 'ctrl-tmux-layout-v1';
+const TMUX_MODE_LS_KEY = 'ctrl-tmux-mode-v1';
+const tmuxPaneEls = new Map();
+const tmuxTreeRoot = CDOM.ID('tmux-tree-root');
+const tmuxModeWorkBtn = CDOM.ID('tmux-mode-work-btn');
+const tmuxModeConfigBtn = CDOM.ID('tmux-mode-config-btn');
+function tmuxLoadLayout() {
+    try {
+        const raw = localStorage.getItem(TMUX_LS_KEY);
+        if (raw)
+            return JSON.parse(raw);
+    }
+    catch (_) { }
+    return { id: genUuid(), contentKey: null };
+}
+function tmuxStrip(p) {
+    if (p.split && p.children)
+        return { id: p.id, split: p.split, children: [tmuxStrip(p.children[0]), tmuxStrip(p.children[1])] };
+    return { id: p.id, contentKey: p.contentKey ?? null };
+}
+function tmuxSaveLayout() {
+    try {
+        localStorage.setItem(TMUX_LS_KEY, JSON.stringify(tmuxStrip(tmuxRoot)));
+    }
+    catch (_) { }
+}
+let tmuxRoot = tmuxLoadLayout();
+let tmuxMode = localStorage.getItem(TMUX_MODE_LS_KEY) || 'config';
+function tmuxFind(node, id) {
+    if (node.id === id)
+        return node;
+    if (node.children) {
+        for (const c of node.children) {
+            const f = tmuxFind(c, id);
+            if (f)
+                return f;
+        }
+    }
+    return null;
+}
+function tmuxFindParent(node, id, parent = null) {
+    if (node.id === id)
+        return { pane: node, parent };
+    if (node.children) {
+        for (const c of node.children) {
+            const f = tmuxFindParent(c, id, node);
+            if (f)
+                return f;
+        }
+    }
+    return null;
+}
+function tmuxCollectIds(p, out = []) {
+    out.push(p.id);
+    if (p.children) {
+        tmuxCollectIds(p.children[0], out);
+        tmuxCollectIds(p.children[1], out);
+    }
+    return out;
+}
+function tmuxKeyToSrc(key) {
+    if (key.startsWith('chat:')) {
+        const p = parseSessKey(key);
+        const ctx = serverCtxOf(p.remoteId);
+        return ctx ? `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(p.id)}` : null;
+    }
+    if (key.startsWith('term:')) {
+        const p = parseSessKey(key);
+        const ctx = serverCtxOf(p.remoteId);
+        return ctx ? ctxApiUrl(ctx, `cmd/terminal-proxy?token=${encodeURIComponent(p.id)}`) : null;
+    }
+    if (key.startsWith('browser:')) {
+        return `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(key.slice(8))}`;
+    }
+    if (key === 'rdp:local') {
+        return `${CPath.WebRootArtgineUrl()}artgine/server/html/RemoteDesktop.html`;
+    }
+    if (key.startsWith('rdp:remote:')) {
+        const remote = rdpRemotes.find(r => r.remoteId === key.slice(11));
+        return remote ? `${rdpRemoteWebRootUrl(remote.entryUrl)}artgine/server/html/RemoteDesktop.html` : null;
+    }
+    if (key.startsWith('editor:')) {
+        const s = editorSessions.get(key);
+        return s ? editorFrameSrc(s) : null;
+    }
+    return null;
+}
+function tmuxRenderLeafContent(el, key) {
+    const content = el.querySelector('.tmux-leaf-content');
+    content.innerHTML = '';
+    if (!key)
+        return;
+    const src = tmuxKeyToSrc(key);
+    if (!src)
+        return;
+    const f = document.createElement('iframe');
+    f.src = src;
+    content.appendChild(f);
+}
+function tmuxBuildLeafToolbar(paneId) {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'tmux-leaf-toolbar';
+    const canMerge = !!tmuxFindParent(tmuxRoot, paneId)?.parent;
+    toolbar.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-h" data-CLan-title="ctrl.tmux.splitH" title="좌우 분할"><i class="bi bi-layout-split"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-v" data-CLan-title="ctrl.tmux.splitV" title="상하 분할"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
+        ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-merge" data-CLan-title="ctrl.tmux.merge" title="병합"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
+        <button type="button" class="btn btn-sm btn-outline-primary tmux-pane-select" data-CLan-title="ctrl.tmux.select" title="콘텐츠 선택"><i class="bi bi-card-list"></i></button>
+    `;
+    toolbar.querySelector('.tmux-pane-split-h').addEventListener('click', () => tmuxSplitPane(paneId, 'row'));
+    toolbar.querySelector('.tmux-pane-split-v').addEventListener('click', () => tmuxSplitPane(paneId, 'col'));
+    toolbar.querySelector('.tmux-pane-merge')?.addEventListener('click', () => tmuxMergePane(paneId));
+    toolbar.querySelector('.tmux-pane-select').addEventListener('click', () => tmuxOpenSelectModal(paneId));
+    applyLanIn(toolbar);
+    return toolbar;
+}
+function tmuxBuildEl(pane) {
+    if (pane.split && pane.children) {
+        const el = document.createElement('div');
+        el.className = `tmux-split tmux-split-${pane.split}`;
+        el.dataset.paneId = pane.id;
+        el.appendChild(tmuxBuildEl(pane.children[0]));
+        el.appendChild(tmuxBuildEl(pane.children[1]));
+        tmuxPaneEls.set(pane.id, el);
+        return el;
+    }
+    const el = document.createElement('div');
+    el.className = 'tmux-leaf';
+    el.dataset.paneId = pane.id;
+    const content = document.createElement('div');
+    content.className = 'tmux-leaf-content';
+    el.appendChild(content);
+    if (!pane.contentKey) {
+        const empty = document.createElement('div');
+        empty.className = 'tmux-leaf-empty';
+        empty.textContent = L('ctrl.tmux.emptyPane', '설정 모드에서 셀렉트로 콘텐츠를 선택하세요');
+        content.appendChild(empty);
+    }
+    else {
+        tmuxRenderLeafContent(el, pane.contentKey);
+    }
+    const overlay = document.createElement('div');
+    overlay.className = 'tmux-leaf-overlay';
+    overlay.appendChild(tmuxBuildLeafToolbar(pane.id));
+    el.appendChild(overlay);
+    tmuxPaneEls.set(pane.id, el);
+    return el;
+}
+function tmuxRenderAll() {
+    tmuxPaneEls.clear();
+    tmuxTreeRoot.innerHTML = '';
+    tmuxTreeRoot.appendChild(tmuxBuildEl(tmuxRoot));
+}
+function tmuxApplyMode() {
+    tmuxTreeRoot.classList.toggle('tmux-config-mode', tmuxMode === 'config');
+    tmuxModeWorkBtn.classList.toggle('active', tmuxMode === 'work');
+    tmuxModeConfigBtn.classList.toggle('active', tmuxMode === 'config');
+}
+function tmuxSplitPane(paneId, dir) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split)
+        return;
+    const oldEl = tmuxPaneEls.get(pane.id);
+    const existingIframe = oldEl?.querySelector('.tmux-leaf-content iframe');
+    const child1 = { id: genUuid(), contentKey: pane.contentKey ?? null };
+    const child2 = { id: genUuid(), contentKey: null };
+    pane.split = dir;
+    pane.children = [child1, child2];
+    delete pane.contentKey;
+    const splitEl = document.createElement('div');
+    splitEl.className = `tmux-split tmux-split-${dir}`;
+    splitEl.dataset.paneId = pane.id;
+    const child1El = tmuxBuildEl(child1);
+    if (existingIframe) {
+        const c1content = child1El.querySelector('.tmux-leaf-content');
+        c1content.innerHTML = '';
+        c1content.appendChild(existingIframe);
+    }
+    const child2El = tmuxBuildEl(child2);
+    splitEl.appendChild(child1El);
+    splitEl.appendChild(child2El);
+    oldEl?.replaceWith(splitEl);
+    tmuxPaneEls.set(pane.id, splitEl);
+    tmuxSaveLayout();
+}
+function tmuxMergePane(paneId) {
+    const found = tmuxFindParent(tmuxRoot, paneId);
+    if (!found || !found.parent)
+        return;
+    const { pane, parent } = found;
+    const paneEl = tmuxPaneEls.get(pane.id);
+    const keptIframe = paneEl?.querySelector('.tmux-leaf-content iframe');
+    const keptContentKey = pane.contentKey ?? null;
+    const staleIds = tmuxCollectIds(parent);
+    const parentEl = tmuxPaneEls.get(parent.id);
+    parent.split = undefined;
+    parent.children = undefined;
+    parent.contentKey = keptContentKey;
+    const newLeafEl = tmuxBuildEl({ id: parent.id, contentKey: null });
+    if (keptIframe) {
+        const c = newLeafEl.querySelector('.tmux-leaf-content');
+        c.innerHTML = '';
+        c.appendChild(keptIframe);
+    }
+    parentEl?.replaceWith(newLeafEl);
+    staleIds.forEach(id => { if (id !== parent.id)
+        tmuxPaneEls.delete(id); });
+    tmuxPaneEls.set(parent.id, newLeafEl);
+    tmuxSaveLayout();
+}
+function tmuxOpenSelectModal(paneId) {
+    const chatItems = (lastChatSessions ?? []).map(s => ({ key: sessKey('chat', s.remoteId, s.sessionId), label: s.title || s.sessionId, sub: s.workingDir }));
+    const chatKnownKeys = new Set(chatItems.map(it => it.key));
+    chatIframePool.forEach((_f, key) => {
+        if (!chatKnownKeys.has(key))
+            chatItems.push({ key, label: L('ctrl.tmux.unsentChat', '(New, unsent)'), sub: key.slice(5) });
+    });
+    const groups = [
+        { label: 'Chat', items: chatItems },
+        { label: 'Terminal', items: (lastTermSessions ?? []).map(s => ({ key: sessKey('term', s.remoteId, s.token), label: s.key || s.lastMsg || `(${s.mode})`, sub: s.workingDir || s.token })) },
+        { label: 'Browser', items: Array.from(browserSessions.values()).map(s => ({ key: `browser:${s.sessionId}`, label: s.url, sub: s.browserName })) },
+        { label: 'RDP', items: [{ key: 'rdp:local', label: 'Local' }, ...rdpRemotes.map(r => ({ key: `rdp:remote:${r.remoteId}`, label: r.entryUrl }))] },
+        { label: 'Editor', items: Array.from(editorSessions.values()).map(s => ({ key: s.key, label: s.path.split('/').pop() || s.path, sub: s.path })) },
+    ];
+    const bodyHtml = groups.map(g => `
+        <div class="mb-2">
+            <div class="small text-secondary fw-semibold mb-1">${aiEscapeHtml(g.label)}</div>
+            ${g.items.length ? g.items.map(it => `<button type="button" class="btn btn-sm btn-outline-secondary d-block w-100 text-start mb-1 tmux-select-item" data-key="${aiEscapeHtml(it.key)}">
+                <span class="d-block text-truncate">${aiEscapeHtml(it.label)}</span>
+                ${it.sub ? `<span class="d-block text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(it.sub)}</span>` : ''}
+            </button>`).join('') : `<div class="small text-secondary fst-italic">${L('ctrl.tmux.noSessions', '없음')}</div>`}
+        </div>`).join('') +
+        `<button type="button" class="btn btn-sm btn-outline-danger w-100 mt-1" id="tmux-select-clear">${L('ctrl.tmux.clearPane', '비우기')}</button>`;
+    const modal = new CModal();
+    modal.SetHeader(L('ctrl.tmux.select', '콘텐츠 선택'));
+    modal.SetBody(bodyHtml);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(420, 480);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        document.querySelectorAll('.tmux-select-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.key;
+                tmuxSetPaneContent(paneId, key);
+                modal.Close();
+            });
+        });
+        document.getElementById('tmux-select-clear')?.addEventListener('click', () => {
+            tmuxSetPaneContent(paneId, null);
+            modal.Close();
+        });
+    }, MODAL_DOM_DELAY);
+}
+function tmuxSetPaneContent(paneId, key) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split)
+        return;
+    pane.contentKey = key;
+    const el = tmuxPaneEls.get(paneId);
+    if (el) {
+        el.querySelector('.tmux-leaf-content').innerHTML = '';
+        if (!key) {
+            const empty = document.createElement('div');
+            empty.className = 'tmux-leaf-empty';
+            empty.textContent = L('ctrl.tmux.emptyPane', '설정 모드에서 셀렉트로 콘텐츠를 선택하세요');
+            el.querySelector('.tmux-leaf-content').appendChild(empty);
+        }
+        else {
+            tmuxRenderLeafContent(el, key);
+        }
+    }
+    tmuxSaveLayout();
+}
+tmuxRenderAll();
+tmuxApplyMode();
+tmuxModeWorkBtn.addEventListener('click', () => { tmuxMode = 'work'; localStorage.setItem(TMUX_MODE_LS_KEY, tmuxMode); tmuxApplyMode(); });
+tmuxModeConfigBtn.addEventListener('click', () => { tmuxMode = 'config'; localStorage.setItem(TMUX_MODE_LS_KEY, tmuxMode); tmuxApplyMode(); });
+function tmuxClose() {
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('help-panel-tab')).show();
+}
+CDOM.ID('tmux-close-btn').addEventListener('click', () => tmuxClose());
+const tmuxTabEl = CDOM.ID('tmux-tab');
+let tmuxTabWasActiveOnPointer = false;
+tmuxTabEl.addEventListener('pointerdown', () => {
+    tmuxTabWasActiveOnPointer = tmuxTabEl.classList.contains('active');
+}, true);
+tmuxTabEl.addEventListener('click', (e) => {
+    if (!tmuxTabWasActiveOnPointer)
+        return;
+    e.preventDefault();
+    e.stopPropagation();
+    tmuxClose();
+}, true);
+const tmuxMaximizeBtn = CDOM.ID('tmux-maximize-btn');
+const TMUX_MAX_LS_KEY = 'ctrl-tmux-maximized-v1';
+let tmuxMaximized = localStorage.getItem(TMUX_MAX_LS_KEY) !== '0';
+function tmuxApplyMaximize() {
+    document.body.classList.toggle('tmux-fullscreen', tmuxMaximized);
+    if (tmuxMaximized) {
+        if (appSidebar?.classList.contains('show'))
+            window.bootstrap.Offcanvas.getOrCreateInstance(appSidebar).hide();
+        if (appSidebarRight?.classList.contains('show'))
+            window.bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).hide();
+    }
+    else {
+        updateSidebarMode();
+    }
+    tmuxMaximizeBtn.innerHTML = tmuxMaximized
+        ? `<i class="bi bi-fullscreen-exit"></i> <span data-CLan="ctrl.tmux.minimize">최소</span>`
+        : `<i class="bi bi-arrows-fullscreen"></i> <span data-CLan="ctrl.tmux.maximize">최대</span>`;
+    applyLanIn(tmuxMaximizeBtn);
+}
+tmuxMaximizeBtn.addEventListener('click', () => {
+    tmuxMaximized = !tmuxMaximized;
+    localStorage.setItem(TMUX_MAX_LS_KEY, tmuxMaximized ? '1' : '0');
+    tmuxApplyMaximize();
+});
+CDOM.ID('tmux-tab').addEventListener('shown.bs.tab', () => {
+    tmuxApplyMaximize();
+});
+CDOM.ID('tmux-tab').addEventListener('hidden.bs.tab', () => {
+    document.body.classList.remove('tmux-fullscreen');
+    updateSidebarMode();
 });
 const schedSessionList = CDOM.ID("schedSessionList");
 function schedIntervalStr(s) {
@@ -3070,6 +4365,10 @@ async function schedOpenModal(existing) {
                         <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.end ?? 0}">
                     </div>
                 </div>
+                <div class="form-check mt-2">
+                    <input id="sched-autoend-interval" type="checkbox" class="form-check-input" ${(existing?.option.autoEnd ?? true) ? 'checked' : ''}>
+                    <label for="sched-autoend-interval" class="form-check-label small text-secondary">${L('ctrl.lbl.autoEndInterval', 'Auto-delete when count is exhausted')}</label>
+                </div>
             </div>
             <div id="sched-panel-time" style="display:${existing?.mode === 'time' ? '' : 'none'}">
                 <div class="mb-2">
@@ -3091,6 +4390,10 @@ async function schedOpenModal(existing) {
                             ${Array.from({ length: 12 }, (_, i) => i * 5).map(m => `<option value="${m}" ${(existing?.option.minute ?? 0) === m ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`).join('')}
                         </select>
                     </div>
+                </div>
+                <div class="form-check mt-2">
+                    <input id="sched-autoend-time" type="checkbox" class="form-check-input" ${(existing?.option.autoEnd ?? false) ? 'checked' : ''}>
+                    <label for="sched-autoend-time" class="form-check-label small text-secondary">${L('ctrl.lbl.autoEndTime', 'Run once then delete')}</label>
                 </div>
             </div>
         </div>
@@ -3147,6 +4450,7 @@ async function schedOpenModal(existing) {
                 option.days = selectedDays;
                 option.hour = parseInt((container.querySelector('#sched-hour')).value) || 0;
                 option.minute = parseInt((container.querySelector('#sched-minute')).value) || 0;
+                option.autoEnd = (container.querySelector('#sched-autoend-time')).checked;
             }
             else {
                 const delay = Math.max(0, parseInt((container.querySelector('#sched-delay')).value) || 0);
@@ -3158,6 +4462,7 @@ async function schedOpenModal(existing) {
                 option.count = Math.max(0, parseInt((container.querySelector('#sched-count')).value) || 0);
                 option.start = Math.max(0, parseInt((container.querySelector('#sched-start')).value) || 0);
                 option.end = Math.max(0, parseInt((container.querySelector('#sched-end')).value) || 0);
+                option.autoEnd = (container.querySelector('#sched-autoend-interval')).checked;
             }
             const params = new URLSearchParams({ name, subAgentKey, mode: isTimeMode ? 'time' : 'interval', command, option: JSON.stringify(option) });
             const r = await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
@@ -3176,6 +4481,52 @@ async function schedOpenModal(existing) {
 CDOM.ID('sched-new-btn').addEventListener('click', () => schedOpenModal());
 schedRefresh();
 setInterval(schedRefresh, 5000);
+function agentRuleToLine(r) {
+    const parts = [];
+    if (r.type)
+        parts.push(`type:${r.type}`);
+    if (r.tool)
+        parts.push(`tool:${r.tool}`);
+    if (r.command)
+        parts.push(`cmd:${r.command}`);
+    return parts.join(' ');
+}
+function agentRulesToText(rules) {
+    return (rules ?? []).map(agentRuleToLine).filter(s => s.length > 0).join('\n');
+}
+function agentTextToRules(text) {
+    const out = [];
+    for (const raw of text.split('\n')) {
+        const line = raw.trim();
+        if (!line)
+            continue;
+        const rule = {};
+        let head = line;
+        const ci = line.indexOf('cmd:');
+        if (ci >= 0) {
+            rule.command = line.slice(ci + 4).trim();
+            head = line.slice(0, ci).trim();
+        }
+        let sawPrefix = false;
+        for (const tok of head.split(/\s+/)) {
+            if (!tok)
+                continue;
+            if (tok.startsWith('type:')) {
+                rule.type = tok.slice(5);
+                sawPrefix = true;
+            }
+            else if (tok.startsWith('tool:')) {
+                rule.tool = tok.slice(5);
+                sawPrefix = true;
+            }
+        }
+        if (!sawPrefix && ci < 0)
+            rule.command = head;
+        if (rule.type || rule.tool || rule.command)
+            out.push(rule);
+    }
+    return out;
+}
 const agentList = CDOM.ID('agentList');
 async function agentRefresh() {
     try {
@@ -3223,19 +4574,39 @@ async function agentRefresh() {
 }
 const AGENT_PROVIDER_IDS = ['claude', 'codex', 'antigravity', 'opencode', 'grok'];
 const AGENT_PROVIDER_LABELS = { claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode', grok: 'Grok' };
-let gAgentModelsCache = null;
-let gAgentModelsFetching = null;
-async function agentFetchModels() {
-    if (gAgentModelsCache)
-        return gAgentModelsCache;
-    if (gAgentModelsFetching)
-        return gAgentModelsFetching;
-    gAgentModelsFetching = (async () => {
+const LS_PROVIDER = 'ai.provider';
+const LS_MODEL = 'ai.model';
+function getLastProvider() {
+    const v = CStorage.Get(LS_PROVIDER);
+    return v || null;
+}
+function getLastModel() {
+    const v = CStorage.Get(LS_MODEL);
+    return v || null;
+}
+function saveLastProviderModel(provider, model = '') {
+    if (!provider)
+        return;
+    CStorage.Set(LS_PROVIDER, provider);
+    if (provider !== 'cmd' && model)
+        CStorage.Set(LS_MODEL, model);
+}
+const gAgentModelsCache = new Map();
+const gAgentModelsFetching = new Map();
+async function agentFetchModels(remoteId = '') {
+    const cached = gAgentModelsCache.get(remoteId);
+    if (cached)
+        return cached;
+    const inFlight = gAgentModelsFetching.get(remoteId);
+    if (inFlight)
+        return inFlight;
+    const p = (async () => {
         try {
-            const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/setting');
+            const ctx = serverCtxOf(remoteId);
+            const r = ctx && remoteId ? await ctxFetch(ctx, 'AIInfo/setting') : await authedFetch(CPath.WebRootUrl() + 'AIInfo/setting');
             const setting = await r.json();
             const models = setting.models || {};
-            gAgentModelsCache = models;
+            gAgentModelsCache.set(remoteId, models);
             return models;
         }
         catch (e) {
@@ -3243,17 +4614,24 @@ async function agentFetchModels() {
             return {};
         }
         finally {
-            gAgentModelsFetching = null;
+            gAgentModelsFetching.delete(remoteId);
         }
     })();
-    return gAgentModelsFetching;
+    gAgentModelsFetching.set(remoteId, p);
+    return p;
 }
 async function agentOpenModal(existing) {
     const isEdit = !!existing;
     const modelMap = await agentFetchModels();
     const modelsFor = (providerId) => modelMap[providerId] ?? [];
-    const defaultProvider = existing?.provider || AGENT_PROVIDER_IDS[0];
-    const defaultModel = existing?.model || modelsFor(defaultProvider)[0]?.value || '';
+    const lastProvider = getLastProvider();
+    const lastModel = getLastModel() || '';
+    const defaultProvider = existing?.provider
+        || (lastProvider && AGENT_PROVIDER_IDS.includes(lastProvider) ? lastProvider : AGENT_PROVIDER_IDS[0]);
+    const modelsOfDefault = modelsFor(defaultProvider);
+    const defaultModel = existing?.model
+        || (lastModel && modelsOfDefault.some(m => m.value === lastModel) ? lastModel : '')
+        || modelsOfDefault[0]?.value || '';
     const buildModelOptions = (providerId, selected) => {
         const models = modelsFor(providerId).slice();
         const values = models.map(m => m.value);
@@ -3307,9 +4685,20 @@ async function agentOpenModal(existing) {
                             <label class="form-label small text-secondary mb-1">Retry Text (auto-repeat instruction while idle)</label>
                             <textarea id="agent-retry-text" class="form-control form-control-sm" rows="2" placeholder="e.g. Review the result once more and improve quality">${aiEscapeHtml(existing?.retryText || '')}</textarea>
                         </div>
-                        <div class="mb-0">
+                        <div class="mb-2">
                             <label class="form-label small text-secondary mb-1">Retry Count (0 = disabled)</label>
                             <input id="agent-retry-count" type="number" min="0" step="1" class="form-control form-control-sm" placeholder="0" value="${existing?.retryCount ?? 0}">
+                        </div>
+                        <hr class="my-2">
+                        <div class="small text-secondary mb-1">Session Permissions <span class="text-body-secondary">(added on top of global settings.json · one rule per line · <code>deny</code> wins)</span></div>
+                        <div class="small text-body-secondary mb-2" style="font-size:0.68rem;">Format: bare line = command prefix (e.g. <code>node *ai/tool/x</code>), or use <code>type:write</code> / <code>tool:Edit</code> / <code>cmd:git log</code> tokens.</div>
+                        <div class="mb-2">
+                            <label class="form-label small text-success mb-1">Allow</label>
+                            <textarea id="agent-perm-allow" class="form-control form-control-sm" rows="3" placeholder="e.g.&#10;cmd:cd D:/MyProject&#10;tool:Edit&#10;type:read">${aiEscapeHtml(agentRulesToText(existing?.permissions?.allow))}</textarea>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small text-danger mb-1">Deny</label>
+                            <textarea id="agent-perm-deny" class="form-control form-control-sm" rows="3" placeholder="e.g.&#10;cmd:rm -rf&#10;cmd:git push">${aiEscapeHtml(agentRulesToText(existing?.permissions?.deny))}</textarea>
                         </div>
                     </div>
                 </div>
@@ -3332,7 +4721,8 @@ async function agentOpenModal(existing) {
         const modelSelect = container.querySelector('#agent-model');
         keyInput.focus();
         providerSelect.addEventListener('change', () => {
-            modelSelect.innerHTML = buildModelOptions(providerSelect.value, '');
+            const prefer = getLastModel() || '';
+            modelSelect.innerHTML = buildModelOptions(providerSelect.value, prefer);
         });
         const doSave = async () => {
             const key = keyInput.value.trim();
@@ -3342,6 +4732,11 @@ async function agentOpenModal(existing) {
             }
             const workingDir = (container.querySelector('#agent-working-dir')).value.trim() || './';
             const superChecked = (container.querySelector('#agent-super')).checked;
+            const permissions = {
+                allow: agentTextToRules((container.querySelector('#agent-perm-allow')).value),
+                deny: agentTextToRules((container.querySelector('#agent-perm-deny')).value),
+            };
+            saveLastProviderModel(providerSelect.value, modelSelect.value);
             const params = new URLSearchParams({
                 key,
                 provider: providerSelect.value,
@@ -3352,6 +4747,7 @@ async function agentOpenModal(existing) {
                 super: superChecked ? '1' : '0',
                 retryText: (container.querySelector('#agent-retry-text')).value.trim(),
                 retryCount: String(Math.max(0, Number((container.querySelector('#agent-retry-count')).value) || 0)),
+                permissions: JSON.stringify(permissions),
             });
             const r = await authedFetch(`${CPath.WebRootUrl()}cmd/agent-set?${params.toString()}`);
             const j = await r.json();
@@ -3372,7 +4768,11 @@ setInterval(agentRefresh, 5000);
 async function teamOpenModal() {
     const modelMap = await agentFetchModels();
     const modelsFor = (providerId) => modelMap[providerId] ?? [];
-    const defaultProvider = AGENT_PROVIDER_IDS[0];
+    const lastProvider = getLastProvider();
+    const lastModel = getLastModel() || '';
+    const defaultProvider = (lastProvider && AGENT_PROVIDER_IDS.includes(lastProvider)) ? lastProvider : AGENT_PROVIDER_IDS[0];
+    const modelsOfDefault = modelsFor(defaultProvider);
+    const defaultModel = (lastModel && modelsOfDefault.some(m => m.value === lastModel) ? lastModel : '') || modelsOfDefault[0]?.value || '';
     const buildModelOptions = (providerId, selected) => {
         const models = modelsFor(providerId).slice();
         const sel = selected || models[0]?.value || '';
@@ -3398,7 +4798,7 @@ async function teamOpenModal() {
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Model (main)</label>
-            <select id="team-model" class="form-select form-select-sm">${buildModelOptions(defaultProvider, '')}</select>
+            <select id="team-model" class="form-select form-select-sm">${buildModelOptions(defaultProvider, defaultModel)}</select>
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Goal</label>
@@ -3443,7 +4843,8 @@ async function teamOpenModal() {
         const cancelBtn = container.querySelector('#team-modal-cancel');
         goalInput.focus();
         providerSelect.addEventListener('change', () => {
-            modelSelect.innerHTML = buildModelOptions(providerSelect.value, '');
+            const prefer = getLastModel() || '';
+            modelSelect.innerHTML = buildModelOptions(providerSelect.value, prefer);
         });
         let creating = false;
         const doCreate = async () => {
@@ -3466,6 +4867,7 @@ async function teamOpenModal() {
             const origHtml = createBtn.innerHTML;
             createBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${L('ctrl.creating', 'Creating...')}`;
             try {
+                saveLastProviderModel(providerSelect.value, modelSelect.value);
                 const params = new URLSearchParams({
                     provider: providerSelect.value,
                     model: modelSelect.value,
@@ -3502,16 +4904,14 @@ async function teamOpenModal() {
     }, MODAL_DOM_DELAY);
 }
 CDOM.ID('team-tab').addEventListener('click', () => teamOpenModal());
-let dlInited = false;
-CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
-    if (dlInited)
+let messengerInited = false;
+CDOM.ID('messenger-tab').addEventListener('shown.bs.tab', () => {
+    if (messengerInited)
         return;
-    dlInited = true;
-    MountDownloadTab("download-root");
-    applyLanIn(document.getElementById('download-root'));
+    messengerInited = true;
+    MountMessengerTab('messenger-root', ctrlRequireAuthed);
 });
-if (CDOM.ID("download-panel").classList.contains("active")) {
-    dlInited = true;
-    MountDownloadTab("download-root");
-    applyLanIn(document.getElementById('download-root'));
+if (CDOM.ID('messenger-panel').classList.contains('active')) {
+    messengerInited = true;
+    MountMessengerTab('messenger-root', ctrlRequireAuthed);
 }

@@ -580,6 +580,7 @@ function ParseFileHomeUrl(input) {
     };
 }
 async function ConnectFileHomeUrl(input) {
+    fileRootSelKey = null;
     if (!input) {
         g_fileWebRootUrl = CPath.WebRootUrl();
         RootPath = null;

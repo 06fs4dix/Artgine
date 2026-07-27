@@ -1,1 +1,35 @@
-var s=this&&this.__decorate||function(s,n,e,t){var o,i=arguments.length,r=i<3?n:null===t?t=Object.getOwnPropertyDescriptor(n,e):t;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)r=Reflect.decorate(s,n,e,t);else for(var h=s.length-1;h>=0;h--)(o=s[h])&&(r=(i<3?o(r):i>3?o(n,e,r):o(n,e))||r);return i>3&&r&&Object.defineProperty(n,e,r),r};import{URLPatterns as n}from"../network/CServerMain.js";import{CAuthServer as e}from"./CAuthServer.js";let t=class extends e{constructor(){super(),this.On("/AIChat/sessions",this.onGetSessions.bind(this)),this.On("/AIChat/session",this.onSession.bind(this)),this.On("/AIChat/session/config",this.onSessionConfig.bind(this)),this.On("/AIChat/session/upload",this.onSessionUpload.bind(this)),this.On("/AIChat/share",this.onShare.bind(this)),this.On("/AIChat/share/file",this.onShareFile.bind(this)),this.On("/AIChat/workspace",this.onWorkspace.bind(this))}Connect(){super.Connect(),this._connectImpl()}_connectImpl(){}async onGetSessions(s,n,e){return null}async onSession(s,n,e){return null}async onSessionConfig(s,n,e){return null}async onSessionUpload(s,n,e){return null}async onShare(s,n,e){return null}async onShareFile(s,n,e){return null}async onWorkspace(s,n,e){return null}};t=s([n(["/AIChat/sessions","/AIChat/session","/AIChat/session/config","/AIChat/session/upload","/AIChat/share","/AIChat/share/file","/AIChat/workspace"])],t);export{t as CAIChatRouter};import o from"../server_imple/CAIChatRouter.js";o();
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { URLPatterns } from '../network/CServerMain.js';
+import { CAuthServer } from './CAuthServer.js';
+let CAIChatRouter = class CAIChatRouter extends CAuthServer {
+    constructor() {
+        super();
+        this.On("/AIChat/sessions", this.onGetSessions.bind(this));
+        this.On("/AIChat/session", this.onSession.bind(this));
+        this.On("/AIChat/session/config", this.onSessionConfig.bind(this));
+        this.On("/AIChat/session/upload", this.onSessionUpload.bind(this));
+        this.On("/AIChat/share", this.onShare.bind(this));
+        this.On("/AIChat/share/file", this.onShareFile.bind(this));
+        this.On("/AIChat/workspace", this.onWorkspace.bind(this));
+    }
+    Connect() { super.Connect(); this._connectImpl(); }
+    _connectImpl() { }
+    async onGetSessions(_json, _req, _res) { return null; }
+    async onSession(_json, _req, _res) { return null; }
+    async onSessionConfig(_json, _req, _res) { return null; }
+    async onSessionUpload(_json, _req, _res) { return null; }
+    async onShare(_json, _req, _res) { return null; }
+    async onShareFile(_json, _req, _res) { return null; }
+    async onWorkspace(_json, _req, _res) { return null; }
+};
+CAIChatRouter = __decorate([
+    URLPatterns(["/AIChat/sessions", "/AIChat/session", "/AIChat/session/config", "/AIChat/session/upload", "/AIChat/share", "/AIChat/share/file", "/AIChat/workspace"])
+], CAIChatRouter);
+export { CAIChatRouter };
+import CAIChatRouter_imple from '../server_imple/CAIChatRouter.js';
+CAIChatRouter_imple();

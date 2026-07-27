@@ -5,6 +5,7 @@ import { CHash } from "../../basic/CHash.js";
 import { CLan } from "../../basic/CLan.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 import { CUtilWeb } from "../../util/CUtilWeb.js";
+import { CStorage } from "../../system/CStorage.js";
 
 // Control.html이 iframe으로 열 때 자신의 현재 테마(light/dark)를 함께 넘겨준다.
 // 값이 없으면(단독 접속 등) 기존과 동일하게 아무 것도 건드리지 않는다(기본 Bootstrap 라이트 모습).
@@ -672,25 +673,43 @@ El("cat-tab-time").addEventListener('shown.bs.tab', ResetSidebarSearch);
 
 // ==================================================================================================================
 // Provider / Model - Home의 AI 채팅과 동일하게 AIInfo/setting에서 읽어온다.
+// Chat/Terminal/SubAgent와 동일한 CStorage 키(ai.provider / ai.model)로 마지막 선택을 공유한다.
 // ==================================================================================================================
 type ProviderInfo = { id: string; models: { value: string; label: string }[] };
 let providers: ProviderInfo[] = [];
+const LS_PROVIDER = 'ai.provider';
+const LS_MODEL = 'ai.model';
 
 const providerSelectEl = El<HTMLSelectElement>("providerSelect");
 const modelSelectEl = El<HTMLSelectElement>("modelSelect");
 const modeSelectEl = El<HTMLSelectElement>("modeSelect");
 
+function SaveLastProviderModel(): void {
+    const provider = providerSelectEl.value;
+    if (!provider) return;
+    CStorage.Set(LS_PROVIDER, provider);
+    if (provider !== 'cmd' && modelSelectEl.value) CStorage.Set(LS_MODEL, modelSelectEl.value);
+}
+
 function PopulateModelSelect(): void {
     const info = providers.find(p => p.id === providerSelectEl.value);
     const models = info ? info.models : [];
     modelSelectEl.innerHTML = models.map(m => `<option value="${m.value}">${EscapeHtml(m.label)}</option>`).join('');
-    if (models.length > 0) {
+    if (models.length === 0) return;
+    const savedModel = CStorage.Get(LS_MODEL) as string | null;
+    if (savedModel && models.some(m => m.value === savedModel)) {
+        modelSelectEl.value = savedModel;
+    } else {
         modelSelectEl.value = models[Math.floor(models.length / 2)].value;
     }
 }
 
 function PopulateProviderSelect(): void {
     providerSelectEl.innerHTML = providers.map(p => `<option value="${p.id}">${p.id}</option>`).join('');
+    const savedProvider = CStorage.Get(LS_PROVIDER) as string | null;
+    if (savedProvider && providers.some(p => p.id === savedProvider)) {
+        providerSelectEl.value = savedProvider;
+    }
     PopulateModelSelect();
 }
 
@@ -705,7 +724,11 @@ async function LoadProviders(): Promise<void> {
     } catch (e) { console.error('provider list error:', e); }
 }
 
-providerSelectEl.addEventListener('change', PopulateModelSelect);
+providerSelectEl.addEventListener('change', () => {
+    PopulateModelSelect();
+    SaveLastProviderModel();
+});
+modelSelectEl.addEventListener('change', () => SaveLastProviderModel());
 
 // ==================================================================================================================
 // 도움말 모달 - 단축키/명령어 설명(한글). CConfirm(OK 전용)으로 표시.

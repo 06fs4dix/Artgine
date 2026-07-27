@@ -1,1 +1,112 @@
-export class CHash{static HashCode(r){for(var n=0,t=0;t<r.length;t++)n=(n<<6)-n+r.charCodeAt(t),n&=n,n=Math.trunc(n);return n}static SHA256(r){function n(r,n){var t=(65535&r)+(65535&n);return(r>>16)+(n>>16)+(t>>16)<<16|65535&t}function t(r,n){return r>>>n|r<<32-n}function e(r,n){return r>>>n}function o(r,n,t){return r&n^~r&t}function a(r,n,t){return r&n^r&t^n&t}function u(r){return t(r,2)^t(r,13)^t(r,22)}function f(r){return t(r,6)^t(r,11)^t(r,25)}function c(r){return t(r,7)^t(r,18)^e(r,3)}function i(r){return t(r,17)^t(r,19)^e(r,10)}return function(r){for(var n="0123456789abcdef",t="",e=0;e<4*r.length;e++)t+=n.charAt(r[e>>2]>>8*(3-e%4)+4&15)+n.charAt(r[e>>2]>>8*(3-e%4)&15);return t}(function(r,t){var e,h,C,g,d,A,v,l,S,m,s=new Array(1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298),y=new Array(1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225),w=new Array(64);r[t>>5]|=128<<24-t%32,r[15+(t+64>>9<<4)]=t;for(var H=0;H<r.length;H+=16){e=y[0],h=y[1],C=y[2],g=y[3],d=y[4],A=y[5],v=y[6],l=y[7];for(var p=0;p<64;p++)w[p]=p<16?r[p+H]:n(n(n(i(w[p-2]),w[p-7]),c(w[p-15])),w[p-16]),S=n(n(n(n(l,f(d)),o(d,A,v)),s[p]),w[p]),m=n(u(e),a(e,h,C)),l=v,v=A,A=d,d=n(g,S),g=C,C=h,h=e,e=n(S,m);y[0]=n(e,y[0]),y[1]=n(h,y[1]),y[2]=n(C,y[2]),y[3]=n(g,y[3]),y[4]=n(d,y[4]),y[5]=n(A,y[5]),y[6]=n(v,y[6]),y[7]=n(l,y[7])}return y}(function(r){for(var n=Array(),t=0;t<8*r.length;t+=8)n[t>>5]|=(255&r.charCodeAt(t/8))<<24-t%32;return n}(r=function(r){r=r.replace(/\r\n/g,"\n");for(var n="",t=0;t<r.length;t++){var e=r.charCodeAt(t);e<128?n+=String.fromCharCode(e):e>127&&e<2048?(n+=String.fromCharCode(e>>6|192),n+=String.fromCharCode(63&e|128)):(n+=String.fromCharCode(e>>12|224),n+=String.fromCharCode(e>>6&63|128),n+=String.fromCharCode(63&e|128))}return n}(r+"")),8*r.length))}}
+export class CHash {
+    static HashCode(_str) {
+        var hash = 0;
+        for (var i = 0; i < _str.length; i++) {
+            var character = _str.charCodeAt(i);
+            hash = ((hash << 6) - hash) + character;
+            hash = hash & hash;
+            hash = Math.trunc(hash);
+        }
+        return hash;
+    }
+    static SHA256(s) {
+        var chrsz = 8;
+        var hexcase = 0;
+        function safe_add(x, y) {
+            var lsw = (x & 0xFFFF) + (y & 0xFFFF);
+            var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+            return (msw << 16) | (lsw & 0xFFFF);
+        }
+        function S(X, n) { return (X >>> n) | (X << (32 - n)); }
+        function R(X, n) { return (X >>> n); }
+        function Ch(x, y, z) { return ((x & y) ^ ((~x) & z)); }
+        function Maj(x, y, z) { return ((x & y) ^ (x & z) ^ (y & z)); }
+        function Sigma0256(x) { return (S(x, 2) ^ S(x, 13) ^ S(x, 22)); }
+        function Sigma1256(x) { return (S(x, 6) ^ S(x, 11) ^ S(x, 25)); }
+        function Gamma0256(x) { return (S(x, 7) ^ S(x, 18) ^ R(x, 3)); }
+        function Gamma1256(x) { return (S(x, 17) ^ S(x, 19) ^ R(x, 10)); }
+        function core_sha256(m, l) {
+            var K = new Array(0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5, 0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5, 0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3, 0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174, 0xE49B69C1, 0xEFBE4786, 0xFC19DC6, 0x240CA1CC, 0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA, 0x983E5152, 0xA831C66D, 0xB00327C8, 0xBF597FC7, 0xC6E00BF3, 0xD5A79147, 0x6CA6351, 0x14292967, 0x27B70A85, 0x2E1B2138, 0x4D2C6DFC, 0x53380D13, 0x650A7354, 0x766A0ABB, 0x81C2C92E, 0x92722C85, 0xA2BFE8A1, 0xA81A664B, 0xC24B8B70, 0xC76C51A3, 0xD192E819, 0xD6990624, 0xF40E3585, 0x106AA070, 0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5, 0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3, 0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208, 0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2);
+            var HASH = new Array(0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19);
+            var W = new Array(64);
+            var a, b, c, d, e, f, g, h;
+            var T1, T2;
+            m[l >> 5] |= 0x80 << (24 - l % 32);
+            m[((l + 64 >> 9) << 4) + 15] = l;
+            for (var i = 0; i < m.length; i += 16) {
+                a = HASH[0];
+                b = HASH[1];
+                c = HASH[2];
+                d = HASH[3];
+                e = HASH[4];
+                f = HASH[5];
+                g = HASH[6];
+                h = HASH[7];
+                for (var j = 0; j < 64; j++) {
+                    if (j < 16)
+                        W[j] = m[j + i];
+                    else
+                        W[j] = safe_add(safe_add(safe_add(Gamma1256(W[j - 2]), W[j - 7]), Gamma0256(W[j - 15])), W[j - 16]);
+                    T1 = safe_add(safe_add(safe_add(safe_add(h, Sigma1256(e)), Ch(e, f, g)), K[j]), W[j]);
+                    T2 = safe_add(Sigma0256(a), Maj(a, b, c));
+                    h = g;
+                    g = f;
+                    f = e;
+                    e = safe_add(d, T1);
+                    d = c;
+                    c = b;
+                    b = a;
+                    a = safe_add(T1, T2);
+                }
+                HASH[0] = safe_add(a, HASH[0]);
+                HASH[1] = safe_add(b, HASH[1]);
+                HASH[2] = safe_add(c, HASH[2]);
+                HASH[3] = safe_add(d, HASH[3]);
+                HASH[4] = safe_add(e, HASH[4]);
+                HASH[5] = safe_add(f, HASH[5]);
+                HASH[6] = safe_add(g, HASH[6]);
+                HASH[7] = safe_add(h, HASH[7]);
+            }
+            return HASH;
+        }
+        function str2binb(str) {
+            var bin = Array();
+            var mask = (1 << chrsz) - 1;
+            for (var i = 0; i < str.length * chrsz; i += chrsz) {
+                bin[i >> 5] |= (str.charCodeAt(i / chrsz) & mask) << (24 - i % 32);
+            }
+            return bin;
+        }
+        function Utf8Encode(_string) {
+            _string = _string.replace(/\r\n/g, "\n");
+            var utftext = "";
+            for (var n = 0; n < _string.length; n++) {
+                var c = _string.charCodeAt(n);
+                if (c < 128) {
+                    utftext += String.fromCharCode(c);
+                }
+                else if ((c > 127) && (c < 2048)) {
+                    utftext += String.fromCharCode((c >> 6) | 192);
+                    utftext += String.fromCharCode((c & 63) | 128);
+                }
+                else {
+                    utftext += String.fromCharCode((c >> 12) | 224);
+                    utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+                    utftext += String.fromCharCode((c & 63) | 128);
+                }
+            }
+            return utftext;
+        }
+        function binb2hex(binarray) {
+            var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
+            var str = "";
+            for (var i = 0; i < binarray.length * 4; i++) {
+                str += hex_tab.charAt((binarray[i >> 2] >> ((3 - i % 4) * 8 + 4)) & 0xF) +
+                    hex_tab.charAt((binarray[i >> 2] >> ((3 - i % 4) * 8)) & 0xF);
+            }
+            return str;
+        }
+        s = Utf8Encode(s + "");
+        return binb2hex(core_sha256(str2binb(s), s.length * chrsz));
+    }
+}

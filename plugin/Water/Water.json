@@ -4,6 +4,12 @@
     },
     "version":1,
     "text":"평면에 쉐도우를 그리는 컴포넌트",
-    "include":true
-
+    "include":true,
+    "client":["Water.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Unknown",
+        "Revision":"Unknown",
+        "Comment":"데칼"
+    }
 }

@@ -1,10 +1,12 @@
 import { CAlert } from "../artgine/basic/CAlert.js";
 import { CServerMain } from "../artgine/network/CServerMain.js";
+import { CCMDMgr } from "../artgine/system/CCMDMgr.js";
 import { GetAppJSON } from "./MainFunc.js";
 var gAppJSON = await GetAppJSON();
 if (gAppJSON == null) {
     process.exit(1);
 }
+await CCMDMgr.NPMInstall(["*Basic"]);
 const parsed = gAppJSON.url ? new URL(gAppJSON.url) : null;
 const port = Number(process.argv[2] ?? parsed?.port ?? '8050');
 const pathname = parsed?.pathname ?? '/Artgine';

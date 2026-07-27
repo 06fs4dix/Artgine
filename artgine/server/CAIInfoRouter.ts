@@ -16,8 +16,11 @@ import { CUtilSystem } from '../system/CUtilSystem.js';
 
 const SETTINGS_FILE = path.join(CAI.AIDir(), 'settings.json');
 
-// manus/gpt는 터미널 실행 모드에 연결되어 있지 않은 미사용 프로바이더라 제외한다.
-const _PROVIDER_STATE_LIST = Object.values(CAI.eProvider).filter(p => p !== CAI.eProvider.manus && p !== CAI.eProvider.gpt);
+// gpt는 터미널 실행 모드에 연결되어 있지 않은 미사용 프로바이더라 제외한다.
+const _PROVIDER_STATE_LIST = Object.values(CAI.eProvider).filter(p => p !== CAI.eProvider.gpt);
+
+// Connect 시 modelsUpdate 갱신은 프로세스당 1회만 (true일 때만 실행 후 false로 저장).
+let _modelsUpdateOnceDone = false;
 
 // Claude 사용량 API는 최근 실제 호출 흔적이 있어야 값을 채워주는 것으로 보여, 설치·인증된 상태에서도
 // 한동안 안 쓰면 -1(조회 불가)이 나온다. 이 경우 헤드리스로 한 번 짧게 호출해 실제 응답을 받은 뒤
@@ -29,9 +32,15 @@ let _lastClaudeWarmupAt = 0;
 // (agy는 헤드리스에서 로컬 조회 API/캐시를 전혀 노출하지 않아 이 방법 외엔 값을 얻을 수 없음 — 실측 확인).
 // 페이지 로드/폴링마다 매번 새 프로세스를 띄우지 않도록 짧게 캐시한다.
 const AGY_USAGE_CACHE_TTL_MS = 5 * 60 * 1000;
+// 조회 실패(-1,-1)는 짧게만 캐시한다. 실패 결과를 5분 붙들고 있으면 일시 오류 후에도 UI가 ?로 고착된다.
+const AGY_USAGE_FAIL_CACHE_TTL_MS = 15 * 1000;
 let _agyUsageCache: { at: number; value: IProviderUsage } | null = null;
 async function _getAgyUsageCached(): Promise<IProviderUsage> {
-    if (_agyUsageCache && Date.now() - _agyUsageCache.at < AGY_USAGE_CACHE_TTL_MS) return _agyUsageCache.value;
+    if (_agyUsageCache) {
+        const failed = _agyUsageCache.value.fiveHour < 0 && _agyUsageCache.value.weekly < 0;
+        const ttl = failed ? AGY_USAGE_FAIL_CACHE_TTL_MS : AGY_USAGE_CACHE_TTL_MS;
+        if (Date.now() - _agyUsageCache.at < ttl) return _agyUsageCache.value;
+    }
     const value = await CAI.ProviderUsage(CAI.eProvider.antigravity);
     _agyUsageCache = { at: Date.now(), value };
     return value;
@@ -210,7 +219,56 @@ export class CAIInfoRouter extends CAuthServer {
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }
-    _connectImpl() {}
+    _connectImpl() {
+        // 서버 기동 직후 1회: ai/settings.json 의 modelsUpdate===true 이면
+        // CAI.ProviderModels 로 models 를 채우고 플래그를 false 로 저장한다(블로킹하지 않음).
+        void CAIInfoRouter._maybeUpdateModelsOnStart();
+    }
+
+    // ai/settings.json modelsUpdate 가 true 일 때만 프로바이더 모델 목록을 조회해 models 에 반영.
+    // 조회 결과가 비어 있는 프로바이더는 기존 목록을 유지(CLI/인증 실패로 목록이 통째로 지워지지 않게).
+    // 성공/실패와 관계없이 한 번 시도한 뒤에는 modelsUpdate 를 false 로 내려 다음 기동에서 반복하지 않는다.
+    private static async _maybeUpdateModelsOnStart(): Promise<void> {
+        if (_modelsUpdateOnceDone) return;
+        _modelsUpdateOnceDone = true;
+
+        const settingsPath = path.join(CAI.AIDir(), 'settings.json');
+        let settings: any;
+        try {
+            settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        } catch (e: any) {
+            CConsol.Log(`[CAIInfoRouter] modelsUpdate: settings.json read failed: ${e?.message ?? e}`, CConsol.eColor.red);
+            return;
+        }
+        if (!settings || typeof settings !== 'object') return;
+        if (settings.modelsUpdate !== true) return;
+
+        CConsol.Log('[CAIInfoRouter] modelsUpdate=true → refreshing models from providers…', CConsol.eColor.cyan);
+        if (!settings.models || typeof settings.models !== 'object') settings.models = {};
+
+        const providers = _PROVIDER_STATE_LIST;
+        for (const p of providers) {
+            try {
+                const list = await CAI.ProviderModels(p);
+                if (list.length > 0) {
+                    settings.models[p] = list;
+                    CConsol.Log(`[CAIInfoRouter] modelsUpdate ${p}: ${list.length} models`, CConsol.eColor.cyan);
+                } else {
+                    CConsol.Log(`[CAIInfoRouter] modelsUpdate ${p}: empty (keep existing)`, CConsol.eColor.yellow);
+                }
+            } catch (e: any) {
+                CConsol.Log(`[CAIInfoRouter] modelsUpdate ${p} failed: ${e?.message ?? e}`, CConsol.eColor.red);
+            }
+        }
+
+        settings.modelsUpdate = false;
+        try {
+            fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+            CConsol.Log('[CAIInfoRouter] modelsUpdate done → saved modelsUpdate=false', CConsol.eColor.cyan);
+        } catch (e: any) {
+            CConsol.Log(`[CAIInfoRouter] modelsUpdate: settings.json write failed: ${e?.message ?? e}`, CConsol.eColor.red);
+        }
+    }
 
     // GET /AIInfo/setting
     // ai/settings.json을 그대로 읽어서 노출한다 (인증 불필요).

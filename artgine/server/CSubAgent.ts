@@ -1,6 +1,11 @@
 import { CORMField, CRDBMS } from '../network/CORM.js';
 import { CSQLite } from '../network/CSQLite.js';
 
+// 세션(서브 에이전트)별 개별 권한 규칙. 터미널 라우터의 PermRule과 동일 구조이지만 순환 참조를
+// 피하기 위해 여기서 별도로 선언한다(type은 'read'|'write' 등 문자열, 구조만 맞으면 된다).
+export type SubAgentPermRule = { type?: string; tool?: string; command?: string };
+export type SubAgentPermissions = { allow: SubAgentPermRule[]; deny: SubAgentPermRule[] };
+
 export type SubAgentRecord = {
     key: string;
     provider: string;
@@ -11,6 +16,7 @@ export type SubAgentRecord = {
     super: number; // 0|1 — 이 에이전트로 세션이 뜰 때 슈퍼 모드(권한 자동 승인)로 시작할지
     retryText: string; // 워크오더가 done으로 끝나고 더 이상 대기 중인 작업이 없을 때 자동으로 반복 지시할 명령
     retryCount: number; // retryText를 자동으로 반복 발주할 최대 횟수(0=사용 안 함)
+    permissions: SubAgentPermissions; // 이 에이전트 세션에만 추가로 적용할 권한(전역 settings.json permissions에 더해짐). deny 우선.
 };
 
 // 터미널 라우터(CTerminalRouter)가 등록·조회·삭제하는 서브 에이전트 카탈로그.
@@ -44,6 +50,7 @@ export class CSubAgent {
             new CORMField('super', 0), // 주의: 값이 양수 정수면 CSQLite가 AUTOINCREMENT PK로 오인하므로 기본값 0 유지 필수
             new CORMField('retryText', ''),
             new CORMField('retryCount', 0),
+            new CORMField('permissions', ''), // JSON 문자열({allow:[],deny:[]}). 빈 문자열이면 규칙 없음.
         ], 'key');
 
         // super/retryText/retryCount 컬럼 추가 이전에 생성된 기존 테이블 호환: 없으면 채워 넣는다(데이터 보존).
@@ -58,6 +65,9 @@ export class CSubAgent {
             if (!cols.includes('retryCount')) {
                 await db.Send(`ALTER TABLE ${CSubAgent.sTable} ADD COLUMN \`retryCount\` INTEGER NOT NULL DEFAULT 0`);
             }
+            if (!cols.includes('permissions')) {
+                await db.Send(`ALTER TABLE ${CSubAgent.sTable} ADD COLUMN \`permissions\` TEXT NOT NULL DEFAULT ''`);
+            }
         }
 
         CSubAgent.sDB = db;
@@ -66,7 +76,7 @@ export class CSubAgent {
 
     public static async List(): Promise<SubAgentRecord[]> {
         const db = await CSubAgent.Init();
-        const rows = await db.Recv(`SELECT key, provider, model, score, traits, workingDir, \`super\`, retryText, retryCount FROM ${CSubAgent.sTable} ORDER BY key ASC`);
+        const rows = await db.Recv(`SELECT key, provider, model, score, traits, workingDir, \`super\`, retryText, retryCount, permissions FROM ${CSubAgent.sTable} ORDER BY key ASC`);
         if (rows == null) return [];
         return rows.map(CSubAgent.RowToRecord);
     }
@@ -75,9 +85,9 @@ export class CSubAgent {
     public static async Set(_record: SubAgentRecord): Promise<void> {
         const db = await CSubAgent.Init();
         await db.Send(
-            `INSERT INTO ${CSubAgent.sTable} (key, provider, model, score, traits, workingDir, \`super\`, retryText, retryCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-             ON CONFLICT(key) DO UPDATE SET provider = excluded.provider, model = excluded.model, score = excluded.score, traits = excluded.traits, workingDir = excluded.workingDir, \`super\` = excluded.\`super\`, retryText = excluded.retryText, retryCount = excluded.retryCount`,
-            [_record.key, _record.provider, _record.model, _record.score, JSON.stringify(_record.traits), _record.workingDir || './', _record.super ? 1 : 0, _record.retryText || '', _record.retryCount || 0]
+            `INSERT INTO ${CSubAgent.sTable} (key, provider, model, score, traits, workingDir, \`super\`, retryText, retryCount, permissions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(key) DO UPDATE SET provider = excluded.provider, model = excluded.model, score = excluded.score, traits = excluded.traits, workingDir = excluded.workingDir, \`super\` = excluded.\`super\`, retryText = excluded.retryText, retryCount = excluded.retryCount, permissions = excluded.permissions`,
+            [_record.key, _record.provider, _record.model, _record.score, JSON.stringify(_record.traits), _record.workingDir || './', _record.super ? 1 : 0, _record.retryText || '', _record.retryCount || 0, CSubAgent.StringifyPermissions(_record.permissions)]
         );
     }
 
@@ -100,7 +110,29 @@ export class CSubAgent {
             super: Number(_row[6]) ? 1 : 0,
             retryText: String(_row[7] ?? ''),
             retryCount: Number(_row[8]) || 0,
+            permissions: CSubAgent.ParsePermissions(_row[9]),
         };
+    }
+
+    // 저장은 항상 {allow:[],deny:[]} 형태의 JSON으로. 비어 있으면 빈 문자열로 저장해 컬럼을 가볍게 둔다.
+    private static StringifyPermissions(_perms: SubAgentPermissions | undefined): string {
+        const allow = Array.isArray(_perms?.allow) ? _perms!.allow : [];
+        const deny  = Array.isArray(_perms?.deny)  ? _perms!.deny  : [];
+        if (allow.length === 0 && deny.length === 0) return '';
+        return JSON.stringify({ allow, deny });
+    }
+
+    // 구버전 행(permissions 컬럼 없음/빈 문자열)은 규칙 없음으로 취급. 손상된 JSON도 안전하게 빈 규칙.
+    private static ParsePermissions(_value: any): SubAgentPermissions {
+        try {
+            const parsed = JSON.parse(String(_value ?? ''));
+            return {
+                allow: Array.isArray(parsed?.allow) ? parsed.allow : [],
+                deny:  Array.isArray(parsed?.deny)  ? parsed.deny  : [],
+            };
+        } catch {
+            return { allow: [], deny: [] };
+        }
     }
 
     private static ParseTraits(_value: any): string[] {

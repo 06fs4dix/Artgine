@@ -4,5 +4,11 @@
     },
     "version": 1,
     "text": "CShape3D - 3D 오브젝트 통합 생성기 (도형/모델/PBR/VFX/물리/충돌/광원/애니)",
-    "include": true
+    "include": true,
+    "client":["CShape3D.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Artgine",
+        "Comment":"CSubject + CPaint3D + PBR + VFX + Shadow + Physics + Collider + Light + Animation 통합 래퍼"
+    }
 }

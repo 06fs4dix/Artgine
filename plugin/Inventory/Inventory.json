@@ -4,6 +4,12 @@
     },
     "version":1,
     "text":"Inventory",
-    "include":true
-
+    "include":true,
+    "client":["Inventory.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Artgine",
+        "Revision":"Artgine",
+        "Comment":"인벤"
+    }
 }

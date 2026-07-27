@@ -1,1 +1,79 @@
-import{CObject as e}from"../basic/CObject.js";import{CLZ4 as t}from"../basic/LZ.js";import{CBound as r}from"../geometry/CBound.js";import{CFloat32Mgr as s}from"../geometry/CFloat32Mgr.js";import{CVertexFormat as o}from"./CShader.js";export class CUVChannel{uvIndex=new Array;uv=new s}export class CMeshBuf extends e{constructor(e){super(),this.vfType=e}bufF=new s;bufI=new Array;vfType=o.eIdentifier.Null}export class CMeshCreateInfo extends e{name;vertexCount;indexCount;vertex;bound;constructor(){super(),this.name="",this.vertexCount=0,this.indexCount=0,this.vertex=new Array,this.bound=new r}GetVFType(e){var t=new Array;for(var r of this.vertex)r.vfType==e&&t.push(r);return t}RemoveVFType(e){for(var t=0;t<this.vertex.length;++t)this.vertex[t].vfType==e&&(this.vertex.splice(t,1),t--)}Create(e){var t=new CMeshBuf(e);return this.vertex.push(t),t}Compress(e=6){let r=0;for(const e of this.vertex)r+=8+4*e.bufF.mSize;const s=new Uint8Array(r),n=new DataView(s.buffer);let i=0;for(const e of this.vertex){n.setInt32(i,e.vfType,!0),i+=4,n.setInt32(i,e.bufF.mSize,!0),i+=4;const t=e.bufF.GetArray();for(let r=0;r<e.bufF.mSize;r++)n.setFloat32(i,t[r],!0),i+=4}const f=(new t).compress(s,e);this.vertex=[];const u=this.Create(o.eIdentifier.Compress);for(let e=0;e<f.length;e++)u.bufI.push(f[e])}}
+import { CObject } from "../basic/CObject.js";
+import { CLZ4 } from "../basic/LZ.js";
+import { CBound } from "../geometry/CBound.js";
+import { CFloat32Mgr } from "../geometry/CFloat32Mgr.js";
+import { CVertexFormat } from "./CShader.js";
+export class CUVChannel {
+    uvIndex = new Array();
+    uv = new CFloat32Mgr();
+}
+export class CMeshBuf extends CObject {
+    constructor(_type) {
+        super();
+        this.vfType = _type;
+    }
+    bufF = new CFloat32Mgr();
+    bufI = new Array();
+    vfType = CVertexFormat.eIdentifier.Null;
+}
+export class CMeshCreateInfo extends CObject {
+    name;
+    vertexCount;
+    indexCount;
+    vertex;
+    bound;
+    constructor() {
+        super();
+        this.name = "";
+        this.vertexCount = 0;
+        this.indexCount = 0;
+        this.vertex = new Array();
+        this.bound = new CBound();
+    }
+    GetVFType(_type) {
+        var rVal = new Array();
+        for (var each0 of this.vertex) {
+            if (each0.vfType == _type)
+                rVal.push(each0);
+        }
+        return rVal;
+    }
+    RemoveVFType(_type) {
+        for (var i = 0; i < this.vertex.length; ++i) {
+            if (this.vertex[i].vfType == _type) {
+                this.vertex.splice(i, 1);
+                i--;
+            }
+        }
+    }
+    Create(_type) {
+        var buf = new CMeshBuf(_type);
+        this.vertex.push(buf);
+        return buf;
+    }
+    Compress(_level = 6) {
+        let totalBytes = 0;
+        for (const buf of this.vertex)
+            totalBytes += 4 + 4 + buf.bufF.mSize * 4;
+        const raw = new Uint8Array(totalBytes);
+        const dv = new DataView(raw.buffer);
+        let off = 0;
+        for (const buf of this.vertex) {
+            dv.setInt32(off, buf.vfType, true);
+            off += 4;
+            dv.setInt32(off, buf.bufF.mSize, true);
+            off += 4;
+            const fa = buf.bufF.GetArray();
+            for (let i = 0; i < buf.bufF.mSize; i++) {
+                dv.setFloat32(off, fa[i], true);
+                off += 4;
+            }
+        }
+        const lz4 = new CLZ4();
+        const compressed = lz4.compress(raw, _level);
+        this.vertex = [];
+        const compBuf = this.Create(CVertexFormat.eIdentifier.Compress);
+        for (let i = 0; i < compressed.length; i++)
+            compBuf.bufI.push(compressed[i]);
+    }
+}

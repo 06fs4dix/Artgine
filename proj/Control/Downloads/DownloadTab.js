@@ -11,6 +11,54 @@ function LF(key, en, ...args) {
         s = s.split(`{${i}}`).join(String(args[i]));
     return s;
 }
+function applyLanInEl(root) {
+    if (!root)
+        return;
+    root.querySelectorAll('[data-CLan]').forEach(el => {
+        const key = el.getAttribute('data-CLan');
+        if (!key)
+            return;
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+            const t = CLan.Get(key, el.placeholder);
+            if (t != null)
+                el.placeholder = t;
+        }
+        else {
+            const t = CLan.Get(key, el.innerHTML);
+            if (t != null)
+                el.innerHTML = t;
+        }
+    });
+}
+function registerDownloadTab() {
+    const menu = document.querySelector('ul[aria-labelledby="more-tab"]');
+    const tabContent = CDOM.ID('myTabContent');
+    if (!menu || !tabContent || CDOM.ID('download-tab'))
+        return;
+    const li = document.createElement('li');
+    li.innerHTML = `<button class="dropdown-item" id="download-tab" data-bs-toggle="tab" data-bs-target="#download-panel" type="button"
+        role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> <span data-CLan="ctrl.download">Download</span></button>`;
+    menu.appendChild(li);
+    const panel = document.createElement('div');
+    panel.className = 'tab-pane h-100';
+    panel.id = 'download-panel';
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', 'download-tab');
+    panel.style.overflowY = 'auto';
+    panel.innerHTML = `<div id="download-root"></div>`;
+    tabContent.appendChild(panel);
+    applyLanInEl(li);
+    let inited = false;
+    const doMount = () => {
+        if (inited)
+            return;
+        inited = true;
+        MountDownloadTab('download-root');
+        applyLanInEl(document.getElementById('download-root'));
+    };
+    document.getElementById('download-tab').addEventListener('shown.bs.tab', doMount);
+}
+registerDownloadTab();
 export function MountDownloadTab(rootId) {
     const root = CDOM.ID(rootId);
     if (!root)

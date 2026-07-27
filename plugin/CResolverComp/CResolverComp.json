@@ -4,6 +4,12 @@
     },
     "version":1,
     "text":"Resolver",
-    "include":true
-
+    "include":true,
+    "client":["CResolverComp.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Unknown",
+        "Revision":"Unknown",
+        "Comment":"리설버"
+    }
 }

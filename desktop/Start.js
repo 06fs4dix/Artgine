@@ -1,7 +1,7 @@
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import { CCMDMgr } from "./CCMDMgr.js";
+import { CCMDMgr } from "../artgine/system/CCMDMgr.js";
 function GetStartPort(_settingsFileName) {
     const mainPath = fs.existsSync(_settingsFileName) ? _settingsFileName : path.join("desktop", _settingsFileName);
     if (!fs.existsSync(mainPath))
@@ -77,8 +77,9 @@ function KillElectronOnPort(_port) {
         }
     }
 }
-if (CCMDMgr.IsTSC() == false || CCMDMgr.GetFileCount("node_modules") == 0) {
-    await CCMDMgr.RunCMD("npm install --production", false);
+const needBootstrap = CCMDMgr.IsTSC() == false || CCMDMgr.GetFileCount("node_modules") == 0;
+await CCMDMgr.NPMInstall(["*Basic"]);
+if (needBootstrap) {
     await CCMDMgr.RunCMD("npx tsc", false);
 }
 const settingsFileName = process.argv[2] ?? "settings.json";

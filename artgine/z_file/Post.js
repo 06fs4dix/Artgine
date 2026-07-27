@@ -1,1 +1,313 @@
-import{VFXDown2 as r,VFX as n,LUT0 as e,LUT1 as w,LUT2 as o,LUT3 as g,LUT4 as a,LUT5 as t,TexOffBlendFactorFun as b,vfxMat0 as i,vfxMat1 as f,BlendColor0 as u,BlendColor1 as l,BlendColor2 as v,BlendColor3 as d,BlendColor4 as x,BlendColor5 as y,BlendColor6 as S,BlendColor7 as h,BlendColor9 as m,BlendColor8 as s,BlendColor10 as c,BlendColor11 as p,BlendColor12 as A,BlendColor13 as P,BlendColor14 as z,BlendColor15 as F}from"./ColorFun";import{ambientColor as k,envmapOn as B,ligCol as L,ligCount as D,ligDir as C,LightCac3D as E,ligMask as R,ligStep0 as T,ligStep1 as U,ligStep2 as V,ligStep3 as X,sam2DCount as j,samCubeCount as q}from"./Light";import{SDF as G}from"./SDF";import{Attribute as H,BranchBegin as I,BranchEnd as J,Build as K,CVec2 as M,CVec3 as N,CVec4 as O,FloatToInt as Q,IntToFloat as W,MappingTexToV3 as Y,Null as Z,Sam2D0ToColor as $,Sam2DSize as _,Sam2DToColor as rr,V2MulV2 as nr,V2AddV2 as er,V2DivV2 as wr,V2MulFloat as or,V3AddV3 as gr,V3Dot as ar,V3MulFloat as tr,V4AddV4 as br,V4DivV4 as ir,V4MulFloat as fr,V4MulMatCoordi as ur,clamp as lr,discard as vr,max as dr,pow as xr}from"./Shader";import{shadowOn as yr}from"./Shadow";var Sr=Z(),hr=Z(),mr=Z(),sr=Z(),cr=new M(0,0),pr=new O(0,0,0,0),Ar=new O(0,0,0,0),Pr=new O(0,0,0,0),zr=new O(0,0,0,0),Fr=Z(),kr=Z(),Br=Z(),Lr=H(0,"time"),Dr=Z(),Cr=Z(),Er=Z(),Rr=Z();function Tr(r,n){cr=n,pr=new O(or(r.xy,2),0,1)}function Ur(r,n,e){var w=er(r,nr(n,e));return rr(0,w)}function Vr(r){var n=function(r){return new N(xr(r.x,1/2.2),xr(r.y,1/2.2),xr(r.z,1/2.2))}(r),e=function(r){return ar(r,new N(.2126,.7152,.0722))}(n)/4;return 1/(1+e)}K("Artgine/Shader/PostBlend",["blend"],Tr,[Sr,hr,mr,u,l,v,d,x,y,S,h,s,m,c,p,A,P,z,F],[pr,cr],function(){Ar=b(cr)},[Ar]),K("Artgine/Shader/PostBlur",["blur"],Tr,[Sr,hr,mr,Fr,kr],[pr,cr],function(){var r=new O(0,0,0,0),n=Fr>32?32:Fr,e=-n,w=-n,o=0,g=wr(new M(1,1),_(0));if(kr<.5){for(var a=0;a<64;a++){for(var t=0;t<64&&!(e>n||w>n);t++)(b=Ur(cr,new M(e,w),g)).a>.01&&(r=br(r,b),o+=1),e+=1;e=-n,w+=1}o>.5&&(r=ir(r,new O(o,o,o,o)))}else if(kr<1.5){for(w=0,t=0;t<=64&&!(e>n);t++)(b=Ur(cr,new M(e,w),g)).a>.01&&(r=br(r,b),o+=1),e+=1;o>.5&&(r=ir(r,new O(o,o,o,o)))}else if(kr<2.5){for(e=0,a=0;a<64&&!(w>n);a++){var b;(b=Ur(cr,new M(e,w),g)).a>.01&&(r=br(r,b),o+=1),w+=1}o>.5&&(r=ir(r,new O(o,o,o,o)))}Ar=r},[Ar]),K("Artgine/Shader/PostFloodFill",["floodFill"],Tr,[Sr,hr,mr],[pr,cr],function(){for(var r=new O(0,0,0,0),n=wr(new M(1,1),_(0)),e=-1,w=0;e<=1.5;e+=1){for(var o=-1;o<=1.5;o+=1){var g=new M(cr.x+e*n.x,cr.y+o*n.y),a=rr(0,g);if(a.r<.99){w=a.r;break}}if(w>.5)break}r=w>.01?new O(w,w,w,1):new O(1,1,1,1),Ar=r},[Ar]),K("Artgine/Shader/PostLight",["light"],Tr,[Sr,hr,mr,sr,Br,C,L,R,D,k,j,q,B,T,U,V,X,Lr,0,0,1,2,3,4],[pr,cr],function(){var r=rr(0,cr),n=rr(1,cr),e=rr(2,cr),w=rr(3,cr).xyz,o=new O(-1,-1,-1,-1);I("shadow","S",[yr]),yr>.5&&(o=rr(G.eTexSlot.SingleShadowRead,cr)),J();var g=r,a=ur(new O(n.xyz,1),sr),t=Y(e.rgb),b=n.w,i=E(Br,a,r,t,o,w.y,w.x,w.z,b);Ar.rgb=i[0],Ar.w=g.w,zr.rgb=i[1],zr.w=g.w,Pr.rgb=i[2],Pr.w=g.w},[Ar,zr,Pr]),K("Artgine/Shader/PostExpandBakedLight",["bake"],Tr,[Sr,hr,mr],[pr,cr],function(){var r=rr(0,cr);if(r.x>=.01||r.y>=.01||r.z>=.01||r.w>=.01)Ar=r;else{for(var n=new O(0,0,0,0),e=_(0),w=new M(1/e.x,1/e.y),o=0,g=-Q(3);g<Q(3)+1;g++)for(var a=-Q(3);a<Q(3)+1;a++){var t=new M(w.x*W(g)+cr.x,w.y*W(a)+cr.y),b=rr(0,t);(b.x>=.01||b.y>=.01||b.z>=.01||b.w>=.01)&&(o+=1,n=br(n,b))}Ar=fr(n,1/o)}},[Ar]),K("Artgine/Shader/PostDownSample",["sample","down"],Tr,[Sr,hr,mr,Dr,Cr,Er],[pr,cr],function(){var r=_(0),n=1/r.x,e=1/r.y,w=cr.x,o=cr.y,g=$(new M(w-2*n,o+2*e)).rgb,a=$(new M(w,o+2*e)).rgb,t=$(new M(w+2*n,o+2*e)).rgb,b=$(new M(w-2*n,o)).rgb,i=$(new M(w,o)).rgb,f=$(new M(w+2*n,o)).rgb,u=$(new M(w-2*n,o-2*e)).rgb,l=$(new M(w,o-2*e)).rgb,v=$(new M(w+2*n,o-2*e)).rgb,d=$(new M(w-1*n,o+1*e)).rgb,x=$(new M(w+1*n,o+1*e)).rgb,y=$(new M(w-1*n,o-1*e)).rgb,S=$(new M(w+1*n,o-1*e)).rgb;if(Dr<.5){var h=tr(gr(gr(g,a),gr(b,i)),.03125),m=tr(gr(gr(a,t),gr(i,f)),.03125),s=tr(gr(gr(b,i),gr(u,l)),.03125),c=tr(gr(gr(i,f),gr(l,v)),.03125),p=tr(gr(gr(d,x),gr(y,S)),.125);h=tr(h,Vr(h)),m=tr(m,Vr(m)),s=tr(s,Vr(s)),c=tr(c,Vr(c)),p=tr(p,Vr(p)),Ar.rgb=gr(gr(gr(h,m),gr(s,c)),p),Ar.rgb=function(r){var n=dr(dr(r.x,r.y),r.z),e=Cr*Er,w=n-(Cr-e);w=lr(w,0,2*e);var o=dr(n-Cr,w=w*w*(4*e+1e-5));return o/=dr(n,1e-5),tr(r,o)}(Ar.rgb)}else Ar.rgb=tr(i,.125),Ar.rgb=gr(Ar.rgb,tr(gr(gr(g,t),gr(u,v)),.03125)),Ar.rgb=gr(Ar.rgb,tr(gr(gr(a,b),gr(f,l)),.0625)),Ar.rgb=gr(Ar.rgb,tr(gr(gr(d,x),gr(y,S)),.125));Ar.w=1},[Ar]),K("Artgine/Shader/PostUpSample",["sample","up"],Tr,[Sr,hr,mr,Rr],[pr,cr],function(){var r=_(0),n=1/r.x,e=1/r.y,w=cr.x,o=cr.y,g=$(new M(w-n,o+e)).rgb,a=$(new M(w,o+e)).rgb,t=$(new M(w+n,o+e)).rgb,b=$(new M(w-n,o)).rgb,i=$(new M(w,o)).rgb,f=$(new M(w+n,o)).rgb,u=$(new M(w-n,o-e)).rgb,l=$(new M(w,o-e)).rgb,v=$(new M(w+n,o-e)).rgb,d=tr(i,.25);d=gr(d,tr(gr(gr(a,b),gr(f,l)),.125)),d=gr(d,tr(gr(gr(g,t),gr(u,v)),.0625)),d=tr(d,Rr),Ar.rgb=d,Ar.w=Rr},[Ar]),K("Artgine/Shader/PostVFX",["vfx"],Tr,[Sr,hr,mr,n,Lr,e,w,o,g,a,t,i,f],[pr,cr],function(){Ar=r(cr,n,Lr,new O(0,0,0,0))},[Ar]);
+import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, vfxMat0, vfxMat1, BlendColor0, BlendColor1, BlendColor2, BlendColor3, BlendColor4, BlendColor5, BlendColor6, BlendColor7, BlendColor9, BlendColor8, BlendColor10, BlendColor11, BlendColor12, BlendColor13, BlendColor14, BlendColor15 } from "./ColorFun";
+import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
+import { SDF } from "./SDF";
+import { Attribute, BranchBegin, BranchEnd, Build, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, V2MulV2, V2AddV2, V2DivV2, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V4AddV4, V4DivV4, V4MulFloat, V4MulMatCoordi, clamp, discard, max, pow } from "./Shader";
+import { shadowOn } from "./Shadow";
+var worldMat = Null();
+var viewMat = Null();
+var projectMat = Null();
+var viewMatInv3D = Null();
+var to_uv = new CVec2(0.0, 0.0);
+var out_position = new CVec4(0.0, 0.0, 0.0, 0.0);
+var out_color = new CVec4(0.0, 0.0, 0.0, 0.0);
+var out_emissive = new CVec4(0.0, 0.0, 0.0, 0.0);
+var out_specular = new CVec4(0.0, 0.0, 0.0, 0.0);
+var renderCount = Null();
+var renderType = Null();
+var camPos3D = Null();
+var time = Attribute(0, "time");
+var renType = 0.0;
+var sam2DDiffuse = 0.0;
+var sam2DPosition = 1.0;
+var sam2DNormal = 2.0;
+var sam2DSpecular = 3.0;
+var sam2DShadow = 4.0;
+var mipLevel = Null();
+var threshold = Null();
+var softThreshold = Null();
+var blendFactor = Null();
+Build("Artgine/Shader/PostBlend", ["blend"], vs_main, [
+    worldMat, viewMat, projectMat,
+    BlendColor0, BlendColor1, BlendColor2, BlendColor3,
+    BlendColor4, BlendColor5, BlendColor6, BlendColor7,
+    BlendColor8, BlendColor9, BlendColor10, BlendColor11,
+    BlendColor12, BlendColor13, BlendColor14, BlendColor15,
+], [out_position, to_uv], ps_main_blend, [out_color]);
+Build("Artgine/Shader/PostBlur", ["blur"], vs_main, [
+    worldMat, viewMat, projectMat, renderCount, renderType
+], [out_position, to_uv], ps_main_blur, [out_color]);
+Build("Artgine/Shader/PostFloodFill", ["floodFill"], vs_main, [
+    worldMat, viewMat, projectMat,
+], [out_position, to_uv], ps_main_floodFill, [out_color]);
+Build("Artgine/Shader/PostLight", ["light"], vs_main, [
+    worldMat, viewMat, projectMat,
+    viewMatInv3D, camPos3D,
+    ligDir, ligCol, ligMask, ligCount,
+    ambientColor, sam2DCount, samCubeCount, envmapOn,
+    ligStep0, ligStep1, ligStep2, ligStep3,
+    time, renType,
+    sam2DDiffuse, sam2DPosition, sam2DNormal, sam2DSpecular, sam2DShadow
+], [out_position, to_uv], ps_main_light, [out_color, out_specular, out_emissive]);
+Build("Artgine/Shader/PostExpandBakedLight", ["bake"], vs_main, [
+    worldMat, viewMat, projectMat,
+], [out_position, to_uv], ps_main_ExpandBakedLight, [out_color]);
+Build("Artgine/Shader/PostDownSample", ["sample", "down"], vs_main, [
+    worldMat, viewMat, projectMat,
+    mipLevel,
+    threshold, softThreshold
+], [out_position, to_uv], ps_main_DownSample, [out_color]);
+Build("Artgine/Shader/PostUpSample", ["sample", "up"], vs_main, [
+    worldMat, viewMat, projectMat,
+    blendFactor
+], [out_position, to_uv], ps_main_UpSample, [out_color]);
+Build("Artgine/Shader/PostVFX", ["vfx"], vs_main, [
+    worldMat, viewMat, projectMat,
+    VFX, time, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, vfxMat0, vfxMat1
+], [out_position, to_uv], ps_main_vfx, [out_color]);
+function vs_main(f3_ver, f2_uv) {
+    to_uv = f2_uv;
+    out_position = new CVec4(V2MulFloat(f3_ver.xy, 2.0), 0.0, 1.0);
+}
+function ps_main_blend() {
+    out_color = TexOffBlendFactorFun(to_uv);
+}
+function GetBlurColor(_uv, _f, _texScale) {
+    var uv = V2AddV2(_uv, V2MulV2(_f, _texScale));
+    return Sam2DToColor(0.0, uv);
+}
+function ps_main_blur() {
+    var all = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var fCount = renderCount > 32.0 ? 32.0 : renderCount;
+    var fx = -fCount;
+    var fy = -fCount;
+    var count = 0.0;
+    var texScale = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
+    if (renderType < 0.5) {
+        for (var y = 0; y < 64; y++) {
+            for (var x = 0; x < 64; x++) {
+                if (fx > fCount || fy > fCount) {
+                    break;
+                }
+                var color = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
+                if (color.a > 0.01) {
+                    all = V4AddV4(all, color);
+                    count += 1.0;
+                }
+                fx += 1.0;
+            }
+            fx = -fCount;
+            fy += 1.0;
+        }
+        if (count > 0.5) {
+            all = V4DivV4(all, new CVec4(count, count, count, count));
+        }
+    }
+    else if (renderType < 1.5) {
+        fy = 0.0;
+        for (var x = 0; x <= 64; x++) {
+            if (fx > fCount) {
+                break;
+            }
+            var color = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
+            if (color.a > 0.01) {
+                all = V4AddV4(all, color);
+                count += 1.0;
+            }
+            fx += 1.0;
+        }
+        if (count > 0.5) {
+            all = V4DivV4(all, new CVec4(count, count, count, count));
+        }
+    }
+    else if (renderType < 2.5) {
+        fx = 0.0;
+        for (var y = 0; y < 64; y++) {
+            if (fy > fCount) {
+                break;
+            }
+            var color = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
+            if (color.a > 0.01) {
+                all = V4AddV4(all, color);
+                count += 1.0;
+            }
+            fy += 1.0;
+        }
+        if (count > 0.5) {
+            all = V4DivV4(all, new CVec4(count, count, count, count));
+        }
+    }
+    out_color = all;
+}
+function ps_main_floodFill() {
+    var all = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var texScale = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
+    var count = 1.0;
+    var x = -count;
+    var foundShadow = 0.0;
+    for (; x <= count + 0.5; x += 1.0) {
+        var y = -count;
+        for (; y <= count + 0.5; y += 1.0) {
+            var uv = new CVec2(to_uv.x + x * texScale.x, to_uv.y + y * texScale.y);
+            var color = Sam2DToColor(0.0, uv);
+            if (color.r < 0.99) {
+                foundShadow = color.r;
+                break;
+            }
+        }
+        if (foundShadow > 0.5)
+            break;
+    }
+    if (foundShadow > 0.01) {
+        all = new CVec4(foundShadow, foundShadow, foundShadow, 1.0);
+    }
+    else {
+        all = new CVec4(1.0, 1.0, 1.0, 1.0);
+    }
+    out_color = all;
+}
+function ps_main_light() {
+    var L_dif = Sam2DToColor(sam2DDiffuse, to_uv);
+    var L_pos = Sam2DToColor(sam2DPosition, to_uv);
+    var L_nor = Sam2DToColor(sam2DNormal, to_uv);
+    var L_spc = Sam2DToColor(sam2DSpecular, to_uv).xyz;
+    var shadow = new CVec4(-1.0, -1.0, -1.0, -1.0);
+    BranchBegin("shadow", "S", [shadowOn]);
+    if (shadowOn > 0.5) {
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, to_uv);
+    }
+    BranchEnd();
+    var L_cor = L_dif;
+    var worldPos = V4MulMatCoordi(new CVec4(L_pos.xyz, 1.0), viewMatInv3D);
+    var normal = MappingTexToV3(L_nor.rgb);
+    var maskIndex = L_pos.w;
+    var dseMat = LightCac3D(camPos3D, worldPos, L_dif, normal, shadow, L_spc.y, L_spc.x, L_spc.z, maskIndex);
+    if (renType < 0.5) {
+        out_color.rgb = dseMat[0];
+        out_color.w = L_cor.w;
+    }
+    else if (renType < 1.5) {
+        out_color.rgb = dseMat[1];
+        out_color.w = L_cor.w;
+    }
+    else {
+        out_color.rgb = dseMat[2];
+        out_color.w = L_cor.w;
+    }
+    out_specular.rgb = dseMat[1];
+    out_specular.w = L_cor.w;
+    out_emissive.rgb = dseMat[2];
+    out_emissive.w = L_cor.w;
+}
+function ps_main_ExpandBakedLight() {
+    var L_cor = Sam2DToColor(0.0, to_uv);
+    if (L_cor.x >= 0.01 || L_cor.y >= 0.01 || L_cor.z >= 0.01 || L_cor.w >= 0.01) {
+        out_color = L_cor;
+        return;
+    }
+    var accurate_cor = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var texSize = Sam2DSize(0.0);
+    var texScale = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
+    var count = 0.0;
+    var adj_pixel_num = 3.0;
+    for (var x = -FloatToInt(adj_pixel_num); x < FloatToInt(adj_pixel_num) + 1; x++) {
+        for (var y = -FloatToInt(adj_pixel_num); y < FloatToInt(adj_pixel_num) + 1; y++) {
+            var adjacentUV = new CVec2(texScale.x * IntToFloat(x) + to_uv.x, texScale.y * IntToFloat(y) + to_uv.y);
+            var adjacent_cor = Sam2DToColor(0.0, adjacentUV);
+            if (adjacent_cor.x >= 0.01 || adjacent_cor.y >= 0.01 || adjacent_cor.z >= 0.01 || adjacent_cor.w >= 0.01) {
+                count += 1.0;
+                accurate_cor = V4AddV4(accurate_cor, adjacent_cor);
+            }
+        }
+    }
+    if (count < 0.5) {
+        discard;
+    }
+    out_color = V4MulFloat(accurate_cor, 1.0 / count);
+}
+function TosRGB(_col) {
+    return new CVec3(pow(_col.x, 1.0 / 2.2), pow(_col.y, 1.0 / 2.2), pow(_col.z, 1.0 / 2.2));
+}
+function tonemapping_luminance(_col) {
+    return V3Dot(_col, new CVec3(0.2126, 0.7152, 0.0722));
+}
+function KarisAverage(_col) {
+    var sRGB = TosRGB(_col);
+    var luman = tonemapping_luminance(sRGB) / 4.0;
+    return 1.0 / (1.0 + luman);
+}
+function PreFilter(_col) {
+    var brightness = max(max(_col.x, _col.y), _col.z);
+    var knee = threshold * softThreshold;
+    var softness = brightness - (threshold - knee);
+    softness = clamp(softness, 0.0, 2.0 * knee);
+    softness = softness * softness * (4.0 * knee + 0.00001);
+    var contribution = max(brightness - threshold, softness);
+    contribution /= max(brightness, 0.00001);
+    return V3MulFloat(_col, contribution);
+}
+function ps_main_DownSample() {
+    var texSize = Sam2DSize(0.0);
+    var x = 1.0 / texSize.x;
+    var y = 1.0 / texSize.y;
+    var uvx = to_uv.x;
+    var uvy = to_uv.y;
+    var a = Sam2D0ToColor(new CVec2(uvx - 2.0 * x, uvy + 2.0 * y)).rgb;
+    var b = Sam2D0ToColor(new CVec2(uvx, uvy + 2.0 * y)).rgb;
+    var c = Sam2D0ToColor(new CVec2(uvx + 2.0 * x, uvy + 2.0 * y)).rgb;
+    var d = Sam2D0ToColor(new CVec2(uvx - 2.0 * x, uvy)).rgb;
+    var e = Sam2D0ToColor(new CVec2(uvx, uvy)).rgb;
+    var f = Sam2D0ToColor(new CVec2(uvx + 2.0 * x, uvy)).rgb;
+    var g = Sam2D0ToColor(new CVec2(uvx - 2.0 * x, uvy - 2.0 * y)).rgb;
+    var h = Sam2D0ToColor(new CVec2(uvx, uvy - 2.0 * y)).rgb;
+    var i = Sam2D0ToColor(new CVec2(uvx + 2.0 * x, uvy - 2.0 * y)).rgb;
+    var j = Sam2D0ToColor(new CVec2(uvx - 1.0 * x, uvy + 1.0 * y)).rgb;
+    var k = Sam2D0ToColor(new CVec2(uvx + 1.0 * x, uvy + 1.0 * y)).rgb;
+    var l = Sam2D0ToColor(new CVec2(uvx - 1.0 * x, uvy - 1.0 * y)).rgb;
+    var m = Sam2D0ToColor(new CVec2(uvx + 1.0 * x, uvy - 1.0 * y)).rgb;
+    if (mipLevel < 0.5) {
+        var g0 = V3MulFloat(V3AddV3(V3AddV3(a, b), V3AddV3(d, e)), 0.125 / 4.0);
+        var g1 = V3MulFloat(V3AddV3(V3AddV3(b, c), V3AddV3(e, f)), 0.125 / 4.0);
+        var g2 = V3MulFloat(V3AddV3(V3AddV3(d, e), V3AddV3(g, h)), 0.125 / 4.0);
+        var g3 = V3MulFloat(V3AddV3(V3AddV3(e, f), V3AddV3(h, i)), 0.125 / 4.0);
+        var g4 = V3MulFloat(V3AddV3(V3AddV3(j, k), V3AddV3(l, m)), 0.5 / 4.0);
+        g0 = V3MulFloat(g0, KarisAverage(g0));
+        g1 = V3MulFloat(g1, KarisAverage(g1));
+        g2 = V3MulFloat(g2, KarisAverage(g2));
+        g3 = V3MulFloat(g3, KarisAverage(g3));
+        g4 = V3MulFloat(g4, KarisAverage(g4));
+        out_color.rgb = V3AddV3(V3AddV3(V3AddV3(g0, g1), V3AddV3(g2, g3)), g4);
+        out_color.rgb = PreFilter(out_color.rgb);
+    }
+    else {
+        out_color.rgb = V3MulFloat(e, 0.125);
+        out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(a, c), V3AddV3(g, i)), 0.03125));
+        out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(b, d), V3AddV3(f, h)), 0.0625));
+        out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(j, k), V3AddV3(l, m)), 0.125));
+    }
+    out_color.w = 1.0;
+}
+function ps_main_UpSample() {
+    var texSize = Sam2DSize(0.0);
+    var x = 1.0 / texSize.x;
+    var y = 1.0 / texSize.y;
+    var uvx = to_uv.x;
+    var uvy = to_uv.y;
+    var a = Sam2D0ToColor(new CVec2(uvx - x, uvy + y)).rgb;
+    var b = Sam2D0ToColor(new CVec2(uvx, uvy + y)).rgb;
+    var c = Sam2D0ToColor(new CVec2(uvx + x, uvy + y)).rgb;
+    var d = Sam2D0ToColor(new CVec2(uvx - x, uvy)).rgb;
+    var e = Sam2D0ToColor(new CVec2(uvx, uvy)).rgb;
+    var f = Sam2D0ToColor(new CVec2(uvx + x, uvy)).rgb;
+    var g = Sam2D0ToColor(new CVec2(uvx - x, uvy - y)).rgb;
+    var h = Sam2D0ToColor(new CVec2(uvx, uvy - y)).rgb;
+    var i = Sam2D0ToColor(new CVec2(uvx + x, uvy - y)).rgb;
+    var col = V3MulFloat(e, 0.25);
+    col = V3AddV3(col, V3MulFloat(V3AddV3(V3AddV3(b, d), V3AddV3(f, h)), 0.125));
+    col = V3AddV3(col, V3MulFloat(V3AddV3(V3AddV3(a, c), V3AddV3(g, i)), 0.0625));
+    col = V3MulFloat(col, blendFactor);
+    out_color.rgb = col;
+    out_color.w = blendFactor;
+}
+function ps_main_vfx() {
+    out_color = VFXDown2(to_uv, VFX, time, new CVec4(0.0, 0.0, 0.0, 0.0));
+}

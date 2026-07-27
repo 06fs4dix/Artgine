@@ -10,10 +10,10 @@ import { execSync, spawn } from 'child_process';
 import { CFile } from '../artgine/system/CFile.js';
 import { CUtil } from '../artgine/basic/CUtil.js';
 import { CConsol } from '../artgine/basic/CConsol.js';
-import { CCMDMgr } from './CCMDMgr.js';
+import { CCMDMgr } from '../artgine/system/CCMDMgr.js';
 import { CPath } from '../artgine/basic/CPath.js';
 import { CString } from '../artgine/basic/CString.js';
-import { BackUp, CreateRole, DeleteRole, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetPluginArr, GetProjName, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './MainFunc.js';
+import { BackUp, CreateRole, DeleteRole, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetPluginArr, GetPluginMap, GetProjName, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './MainFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 import { CLogRouter } from '../artgine/server/CLogRouter.js';
@@ -46,6 +46,9 @@ if (gAppJSON == null)
 {
     const port = new URL(gAppJSON.url).port || "default";
     app.setPath('userData', app.getPath('userData') + "-" + port);
+}
+if (gAppJSON.program == "developer") {
+    await CCMDMgr.NPMInstall(["*Dev"]);
 }
 var gTSCPID = 0;
 if (gAppJSON.tsc) {
@@ -440,6 +443,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     let IStr = "";
     let MStr = "";
     let EStr = "";
+    let serverScriptStr = "";
     let ChromeStartCreate = async () => {
         const startBatContent = `@echo off
 		title Chrome CORS Disabled
@@ -659,8 +663,12 @@ ipcMain.handle("NewPage", async (_event, _json) => {
             pfStr += "\nimport {CAtelier} from \"" + upFolder + "artgine/app/CAtelier.js\";\n";
             pfStr += "\nimport {CPlugin} from \"" + upFolder + "artgine/util/CPlugin.js\";\n";
             for (let p in _json.projetJSON.dependencies) {
+                let pInfo = GetPluginMap().get(p);
                 pfStr += "CPlugin.PushPath('" + p + "','" + upFolder + "plugin/" + p + "/');\n";
-                pfStr += "import \"" + upFolder + "plugin/" + p + "/" + p + ".js\"\n";
+                for (let file of pInfo.client)
+                    pfStr += "import \"" + upFolder + "plugin/" + p + "/" + file + "\"\n";
+                for (let file of pInfo.server)
+                    serverScriptStr += "<script type=\"server\" src=\"" + upFolder + "plugin/" + p + "/" + file + "\"></script>\n";
             }
             pfStr += "var gAtl = new CAtelier();\n";
             pfStr += "gAtl.mPF = gPF;\n";
@@ -713,11 +721,13 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     if (!htmlSkip) {
         if (_json.appJSON.github == true) {
             buf = await CFile.Load(savePath + ".js");
+            IStr += serverScriptStr;
             IStr += "<script type='module'>\n";
             IStr += CUtil.ArrayToString(buf);
             IStr += "</script>\n";
         }
         else {
+            IStr += serverScriptStr;
             IStr += "<script type='module' src='" + projectName + ".js'></script>\n";
         }
         pos = bHTML.indexOf("<!--Include-->");

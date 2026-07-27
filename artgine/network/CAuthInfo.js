@@ -1,1 +1,6 @@
-export class CAuthInfo{mID="";mPW="";mAddres="";mPort=""}
+export class CAuthInfo {
+    mID = "";
+    mPW = "";
+    mAddres = "";
+    mPort = "";
+}

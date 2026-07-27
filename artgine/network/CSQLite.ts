@@ -1,15 +1,37 @@
 import { CORMField, CRDBMS } from "./CORM.js";
-import sqlite3 from 'sqlite3'; // or: import * as sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import { CCMDMgr } from "../system/CCMDMgr.js";
 import * as fs from 'fs';
 import * as path from 'path';
 
+let sqlite3Module: any = null;
+let sqliteOpen: any = null;
+let sqliteLoad: Promise<{ sqlite3: any, open: any }> = null;
 
 export class CSQLite extends CRDBMS {
     protected mConn;
 
+    /** sqlite3/sqlite 설치(NPMInstall) 후 동적 로드 (프로세스당 1회) */
+    private static EnsureModule(): Promise<{ sqlite3: any, open: any }> {
+        if (sqlite3Module && sqliteOpen) {
+            return Promise.resolve({ sqlite3: sqlite3Module, open: sqliteOpen });
+        }
+        if (!sqliteLoad) {
+            sqliteLoad = (async () => {
+                await CCMDMgr.NPMInstall(["sqlite3", "sqlite"]);
+                const sqlite3Mod: any = await import("sqlite3");
+                // ESM 네임스페이스 시 CJS exports가 default 아래에 있을 수 있음
+                sqlite3Module = sqlite3Mod.default ?? sqlite3Mod;
+                const sqliteMod: any = await import("sqlite");
+                sqliteOpen = sqliteMod.open ?? sqliteMod.default?.open;
+                return { sqlite3: sqlite3Module, open: sqliteOpen };
+            })();
+        }
+        return sqliteLoad;
+    }
+
     override async Init(): Promise<void> {
         //this.mType=CRDBMS.eType.Sqlite;
+        const { sqlite3, open } = await CSQLite.EnsureModule();
         const filename = this.mDatabase || './db/artgine.sqlite';
         fs.mkdirSync(path.dirname(filename), { recursive: true });
         this.mConn = await open({
@@ -44,8 +66,8 @@ export class CSQLite extends CRDBMS {
                 result.push(Object.values(row));
             }
             return result;
-        } catch (err) {
-            if (err.message.includes("no such table")) {
+        } catch (err: any) {
+            if (err?.message?.includes("no such table")) {
                 // ❗ 테이블 없으면 빈 배열 리턴
                 return null;
             } else {

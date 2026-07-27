@@ -10,6 +10,21 @@ import {CHash} from "../artgine/basic/CHash.js";
 
 
 
+// plugin json의 tooltip:{key:value,...} 객체를 Bootstrap 툴팁(title, data-bs-html)용 HTML 문자열로 변환
+function BuildPluginTooltipHTML(tooltip: Record<string, string>): string
+{
+    const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    let inner = "";
+    for (const key in tooltip ?? {})
+    {
+        const value = esc(tooltip[key]).replace(/\n/g, "<br>");
+        inner += `<strong>${esc(key)}:</strong> ${value}<br>`;
+    }
+
+    return `<div style="font-size: 0.875em; line-height: 1.2; min-width: 240px;">${inner}</div>`;
+}
+
 var gProjJSON = null;
 var gAppJSON: { url, projectPath, program, server, width, height, fullScreen, github, tsc, password } = null;
 var gManifest=null;
@@ -251,7 +266,7 @@ async function Init() {
 
             label.setAttribute("data-bs-toggle", "tooltip");
             label.setAttribute("data-bs-placement", "top");
-            label.setAttribute("title", plugin.html);
+            label.setAttribute("title", BuildPluginTooltipHTML(plugin.tooltip));
             label.setAttribute("data-bs-html", "true"); // html ?�용 ?�용
 
             inner.appendChild(checkbox);

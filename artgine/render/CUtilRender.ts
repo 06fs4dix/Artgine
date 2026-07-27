@@ -2045,23 +2045,12 @@ export class CUtilRender
 		}
 	}
 
-	static MeshAniBake(_texture : CTexture,_mesh : CMesh,_st : number,_end : number)
+	static MeshAniBake(_texture : CTexture,_amesh : CMesh,_pmesh : CMesh,_st : number,_end : number)
 	{
 
 		let buf=_texture.GetBuf()[0] as Float32Array;
-		let XCount=_mesh.skin.length*4;
+		let XCount=_pmesh.skin.length*4;
 		let YCount=(_end-_st)*0.01;
-
-		// let tm=new CMat();
-		// for(let i=0;i<_texture.GetHeight()*_texture.GetWidth()*4;i+=16)
-		// {
-			
-		// 	for(let j=0;j<16;++j)
-		// 		buf[i+j]=tm.mF32A[j];
-			
-		// 	break;
-			
-		// }
 
 
 		if(_texture.GetWidth()<XCount || _texture.GetHeight()<YCount)
@@ -2072,12 +2061,24 @@ export class CUtilRender
 
 		let pst=0;
 		
-		let UpdateAni=(_node : CTree<CMeshDataNode>,_mat : CMat)=>{
+		let anodeCache = new Map<string, CTree<CMeshDataNode>>();
+		if (_amesh.meshTree != null) {
+			let arr = _amesh.meshTree.GetArray();
+			for (let i = 0; i < arr.length; ++i) {
+				anodeCache.set(arr[i].mKey, arr[i] as CTree<CMeshDataNode>);
+			}
+		}
+
+		let UpdateAni=(_pnode : CTree<CMeshDataNode>, _mat : CMat)=>{
 			let mpi=new CMeshCopyNode();
-			mpi.pos=_node.mData.pos;
-			mpi.rot=_node.mData.rot;
-			mpi.sca=_node.mData.sca;
-			CMeshTreeUpdate.TreeUpdateMeshAni(pst,_st,_end,_node.mData,_node.mData,mpi,_mat);
+			mpi.pos.Import(_pnode.mData.pos);
+			mpi.rot.Import(_pnode.mData.rot);
+			mpi.sca.Import(_pnode.mData.sca);
+			
+			let _anode = anodeCache.get(_pnode.mKey);
+			if (_anode != null) {
+				CMeshTreeUpdate.TreeUpdateMeshAni(pst,_st,_end,_pnode.mData,_anode.mData,mpi,_mat);
+			}
 
 			mpi.MatUpdate();
 			mpi.pst = CMath.MatMul(mpi.pst, _mat);
@@ -2085,31 +2086,31 @@ export class CUtilRender
 			//CConsol.Log(_node.mKey+" "+mpi.pst.ToStr());
 
 
-			for (var i = 0; i < _mesh.skin.length; ++i)
+			for (var i = 0; i < _pmesh.skin.length; ++i)
 			{
-				if (_node.mData.IsSkinKey(_mesh.skin[i].key))
+				if (_pnode.mData.IsSkinKey(_pmesh.skin[i].key))
 				{
 					var all=new CMat();
-					all = CMath.MatMul(_mesh.skin[i].mat, mpi.pst);
+					all = CMath.MatMul(_pmesh.skin[i].mat, mpi.pst);
 					for(let j=0;j<16;++j)
 						buf[(j+i*16)+((YCount-1)-pst*YCount)*XCount*4]=all.mF32A[j];
 				}
 			}
 
-			if(_node.mChild!=null)
-				UpdateAni(_node.mChild,mpi.pst);
+			if(_pnode.mChild!=null)
+				UpdateAni(_pnode.mChild, mpi.pst);
 			
-			if(_node.mColleague!=null)
-				UpdateAni(_node.mColleague,_mat);
+			if(_pnode.mColleague!=null)
+				UpdateAni(_pnode.mColleague, _mat);
 			
 
 			
 		};
 		for(let c=0;c<YCount;++c)
 		{
-			pst=c/YCount;
+			pst= c/(YCount);
 			//pst=0;
-			UpdateAni(_mesh.meshTree,new CMat());
+			UpdateAni(_pmesh.meshTree, new CMat());
 		}
 		
 		

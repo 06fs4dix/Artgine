@@ -1,1 +1,41 @@
-import{CShaderAttr as e}from"../../../render/CShaderAttr.js";import{CRPAuto as t}from"../../canvas/CRPMgr.js";import{CPaint as r}from"./CPaint.js";export class CPaintSurface extends r{constructor(e,t=null){super(),null!=e&&(this.PushRenderPass(e),this.mBW.mRadian=4294967295)}InitChk(){super.InitChk(),this.mBW.mRadian=4294967295}EmptyRPChk(){if(0==this.mRenderPass.length){var e=new t(this.mOwner.GetFrame().Pal().Sl2D().GetShader("Artgine/Shader/2DBlit").mKey);this.mRenderPass=[e]}}Update(e){this.mRenPT.length}Render(t){var r=this.RenderBatch(t,1);if(null!=r){this.mOwner.GetFrame().BMgr().BatchOn(),this.Common(t),this.mOwner.GetFrame().BMgr().SetBatchSA(new e("worldMat",this.GetFMat())),this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);var a=this.GetDrawMesh("Artgine/DM/Surface",t,this.mOwner.GetFrame().Pal().MCI2D());this.mOwner.GetFrame().BMgr().SetBatchMesh(a),r[0]=this.mOwner.GetFrame().BMgr().BatchOff()}}}
+import { CShaderAttr } from "../../../render/CShaderAttr.js";
+import { CRPAuto } from "../../canvas/CRPMgr.js";
+import { CPaint } from "./CPaint.js";
+export class CPaintSurface extends CPaint {
+    constructor(_rp, _size = null) {
+        super();
+        if (_rp == null)
+            return;
+        else {
+            this.PushRenderPass(_rp);
+        }
+        this.mBW.mRadian = 0xffffffff;
+    }
+    InitChk() {
+        super.InitChk();
+        this.mBW.mRadian = 0xffffffff;
+    }
+    EmptyRPChk() {
+        if (this.mRenderPass.length == 0) {
+            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().GetShader("Artgine/Shader/2DBlit").mKey);
+            this.mRenderPass = [rp];
+        }
+    }
+    Update(_update) {
+        if (this.mRenPT.length == 0)
+            return;
+    }
+    Render(_vf) {
+        var barr = this.RenderBatch(_vf, 1);
+        if (barr == null)
+            return;
+        this.mOwner.GetFrame().BMgr().BatchOn();
+        this.Common(_vf);
+        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
+        var dm = this.GetDrawMesh("Artgine/DM/Surface", _vf, this.mOwner.GetFrame().Pal().MCI2D());
+        this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
+        barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
+    }
+}
+;

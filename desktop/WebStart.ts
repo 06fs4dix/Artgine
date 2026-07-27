@@ -1,5 +1,6 @@
 import { CAlert } from "../artgine/basic/CAlert.js";
 import { CServerMain } from "../artgine/network/CServerMain.js";
+import { CCMDMgr } from "../artgine/system/CCMDMgr.js";
 import { GetAppJSON } from "./MainFunc.js";
 
 var gAppJSON=await GetAppJSON();
@@ -7,6 +8,13 @@ if(gAppJSON==null)
 {
     process.exit(1);
 }
+
+// 웹서버 기동에 필요한 Basic만 설치 (DB 등 온디맨드 제외).
+// NPMPackageInit()은 호출하지 않는다 — deps/lock을 매 기동 지우면 npm이 디스크 상태를 대조할
+// 기준을 잃고 이미 설치된 패키지까지 삭제 후 재압축해제한다. 그 삭제 순간에 서버가 그 패키지를
+// 읽으면 빈 파일을 잡는다(예: Terminal 페이지의 xterm 자산이 빈 <script>로 나갔던 건).
+await CCMDMgr.NPMInstall(["*Basic"]);
+
 const parsed = gAppJSON.url ? new URL(gAppJSON.url) : null;
 const port = Number(process.argv[2] ?? parsed?.port ?? '8050');
 const pathname = parsed?.pathname ?? '/Artgine';
