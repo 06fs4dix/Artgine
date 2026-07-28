@@ -1,6 +1,8 @@
 import { CORMField } from '../network/CORM.js';
 import { CSQLite } from '../network/CSQLite.js';
 import { marked, Renderer } from '../external/esnext/md/marked.esm.js';
+import { CMail } from '../network/CMail.js';
+import { CMailAccount } from '../network/CMailAccount.js';
 const sTelegramRenderer = Object.assign(Object.create(new Renderer()), {
     heading: (text) => `<b>${text}</b>\n`,
     hr: () => '\n',
@@ -17,8 +19,8 @@ export class CMessenger {
     static sDB = null;
     static sSessionTable = 'messenger_session';
     static sQueueTable = 'messenger_queue';
-    static ePlatform = { Telegram: 'telegram', Discord: 'discord' };
-    static sTextLimit = { telegram: 3800, discord: 1900 };
+    static ePlatform = { Telegram: 'telegram', Discord: 'discord', Email: 'email' };
+    static sTextLimit = { telegram: 3800, discord: 1900, email: 1000000 };
     static sFailMax = 5;
     static sDiscordAPI = 'https://discord.com/api/v10';
     static sDiscordEpoch = 1420070400000;
@@ -72,6 +74,8 @@ export class CMessenger {
             return CMessenger.ePlatform.Telegram;
         if (/^[\w-]{20,}\.[\w-]{4,}\.[\w-]{20,}$/.test(token))
             return CMessenger.ePlatform.Discord;
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(token))
+            return CMessenger.ePlatform.Email;
         return '';
     }
     static async Create(_platform, _token) {
@@ -82,22 +86,32 @@ export class CMessenger {
         if (platform === '' || platform === 'auto') {
             platform = CMessenger.Detect(token);
             if (platform === '')
-                throw new Error('CMessenger: cannot tell the platform from this token (expected a Telegram or Discord bot token)');
+                throw new Error('CMessenger: cannot tell the platform from this token (expected a Telegram/Discord bot token or an email address)');
         }
-        if (platform !== CMessenger.ePlatform.Telegram && platform !== CMessenger.ePlatform.Discord) {
+        if (platform !== CMessenger.ePlatform.Telegram && platform !== CMessenger.ePlatform.Discord && platform !== CMessenger.ePlatform.Email) {
             throw new Error(`CMessenger: unsupported platform '${_platform}'`);
         }
-        const me = await CMessenger.GetMe(platform, token);
+        if (platform === CMessenger.ePlatform.Email) {
+            const account = CMailAccount.Load();
+            if (!CMailAccount.IsConfigured(account)) {
+                throw new Error('CMessenger: mail account is not configured yet — set it up first (Email button)');
+            }
+        }
+        const me = platform === CMessenger.ePlatform.Email
+            ? { name: token, link: '' }
+            : await CMessenger.GetMe(platform, token);
         const db = await CMessenger.Init();
         await db.Send(`UPDATE ${CMessenger.sSessionTable} SET state = 'dead' WHERE token = ?`, [token]);
         const cursor = platform === CMessenger.ePlatform.Discord ? CMessenger.DiscordNowKey() : '0';
+        const initialChatKey = platform === CMessenger.ePlatform.Email ? token : '';
+        const initialState = platform === CMessenger.ePlatform.Email ? 'active' : 'pending';
         const createdAt = CMessenger.Now();
-        await db.Send(`INSERT INTO ${CMessenger.sSessionTable} (platform, token, botName, chatKey, cursor, link, state, createdAt) VALUES (?, ?, ?, '', ?, ?, 'pending', ?)`, [platform, token, me.name, cursor, me.link, createdAt]);
+        await db.Send(`INSERT INTO ${CMessenger.sSessionTable} (platform, token, botName, chatKey, cursor, link, state, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [platform, token, me.name, initialChatKey, cursor, me.link, initialState, createdAt]);
         const rows = await db.Recv(`SELECT id FROM ${CMessenger.sSessionTable} WHERE token = ? AND state != 'dead' ORDER BY id DESC LIMIT 1`, [token]);
         if (rows == null || rows.length === 0)
             throw new Error('CMessenger: failed to create session');
         const id = Number(rows[0][0]);
-        if (platform === CMessenger.ePlatform.Telegram) {
+        if (platform === CMessenger.ePlatform.Telegram || platform === CMessenger.ePlatform.Email) {
             const ses = await CMessenger.GetSession(id);
             try {
                 await CMessenger.Poll(ses, false);
@@ -152,6 +166,17 @@ export class CMessenger {
             text: String(r[3]),
         }));
     }
+    static async ResetCursor(_sessionId) {
+        const ses = await CMessenger.GetSession(_sessionId);
+        if (ses.platform === CMessenger.ePlatform.Discord) {
+            await CMessenger.SetCursor(ses, CMessenger.DiscordNowKey());
+            return;
+        }
+        try {
+            await CMessenger.Poll(ses, false);
+        }
+        catch { }
+    }
     static async GetInfo(_sessionId) {
         const ses = await CMessenger.GetSession(_sessionId);
         return {
@@ -191,6 +216,8 @@ export class CMessenger {
     static async Poll(_ses, _store = true) {
         if (_ses.platform === CMessenger.ePlatform.Discord)
             return await CMessenger.PollDiscord(_ses, _store);
+        if (_ses.platform === CMessenger.ePlatform.Email)
+            return await CMessenger.PollEmail(_ses, _store);
         return await CMessenger.PollTelegram(_ses, _store);
     }
     static async Flush(_ses) {
@@ -229,6 +256,14 @@ export class CMessenger {
             await CMessenger.CallDiscord(_ses.token, `/channels/${_ses.chatKey}/messages`, 'POST', { content: _text });
             return;
         }
+        if (_ses.platform === CMessenger.ePlatform.Email) {
+            const account = CMailAccount.Load();
+            const html = CMessenger.ToEmailHtml(_text);
+            const ok = await CMail.Send(CMailAccount.ToAuthInfo(account.smtp), _ses.chatKey, 'Messenger', html);
+            if (!ok)
+                throw new Error('CMessenger: email send failed');
+            return;
+        }
         const html = CMessenger.ToTelegramHtml(_text);
         await CMessenger.CallTelegram(_ses.token, 'sendMessage', {
             chat_id: Number(_ses.chatKey), text: html, parse_mode: 'HTML',
@@ -238,6 +273,12 @@ export class CMessenger {
         const escaped = _raw
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         const html = marked.parse(escaped, { renderer: sTelegramRenderer });
+        return html.trim();
+    }
+    static ToEmailHtml(_raw) {
+        const escaped = _raw
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const html = marked.parse(escaped);
         return html.trim();
     }
     static async Bind(_ses, _chatKey) {
@@ -388,6 +429,22 @@ export class CMessenger {
         if (res.status === 204)
             return null;
         return await res.json().catch(() => null);
+    }
+    static async PollEmail(_ses, _store) {
+        const account = CMailAccount.Load();
+        const sinceUid = Number(_ses.cursor) || 0;
+        const result = await CMail.Receive(CMailAccount.ToAuthInfo(account.imap), sinceUid);
+        if (result.messages.length === 0)
+            return;
+        const peer = _ses.chatKey.toLowerCase();
+        for (const msg of result.messages) {
+            if (_store && msg.from.toLowerCase() === peer) {
+                const text = msg.subject ? `[${msg.subject}]\n${msg.text}` : msg.text;
+                await CMessenger.Store(_ses, msg.from, msg.date, String(msg.uid), text);
+            }
+        }
+        if (result.nextUid > sinceUid)
+            await CMessenger.SetCursor(_ses, String(result.nextUid));
     }
     static SplitText(_text, _limit) {
         const text = _text === '' ? '(empty)' : _text;

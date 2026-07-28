@@ -7,7 +7,7 @@
 모든 `/Memo/*` 엔드포인트는 **`folder`(실제 파일 시스템 경로)를 선택적으로 받는다** — 그 폴더 안에 `memo.sqlite`를 직접 만들어(없으면 자동 생성) 폴더별로 완전히 독립된 db를 갖는다. 서로 다른 `folder` 값끼리는 카테고리/메모가 절대 섞이지 않는다. 보통 작업 중인 프로젝트 폴더 경로(예: `D:/Artgine_svn/WebContent/proj/2D/Village` 또는 `proj/2D/Village`)를 그대로 쓴다. **`folder`를 생략하거나 빈 값이면 폴더 구분 이전부터 쓰던 기존 기본 db(`./db/memo.sqlite`)를 그대로 쓴다** — 하위 호환용 기본값.
 
 ## 빠른 사용 (ai/tool/memo.js)
-저장/검색만 필요하면 전용 도구를 쓴다. `browser.js`/`remotecmd.js`와 동일하게 `common.js`의 인증 공유 방식(쿠키 jar)을 쓰며, 쿠키는 `ai/tool/memo_cookie.txt`에 저장/로드된다.
+저장/검색만 필요하면 전용 도구를 쓴다. `browser.js`/`remote.js`와 동일하게 `common.js`의 인증 공유 방식을 쓰며, 인증은 도구 공용 `ai/tool/cookie.json`에 서버(base)별로 저장/로드된다.
 
 > ⚠️ `<BASE_URL>`은 지금 이 세션에 적용된 지침 파일의 "접속 정보" 섹션에 적힌 주소+포트+기본경로를 직접 읽어서 조합한다. settings.json을 열거나 포트를 추측하지 말 것.
 

@@ -37,7 +37,7 @@ const LS_MODEL    = 'ai.model';
 import { CFecth } from "../../network/CFecth.js";
 import { CPath } from "../../basic/CPath.js";
 import { CHash } from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../CAuthToken.js";
 import { CLan } from "../../basic/CLan.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 import { CStorage } from "../../system/CStorage.js";
@@ -607,7 +607,8 @@ function connectWs() {
 async function tryLogin(pw: string) {
     const msgEl = document.getElementById('composerLoginMsg') || document.getElementById('loginMsg');
     try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json") as any;
+        const j = await authLogin(CPath.WebRootUrl(), CHash.SHA256('artgine_' + pw),
+            () => { if (msgEl) msgEl.textContent = 'Waiting for messenger approval (up to 5 minutes)...'; });
         if (j.ok && j.token) {
             authToken = j.token;
             setAuthToken(CPath.WebRootUrl(), authToken);

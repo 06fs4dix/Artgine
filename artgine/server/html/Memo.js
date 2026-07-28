@@ -6,6 +6,8 @@ import { CLan } from "../../basic/CLan.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 import { CUtilWeb } from "../../util/CUtilWeb.js";
 import { CStorage } from "../../system/CStorage.js";
+import { CPath } from "../../basic/CPath.js";
+import { authLogin } from "../CAuthToken.js";
 const _memoTheme = CUtilWeb.Parameter("theme");
 if (_memoTheme)
     document.documentElement.setAttribute('data-bs-theme', _memoTheme);
@@ -147,7 +149,7 @@ async function DoAuth() {
     authSubmitBtn.disabled = true;
     authMsg.textContent = '';
     try {
-        const j = await CFecth.Exe("auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json");
+        const j = await authLogin(CPath.WebRootUrl(), CHash.SHA256('artgine_' + pw), () => { authMsg.textContent = 'Waiting for messenger approval (up to 5 minutes)...'; });
         if (j.ok) {
             authOverlay.style.display = 'none';
             await LoadProviders();

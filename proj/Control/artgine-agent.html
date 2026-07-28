@@ -18,6 +18,12 @@
   .section-sub { color: #8b949e; margin-bottom: 2rem; }
   .feature-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; transition: all .2s; }
   .feature-card:hover { border-color: #58a6ff; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(88,166,255,.12); }
+  /* 화면 레이아웃 4영역 카드 → 해당 상세 섹션으로 스크롤 */
+  .d-layout-nav { cursor: pointer; user-select: none; }
+  .d-layout-nav:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
+  #d-section-top, #d-section-left, #d-section-center, #d-section-right {
+    scroll-margin-top: 72px; /* sticky 탭 바에 가리지 않도록 */
+  }
   .tab-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .7rem; border-radius: 20px; font-size: .82rem; font-weight: 600; }
   .tab-rdp { background: #1a2332; color: #58a6ff; }
   .tab-files { background: #1a2e1f; color: #3fb950; }
@@ -2076,28 +2082,28 @@
     <p class="text-muted mb-4" data-CLan="dLayoutDesc">The screen is split into four areas: a top bar, a left sidebar, a center panel, and a right sidebar.</p>
     <div class="row g-3 mb-5">
       <div class="col-6 col-md-3">
-        <div class="feature-card p-3 h-100 text-center">
+        <div class="feature-card p-3 h-100 text-center d-layout-nav" role="button" tabindex="0" data-scroll-target="d-section-top" title="Scroll to Top Bar">
           <i class="bi bi-layout-text-window-reverse fs-3" style="color:#58a6ff;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutTopTitle">Top</h6>
           <p class="text-muted small mb-0" data-CLan="dLayoutTopDesc">File and Multiplexer tabs, plus the More menu (Memo, Chat, Terminal, Messenger, Help, …).</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
-        <div class="feature-card p-3 h-100 text-center">
+        <div class="feature-card p-3 h-100 text-center d-layout-nav" role="button" tabindex="0" data-scroll-target="d-section-left" title="Scroll to Left Sidebar">
           <i class="bi bi-layout-sidebar fs-3" style="color:#3fb950;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutLeftTitle">Left</h6>
           <p class="text-muted small mb-0" data-CLan="dLayoutLeftDesc">RDP targets, then Agent / Other sessions (path groups vs flat list).</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
-        <div class="feature-card p-3 h-100 text-center">
+        <div class="feature-card p-3 h-100 text-center d-layout-nav" role="button" tabindex="0" data-scroll-target="d-section-center" title="Scroll to Center Panel">
           <i class="bi bi-square fs-3" style="color:#d2a8ff;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutCenterTitle">Center</h6>
           <p class="text-muted small mb-0" data-CLan="dLayoutCenterDesc">Shows whichever tab or session you selected — RDP, File, Help, Terminal, Chat, Messenger, Multiplexer, and more.</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
-        <div class="feature-card p-3 h-100 text-center">
+        <div class="feature-card p-3 h-100 text-center d-layout-nav" role="button" tabindex="0" data-scroll-target="d-section-right" title="Scroll to Right Sidebar">
           <i class="bi bi-layout-sidebar-reverse fs-3" style="color:#d29922;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutRightTitle">Right</h6>
           <p class="text-muted small mb-0" data-CLan="dLayoutRightDesc">Info / File / Option sub-tabs.</p>
@@ -2105,134 +2111,8 @@
       </div>
     </div>
 
-    <!-- Left sidebar detail -->
-    <h3 class="mb-2" data-CLan="dLeftHeading">Left Sidebar</h3>
-    <p class="text-muted mb-4" data-CLan="dLeftSub">Top to bottom: RDP list, then Agent / Other sub-tabs. Agent groups Chat/Terminal by working directory; Other lists Browser/Editor newest-first.</p>
-
-    <div class="row g-4 mb-5">
-      <!-- Live sample of the left sidebar -->
-      <div class="col-12 col-lg-5">
-        <div class="dleft-sample-wrap">
-          <div class="ctrlmock-col ctrlmock-left dleft-sample">
-            <div class="ctrlmock-label" data-CLan="uLeftRdpLabel">RDP</div>
-            <div class="mock-sess active" id="dSampleRdpLocal">
-              <div class="name"><i class="bi bi-pc-display"></i> Local <i class="bi bi-link-45deg text-secondary ms-auto" style="font-size:12px;"></i></div>
-            </div>
-            <div class="mock-sess" id="dSampleRdpRemote">
-              <div class="name"><i class="bi bi-hdd-network"></i> <span class="text-truncate" style="font-size:11px;font-weight:500;">http://192.168.0.20:8050/Artgine/proj/Control/Control.html</span></div>
-            </div>
-
-            <div class="ctrlmock-subtabs" id="dSampleSubTabs">
-              <button type="button" class="ctrlmock-subtab active" id="dSampleSbAgent">Agent</button>
-              <button type="button" class="ctrlmock-subtab" id="dSampleSbOther">Other</button>
-            </div>
-
-            <div id="dSampleAgentPane">
-              <button type="button" class="ctrlmock-add-folder mb-1" id="dSampleRootAddFolder" title="Add Working Folder">
-                <i class="bi bi-plus-lg"></i> <span data-CLan="uLeftAddFolder">Add Working Folder</span>
-              </button>
-              <div class="ctrlmock-agent-group" id="dSampleAgentGroup">
-                <div class="ctrlmock-agent-head" id="dSampleAgentHead">
-                  <span class="ctrlmock-agent-caret">▾</span>
-                  <span class="ctrlmock-agent-path"><span>D:/git/Artgine</span></span>
-                  <span class="ctrlmock-agent-count">3</span>
-                  <span class="ctrlmock-agent-dots" id="dSampleAgentDots">⋯</span>
-                </div>
-                <div class="ctrlmock-agent-body">
-                  <div class="mock-sess" id="dSampleSess1">
-                    <div class="name"><span class="status-dot status-idle"></span> Chat · Control UI update</div>
-                  </div>
-                  <div class="mock-sess" id="dSampleSess2">
-                    <div class="name"><span class="status-dot status-idle"></span> cmd : local</div>
-                  </div>
-                  <div class="mock-sess" id="dSampleSessClaude">
-                    <div class="name"><span class="status-dot status-busy"></span> claude : app</div>
-                  </div>
-                </div>
-              </div>
-              <div class="ctrlmock-agent-group mt-1">
-                <div class="ctrlmock-agent-head">
-                  <span class="ctrlmock-agent-caret">▾</span>
-                  <span class="ctrlmock-agent-path"><span>./</span></span>
-                  <span class="ctrlmock-agent-count">1</span>
-                  <span class="ctrlmock-agent-dots">⋯</span>
-                </div>
-                <div class="ctrlmock-agent-body">
-                  <div class="mock-sess" id="dSampleSessGrok">
-                    <div class="name"><span class="status-dot status-idle"></span> grok : app</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div id="dSampleOtherPane" class="d-none">
-              <div class="mock-sess" id="dSampleSess3">
-                <div class="name"><span class="status-dot status-off"></span> Browser · docs preview</div>
-              </div>
-              <div class="mock-sess" id="dSampleSessEditor">
-                <div class="name"><span class="status-dot status-idle"></span> Editor · Control.ts</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Description cards, hover/click to highlight the matching sample element -->
-      <div class="col-12 col-lg-7 d-flex flex-column gap-3">
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRdpLocal dSampleRdpRemote" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-display" style="color:#3fb950;"></i> <span data-CLan="dLeftRdpHeading">RDP</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dLeftRdpDesc">At the top of the left sidebar. <strong>Local</strong> is always present (this server's screen); below it, any <strong>Remote</strong> Control.html servers you've registered (via More → RDP). Click one to view its screen in the center; turn on Input to forward keyboard/mouse.</p>
-        </div>
-
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSbAgent dSampleSbOther" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-layout-split" style="color:#58a6ff;"></i> <span data-CLan="dLeftSubTabsHeading">Agent / Other</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dLeftSubTabsDesc"><strong>Agent</strong> holds Chat and Terminal, grouped by working directory. <strong>Other</strong> holds Browser and Editor in a flat newest-first list. The active sub-tab is remembered; opening a session auto-switches to the matching tab.</p>
-        </div>
-
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRootAddFolder" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-folder2-open" style="color:#d29922;"></i> <span data-CLan="dLeftRootAddHeading">Agent → Add Working Folder</span></h5>
-          <p class="text-muted small mb-3" data-CLan="dLeftRootAddDesc">Visible on the Agent tab. Edits the server's allowed root folders (one path per line). Registered paths show as empty path groups even with no sessions. Saving restarts the server.</p>
-          <div class="dtop-modal-frame" data-modal-key="workfolder"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
-        </div>
-
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleAgentGroup dSampleAgentHead dSampleAgentDots" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-folder-symlink" style="color:#d2a8ff;"></i> <span data-CLan="dLeftPathGroupHeading">Path groups</span></h5>
-          <div class="text-muted small mb-0" data-CLan="dLeftPathGroupDesc">
-            <p class="mb-2">Each group is one working directory (long paths show the tail). Click the header to collapse/expand. Empty registered folders still appear so you can start work there.</p>
-            <p class="mb-1 fw-semibold" style="color:#c9d1d9;">⋯ menu on the path group — three things you can do here:</p>
-            <ul class="mb-2 ps-3">
-              <li><strong>Chat</strong> — start a new AI chat with this path as Working Directory (same as More → Chat, cwd already filled).</li>
-              <li><strong>Terminal</strong> — start a new CLI session (cmd / claude / codex / …) in this path (same as More → Terminal / F3 with cwd set).</li>
-              <li><strong>Search</strong> — open the multi-path search modal with <strong>this path checked</strong> (other registered local/remote roots stay listed so you can check them too). <kbd>F2</kbd> opens the same modal with <strong>all paths checked</strong>.</li>
-            </ul>
-            <p class="mb-0">Sessions created from Chat/Terminal land under this same path group in the Agent list.</p>
-          </div>
-        </div>
-
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess1 dSampleSess2 dSampleSessClaude dSampleSess3 dSampleSessEditor" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-palette" style="color:#d29922;"></i> <span data-CLan="dLeftColorHeading">Status Colors</span></h5>
-          <p class="text-muted small mb-2" data-CLan="dLeftColorDesc">Chat / Terminal / Browser / Editor show a colored status dot. RDP items do not — Local is just a label, Remote shows its URL.</p>
-          <div class="d-flex flex-column gap-2">
-            <div class="d-flex align-items-center gap-2"><span class="status-dot status-idle"></span> <span class="text-muted small" data-CLan="dLeftColorIdle"><strong>Green (idle)</strong> — connected and ready, or waiting for the next instruction.</span></div>
-            <div class="d-flex align-items-center gap-2"><span class="status-dot status-busy"></span> <span class="text-muted small" data-CLan="dLeftColorBusy"><strong>Yellow (busy)</strong> — currently working: an AI response is being generated.</span></div>
-            <div class="d-flex align-items-center gap-2"><span class="status-dot status-off"></span> <span class="text-muted small" data-CLan="dLeftColorOff"><strong>Red (off)</strong> — disconnected, or the provider/session isn't signed in.</span></div>
-          </div>
-        </div>
-
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess1 dSampleSess2 dSampleSessClaude" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-robot" style="color:#f778ba;"></i> <span data-CLan="dLeftSessHeading">Agent sessions</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dLeftSessDesc">Chat and Terminal items live under their path group. Click to open in the center. Create new ones from More → Chat / Terminal (F3), or from a path group's ⋯ menu (Chat / Terminal / Search).</p>
-        </div>
-
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess3 dSampleSessEditor" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-browser-chrome" style="color:#d29922;"></i> <span data-CLan="dLeftOtherHeading">Other sessions</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dLeftOtherDesc">Browser and Editor are listed flat under Other (newest first). New Browser: More → Browser. Editors appear when you open a file from the File tab or the right-sidebar File list.</p>
-        </div>
-      </div>
-    </div>
-
     <!-- Top bar detail -->
-    <h3 class="mb-2" data-CLan="dTopHeading">Top Bar</h3>
+    <h3 class="mb-2" id="d-section-top" data-CLan="dTopHeading">Top Bar</h3>
     <p class="text-muted mb-3" data-CLan="dTopSub">Above the center panel: <strong>File</strong>, <strong>Multiplexer</strong>, and a <strong>More</strong> dropdown (Memo, RDP, Chat, Terminal, Browser, Team, Download, Log, Messenger, Help). File search is <em>not</em> a top tab — <kbd>F2</kbd> or path <strong>⋯ → Search</strong> open a multi-path checkbox modal. Several items open a dialog first — expand below to see the real content.</p>
 
     <!-- Live sample of the top bar -->
@@ -2488,115 +2368,134 @@
 
     </div>
 
-    <!-- Right sidebar detail -->
-    <h3 class="mb-2" data-CLan="dRightHeading">Right Sidebar</h3>
-    <p class="text-muted mb-4" data-CLan="dRightSub">The right sidebar has three sub-tabs — Info, File, and Option — explained one at a time below. Option itself bundles eight separate controls, each broken out individually.</p>
+    <!-- Left sidebar detail -->
+    <h3 class="mb-2" id="d-section-left" data-CLan="dLeftHeading">Left Sidebar</h3>
+    <p class="text-muted mb-4" data-CLan="dLeftSub">Top to bottom: RDP list, then Agent / Other sub-tabs. Agent groups Chat/Terminal by working directory; Other lists Browser/Editor newest-first.</p>
 
-    <!-- Group 1: Info -->
-    <div class="row g-4 mb-4">
-      <div class="col-12 col-lg-5">
-        <div class="dleft-sample-wrap">
-          <div class="ctrlmock-right-body dleft-sample p-2" id="dSampleInfoPanel"></div>
-        </div>
-      </div>
-      <div class="col-12 col-lg-7">
-        <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleInfoPanel" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-info-circle" style="color:#58a6ff;"></i> <span data-CLan="uRightInfoTitle">Info</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dRightInfoDesc">Provider Status shows Node.js and each AI provider with install/auth state, version, and remaining usage (5h / Weekly). Below that, completed Chat/Terminal notifications are listed.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Group 2: File -->
-    <div class="row g-4 mb-4">
-      <div class="col-12 col-lg-5">
-        <div class="dleft-sample-wrap">
-          <div class="ctrlmock-right-body dleft-sample p-2" id="dSampleFilePanel"></div>
-        </div>
-      </div>
-      <div class="col-12 col-lg-7">
-        <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleFilePanel" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-folder" style="color:#3fb950;"></i> <span data-CLan="uRightFileTitle">File</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dRightFileDesc">A lightweight file browser separate from the full File tab — navigate folders and open a file straight into the Editor tab.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Group 3: Option (+ its 8 individual controls) -->
     <div class="row g-4 mb-5">
+      <!-- Live sample of the left sidebar -->
       <div class="col-12 col-lg-5">
         <div class="dleft-sample-wrap">
-          <div class="ctrlmock-right-body dleft-sample p-2" id="dSampleOptionPanel"></div>
+          <div class="ctrlmock-col ctrlmock-left dleft-sample">
+            <div class="ctrlmock-label" data-CLan="uLeftRdpLabel">RDP</div>
+            <div class="mock-sess active" id="dSampleRdpLocal">
+              <div class="name"><i class="bi bi-pc-display"></i> Local <i class="bi bi-link-45deg text-secondary ms-auto" style="font-size:12px;"></i></div>
+            </div>
+            <div class="mock-sess" id="dSampleRdpRemote">
+              <div class="name"><i class="bi bi-hdd-network"></i> <span class="text-truncate" style="font-size:11px;font-weight:500;">http://192.168.0.20:8050/Artgine/proj/Control/Control.html</span></div>
+            </div>
+
+            <div class="ctrlmock-subtabs" id="dSampleSubTabs">
+              <button type="button" class="ctrlmock-subtab active" id="dSampleSbAgent">Agent</button>
+              <button type="button" class="ctrlmock-subtab" id="dSampleSbOther">Other</button>
+            </div>
+
+            <div id="dSampleAgentPane">
+              <button type="button" class="ctrlmock-add-folder mb-1" id="dSampleRootAddFolder" title="Add Working Folder">
+                <i class="bi bi-plus-lg"></i> <span data-CLan="uLeftAddFolder">Add Working Folder</span>
+              </button>
+              <div class="ctrlmock-agent-group" id="dSampleAgentGroup">
+                <div class="ctrlmock-agent-head" id="dSampleAgentHead">
+                  <span class="ctrlmock-agent-caret">▾</span>
+                  <span class="ctrlmock-agent-path"><span>D:/git/Artgine</span></span>
+                  <span class="ctrlmock-agent-count">3</span>
+                  <span class="ctrlmock-agent-dots" id="dSampleAgentDots">⋯</span>
+                </div>
+                <div class="ctrlmock-agent-body">
+                  <div class="mock-sess" id="dSampleSess1">
+                    <div class="name"><span class="status-dot status-idle"></span> Chat · Control UI update</div>
+                  </div>
+                  <div class="mock-sess" id="dSampleSess2">
+                    <div class="name"><span class="status-dot status-idle"></span> cmd : local</div>
+                  </div>
+                  <div class="mock-sess" id="dSampleSessClaude">
+                    <div class="name"><span class="status-dot status-busy"></span> claude : app</div>
+                  </div>
+                </div>
+              </div>
+              <div class="ctrlmock-agent-group mt-1">
+                <div class="ctrlmock-agent-head">
+                  <span class="ctrlmock-agent-caret">▾</span>
+                  <span class="ctrlmock-agent-path"><span>./</span></span>
+                  <span class="ctrlmock-agent-count">1</span>
+                  <span class="ctrlmock-agent-dots">⋯</span>
+                </div>
+                <div class="ctrlmock-agent-body">
+                  <div class="mock-sess" id="dSampleSessGrok">
+                    <div class="name"><span class="status-dot status-idle"></span> grok : app</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="dSampleOtherPane" class="d-none">
+              <div class="mock-sess" id="dSampleSess3">
+                <div class="name"><span class="status-dot status-off"></span> Browser · docs preview</div>
+              </div>
+              <div class="mock-sess" id="dSampleSessEditor">
+                <div class="name"><span class="status-dot status-idle"></span> Editor · Control.ts</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Description cards, hover/click to highlight the matching sample element -->
       <div class="col-12 col-lg-7 d-flex flex-column gap-3">
-        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleOptionPanel" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-gear" style="color:#d29922;"></i> <span data-CLan="uRightOptionTitle">Option</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dRightOptionDesc">Bundles seven controls in one panel: Theme, local model registration, Database viewers, history cleanup, Schedule, Sub Agent, and the shortcut list. Each is broken down individually below.</p>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRdpLocal dSampleRdpRemote" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-display" style="color:#3fb950;"></i> <span data-CLan="dLeftRdpHeading">RDP</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dLeftRdpDesc">At the top of the left sidebar. <strong>Local</strong> is always present (this server's screen); below it, any <strong>Remote</strong> Control.html servers you've registered (via More → RDP). Click one to view its screen in the center; turn on Input to forward keyboard/mouse.</p>
         </div>
 
-        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOTheme" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-palette" style="color:#58a6ff;"></i> <span data-CLan="dOptThemeHeading">Option → Theme</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dOptThemeDesc">Switches the whole app between Light and Dark.</p>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSbAgent dSampleSbOther" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-layout-split" style="color:#58a6ff;"></i> <span data-CLan="dLeftSubTabsHeading">Agent / Other</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dLeftSubTabsDesc"><strong>Agent</strong> holds Chat and Terminal, grouped by working directory. <strong>Other</strong> holds Browser and Editor in a flat newest-first list. The active sub-tab is remembered; opening a session auto-switches to the matching tab.</p>
         </div>
 
-        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOLocalModel" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-cpu" style="color:#3fb950;"></i> <span data-CLan="dOptLocalModelHeading">Option → Add OpenCode Model / Status</span></h5>
-          <p class="text-muted small mb-3" data-CLan="dOptLocalModelDesc">Registers a local Ollama/LM Studio server and checks its connection status. Each button opens its own modal:</p>
-          <div class="dopt-modal-label" data-CLan="mAddModelTitle">Add OpenCode Model</div>
-          <div class="dtop-modal-frame mb-3" data-modal-key="addmodel"><div class="dtop-modal-frame-body"></div></div>
-          <div class="dopt-modal-label" data-CLan="mOpencodeStatusTitle">OpenCode Provider Status</div>
-          <div class="dtop-modal-frame" data-modal-key="opencodestatus"><div class="dtop-modal-frame-body"></div></div>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleRootAddFolder" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-folder2-open" style="color:#d29922;"></i> <span data-CLan="dLeftRootAddHeading">Agent → Add Working Folder</span></h5>
+          <p class="text-muted small mb-3" data-CLan="dLeftRootAddDesc">Visible on the Agent tab. Edits the server's allowed root folders (one path per line). Registered paths show as empty path groups even with no sessions. Saving restarts the server.</p>
+          <div class="dtop-modal-frame" data-modal-key="workfolder"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
         </div>
 
-        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dODatabase" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-database" style="color:#d2a8ff;"></i> <span data-CLan="dOptDatabaseHeading">Option → Database</span></h5>
-          <p class="text-muted small mb-3" data-CLan="dOptDatabaseDesc">SQLite viewer and a generic DB (MySQL/MSSQL/SQLite) viewer for browsing local data files.</p>
-          <div class="dtop-modal-frame" data-modal-key="database"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
-        </div>
-
-        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dODeleteHistory" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-trash3" style="color:#f85149;"></i> <span data-CLan="dOptDeleteHistoryHeading">Option → Delete history</span></h5>
-          <p class="text-muted small mb-3" data-CLan="dOptDeleteHistoryDesc">Bulk-deletes old AI conversation logs older than the given number of months.</p>
-          <div class="dtop-modal-frame" data-modal-key="deletehistory"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
-        </div>
-
-        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOSchedule" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-clock" style="color:#58a6ff;"></i> <span data-CLan="dOptScheduleHeading">Option → Schedule</span></h5>
-          <div class="text-muted small mb-3" data-CLan="dOptScheduleDesc">
-            <ul class="mb-0 ps-3">
-              <li><strong>On fire:</strong> no typing into a terminal — creates a work order for the chosen Sub Agent, delivered by the same dispatch Team uses to its already-running session.</li>
-              <li><strong>Interval:</strong> Delay (sec, ≥1), Count (0 = infinite), Start/End offsets (sec). Optional <em>Auto-delete when count is exhausted</em> (on by default). List badge shows mode + delay/×count summary.</li>
-              <li><strong>Time:</strong> pick one or more days of week, Hour (0–23), Minute (0/5/…/55). Optional <em>Run once then delete</em> (off by default).</li>
-              <li><strong>Saved list:</strong> click an item to reopen as "Edit Schedule" (same name = overwrite); trash confirms before delete. List refreshes every few seconds.</li>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleAgentGroup dSampleAgentHead dSampleAgentDots" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-folder-symlink" style="color:#d2a8ff;"></i> <span data-CLan="dLeftPathGroupHeading">Path groups</span></h5>
+          <div class="text-muted small mb-0" data-CLan="dLeftPathGroupDesc">
+            <p class="mb-2">Each group is one working directory (long paths show the tail). Click the header to collapse/expand. Empty registered folders still appear so you can start work there.</p>
+            <p class="mb-1 fw-semibold" style="color:#c9d1d9;">⋯ menu on the path group — three things you can do here:</p>
+            <ul class="mb-2 ps-3">
+              <li><strong>Chat</strong> — start a new AI chat with this path as Working Directory (same as More → Chat, cwd already filled).</li>
+              <li><strong>Terminal</strong> — start a new CLI session (cmd / claude / codex / …) in this path (same as More → Terminal / F3 with cwd set).</li>
+              <li><strong>Search</strong> — open the multi-path search modal with <strong>this path checked</strong> (other registered local/remote roots stay listed so you can check them too). <kbd>F2</kbd> opens the same modal with <strong>all paths checked</strong>.</li>
             </ul>
+            <p class="mb-0">Sessions created from Chat/Terminal land under this same path group in the Agent list.</p>
           </div>
-          <div class="dtop-modal-frame" data-modal-key="schedule"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
         </div>
 
-        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOSubAgent" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-robot" style="color:#3fb950;"></i> <span data-CLan="dOptSubAgentHeading">Option → Sub Agent</span></h5>
-          <div class="text-muted small mb-3" data-CLan="dOptSubAgentDesc">
-            <ul class="mb-0 ps-3">
-              <li><strong>On save:</strong> the server keeps a terminal session alive for this key — spawned immediately, auto-respawned if it's ever killed or crashes.</li>
-              <li><strong>Working Directory / Super:</strong> that session's folder, and whether it starts in auto-approve mode.</li>
-              <li><strong>Score / Traits:</strong> not enforced by anything — just hints a Team supervisor (or a Schedule) uses to judge which agent fits which task.</li>
-              <li><strong>Retry Text / Count:</strong> auto quality-loop — re-queues Retry Text as a new task whenever this agent goes idle, up to Count times since its last real task.</li>
-              <li><strong>Saved list:</strong> click an agent to reopen it as "Edit Sub Agent"; the trash icon confirms before deleting.</li>
-            </ul>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess1 dSampleSess2 dSampleSessClaude dSampleSess3 dSampleSessEditor" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-palette" style="color:#d29922;"></i> <span data-CLan="dLeftColorHeading">Status Colors</span></h5>
+          <p class="text-muted small mb-2" data-CLan="dLeftColorDesc">Chat / Terminal / Browser / Editor show a colored status dot. RDP items do not — Local is just a label, Remote shows its URL.</p>
+          <div class="d-flex flex-column gap-2">
+            <div class="d-flex align-items-center gap-2"><span class="status-dot status-idle"></span> <span class="text-muted small" data-CLan="dLeftColorIdle"><strong>Green (idle)</strong> — connected and ready, or waiting for the next instruction.</span></div>
+            <div class="d-flex align-items-center gap-2"><span class="status-dot status-busy"></span> <span class="text-muted small" data-CLan="dLeftColorBusy"><strong>Yellow (busy)</strong> — currently working: an AI response is being generated.</span></div>
+            <div class="d-flex align-items-center gap-2"><span class="status-dot status-off"></span> <span class="text-muted small" data-CLan="dLeftColorOff"><strong>Red (off)</strong> — disconnected, or the provider/session isn't signed in.</span></div>
           </div>
-          <div class="dtop-modal-frame" data-modal-key="subagentmodal"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
         </div>
 
-        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOShortcuts" tabindex="0">
-          <h5 class="mb-2"><i class="bi bi-keyboard" style="color:#d2a8ff;"></i> <span data-CLan="dOptShortcutsHeading">Option → Help</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dOptShortcutsDesc">The same keyboard shortcut list shown in the Install tab.</p>
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess1 dSampleSess2 dSampleSessClaude" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-robot" style="color:#f778ba;"></i> <span data-CLan="dLeftSessHeading">Agent sessions</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dLeftSessDesc">Chat and Terminal items live under their path group. Click to open in the center. Create new ones from More → Chat / Terminal (F3), or from a path group's ⋯ menu (Chat / Terminal / Search).</p>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleSess3 dSampleSessEditor" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-browser-chrome" style="color:#d29922;"></i> <span data-CLan="dLeftOtherHeading">Other sessions</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dLeftOtherDesc">Browser and Editor are listed flat under Other (newest first). New Browser: More → Browser. Editors appear when you open a file from the File tab or the right-sidebar File list.</p>
         </div>
       </div>
     </div>
 
     <!-- Center panel detail -->
-    <h3 class="mb-2" data-CLan="dCenterHeading">Center Panel</h3>
+    <h3 class="mb-2" id="d-section-center" data-CLan="dCenterHeading">Center Panel</h3>
     <p class="text-muted mb-4" data-CLan="dCenterSub">The center panel shows whichever tab or session is active. Each type below is explained one at a time, with the real sample screen next to it.</p>
 
     <div class="row g-4 mb-4">
@@ -2849,6 +2748,113 @@
         </div>
       </div>
     </div>
+    <!-- Right sidebar detail -->
+    <h3 class="mb-2" id="d-section-right" data-CLan="dRightHeading">Right Sidebar</h3>
+    <p class="text-muted mb-4" data-CLan="dRightSub">The right sidebar has three sub-tabs — Info, File, and Option — explained one at a time below. Option itself bundles eight separate controls, each broken out individually.</p>
+
+    <!-- Group 1: Info -->
+    <div class="row g-4 mb-4">
+      <div class="col-12 col-lg-5">
+        <div class="dleft-sample-wrap">
+          <div class="ctrlmock-right-body dleft-sample p-2" id="dSampleInfoPanel"></div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-7">
+        <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleInfoPanel" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-info-circle" style="color:#58a6ff;"></i> <span data-CLan="uRightInfoTitle">Info</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dRightInfoDesc">Provider Status shows Node.js and each AI provider with install/auth state, version, and remaining usage (5h / Weekly). Below that, completed Chat/Terminal notifications are listed.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group 2: File -->
+    <div class="row g-4 mb-4">
+      <div class="col-12 col-lg-5">
+        <div class="dleft-sample-wrap">
+          <div class="ctrlmock-right-body dleft-sample p-2" id="dSampleFilePanel"></div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-7">
+        <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleFilePanel" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-folder" style="color:#3fb950;"></i> <span data-CLan="uRightFileTitle">File</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dRightFileDesc">A lightweight file browser separate from the full File tab — navigate folders and open a file straight into the Editor tab.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group 3: Option (+ its 8 individual controls) -->
+    <div class="row g-4 mb-5">
+      <div class="col-12 col-lg-5">
+        <div class="dleft-sample-wrap">
+          <div class="ctrlmock-right-body dleft-sample p-2" id="dSampleOptionPanel"></div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-7 d-flex flex-column gap-3">
+        <div class="feature-card p-4 dleft-desc" data-highlight="dSampleOptionPanel" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-gear" style="color:#d29922;"></i> <span data-CLan="uRightOptionTitle">Option</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dRightOptionDesc">Bundles seven controls in one panel: Theme, local model registration, Database viewers, history cleanup, Schedule, Sub Agent, and the shortcut list. Each is broken down individually below.</p>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOTheme" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-palette" style="color:#58a6ff;"></i> <span data-CLan="dOptThemeHeading">Option → Theme</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dOptThemeDesc">Switches the whole app between Light and Dark.</p>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOLocalModel" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-cpu" style="color:#3fb950;"></i> <span data-CLan="dOptLocalModelHeading">Option → Add OpenCode Model / Status</span></h5>
+          <p class="text-muted small mb-3" data-CLan="dOptLocalModelDesc">Registers a local Ollama/LM Studio server and checks its connection status. Each button opens its own modal:</p>
+          <div class="dopt-modal-label" data-CLan="mAddModelTitle">Add OpenCode Model</div>
+          <div class="dtop-modal-frame mb-3" data-modal-key="addmodel"><div class="dtop-modal-frame-body"></div></div>
+          <div class="dopt-modal-label" data-CLan="mOpencodeStatusTitle">OpenCode Provider Status</div>
+          <div class="dtop-modal-frame" data-modal-key="opencodestatus"><div class="dtop-modal-frame-body"></div></div>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dODatabase" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-database" style="color:#d2a8ff;"></i> <span data-CLan="dOptDatabaseHeading">Option → Database</span></h5>
+          <p class="text-muted small mb-3" data-CLan="dOptDatabaseDesc">SQLite viewer and a generic DB (MySQL/MSSQL/SQLite) viewer for browsing local data files.</p>
+          <div class="dtop-modal-frame" data-modal-key="database"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dODeleteHistory" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-trash3" style="color:#f85149;"></i> <span data-CLan="dOptDeleteHistoryHeading">Option → Delete history</span></h5>
+          <p class="text-muted small mb-3" data-CLan="dOptDeleteHistoryDesc">Bulk-deletes old AI conversation logs older than the given number of months.</p>
+          <div class="dtop-modal-frame" data-modal-key="deletehistory"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOSchedule" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-clock" style="color:#58a6ff;"></i> <span data-CLan="dOptScheduleHeading">Option → Schedule</span></h5>
+          <div class="text-muted small mb-3" data-CLan="dOptScheduleDesc">
+            <ul class="mb-0 ps-3">
+              <li><strong>On fire:</strong> no typing into a terminal — creates a work order for the chosen Sub Agent, delivered by the same dispatch Team uses to its already-running session.</li>
+              <li><strong>Interval:</strong> Delay (sec, ≥1), Count (0 = infinite), Start/End offsets (sec). Optional <em>Auto-delete when count is exhausted</em> (on by default). List badge shows mode + delay/×count summary.</li>
+              <li><strong>Time:</strong> pick one or more days of week, Hour (0–23), Minute (0/5/…/55). Optional <em>Run once then delete</em> (off by default).</li>
+              <li><strong>Saved list:</strong> click an item to reopen as "Edit Schedule" (same name = overwrite); trash confirms before delete. List refreshes every few seconds.</li>
+            </ul>
+          </div>
+          <div class="dtop-modal-frame" data-modal-key="schedule"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOSubAgent" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-robot" style="color:#3fb950;"></i> <span data-CLan="dOptSubAgentHeading">Option → Sub Agent</span></h5>
+          <div class="text-muted small mb-3" data-CLan="dOptSubAgentDesc">
+            <ul class="mb-0 ps-3">
+              <li><strong>On save:</strong> the server keeps a terminal session alive for this key — spawned immediately, auto-respawned if it's ever killed or crashes.</li>
+              <li><strong>Working Directory / Super:</strong> that session's folder, and whether it starts in auto-approve mode.</li>
+              <li><strong>Score / Traits:</strong> not enforced by anything — just hints a Team supervisor (or a Schedule) uses to judge which agent fits which task.</li>
+              <li><strong>Retry Text / Count:</strong> auto quality-loop — re-queues Retry Text as a new task whenever this agent goes idle, up to Count times since its last real task.</li>
+              <li><strong>Saved list:</strong> click an agent to reopen it as "Edit Sub Agent"; the trash icon confirms before deleting.</li>
+            </ul>
+          </div>
+          <div class="dtop-modal-frame" data-modal-key="subagentmodal"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOShortcuts" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-keyboard" style="color:#d2a8ff;"></i> <span data-CLan="dOptShortcutsHeading">Option → Help</span></h5>
+          <p class="text-muted small mb-0" data-CLan="dOptShortcutsDesc">The same keyboard shortcut list shown in the Install tab.</p>
+        </div>
+      </div>
+    </div>
+
 
   </div>
 </div>
@@ -3532,6 +3538,25 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
         if (el) el.classList.remove('dleft-highlight');
       }));
       setHi(true);
+    });
+  });
+})();
+
+// ---- Layout overview cards → scroll to detail sections (Guide tab) ----
+(function initLayoutNavScroll() {
+  const go = targetId => {
+    const el = document.getElementById(targetId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  document.querySelectorAll('.d-layout-nav[data-scroll-target]').forEach(card => {
+    const targetId = card.getAttribute('data-scroll-target');
+    if (!targetId) return;
+    card.addEventListener('click', () => go(targetId));
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        go(targetId);
+      }
     });
   });
 })();

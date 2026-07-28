@@ -6,7 +6,7 @@ import { CFecth } from "../../network/CFecth.js";
 import { CPath } from "../../basic/CPath.js";
 import { CStorage } from "../../system/CStorage.js";
 import { CUtilWeb } from "../../util/CUtilWeb.js";
-import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../CAuthToken.js";
 import { CFileViewer, CMDViewer, CSheetViewer, CModalMusic, CORMViewer } from "../../util/CModalUtil.js";
 import { CAuthInfo } from "../../network/CAuthInfo.js";
 import { CIframeMsg } from "./CIframeMsg.js";
@@ -41,7 +41,7 @@ function promptFileAuth(onSuccess) {
     dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
     const doAuth = () => {
         const pw = CDOM.IDValue("AuthPassword");
-        CFecth.Exe(FileApiUrl("auth/login"), { password: CHash.SHA256('artgine_' + pw) }, "json").then(async (j) => {
+        authLogin(g_fileWebRootUrl, CHash.SHA256('artgine_' + pw), () => { CAlert.Info("Waiting for messenger approval (up to 5 minutes)..."); }).then(async (j) => {
             if (j.ok) {
                 SetFileToken(j.token);
                 await refreshFileAuthState();

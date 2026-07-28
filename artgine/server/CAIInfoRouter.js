@@ -8,6 +8,7 @@ var CAIInfoRouter_1;
 import { URLPatterns } from '../network/CServerMain.js';
 import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
 import { spawnSync } from 'child_process';
+import { randomUUID } from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -223,6 +224,7 @@ async function _pruneAntigravity(cutoffMs) {
     catch { }
     return n;
 }
+const gInstanceId = randomUUID();
 let CAIInfoRouter = CAIInfoRouter_1 = class CAIInfoRouter extends CAuthServer {
     IsAuth(_json, req) {
         const token = _json.GetStr('token');
@@ -237,6 +239,11 @@ let CAIInfoRouter = CAIInfoRouter_1 = class CAIInfoRouter extends CAuthServer {
         this.On("/AIInfo/prune-conversations", this.onPruneConversations.bind(this));
         this.On("/AIInfo/workfolder", this.onGetWorkFolder.bind(this));
         this.On("/AIInfo/workfolder-set", this.onSetWorkFolder.bind(this));
+        this.On("/AIInfo/whoami", this.onWhoAmI.bind(this));
+    }
+    async onWhoAmI(_json, _req, _res) {
+        _res.json({ ok: true, instanceId: gInstanceId });
+        return null;
     }
     Connect() { super.Connect(); this._connectImpl(); }
     _connectImpl() {
@@ -348,7 +355,7 @@ let CAIInfoRouter = CAIInfoRouter_1 = class CAIInfoRouter extends CAuthServer {
                 _lastClaudeWarmupAt = Date.now();
                 try {
                     const model = info.models[0]?.value ?? '';
-                    await CAI.Chat(p, model, process.cwd(), 'hi', false);
+                    await CAI.Chat(p, model, os.tmpdir(), 'usage check, no reply', false);
                     const retried = await CAI.ProviderUsage(p);
                     return { ...info, usage: retried };
                 }
@@ -632,6 +639,6 @@ let CAIInfoRouter = CAIInfoRouter_1 = class CAIInfoRouter extends CAuthServer {
     }
 };
 CAIInfoRouter = CAIInfoRouter_1 = __decorate([
-    URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations", "/AIInfo/workfolder", "/AIInfo/workfolder-set"])
+    URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations", "/AIInfo/workfolder", "/AIInfo/workfolder-set", "/AIInfo/whoami"])
 ], CAIInfoRouter);
 export { CAIInfoRouter };

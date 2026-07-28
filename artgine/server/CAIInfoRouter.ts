@@ -3,6 +3,7 @@ import { CJSON } from '../basic/CJSON.js';
 import { Request, Response } from 'express';
 import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
 import { spawnSync } from 'child_process';
+import { randomUUID } from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -198,7 +199,14 @@ async function _pruneAntigravity(cutoffMs: number): Promise<number> {
 
 type PruneOutcome = { installed: boolean; deleted: number; error?: string };
 
-@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations", "/AIInfo/workfolder", "/AIInfo/workfolder-set"])
+// 이 서버 프로세스의 신원. 기동할 때 한 번 만들고 죽을 때까지 고정이라, 서로 다른 주소로 받은
+// 두 응답의 instanceId가 같으면 "물리적으로 같은 프로세스"임이 확정된다(재시작하면 값이 바뀐다).
+// ai/tool 계열 도구가 공인 주소로 받은 접속 대상이 실은 자기 PC의 서버인지(헤어핀 NAT) 판별해
+// localhost로 갈아타는 데 쓴다 - 폴더 구성이나 설정값 비교로는 같은 프로젝트를 쓰는 원격 서버와
+// 구분되지 않아 엉뚱한 서버에 붙을 수 있어서, 프로세스마다 다른 값이 필요하다.
+const gInstanceId = randomUUID();
+
+@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations", "/AIInfo/workfolder", "/AIInfo/workfolder-set", "/AIInfo/whoami"])
 export class CAIInfoRouter extends CAuthServer {
     // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
     // cross-origin(RDP로 전환된 원격 서버) 요청은 쿠키가 기본적으로 전달되지 않으므로 토큰이 필요하다.
@@ -216,6 +224,16 @@ export class CAIInfoRouter extends CAuthServer {
         this.On("/AIInfo/prune-conversations", this.onPruneConversations.bind(this));
         this.On("/AIInfo/workfolder", this.onGetWorkFolder.bind(this));
         this.On("/AIInfo/workfolder-set", this.onSetWorkFolder.bind(this));
+        this.On("/AIInfo/whoami", this.onWhoAmI.bind(this));
+    }
+
+    // GET|POST /AIInfo/whoami -> { ok, instanceId }
+    // 인증을 요구하지 않는다. 로그인 "전에" 접속 대상이 자기 PC의 서버인지 판별하는 용도라
+    // 인증을 걸면 순서가 성립하지 않는다. 노출되는 값은 아무 권한도 없는 불투명한 난수 하나뿐이고,
+    // 이걸로 할 수 있는 건 두 주소가 같은 프로세스를 가리키는지 비교하는 것뿐이다.
+    async onWhoAmI(_json: CJSON, _req: Request, _res: Response): Promise<null> {
+        _res.json({ ok: true, instanceId: gInstanceId });
+        return null;
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }
@@ -336,7 +354,11 @@ export class CAIInfoRouter extends CAuthServer {
                 _lastClaudeWarmupAt = Date.now();
                 try {
                     const model = info.models[0]?.value ?? '';
-                    await CAI.Chat(p, model, process.cwd(), 'hi', false);
+                    // cwd를 실제 작업 디렉토리로 주면 이 헤드리스 세션의 transcript가 살아있는 터미널과
+                    // 같은 (provider, cwd) 스코프에 놓여 CConversationReader._matchKey가 "peer 1개뿐"
+                    // 규칙으로 오귀속시킨다(그 터미널이 메신저에 연결돼 있으면 'hi'가 그리로 새 나감).
+                    // 겹칠 일 없는 tmpdir을 줘서 애초에 매칭 후보에서 빠지게 한다.
+                    await CAI.Chat(p, model, os.tmpdir(), 'usage check, no reply', false);
                     const retried = await CAI.ProviderUsage(p);
                     return { ...info, usage: retried };
                 } catch { /* 웜업 실패 시 원래 usage(-1)를 그대로 사용 */ }

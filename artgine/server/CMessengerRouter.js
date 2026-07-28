@@ -15,6 +15,8 @@ let CMessengerRouter = class CMessengerRouter extends CAuthServer {
         this.On("/messenger/unlink", this.onUnlink.bind(this));
         this.On("/messenger/send", this.onSend.bind(this));
         this.On("/messenger/log", this.onLog.bind(this));
+        this.On("/messenger/email/get", this.onEmailGet.bind(this));
+        this.On("/messenger/email/set", this.onEmailSet.bind(this));
     }
     Connect() { super.Connect(); this._connectImpl(); }
     _connectImpl() { }
@@ -24,9 +26,11 @@ let CMessengerRouter = class CMessengerRouter extends CAuthServer {
     async onUnlink(_json, _req, _res) { return null; }
     async onSend(_json, _req, _res) { return null; }
     async onLog(_json, _req, _res) { return null; }
+    async onEmailGet(_json, _req, _res) { return null; }
+    async onEmailSet(_json, _req, _res) { return null; }
 };
 CMessengerRouter = __decorate([
-    URLPatterns(["/messenger/list", "/messenger/create", "/messenger/link", "/messenger/unlink", "/messenger/send", "/messenger/log"])
+    URLPatterns(["/messenger/list", "/messenger/create", "/messenger/link", "/messenger/unlink", "/messenger/send", "/messenger/log", "/messenger/email/get", "/messenger/email/set"])
 ], CMessengerRouter);
 export { CMessengerRouter };
 import CMessengerRouter_imple from '../server_imple/CMessengerRouter.js';

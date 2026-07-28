@@ -1,12 +1,11 @@
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createApiClient, login } from './common.js';
+import { createApiClient, resolveLocalBase } from './common.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = dirname(dirname(SCRIPT_DIR));
-const COOKIE_FILE = join(SCRIPT_DIR, 'memo_cookie.txt');
 
-const { call, get } = createApiClient(COOKIE_FILE);
+const { call, get, login } = createApiClient(PROJECT_ROOT);
 
 // --folder=<value>는 어느 위치에 와도 되는 옵션 플래그로 분리한다 - 생략하면 서버가
 // 폴더 구분 이전부터 쓰던 기존 기본 db(memo.sqlite)를 그대로 쓴다.
@@ -41,15 +40,15 @@ function usageAndExit() {
 
 if (!baseArg || !baseArg.startsWith('http') || !cmd) usageAndExit();
 
-const base = baseArg.replace(/\/$/, '');
+const base = await resolveLocalBase(baseArg.replace(/\/$/, ''));
 
 function printResult(r, okKey) {
     console.log(r.ok ? JSON.stringify(r[okKey] ?? r) : `fail: ${r.msg ?? 'unknown'}`);
 }
 
 if (cmd === 'login') {
-    const r = await login(call, base, PROJECT_ROOT);
-    console.log(r.ok ? 'ok' : `fail: ${r.msg ?? 'unknown'}`);
+    const r = await login(base);
+    console.log(r.ok ? (r.reused ? 'ok (reused)' : 'ok') : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'cats') {
     const r = await get(base, 'Memo/Category/List', { folder });

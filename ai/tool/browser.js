@@ -1,13 +1,12 @@
 import { readFileSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createApiClient, login } from './common.js';
+import { createApiClient, resolveLocalBase } from './common.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = dirname(dirname(SCRIPT_DIR));
-const COOKIE_FILE = join(SCRIPT_DIR, 'browser_cookie.txt');
 
-const { call } = createApiClient(COOKIE_FILE);
+const { call, login } = createApiClient(PROJECT_ROOT);
 
 const [,, baseArg, cmd, ...args] = process.argv;
 
@@ -28,11 +27,11 @@ if (!baseArg || !baseArg.startsWith('http')) {
     process.exit(1);
 }
 
-const base = baseArg.replace(/\/$/, '');
+const base = await resolveLocalBase(baseArg.replace(/\/$/, ''));
 
 if (cmd === 'login') {
-    const r = await login(call, base, PROJECT_ROOT);
-    console.log(r.ok ? 'ok' : `fail: ${r.msg ?? 'unknown'}`);
+    const r = await login(base);
+    console.log(r.ok ? (r.reused ? 'ok (reused)' : 'ok') : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'push') {
     const [url, ttl = '600', logSize = '100', width = '1280', height = '720', captureConsole = '1'] = args;

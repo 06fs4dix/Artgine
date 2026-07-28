@@ -35,7 +35,7 @@ import { CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken } from "../../artgine/server/CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../../artgine/server/CAuthToken.js";
 import { CIframeMsg } from "../../artgine/server/html/CIframeMsg.js";
 import { CModalStackMsg } from "../../artgine/util/CModalUtil.js";
 import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
@@ -102,18 +102,60 @@ if (themeSelect)
     themeSelect.value = savedTheme;
 applyTheme(savedTheme);
 themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
+const HIDE_SUBAGENT_LS = 'ctrl.hideSubAgentSessions';
+let hideSubAgentSessions = localStorage.getItem(HIDE_SUBAGENT_LS) !== '0';
+const hideSubAgentChk = document.getElementById('hideSubAgentSessionsChk');
+if (hideSubAgentChk)
+    hideSubAgentChk.checked = hideSubAgentSessions;
+hideSubAgentChk?.addEventListener('change', () => {
+    hideSubAgentSessions = hideSubAgentChk.checked;
+    localStorage.setItem(HIDE_SUBAGENT_LS, hideSubAgentSessions ? '1' : '0');
+    renderSessionSidebar();
+});
+const twoFactorSessionSelect = document.getElementById('twoFactorSessionSelect');
+const twoFactorMsg = document.getElementById('twoFactorMsg');
+async function twoFactorLoadSessions(_selected) {
+    if (!twoFactorSessionSelect)
+        return;
+    try {
+        const j = await CFecth.Exe('messenger/list', null, 'json');
+        const sessions = j.ok ? (j.sessions ?? []) : [];
+        twoFactorSessionSelect.innerHTML = `<option value="0">${L('ctrl.twoFactorDisabled', 'Disabled')}</option>`
+            + sessions.map(s => `<option value="${s.id}">${aiEscapeHtml(`${s.platform} - ${s.botName}`)}</option>`).join('');
+        twoFactorSessionSelect.value = String(_selected);
+    }
+    catch { }
+}
+async function twoFactorLoadConfig() {
+    try {
+        const j = await CFecth.Exe('auth/twoFactorConfig', null, 'json');
+        if (!j.ok)
+            return;
+        await twoFactorLoadSessions(j.sessionId ?? 0);
+    }
+    catch { }
+}
+async function twoFactorSaveConfig() {
+    if (twoFactorMsg)
+        twoFactorMsg.textContent = '';
+    try {
+        const body = { sessionId: Number(twoFactorSessionSelect?.value ?? 0) };
+        const j = await CFecth.Exe('auth/twoFactorConfig', body, 'json');
+        if (twoFactorMsg)
+            twoFactorMsg.textContent = j.ok ? L('ctrl.twoFactorSaved', 'Saved') : (j.msg ?? L('ctrl.serverError', 'Server error'));
+    }
+    catch {
+        if (twoFactorMsg)
+            twoFactorMsg.textContent = L('ctrl.serverError', 'Server error');
+    }
+}
+twoFactorSessionSelect?.addEventListener('change', () => twoFactorSaveConfig());
+CDOM.ID('right-option-tab').addEventListener('shown.bs.tab', () => twoFactorLoadConfig());
+if (CDOM.ID('right-option-panel').classList.contains('active'))
+    twoFactorLoadConfig();
 function registerControlLan() {
     CLan.Set({
         ko: {
-            "ctrl.help": "도움말",
-            "ctrl.kb.global": "전역 단축키",
-            "ctrl.kb.f1": "<kbd>F1</kbd> 우측 사이드바 File ↔ Info 토글 (작은 화면이면 사이드바 열림)",
-            "ctrl.kb.f2": "<kbd>F2</kbd> 파일 검색(등록 경로 전부 체크 · 체크박스 토글)",
-            "ctrl.kb.f3": "<kbd>F3</kbd> 새 터미널 열기",
-            "ctrl.kb.f4": "<kbd>F4</kbd> / <kbd>Ctrl</kbd> 빠르게 두 번 사이드바 포커스/토글",
-            "ctrl.kb.f6": "<kbd>F6</kbd> Terminal: SUPER(자동 승인) 토글 + 입력창 표시/포커스. Terminal 밖에서는 F4와 동일",
-            "ctrl.kb.f7": "<kbd>F7</kbd> Terminal: Log/Terminal 대화 패널 토글",
-            "ctrl.kb.updown": "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)",
             "ctrl.failed": "실패",
             "ctrl.failedToLoad": "불러오기 실패",
             "ctrl.msg.signInRequired": "로그인이 필요합니다.",
@@ -831,7 +873,7 @@ async function rdpLoadRemotes() {
     for (const r of list) {
         if (!r?.remoteId || !r?.entryUrl || known.has(r.remoteId))
             continue;
-        rdpRemotes.push({ remoteId: r.remoteId, entryUrl: r.entryUrl, saved: true, pwHash: r.pwHash });
+        rdpRemotes.push({ remoteId: r.remoteId, entryUrl: r.entryUrl, saved: true, password: r.password });
     }
     if (!list.length)
         return;
@@ -839,7 +881,7 @@ async function rdpLoadRemotes() {
     rdpRefreshAllStatus();
 }
 async function rdpSaveRemotes() {
-    const list = rdpRemotes.filter(r => r.saved).map(r => ({ remoteId: r.remoteId, entryUrl: r.entryUrl, pwHash: r.pwHash }));
+    const list = rdpRemotes.filter(r => r.saved).map(r => ({ remoteId: r.remoteId, entryUrl: r.entryUrl, password: r.password }));
     try {
         await CFecth.Exe(CPath.WebRootUrl() + "RemoteDesktop/remotes-set", { list }, "json");
     }
@@ -967,7 +1009,7 @@ async function ctrlRefreshRootSelect() {
     const seq = ++ctrlRootReqSeq;
     if (baseUrl) {
         const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === baseUrl);
-        const authed = remote?.pwHash ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
+        const authed = remote?.password ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
         if (!authed) {
             if (seq !== ctrlRootReqSeq)
                 return;
@@ -1108,8 +1150,8 @@ async function rdpShowLocalAccessLink() {
         setTimeout(() => { copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
     });
 }
-function rdpAddRemote(entryUrl, save = false, pwHash) {
-    const remote = { remoteId: genUuid(), entryUrl, saved: save, pwHash };
+function rdpAddRemote(entryUrl, save = false, password) {
+    const remote = { remoteId: genUuid(), entryUrl, saved: save, password };
     rdpRemotes.unshift(remote);
     rdpRenderList();
     if (save)
@@ -1185,12 +1227,20 @@ function openRdpAddModal() {
             }
             if (btn)
                 btn.disabled = true;
-            const pwHash = CHash.SHA256('artgine_' + pw);
+            const password = CHash.SHA256('artgine_' + pw);
             try {
-                const j = await CFecth.Exe(webRootUrl + "auth/login", { password: pwHash }, "json");
+                const j = await authLogin(webRootUrl, password, () => {
+                    if (errEl) {
+                        errEl.className = 'small text-secondary';
+                        errEl.textContent = L('ctrl.msg.waitingTwoFactor', 'Waiting for messenger approval (up to 5 minutes)...');
+                        errEl.style.display = 'block';
+                    }
+                });
+                if (errEl)
+                    errEl.className = 'small text-danger';
                 if (j.ok) {
                     setAuthToken(webRootUrl, j.token);
-                    rdpAddRemote(url, save, pwHash);
+                    rdpAddRemote(url, save, password);
                     modal.Close();
                 }
                 else if (errEl) {
@@ -2306,12 +2356,15 @@ function markLocalAuthLost() {
     localAuthSettled = true;
     localAuthOk = false;
 }
+function rdpNormalizePassword(password) {
+    return password.length < 64 ? CHash.SHA256('artgine_' + password) : password;
+}
 async function rdpEnsureRemoteAuth(remote) {
-    if (!remote.pwHash)
+    if (!remote.password)
         return rdpCheckRemoteAuth(rdpRemoteWebRootUrl(remote.entryUrl));
     const webRootUrl = rdpRemoteWebRootUrl(remote.entryUrl);
     try {
-        const j = await CFecth.Exe(webRootUrl + "auth/login", { password: remote.pwHash }, "json");
+        const j = await authLogin(webRootUrl, rdpNormalizePassword(remote.password));
         if (!j.ok || !j.token)
             return false;
         setAuthToken(webRootUrl, j.token);
@@ -2336,7 +2389,9 @@ function rdpPromptRemoteAuth(webRootUrl, onSuccess) {
     dlg.SetBody(`${L('ctrl.msg.enterAdminPassword', 'Enter admin password:')}<br><input type="password" id="AuthPassword" class="form-control form-control-sm">`);
     const doAuth = () => {
         const pw = CDOM.IDValue("AuthPassword");
-        CFecth.Exe(webRootUrl + "auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json").then((j) => {
+        authLogin(webRootUrl, CHash.SHA256('artgine_' + pw), () => {
+            CAlert.Info(L('ctrl.msg.waitingTwoFactor', 'Waiting for messenger approval (up to 5 minutes)...'));
+        }).then((j) => {
             if (j.ok) {
                 setAuthToken(webRootUrl, j.token);
                 CAlert.Info(L('ctrl.msg.permissionGranted', 'Permission granted'));
@@ -2415,7 +2470,7 @@ async function memoSendRemoteInfo() {
         return;
     }
     const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === baseUrl);
-    const authed = remote?.pwHash ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
+    const authed = remote?.password ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
     if (!authed) {
         rdpPromptRemoteAuth(baseUrl, () => {
             if (currentWebRootUrl !== baseUrl)
@@ -2509,6 +2564,7 @@ function createAgentGroup(key) {
                 <span class="agent-group-path"><span></span></span>
             </span>
             <span class="agent-group-count text-secondary flex-shrink-0" style="font-size:0.7rem;"></span>
+            <span class="agent-group-hidden text-secondary flex-shrink-0" style="font-size:0.65rem;" title=""></span>
             <div class="dropdown flex-shrink-0">
                 <button class="agent-group-add btn btn-sm btn-link text-secondary p-0 px-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="New"><i class="bi bi-three-dots"></i></button>
                 <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
@@ -2750,9 +2806,16 @@ function flushSessionSidebar() {
     if (lastChatSessions)
         for (const s of lastChatSessions)
             agentEntries.push({ key: sessKey('chat', s.remoteId, s.sessionId), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s, activeKey) });
+    const hiddenByGroup = new Map();
     if (lastTermSessions)
-        for (const s of lastTermSessions)
-            agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+        for (const s of lastTermSessions) {
+            const groupKey = sessionGroupKey(s.remoteId, s.workingDir);
+            if (hideSubAgentSessions && s.key) {
+                hiddenByGroup.set(groupKey, (hiddenByGroup.get(groupKey) ?? 0) + 1);
+                continue;
+            }
+            agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+        }
     const otherEntries = [];
     for (const s of browserSessions.values())
         otherEntries.push({ key: `browser:${s.sessionId}`, sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s, activeKey) });
@@ -2773,10 +2836,10 @@ function flushSessionSidebar() {
     const frozen = sessionOrderFrozen
         || !!agentSidebarList.querySelector('.dropdown-menu.show')
         || !!otherSidebarList.querySelector('.dropdown-menu.show');
-    renderAgentGroups(agentEntries, frozen);
+    renderAgentGroups(agentEntries, frozen, hiddenByGroup);
     renderOtherList(otherEntries, frozen);
 }
-function renderAgentGroups(entries, frozen) {
+function renderAgentGroups(entries, frozen, hiddenByGroup) {
     const byGroup = new Map();
     for (const e of entries) {
         let arr = byGroup.get(e.groupKey);
@@ -2811,8 +2874,11 @@ function renderAgentGroups(entries, frozen) {
             }
         }
     }
-    const adhoc = Array.from(byGroup.keys()).filter(k => !regSet.has(k));
-    adhoc.sort((a, b) => (byGroup.get(b)[0]?.sortKey ?? 0) - (byGroup.get(a)[0]?.sortKey ?? 0));
+    const adhocKeys = new Set(byGroup.keys());
+    for (const k of hiddenByGroup.keys())
+        adhocKeys.add(k);
+    const adhoc = Array.from(adhocKeys).filter(k => !regSet.has(k));
+    adhoc.sort((a, b) => (byGroup.get(b)?.[0]?.sortKey ?? 0) - (byGroup.get(a)?.[0]?.sortKey ?? 0));
     let groupOrder = [...registered, ...adhoc];
     const naturalItemOrder = [];
     for (const arr of byGroup.values()) {
@@ -2832,7 +2898,7 @@ function renderAgentGroups(entries, frozen) {
         frozenAgentItemOrder = naturalItemOrder;
     }
     for (const [k, el] of Array.from(agentGroupEls)) {
-        if (!regSet.has(k) && !byGroup.has(k)) {
+        if (!regSet.has(k) && !byGroup.has(k) && !hiddenByGroup.has(k)) {
             destroyAgentGroup(el);
             agentGroupEls.delete(k);
         }
@@ -2852,6 +2918,10 @@ function renderAgentGroups(entries, frozen) {
         updateAgentGroupHeader(g, meta);
         const items = byGroup.get(k) ?? [];
         g.querySelector('.agent-group-count').textContent = items.length ? String(items.length) : '';
+        const hiddenCount = hiddenByGroup.get(k) ?? 0;
+        const hiddenEl = g.querySelector('.agent-group-hidden');
+        hiddenEl.textContent = hiddenCount ? `+${hiddenCount} \u{1F916}` : '';
+        hiddenEl.title = hiddenCount ? `${hiddenCount} hidden sub agent session(s)` : '';
         g.classList.toggle('agent-group-collapsed', collapsedGroups.has(k));
         if (g === gcursor)
             gcursor = gcursor.nextElementSibling;
@@ -3535,22 +3605,33 @@ async function termStartNew(mode = 'cmd', initialWorkingDir, remoteId = '') {
                 ${buildModelOptions(initialProvider, '')}
             </select>
         </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
-            <input id="term-opt-workingdir" type="text" class="form-control form-control-sm" placeholder="./" autocomplete="off">
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.key', 'Key')}</label>
-            <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="${L('ctrl.ph.sessionKey', 'Session key (optional)')}" autocomplete="off">
-        </div>
-        <div class="mb-3 d-flex gap-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
-                <label class="form-check-label small text-secondary" for="term-opt-mcp">${L('ctrl.lbl.mcp', 'MCP')}</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="term-opt-mdcopy" checked>
-                <label class="form-check-label small text-secondary" for="term-opt-mdcopy">${L('ctrl.lbl.mdcopy', 'Copy MD')}</label>
+        <div class="accordion mb-3" id="term-options-accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#term-options-body">${L('ctrl.lbl.options', 'Options')}</button>
+                </h2>
+                <div id="term-options-body" class="accordion-collapse collapse" data-bs-parent="#term-options-accordion">
+                    <div class="accordion-body">
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
+                            <input id="term-opt-workingdir" type="text" class="form-control form-control-sm" placeholder="./" autocomplete="off">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.key', 'Key')}</label>
+                            <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="${L('ctrl.ph.sessionKey', 'Session key (optional)')}" autocomplete="off">
+                        </div>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
+                                <label class="form-check-label small text-secondary" for="term-opt-mcp">${L('ctrl.lbl.mcp', 'MCP')}</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="term-opt-mdcopy" checked>
+                                <label class="form-check-label small text-secondary" for="term-opt-mdcopy">${L('ctrl.lbl.mdcopy', 'Copy MD')}</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="d-flex justify-content-between">
@@ -3562,8 +3643,20 @@ async function termStartNew(mode = 'cmd', initialWorkingDir, remoteId = '') {
     modal.SetHeader(L('ctrl.hdr.newTerminal', 'New Terminal'));
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
+    const TERM_MODAL_W = 560;
+    modal.SetSize(TERM_MODAL_W, 430);
     modal.Open(CModal.ePos.Center);
     setTimeout(() => {
+        const fitHeight = (_recenter = false) => {
+            const headerH = modal.GetHeader()?.offsetHeight ?? 0;
+            modal.SetSize(TERM_MODAL_W, headerH + container.offsetHeight + 16 + 12);
+            if (_recenter)
+                modal.SetPosition(CModal.ePos.Center);
+        };
+        fitHeight(true);
+        const optionsAccordion = container.querySelector('#term-options-accordion');
+        optionsAccordion.addEventListener('shown.bs.collapse', () => fitHeight());
+        optionsAccordion.addEventListener('hidden.bs.collapse', () => fitHeight());
         const providerSelect = container.querySelector('#term-opt-provider');
         const modelSelect = container.querySelector('#term-opt-model');
         const mcpCheck = container.querySelector('#term-opt-mcp');

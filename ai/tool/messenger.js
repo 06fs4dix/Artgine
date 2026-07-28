@@ -1,12 +1,11 @@
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createApiClient, login } from './common.js';
+import { createApiClient, resolveLocalBase } from './common.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = dirname(dirname(SCRIPT_DIR));
-const COOKIE_FILE = join(SCRIPT_DIR, 'messenger_cookie.txt');
 
-const { call, get } = createApiClient(COOKIE_FILE);
+const { call, get, login } = createApiClient(PROJECT_ROOT);
 
 const [baseArg, cmd, ...rest] = process.argv.slice(2);
 
@@ -23,15 +22,15 @@ function usageAndExit() {
 
 if (!baseArg || !baseArg.startsWith('http') || !cmd) usageAndExit();
 
-const base = baseArg.replace(/\/$/, '');
+const base = await resolveLocalBase(baseArg.replace(/\/$/, ''));
 
 function printResult(r, okKey) {
     console.log(r.ok ? JSON.stringify(okKey ? (r[okKey] ?? r) : r) : `fail: ${r.msg ?? 'unknown'}`);
 }
 
 if (cmd === 'login') {
-    const r = await login(call, base, PROJECT_ROOT);
-    console.log(r.ok ? 'ok' : `fail: ${r.msg ?? 'unknown'}`);
+    const r = await login(base);
+    console.log(r.ok ? (r.reused ? 'ok (reused)' : 'ok') : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'list') {
     const r = await get(base, 'messenger/list');

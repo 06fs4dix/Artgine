@@ -1,7 +1,7 @@
 import { CFecth } from "../../network/CFecth.js";
 import { CPath } from "../../basic/CPath.js";
 import { CHash } from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../CAuthToken.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 const params = new URLSearchParams(location.search);
 const SESSION_ID = params.get('session') || '';
@@ -117,7 +117,7 @@ function hideOverlay() {
 async function tryLogin(pw) {
     loginMsg.textContent = '';
     try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/login', { password: CHash.SHA256('artgine_' + pw) }, 'json');
+        const j = await authLogin(CPath.WebRootUrl(), CHash.SHA256('artgine_' + pw), () => { loginMsg.textContent = 'Waiting for messenger approval (up to 5 minutes)...'; });
         if (j.ok && j.token) {
             authToken = j.token;
             setAuthToken(CPath.WebRootUrl(), authToken);

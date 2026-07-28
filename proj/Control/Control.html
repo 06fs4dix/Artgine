@@ -133,8 +133,9 @@ body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleB
 /* 히든 콘솔 채팅 트리거를 위해 탭 맨 앞에 작은 여백 확보 */
 #myTab{padding-left:14px;}
 #rdp-sidebar-list .ai-session-item, #agent-sidebar-list .ai-session-item, #other-sidebar-list .ai-session-item{cursor:pointer;}
-/* 좌측 사이드바 하위 탭(Agent/Other) */
-#sidebarSubTab .nav-link{font-size:0.8rem;border-radius:0.375rem;}
+/* 좌측 사이드바 하위 탭(Agent/Other): 우측 사이드바(#rightSidebarTab)와 동일한 부트스트랩 기본
+   nav-tabs 룩(밑줄 연결 + 활성 탭만 패널과 같은 배경으로 붙는 형태)을 그대로 쓴다. */
+#sidebarSubTab .nav-link{font-size:0.8rem;}
 /* Agent 경로 그룹: 헤더 클릭으로 접기/펼치기, ...버튼으로 그 경로에 Chat/Terminal 생성.
    세션 아이템과 확실히 구분되도록 진한 배경 + 좌측 액센트 바 + 살짝 굵은 텍스트로 강조한다. */
 .agent-group-head{cursor:pointer;user-select:none;background-color:var(--bs-secondary-bg);box-shadow:inset 3px 0 0 var(--bs-primary);border:1px solid var(--bs-border-color);}
@@ -221,7 +222,7 @@ body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleB
             <!-- RDP 세션 목록(Local + Remote). Control.ts의 rdpRenderList()가 채운다. -->
             <div id="rdp-sidebar-list" class="d-flex flex-column gap-1"></div>
             <!-- 하위 탭: Agent(Chat/Terminal) ↔ Other(Browser/Editor). 선택 탭은 localStorage에 기억된다. -->
-            <ul class="nav nav-pills nav-fill my-2 flex-shrink-0" id="sidebarSubTab" role="tablist">
+            <ul class="nav nav-tabs nav-fill my-2 flex-shrink-0" id="sidebarSubTab" role="tablist">
                 <li class="nav-item"><button class="nav-link active py-1 px-2" id="sb-agent-tab" type="button">Agent</button></li>
                 <li class="nav-item"><button class="nav-link py-1 px-2" id="sb-other-tab" type="button">Other</button></li>
             </ul>
@@ -477,6 +478,12 @@ body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleB
                         </button>
                     </div>
                     <hr class="my-3">
+                    <h6 class="text-secondary mb-2"><i class="bi bi-shield-lock"></i> <span data-CLan="ctrl.twoFactor">Two-Factor Auth</span></h6>
+                    <select id="twoFactorSessionSelect" class="form-select form-select-sm">
+                        <option value="0" data-CLan="ctrl.twoFactorDisabled">Disabled</option>
+                    </select>
+                    <div id="twoFactorMsg" class="small text-secondary mt-1"></div>
+                    <hr class="my-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <h6 class="text-secondary mb-0"><i class="bi bi-database"></i> <span data-CLan="ctrl.database">Database</span></h6>
                         <div class="d-flex gap-1">
@@ -508,22 +515,12 @@ body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleB
                         <h6 class="text-secondary mb-0"><i class="bi bi-robot"></i> <span data-CLan="ctrl.subAgent">Sub Agent</span></h6>
                         <button id="agent-new-btn" type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> <span data-CLan="ctrl.new">New</span></button>
                     </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="hideSubAgentSessionsChk" checked>
+                        <label class="form-check-label small text-secondary" for="hideSubAgentSessionsChk" data-CLan="ctrl.hideSubAgentSessions">Hide sub agent sessions in sidebar</label>
+                    </div>
                     <!-- 등록된 서브 에이전트 목록. Control.ts의 agentRefresh()가 채운다(생성은 위 New 버튼, 편집은 항목 클릭 → 모달). -->
                     <div id="agentList" class="d-flex flex-column gap-1"></div>
-                    <hr class="my-3">
-                    <h6 class="text-secondary"><i class="bi bi-keyboard"></i> <span data-CLan="ctrl.help">Help</span></h6>
-                    <div class="mb-0">
-                        <div class="small text-secondary fw-semibold mb-1" data-CLan="ctrl.kb.global">Global Shortcuts</div>
-                        <ul class="list-unstyled small mb-0">
-                            <li data-CLan="ctrl.kb.f1"><kbd>F1</kbd> Right sidebar File ↔ Info toggle (opens sidebar on small screens)</li>
-                            <li data-CLan="ctrl.kb.f2"><kbd>F2</kbd> File Search (all registered paths checked; toggle checkboxes)</li>
-                            <li data-CLan="ctrl.kb.f3"><kbd>F3</kbd> Open New Terminal</li>
-                            <li data-CLan="ctrl.kb.f4"><kbd>F4</kbd> / double-tap <kbd>Ctrl</kbd> Focus/toggle sidebar</li>
-                            <li data-CLan="ctrl.kb.f6"><kbd>F6</kbd> Terminal: SUPER (auto-approve) + show/focus input. Outside Terminal: same as F4</li>
-                            <li data-CLan="ctrl.kb.f7"><kbd>F7</kbd> Terminal: toggle Log/Terminal conversation panel</li>
-                            <li data-CLan="ctrl.kb.updown"><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Move through session list (sidebar open)</li>
-                        </ul>
-                    </div>
                 </div>
             </div>
         </div>

@@ -163,7 +163,7 @@ export class CUtilWeb {
     static PageBack() {
         window.history.back();
     }
-    static async TSImport(_source, _monaco = true, _github = false, _filePath = null, _rewriteSource = true) {
+    static async TSImport(_source, _monaco = true, _github = false, _filePath = null, _rewriteSource = true, _visited = new Set()) {
         let importPathArr = ExtractImportPaths(_source, false);
         const fileDir = CString.PathSub(_filePath ?? CPath.FullPath());
         const rootBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.WebRootUrl()).replace(/\/$/, "");
@@ -233,7 +233,8 @@ export class CUtilWeb {
                 _source = _source.replaceAll(originalPath, adjustedFullPath);
             processedPaths.set(originalPath, adjustedFullPath);
             importPathArr[i] = adjustedFullPath;
-            if (_monaco && window["require"] != null) {
+            if (_monaco && window["require"] != null && !_visited.has(adjustedFullPath)) {
+                _visited.add(adjustedFullPath);
                 const fName = adjustedFullPath + ".ts";
                 const buf = await CFile.Load(fName);
                 const libSource = CUtil.ArrayToString(buf);
@@ -247,6 +248,7 @@ export class CUtilWeb {
                         window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, monacoAliasPath + ".js");
                     }
                 }
+                await CUtilWeb.TSImport(libSource, _monaco, _github, adjustedFullPath, false, _visited);
             }
         }
         return _source;

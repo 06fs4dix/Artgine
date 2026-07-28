@@ -55,3 +55,35 @@ export function removeAuthToken(origin) {
     delete store[origin];
     writeStore(store);
 }
+async function postJson(url, body) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify(body),
+    });
+    return res.json();
+}
+export async function authLogin(webRootUrl, passwordHash, onPending) {
+    const base = webRootUrl.replace(/\/+$/, '') + '/';
+    const j = await postJson(base + 'auth/login', { password: passwordHash });
+    if (!j.ok || !j.pending2FA || !j.token)
+        return j;
+    onPending?.();
+    const pollMs = j.pollMs ?? 1000;
+    const deadline = Date.now() + (j.waitMs ?? 5 * 60 * 1000);
+    while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, pollMs));
+        let w;
+        try {
+            w = await postJson(base + 'auth/check', { token: j.token });
+        }
+        catch {
+            continue;
+        }
+        if (w.authed)
+            return { ok: true, token: j.token };
+        if (w.ok === false)
+            return { ok: false, msg: w.msg ?? '2FA approval timed out' };
+    }
+    return { ok: false, msg: '2FA approval timed out' };
+}

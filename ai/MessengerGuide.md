@@ -23,7 +23,7 @@ node ai/tool/messenger.js <BASE_URL> unlink <termToken>                         
 node ai/tool/messenger.js <BASE_URL> whoami <key>                                   # 해당 key 세션의 termToken 조회 (자기 자신을 link할 때 사용)
 ```
 
-- 모든 명령은 세션 쿠키 기반 인증이 필요하다 — 먼저 `login`으로 세션을 인증시켜야 한다. 쿠키는 `ai/tool/messenger_cookie.txt`에 저장/로드된다.
+- 모든 명령은 세션 쿠키 기반 인증이 필요하다. 인증은 도구 공용 `ai/tool/cookie.json`에 서버(base)별로 저장/로드되고, 미인증이면 자동으로 재인증하므로 `login`은 처음 한 번이면 된다.
 - `list` → `[{id, platform, botName, chatKey, cursor, link, state, createdAt, termToken, termKey}, ...]`
   - `state`: `pending`(등록만 됨) | `active`(대화 중) | `dead`(재등록으로 폐기, 목록에서 제외)
   - `chatKey`: 대화 상대 식별자(텔레그램 chat_id / 디스코드 채널 id). 빈 문자열이면 아직 아무도 말을 안 건 상태

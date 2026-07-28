@@ -314,15 +314,16 @@
       if (!pw.value) return;
       // 서버(handleAuth)는 SHA256('artgine_'+pw) 해시를 기대한다 — 날것 그대로 보내면 항상 "틀린 암호"가 된다
       // (Control/Chat/Browser는 모두 이 해시를 보낸다).
-      if (!_hashMod) { msg.textContent = "Loading..."; return; }
+      if (!_hashMod || !_authTokenMod) { msg.textContent = "Loading..."; return; }
       btn.disabled = true; msg.textContent = "";
-      fetch(window.__CTX_PATH__ + "/auth/login", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: _hashMod.CHash.SHA256('artgine_' + pw.value) })
-      }).then(function (r) { return r.json(); }).then(function (j) {
-        if (j.ok) { if (_authTokenMod) _authTokenMod.setAuthToken(_webRootUrl(), j.token); location.reload(); }
+      // authLogin은 서버에 2차 인증이 켜져 있으면 메신저 승인까지 기다린 뒤에 반환한다.
+      _authTokenMod.authLogin(window.__CTX_PATH__, _hashMod.CHash.SHA256('artgine_' + pw.value), function () {
+        msg.style.color = "#aaa"; msg.textContent = "Waiting for messenger approval...";
+      }).then(function (j) {
+        msg.style.color = "#f55";
+        if (j.ok) { _authTokenMod.setAuthToken(_webRootUrl(), j.token); location.reload(); }
         else { msg.textContent = j.msg || "Wrong password"; btn.disabled = false; pw.value = ""; pw.focus(); }
-      }).catch(function () { msg.textContent = "Connection failed"; btn.disabled = false; });
+      }).catch(function () { msg.style.color = "#f55"; msg.textContent = "Connection failed"; btn.disabled = false; });
     }
     btn.addEventListener("click", doAuth);
     pw.addEventListener("keydown", function (e) { if (e.key === "Enter") doAuth(); });

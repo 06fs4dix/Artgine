@@ -1,13 +1,12 @@
-import { dirname, join, basename } from 'path';
+import { dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, writeFileSync } from 'fs';
-import { createMultiApiClient, login, hashPassword } from './common.js';
+import { createApiClient, resolveLocalBase } from './common.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = dirname(dirname(SCRIPT_DIR));
-const COOKIE_FILE = join(SCRIPT_DIR, 'remote_cookie.json');
 
-const { call } = createMultiApiClient(COOKIE_FILE);
+const { call, login } = createApiClient(PROJECT_ROOT);
 
 // HomeURL = <주소>:<포트>/<기본경로>/proj/.../Control.html?path=...&RootPath=...&RootUrl=...
 // 기본경로(예: /Artgine)까지가 API base. base는 그 서버의 세션 쿠키를 구분하는 키로도 쓰인다.
@@ -42,15 +41,15 @@ function usageAndExit() {
 
 if (!homeUrlArg || !homeUrlArg.startsWith('http') || !cmd) usageAndExit();
 
-const { base, cwd, origin, rootUrl } = parseHomeUrl(homeUrlArg);
+const { base: rawBase, cwd, origin, rootUrl } = parseHomeUrl(homeUrlArg);
+// base는 세션 쿠키 맵의 키이기도 하므로 여기서 한 번 확정해 모든 명령이 같은 주소를 쓰게 한다.
+const base = await resolveLocalBase(rawBase);
 
 if (cmd === 'login') {
     // 비밀번호 인자가 없으면 로컬(settings.json) 비밀번호로, 있으면 그 값을 그대로 해시해서 로그인한다.
     const [password] = rest;
-    const r = password
-        ? await call(base, 'auth/login', { password: hashPassword(password) })
-        : await login(call, base, PROJECT_ROOT);
-    console.log(r.ok ? 'ok' : `fail: ${r.msg ?? 'unknown'}`);
+    const r = await login(base, password);
+    console.log(r.ok ? (r.reused ? 'ok (reused)' : 'ok') : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'cmd') {
     if (rest.length === 0) { console.error('Usage: cmd <콘솔 명령어 그대로...>'); process.exit(1); }

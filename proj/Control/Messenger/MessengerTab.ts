@@ -1,6 +1,7 @@
 import { CDOM } from '../../../artgine/basic/CDOM.js';
 import { CFecth } from '../../../artgine/network/CFecth.js';
 import { CAlert } from '../../../artgine/basic/CAlert.js';
+import { CModal } from '../../../artgine/basic/CModal.js';
 import { marked } from '../../../artgine/external/esnext/md/marked.esm.js';
 
 // ── 타입 ────────────────────────────────────────────────────────────────────
@@ -56,8 +57,9 @@ export function MountMessengerTab(rootId: string, onAuthFail: () => boolean) {
     <div class="d-flex align-items-center gap-2">
       <span class="fw-semibold small text-nowrap"><i class="bi bi-chat-dots-fill"></i> Messenger</span>
       <input id="msg-new-bot" type="text" class="form-control form-control-sm"
-        placeholder="Paste bot token to register (Telegram / Discord)" autocomplete="off">
+        placeholder="Paste bot token or peer email to register (Telegram / Discord / Email)" autocomplete="off">
       <button id="msg-new-btn" class="btn btn-sm btn-primary text-nowrap">Register</button>
+      <button id="msg-new-email-btn" class="btn btn-sm btn-outline-primary text-nowrap"><i class="bi bi-envelope-plus"></i> Email</button>
       <button id="msg-refresh-btn" class="btn btn-sm btn-outline-secondary flex-shrink-0" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
     </div>
     <div id="msg-new-err" class="small text-danger mt-1"></div>
@@ -71,6 +73,7 @@ export function MountMessengerTab(rootId: string, onAuthFail: () => boolean) {
 
     CDOM.ID('msg-refresh-btn').addEventListener('click', () => refresh());
     CDOM.ID('msg-new-btn').addEventListener('click', () => registerBot());
+    CDOM.ID('msg-new-email-btn').addEventListener('click', () => showEmailModal());
     (CDOM.ID('msg-new-bot') as HTMLInputElement).addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter') registerBot();
     });
@@ -105,6 +108,112 @@ async function registerBot() {
         btn.disabled = false;
         btn.textContent = 'Register';
     }
+}
+
+// ── 이메일 계정 등록(발신 SMTP / 수신 IMAP) ─────────────────────────────────────
+// SetBody가 innerHTML을 통째로 넣은 직후에는 DOM이 아직 붙지 않은 프레임이 있어(Control.ts의
+// showAddOllamaModal과 동일한 이유), 살짝 지연을 두고서야 입력 요소를 안전하게 잡을 수 있다.
+const MODAL_DOM_DELAY = 100;
+
+function authFields(prefix: string, title: string): string {
+    return `
+        <div class="small fw-semibold mb-1 d-flex align-items-center gap-2">
+            <span>${title}</span>
+            <span id="${prefix}_status"></span>
+        </div>
+        <div class="row g-1 mb-1">
+            <div class="col-8"><input id="${prefix}_address" type="text" class="form-control form-control-sm" placeholder="Address (e.g. smtp.example.com)"></div>
+            <div class="col-4"><input id="${prefix}_port" type="text" class="form-control form-control-sm" placeholder="Port"></div>
+            <div class="col-6"><input id="${prefix}_id" type="text" class="form-control form-control-sm" placeholder="ID"></div>
+            <div class="col-6"><input id="${prefix}_pw" type="password" class="form-control form-control-sm" placeholder="Password"></div>
+        </div>
+        <div id="${prefix}_msg" class="small text-danger mb-2"></div>`;
+}
+
+function setAuthStatus(prefix: string, result: { ok: boolean; msg?: string } | null) {
+    const status = CDOM.ID(`${prefix}_status`);
+    const msgEl  = CDOM.ID(`${prefix}_msg`);
+    if (!result) { status.innerHTML = ''; msgEl.textContent = ''; return; }
+    status.innerHTML = result.ok
+        ? '<i class="bi bi-check-circle-fill text-success"></i>'
+        : '<i class="bi bi-x-circle-fill text-danger"></i>';
+    msgEl.textContent = result.ok ? '' : (result.msg || 'Verification failed');
+}
+
+// 서버는 비밀번호를 절대 돌려주지 않는다(hasPw로 저장 여부만 알려줌) — 비밀번호 칸은 항상 비워두고
+// placeholder로만 "저장돼 있음"을 표시한다. 그대로 제출(빈 값)하면 서버가 기존 비밀번호를 유지한다.
+function fillAuthFields(prefix: string, auth: { address: string; port: string; id: string; hasPw?: boolean }) {
+    (CDOM.ID(`${prefix}_address`) as HTMLInputElement).value = auth?.address ?? '';
+    (CDOM.ID(`${prefix}_port`)    as HTMLInputElement).value = auth?.port    ?? '';
+    (CDOM.ID(`${prefix}_id`)      as HTMLInputElement).value = auth?.id      ?? '';
+    const pwInput = CDOM.ID(`${prefix}_pw`) as HTMLInputElement;
+    pwInput.value = '';
+    pwInput.placeholder = auth?.hasPw ? 'Saved — leave blank to keep' : 'Password';
+}
+
+function readAuthFields(prefix: string) {
+    return {
+        address: (CDOM.ID(`${prefix}_address`) as HTMLInputElement).value.trim(),
+        port:    (CDOM.ID(`${prefix}_port`)    as HTMLInputElement).value.trim(),
+        id:      (CDOM.ID(`${prefix}_id`)      as HTMLInputElement).value.trim(),
+        pw:      (CDOM.ID(`${prefix}_pw`)      as HTMLInputElement).value,
+    };
+}
+
+async function showEmailModal() {
+    const modal = new CModal();
+    modal.SetHeader('Add Email Messenger');
+    modal.SetBody(`
+        <div class="small text-secondary mb-3">
+            Send account (SMTP) and receive account (IMAP) can be different credentials.
+        </div>
+        ${authFields('msgEmailSmtp', 'Send (SMTP)')}
+        ${authFields('msgEmailImap', 'Receive (IMAP)')}
+        <div class="d-flex justify-content-end gap-2">
+            <div id="msgEmailErr" class="small text-danger flex-grow-1 align-self-center"></div>
+            <button id="msgEmailSaveBtn" class="btn btn-sm btn-primary">Verify & Save</button>
+        </div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(480, 460);
+    modal.Open(CModal.ePos.Center);
+
+    setTimeout(async () => {
+        try {
+            const res: any = await CFecth.Exe('messenger/email/get', {}, 'json');
+            if (res.ok && res.account) {
+                fillAuthFields('msgEmailSmtp', res.account.smtp);
+                fillAuthFields('msgEmailImap', res.account.imap);
+            }
+        } catch (e: any) {
+            if (!/\b401\b/.test(String(e?.message ?? e))) CAlert.E(String(e?.message ?? e));
+        }
+
+        const errEl = CDOM.ID('msgEmailErr');
+        const saveBtn = CDOM.ID('msgEmailSaveBtn') as HTMLButtonElement;
+        saveBtn.addEventListener('click', async () => {
+            errEl.textContent = '';
+            setAuthStatus('msgEmailSmtp', null);
+            setAuthStatus('msgEmailImap', null);
+            const smtp = readAuthFields('msgEmailSmtp');
+            const imap = readAuthFields('msgEmailImap');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Verifying…';
+            try {
+                const res: any = await CFecth.Exe('messenger/email/set', { smtp, imap }, 'json');
+                if (res.smtp) setAuthStatus('msgEmailSmtp', res.smtp);
+                if (res.imap) setAuthStatus('msgEmailImap', res.imap);
+                if (!res.ok) { errEl.textContent = res.msg || 'Verification failed — nothing saved'; return; }
+                modal.Close();
+            } catch (e: any) {
+                const msg = String(e?.message ?? e);
+                if (/\b401\b/.test(msg)) { gOnAuthFail(); } else { errEl.textContent = msg; }
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Verify & Save';
+            }
+        });
+    }, MODAL_DOM_DELAY);
 }
 
 // ── 새로고침: 목록 diff 갱신 ─────────────────────────────────────────────────
@@ -229,8 +338,8 @@ function onExpand(item: MsgItemEl) {
 // info 줄로 내린다 — 거기서는 자유롭게 클릭/선택/복사할 수 있다.
 function updateAccordionHeader(item: MsgItemEl, s: MsgSession) {
     const header = item.querySelector<HTMLElement>('[data-role="header"]')!;
-    const platLabel = s.platform === 'discord' ? 'Discord' : 'Telegram';
-    const platBadge = s.platform === 'discord' ? 'bg-primary' : 'bg-info text-dark';
+    const platLabel = s.platform === 'discord' ? 'Discord' : s.platform === 'email' ? 'Email' : 'Telegram';
+    const platBadge = s.platform === 'discord' ? 'bg-primary' : s.platform === 'email' ? 'bg-warning text-dark' : 'bg-info text-dark';
     const stateColor = s.state === 'active' ? 'bg-success' : s.state === 'pending' ? 'bg-warning text-dark' : 'bg-danger';
 
     header.innerHTML = `

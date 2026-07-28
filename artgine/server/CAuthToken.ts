@@ -59,3 +59,44 @@ export function removeAuthToken(origin: string): void {
     delete store[origin];
     writeStore(store);
 }
+
+// ---- 로그인 (2차 인증 포함) ----------------------------------------------------------------------
+// 서버에 2차 인증이 켜져 있으면 auth/login은 비밀번호가 맞아도 곧장 인증하지 않고 pending2FA:true와
+// 함께 토큰을 준다. 그 토큰은 메신저로 간 승인 링크를 사람이 누르기 전까지 아무 권한이 없으므로,
+// 승인될 때까지 auth/check를 폴링해야 한다. 이 처리를 페이지마다 복사하지 않도록 여기 모아둔다.
+
+export interface IAuthLoginResult { ok: boolean; token?: string; msg?: string; pending2FA?: boolean; waitMs?: number; pollMs?: number; }
+
+// CFecth를 쓰지 않는 이유: 이 모듈은 Terminal.html처럼 번들 없이 동적 import로 불러 쓰는 곳도 있어
+// 의존성을 늘리지 않는다. 또 폴링 중 403(만료)을 예외가 아니라 본문으로 읽어야 한다.
+async function postJson(url: string, body: unknown): Promise<any> {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify(body),
+    });
+    return res.json();
+}
+
+// 비밀번호 로그인 + (필요하면) 2차 인증 승인 대기까지 한 번에 처리한다.
+// 승인/실패/타임아웃이 확정된 뒤에만 반환하므로 호출부는 기존처럼 ok/token만 보면 된다.
+// onPending은 "승인을 기다리는 중"임을 화면에 알리고 싶을 때 쓴다.
+export async function authLogin(webRootUrl: string, passwordHash: string, onPending?: () => void): Promise<IAuthLoginResult> {
+    const base = webRootUrl.replace(/\/+$/, '') + '/';
+    const j = await postJson(base + 'auth/login', { password: passwordHash }) as IAuthLoginResult;
+    if (!j.ok || !j.pending2FA || !j.token) return j;
+
+    onPending?.();
+    const pollMs = j.pollMs ?? 1000;
+    const deadline = Date.now() + (j.waitMs ?? 5 * 60 * 1000);
+    while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, pollMs));
+        // 서버는 세 가지를 구분해 준다: authed:true=승인 완료 / ok:true+authed:false=아직 대기 / ok:false=만료·무효
+        let w: { ok?: boolean; authed?: boolean; msg?: string };
+        try { w = await postJson(base + 'auth/check', { token: j.token }); }
+        catch { continue; }   // 일시적인 네트워크 오류로 대기를 포기하지 않는다(만료되면 서버가 알려준다).
+        if (w.authed) return { ok: true, token: j.token };
+        if (w.ok === false) return { ok: false, msg: w.msg ?? '2FA approval timed out' };
+    }
+    return { ok: false, msg: '2FA approval timed out' };
+}

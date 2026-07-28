@@ -235,7 +235,7 @@ export class CUtilWeb {
 	// _rewriteSource=false면 소스 텍스트(상대경로 import문)는 그대로 두고 extra lib만 등록한다.
 	// MonacoEditer가 실제 파일 URI로 모델을 만들 때 쓰는 모드 - TS가 상대경로를 스스로 해석하므로
 	// 화면/저장 시 원본 소스가 그대로 보존된다.
-	static async TSImport(_source: string, _monaco = true, _github = false, _filePath: string = null, _rewriteSource = true) {
+	static async TSImport(_source: string, _monaco = true, _github = false, _filePath: string = null, _rewriteSource = true, _visited: Set<string> = new Set()) {
 		let importPathArr = ExtractImportPaths(_source, false);
 		const fileDir = CString.PathSub(_filePath ?? CPath.FullPath());
 		const rootBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.WebRootUrl()).replace(/\/$/, "");
@@ -318,7 +318,8 @@ export class CUtilWeb {
 			processedPaths.set(originalPath, adjustedFullPath);
 			importPathArr[i] = adjustedFullPath;
 
-			if (_monaco && window["require"] != null) {
+			if (_monaco && window["require"] != null && !_visited.has(adjustedFullPath)) {
+				_visited.add(adjustedFullPath);
 				const fName = adjustedFullPath + ".ts";
 				const buf = await CFile.Load(fName);
 				const libSource = CUtil.ArrayToString(buf);
@@ -334,6 +335,9 @@ export class CUtilWeb {
 						window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, monacoAliasPath + ".js");
 					}
 				}
+				// A->B->C처럼 간접 상속/참조되는 파일도 타입을 찾을 수 있도록, 방금 로드한 파일의
+				// import도 재귀적으로 처리한다. _visited로 순환 참조/중복 로드를 막는다.
+				await CUtilWeb.TSImport(libSource, _monaco, _github, adjustedFullPath, false, _visited);
 			}
 		}
 

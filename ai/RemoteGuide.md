@@ -16,7 +16,7 @@
 | 애매함 (둘 다 가능) | — | **추측하지 말고 사용자에게 어느 서버인지 확인** |
 
 - 로컬 서버 로그인: `login`을 **비밀번호 인자 없이** 실행 (로컬 `settings.json` 비밀번호 자동 사용). `Env.json`을 뒤질 필요 없음.
-- 원격지 로그인: `rdpRemotes`의 `pwHash`를 `login` 비밀번호 인자로 넘기거나, 가이드 아래 "원격지 주소/비밀번호" 절차를 따른다.
+- 원격지 로그인: `rdpRemotes`의 `password`를 `login` 비밀번호 인자로 넘기거나, 가이드 아래 "원격지 주소/비밀번호" 절차를 따른다.
 - 잘못된 예: 사용자가 "원격지 워킹 폴더 리스트"라고 했는데 접속 정보(로컬)로 `roots`를 치는 것.
 
 ## HomeURL
@@ -26,14 +26,14 @@
 - 기본형: `<주소>:<포트>/<기본경로>` (예: 로컬 `http://localhost:7000/Artgine`, 원격 `http://dev.example.com:7000/Artgine`)
 - `entryUrl`이 `.../proj/Control/Control.html`처럼 페이지 경로까지 있으면 **`/기본경로`까지만** 잘라 HomeURL로 쓴다 (예: `http://host:7000/Artgine/proj/Control/Control.html` → `http://host:7000/Artgine`).
 - `Home.html` 쿼리스트링 형태(`.../Home.html?path=...&RootPath=...&RootUrl=...`)로 넘기면 `cmd`/`upload`의 cwd(`RootPath`+`path`)와 `download`의 정적 서빙 경로 계산에 쓰인다. 생략하면 cwd는 기본값(`./`)이다.
-- 인증 세션 쿠키는 이 HomeURL에서 계산한 API base(`/기본경로` 이전 경로)를 키로 `ai/tool/remote_cookie.json`에 저장된다 — 서로 다른 서버로 각각 로그인해도 세션이 섞이지 않고 동시에 여러 서버를 오갈 수 있다.
+- 인증 세션은 이 HomeURL에서 계산한 API base(`/기본경로` 이전 경로)를 키로 `ai/tool/cookie.json`에 저장된다 — 서로 다른 서버로 각각 로그인해도 세션이 섞이지 않고, A서버에 접속했다 B서버에 갔다 다시 A로 돌아와도 A의 인증은 그대로 살아 있다. 이 파일은 `browser.js`/`memo.js`/`messenger.js`와 공용이라 도구가 달라도 같은 세션을 재사용한다.
 - 그 서버의 유효한 작업 디렉터리(`RootPath`)를 모른다면 먼저 `roots`로 조회한다. 결과의 `roots[].path` 중 하나를 HomeURL의 `RootPath` 쿼리에 넣어야 `cmd`/`upload`의 cwd나 `download`의 상대경로가 그 루트 기준으로 정확히 계산된다.
 
 ## 원격지 주소/비밀번호 출처 (Where Remote Info Comes From)
 
 - `remote.js`는 주소를 스스로 찾아내지 않는다 — HomeURL은 항상 위에서 판별한 출처로 확보해서 넘긴다.
 - Control에서 "저장"한 **원격지** 목록은 로컬 서버의 **`Env.json`**(작업 디렉터리 루트, `CPath.WorkingPath()+"Env.json"` 없으면 `desktop/Env.json`)의 **`rdpRemotes`** 키에 있다. 접속 정보와 **별개**다.
-  - 형태: `[{ remoteId, entryUrl, pwHash }]` — `entryUrl`이 그 원격의 접속 주소, `pwHash`는 관리자 비밀번호의 SHA256 해시(`auth/login`에 `password`로 그대로 보내면 통과됨).
+  - 형태: `[{ remoteId, entryUrl, password }]` — `entryUrl`이 그 원격의 접속 주소, `password`는 관리자 비밀번호(평문 또는 SHA256 해시 둘 다 가능 — 64자 미만이면 평문으로 보고 자동으로 해시해서 `auth/login`에 보낸다).
   - 값은 JSON 문자열로 저장돼 있으므로 읽을 때 `JSON.parse`가 한 번 더 필요하다.
 - 원격지 주소/비밀번호를 모를 때: **`rdpRemotes`를 먼저 확인**. 없거나(`"null"`) 대상이 목록에 없으면 사용자에게 직접 물어본다. 접속 정보로 대체하지 말 것.
 

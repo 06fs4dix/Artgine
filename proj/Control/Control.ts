@@ -45,7 +45,7 @@ import { CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken } from "../../artgine/server/CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../../artgine/server/CAuthToken.js";
 import { CIframeMsg } from "../../artgine/server/html/CIframeMsg.js";
 import { CModalStackMsg } from "../../artgine/util/CModalUtil.js";
 import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
@@ -123,6 +123,59 @@ if (themeSelect) themeSelect.value = savedTheme;
 applyTheme(savedTheme);
 themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
 
+// ---- 우측 사이드바: 서브 에이전트 세션 숨기기 ----
+// 터미널 세션 중 key가 있는(=set-agent로 등록된 서브 에이전트가 띄운) 항목을 좌측 Agent 목록에서 뺀다.
+// 숨겨진 개수는 사라지지 않고 그룹 헤더에 배지로 남아, "몇 개가 숨어있는지"를 알 수 있게 한다.
+const HIDE_SUBAGENT_LS = 'ctrl.hideSubAgentSessions';
+// 저장된 값이 없으면 기본 ON(숨김). 사용자가 명시적으로 끈 경우('0')만 해제한다.
+let hideSubAgentSessions = localStorage.getItem(HIDE_SUBAGENT_LS) !== '0';
+const hideSubAgentChk = document.getElementById('hideSubAgentSessionsChk') as HTMLInputElement | null;
+if (hideSubAgentChk) hideSubAgentChk.checked = hideSubAgentSessions;
+hideSubAgentChk?.addEventListener('change', () => {
+    hideSubAgentSessions = hideSubAgentChk.checked;
+    localStorage.setItem(HIDE_SUBAGENT_LS, hideSubAgentSessions ? '1' : '0');
+    renderSessionSidebar();
+});
+
+// ---- 우측 사이드바: 2단계 인증(메신저 승인) 설정 ----
+// 셀렉트박스 하나로 선택/비선택만 관리한다(값 0 = 비활성). 로컬 서버 전용 설정.
+const twoFactorSessionSelect = document.getElementById('twoFactorSessionSelect') as HTMLSelectElement | null;
+const twoFactorMsg = document.getElementById('twoFactorMsg') as HTMLDivElement | null;
+
+async function twoFactorLoadSessions(_selected: number) {
+    if (!twoFactorSessionSelect) return;
+    try {
+        const j = await CFecth.Exe('messenger/list', null, 'json') as { ok: boolean, sessions?: Array<{ id: number, platform: string, botName: string }> };
+        const sessions = j.ok ? (j.sessions ?? []) : [];
+        twoFactorSessionSelect.innerHTML = `<option value="0">${L('ctrl.twoFactorDisabled', 'Disabled')}</option>`
+            + sessions.map(s => `<option value="${s.id}">${aiEscapeHtml(`${s.platform} - ${s.botName}`)}</option>`).join('');
+        twoFactorSessionSelect.value = String(_selected);
+    } catch { /* 목록을 못 가져와도 셀렉트박스 자체는 계속 쓸 수 있게 조용히 둔다 */ }
+}
+
+async function twoFactorLoadConfig() {
+    try {
+        const j = await CFecth.Exe('auth/twoFactorConfig', null, 'json') as { ok: boolean, sessionId?: number };
+        if (!j.ok) return;
+        await twoFactorLoadSessions(j.sessionId ?? 0);
+    } catch { /* 인증 전이면 조회가 막힌다 - 로그인 후 옵션 탭을 열면 다시 로드됨 */ }
+}
+
+async function twoFactorSaveConfig() {
+    if (twoFactorMsg) twoFactorMsg.textContent = '';
+    try {
+        const body = { sessionId: Number(twoFactorSessionSelect?.value ?? 0) };
+        const j = await CFecth.Exe('auth/twoFactorConfig', body, 'json') as { ok: boolean, msg?: string };
+        if (twoFactorMsg) twoFactorMsg.textContent = j.ok ? L('ctrl.twoFactorSaved', 'Saved') : (j.msg ?? L('ctrl.serverError', 'Server error'));
+    } catch {
+        if (twoFactorMsg) twoFactorMsg.textContent = L('ctrl.serverError', 'Server error');
+    }
+}
+
+twoFactorSessionSelect?.addEventListener('change', () => twoFactorSaveConfig());
+CDOM.ID('right-option-tab').addEventListener('shown.bs.tab', () => twoFactorLoadConfig());
+if (CDOM.ID('right-option-panel').classList.contains('active')) twoFactorLoadConfig();
+
 // ---- 다국어(CLan) ----
 // 기본 텍스트는 영문(HTML/코드 기본값). 한국어는 아래 한곳(registerControlLan)에만 등록한다.
 // 탭/옵션 설명/모달 폼 라벨 = 영문. 도움말 + 경고/알림/에러 메시지 = 한영.
@@ -133,17 +186,6 @@ function registerControlLan(): void {
     // ★ 한국어 UI 문자열은 전부 이 객체에만 추가/수정한다.
     CLan.Set({
         ko: {
-            // Option 패널 Help + 전역 단축키
-            "ctrl.help": "도움말",
-            "ctrl.kb.global": "전역 단축키",
-            "ctrl.kb.f1": "<kbd>F1</kbd> 우측 사이드바 File ↔ Info 토글 (작은 화면이면 사이드바 열림)",
-            "ctrl.kb.f2": "<kbd>F2</kbd> 파일 검색(등록 경로 전부 체크 · 체크박스 토글)",
-            "ctrl.kb.f3": "<kbd>F3</kbd> 새 터미널 열기",
-            "ctrl.kb.f4": "<kbd>F4</kbd> / <kbd>Ctrl</kbd> 빠르게 두 번 사이드바 포커스/토글",
-            "ctrl.kb.f6": "<kbd>F6</kbd> Terminal: SUPER(자동 승인) 토글 + 입력창 표시/포커스. Terminal 밖에서는 F4와 동일",
-            "ctrl.kb.f7": "<kbd>F7</kbd> Terminal: Log/Terminal 대화 패널 토글",
-            "ctrl.kb.updown": "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)",
-
             // 경고 / 알림 / 에러 (CAlert, 토스트, 인라인 상태 메시지)
             "ctrl.failed": "실패",
             "ctrl.failedToLoad": "불러오기 실패",
@@ -883,7 +925,7 @@ function rdpActivatePane() {
     activatePaneUnlessMultiplexer('rdp-panel-tab', 'RDP');
 }
 
-interface IRdpRemote { remoteId: string; entryUrl: string; saved?: boolean; pwHash?: string; }
+interface IRdpRemote { remoteId: string; entryUrl: string; saved?: boolean; password?: string; }
 // saved=true 항목만 서버에 영속된다(추가 모달의 "Save this remote" 체크박스). 나머지는 이번 세션 한정.
 // 저장은 반드시 서버(/RemoteDesktop/remotes-set)를 거친다 — CStorage를 브라우저에서 직접 부르면
 // CUtil.IsNode()가 false라 localStorage로 떨어져 이 브라우저에만 남는다. 서버(Node)에서 호출해야
@@ -919,7 +961,7 @@ async function rdpLoadRemotes() {
     const known = new Set(rdpRemotes.map(r => r.remoteId));
     for (const r of list) {
         if (!r?.remoteId || !r?.entryUrl || known.has(r.remoteId)) continue;
-        rdpRemotes.push({ remoteId: r.remoteId, entryUrl: r.entryUrl, saved: true, pwHash: r.pwHash });
+        rdpRemotes.push({ remoteId: r.remoteId, entryUrl: r.entryUrl, saved: true, password: r.password });
     }
     if (!list.length) return;
     rdpRenderList();
@@ -928,7 +970,7 @@ async function rdpLoadRemotes() {
 
 // 목록 전체를 덮어쓴다(추가/삭제 모두 최종 목록을 통째로 보낸다).
 async function rdpSaveRemotes() {
-    const list = rdpRemotes.filter(r => r.saved).map(r => ({ remoteId: r.remoteId, entryUrl: r.entryUrl, pwHash: r.pwHash }));
+    const list = rdpRemotes.filter(r => r.saved).map(r => ({ remoteId: r.remoteId, entryUrl: r.entryUrl, password: r.password }));
     try {
         await CFecth.Exe(CPath.WebRootUrl() + "RemoteDesktop/remotes-set", { list }, "json");
     } catch {
@@ -1075,9 +1117,9 @@ async function ctrlRefreshRootSelect() {
     const baseUrl = currentWebRootUrl;
     const seq = ++ctrlRootReqSeq;
     if (baseUrl) {
-        // pwHash가 저장된 원격이면 기존 토큰을 확인하지 않고 매번 새로 로그인해 세션을 새로 맺는다.
+        // password가 저장된 원격이면 기존 토큰을 확인하지 않고 매번 새로 로그인해 세션을 새로 맺는다.
         const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === baseUrl);
-        const authed = remote?.pwHash ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
+        const authed = remote?.password ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
         if (!authed) {
             if (seq !== ctrlRootReqSeq) return;
             rdpPromptRemoteAuth(baseUrl, () => {
@@ -1227,8 +1269,8 @@ async function rdpShowLocalAccessLink() {
     });
 }
 
-function rdpAddRemote(entryUrl: string, save = false, pwHash?: string) {
-    const remote: IRdpRemote = { remoteId: genUuid(), entryUrl, saved: save, pwHash };
+function rdpAddRemote(entryUrl: string, save = false, password?: string) {
+    const remote: IRdpRemote = { remoteId: genUuid(), entryUrl, saved: save, password };
     rdpRemotes.unshift(remote);
     rdpRenderList();
     if (save) rdpSaveRemotes();
@@ -1307,13 +1349,16 @@ function openRdpAddModal() {
             try { webRootUrl = rdpRemoteWebRootUrl(url); }
             catch { if (errEl) { errEl.textContent = L('ctrl.msg.invalidUrl', 'Invalid URL'); errEl.style.display = 'block'; } return; }
             if (btn) btn.disabled = true;
-            const pwHash = CHash.SHA256('artgine_' + pw);
+            const password = CHash.SHA256('artgine_' + pw);
             try {
-                const j = await CFecth.Exe(webRootUrl + "auth/login", { password: pwHash }, "json") as { ok: boolean, token?: string, msg?: string };
+                const j = await authLogin(webRootUrl, password, () => {
+                    if (errEl) { errEl.className = 'small text-secondary'; errEl.textContent = L('ctrl.msg.waitingTwoFactor', 'Waiting for messenger approval (up to 5 minutes)...'); errEl.style.display = 'block'; }
+                });
+                if (errEl) errEl.className = 'small text-danger';
                 if (j.ok) {
                     setAuthToken(webRootUrl, j.token!);
                     // 해시로 저장해두면 다음부터는 이 비밀번호를 다시 묻지 않고 매번 새 세션으로 바로 로그인한다.
-                    rdpAddRemote(url, save, pwHash);
+                    rdpAddRemote(url, save, password);
                     modal.Close();
                 } else if (errEl) {
                     errEl.textContent = LF('ctrl.msg.wrongPassword', 'Wrong password: {0}', j.msg ?? '');
@@ -2504,14 +2549,20 @@ function markLocalAuthLost() {
     localAuthOk = false;
 }
 
-// 저장된 pwHash가 있는 원격은 기존 토큰을 확인/재사용하지 않고 매번 auth/login으로 새 세션을
+// 저장된 password가 해시(SHA256, 64자)가 아니라 평문으로 들어와 있는 경우(수동 편집 등)를 대비해
+// CAuthServer.handleAuth와 동일한 규칙으로 정규화한다: 64자 미만이면 해시가 아닌 것으로 보고 해시한다.
+function rdpNormalizePassword(password: string): string {
+    return password.length < 64 ? CHash.SHA256('artgine_' + password) : password;
+}
+
+// 저장된 password가 있는 원격은 기존 토큰을 확인/재사용하지 않고 매번 auth/login으로 새 세션을
 // 새로 맺는다(만료/서버 재시작으로 토큰이 죽어 있어도 관리자 비밀번호 재입력 없이 바로 붙기 위함).
-// pwHash가 없으면(과거에 추가된 원격) 기존처럼 저장된 토큰 유효성만 확인한다.
+// password가 없으면(과거에 추가된 원격) 기존처럼 저장된 토큰 유효성만 확인한다.
 async function rdpEnsureRemoteAuth(remote: IRdpRemote): Promise<boolean> {
-    if (!remote.pwHash) return rdpCheckRemoteAuth(rdpRemoteWebRootUrl(remote.entryUrl));
+    if (!remote.password) return rdpCheckRemoteAuth(rdpRemoteWebRootUrl(remote.entryUrl));
     const webRootUrl = rdpRemoteWebRootUrl(remote.entryUrl);
     try {
-        const j = await CFecth.Exe(webRootUrl + "auth/login", { password: remote.pwHash }, "json") as { ok: boolean, token?: string };
+        const j = await authLogin(webRootUrl, rdpNormalizePassword(remote.password));
         if (!j.ok || !j.token) return false;
         setAuthToken(webRootUrl, j.token);
         return true;
@@ -2538,7 +2589,9 @@ function rdpPromptRemoteAuth(webRootUrl: string, onSuccess?: () => void) {
     dlg.SetBody(`${L('ctrl.msg.enterAdminPassword', 'Enter admin password:')}<br><input type="password" id="AuthPassword" class="form-control form-control-sm">`);
     const doAuth = () => {
         const pw = CDOM.IDValue("AuthPassword");
-        (CFecth.Exe(webRootUrl + "auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
+        authLogin(webRootUrl, CHash.SHA256('artgine_' + pw), () => {
+            CAlert.Info(L('ctrl.msg.waitingTwoFactor', 'Waiting for messenger approval (up to 5 minutes)...'));
+        }).then((j: { ok: boolean, token?: string, msg?: string }) => {
             if (j.ok) {
                 setAuthToken(webRootUrl, j.token!);
                 CAlert.Info(L('ctrl.msg.permissionGranted', 'Permission granted'));
@@ -2632,7 +2685,7 @@ async function memoSendRemoteInfo() {
         return;
     }
     const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === baseUrl);
-    const authed = remote?.pwHash ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
+    const authed = remote?.password ? await rdpEnsureRemoteAuth(remote) : await rdpCheckRemoteAuth(baseUrl);
     if (!authed) {
         rdpPromptRemoteAuth(baseUrl, () => {
             if (currentWebRootUrl !== baseUrl) return; // 그 사이에 다른 원격/로컬로 전환했으면 무시
@@ -2737,6 +2790,7 @@ function createAgentGroup(key: string): AgentGroupEl {
                 <span class="agent-group-path"><span></span></span>
             </span>
             <span class="agent-group-count text-secondary flex-shrink-0" style="font-size:0.7rem;"></span>
+            <span class="agent-group-hidden text-secondary flex-shrink-0" style="font-size:0.65rem;" title=""></span>
             <div class="dropdown flex-shrink-0">
                 <button class="agent-group-add btn btn-sm btn-link text-secondary p-0 px-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="New"><i class="bi bi-three-dots"></i></button>
                 <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
@@ -3012,7 +3066,17 @@ function flushSessionSidebar() {
     type OtherEntry = { key: string; sortKey: number; spec: SessionItemSpec };
     const agentEntries: AgentEntry[] = [];
     if (lastChatSessions) for (const s of lastChatSessions) agentEntries.push({ key: sessKey('chat', s.remoteId, s.sessionId), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s, activeKey) });
-    if (lastTermSessions) for (const s of lastTermSessions) agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+    // key가 있는 터미널 세션 = 서브 에이전트가 띄운 세션. 숨김이 켜져 있으면 목록에서 빼되,
+    // 그룹별로 몇 개가 숨었는지 세어 헤더 배지로 보여준다(아예 안 보이면 "왜 없지" 하고 다시 헷갈리게 된다).
+    const hiddenByGroup = new Map<string, number>();
+    if (lastTermSessions) for (const s of lastTermSessions) {
+        const groupKey = sessionGroupKey(s.remoteId, s.workingDir);
+        if (hideSubAgentSessions && s.key) {
+            hiddenByGroup.set(groupKey, (hiddenByGroup.get(groupKey) ?? 0) + 1);
+            continue;
+        }
+        agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+    }
     const otherEntries: OtherEntry[] = [];
     for (const s of browserSessions.values()) otherEntries.push({ key: `browser:${s.sessionId}`, sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s, activeKey) });
     for (const s of editorSessions.values()) otherEntries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s, activeKey) });
@@ -3031,13 +3095,13 @@ function flushSessionSidebar() {
         || !!agentSidebarList.querySelector('.dropdown-menu.show')
         || !!otherSidebarList.querySelector('.dropdown-menu.show');
 
-    renderAgentGroups(agentEntries, frozen);
+    renderAgentGroups(agentEntries, frozen, hiddenByGroup);
     renderOtherList(otherEntries, frozen);
 }
 
 // Agent: 경로별 그룹으로 렌더. 그룹 소스 = 등록된 경로(ctrlRootOpts) ∪ 실제 세션의 workingDir.
 // 등록 경로는 세션이 없어도 빈 그룹으로 남고, 등록 안 된 임의 경로 세션은 자기 그룹을 새로 만든다.
-function renderAgentGroups(entries: { key: string; groupKey: string; sortKey: number; spec: SessionItemSpec }[], frozen: boolean) {
+function renderAgentGroups(entries: { key: string; groupKey: string; sortKey: number; spec: SessionItemSpec }[], frozen: boolean, hiddenByGroup: Map<string, number>) {
     // 그룹별 아이템 수집.
     const byGroup = new Map<string, { key: string; groupKey: string; sortKey: number; spec: SessionItemSpec }[]>();
     for (const e of entries) {
@@ -3064,8 +3128,12 @@ function renderAgentGroups(entries: { key: string; groupKey: string; sortKey: nu
             if (!regSet.has(k)) { regSet.add(k); registered.push(k); groupMeta.set(k, { pathText: agentGroupPathText(base), remoteLabel: remote.entryUrl }); }
         }
     }
-    const adhoc = Array.from(byGroup.keys()).filter(k => !regSet.has(k));
-    adhoc.sort((a, b) => (byGroup.get(b)![0]?.sortKey ?? 0) - (byGroup.get(a)![0]?.sortKey ?? 0));
+    // 보이는 세션이 하나도 없어도(전부 숨겨진 서브 에이전트 세션뿐이어도) 그룹 자체는 남아야
+    // 숨김 배지가 뜬다 - 그래서 byGroup뿐 아니라 hiddenByGroup의 키도 adhoc 후보에 포함시킨다.
+    const adhocKeys = new Set<string>(byGroup.keys());
+    for (const k of hiddenByGroup.keys()) adhocKeys.add(k);
+    const adhoc = Array.from(adhocKeys).filter(k => !regSet.has(k));
+    adhoc.sort((a, b) => (byGroup.get(b)?.[0]?.sortKey ?? 0) - (byGroup.get(a)?.[0]?.sortKey ?? 0));
 
     // 그룹 순서/아이템 순서를 얼림 상태에 맞춰 확정.
     let groupOrder = [...registered, ...adhoc];
@@ -3081,9 +3149,9 @@ function renderAgentGroups(entries: { key: string; groupKey: string; sortKey: nu
         frozenAgentItemOrder = naturalItemOrder;
     }
 
-    // 죽은 그룹 제거(등록 경로가 아니고 세션도 없는 그룹).
+    // 죽은 그룹 제거(등록 경로가 아니고, 보이는 세션도 숨겨진 세션도 없는 그룹).
     for (const [k, el] of Array.from(agentGroupEls)) {
-        if (!regSet.has(k) && !byGroup.has(k)) { destroyAgentGroup(el); agentGroupEls.delete(k); }
+        if (!regSet.has(k) && !byGroup.has(k) && !hiddenByGroup.has(k)) { destroyAgentGroup(el); agentGroupEls.delete(k); }
     }
 
     // 그룹 노드 배치 + 헤더 갱신 + 그룹 내부 아이템 배치.
@@ -3098,6 +3166,10 @@ function renderAgentGroups(entries: { key: string; groupKey: string; sortKey: nu
         updateAgentGroupHeader(g, meta);
         const items = byGroup.get(k) ?? [];
         g.querySelector('.agent-group-count')!.textContent = items.length ? String(items.length) : '';
+        const hiddenCount = hiddenByGroup.get(k) ?? 0;
+        const hiddenEl = g.querySelector('.agent-group-hidden') as HTMLElement;
+        hiddenEl.textContent = hiddenCount ? `+${hiddenCount} \u{1F916}` : '';
+        hiddenEl.title = hiddenCount ? `${hiddenCount} hidden sub agent session(s)` : '';
         g.classList.toggle('agent-group-collapsed', collapsedGroups.has(k));
         if (g === gcursor) gcursor = gcursor.nextElementSibling;
         else agentSidebarList.insertBefore(g, gcursor);
@@ -3791,22 +3863,33 @@ async function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | '
                 ${buildModelOptions(initialProvider, '')}
             </select>
         </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
-            <input id="term-opt-workingdir" type="text" class="form-control form-control-sm" placeholder="./" autocomplete="off">
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.key', 'Key')}</label>
-            <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="${L('ctrl.ph.sessionKey', 'Session key (optional)')}" autocomplete="off">
-        </div>
-        <div class="mb-3 d-flex gap-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
-                <label class="form-check-label small text-secondary" for="term-opt-mcp">${L('ctrl.lbl.mcp', 'MCP')}</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="term-opt-mdcopy" checked>
-                <label class="form-check-label small text-secondary" for="term-opt-mdcopy">${L('ctrl.lbl.mdcopy', 'Copy MD')}</label>
+        <div class="accordion mb-3" id="term-options-accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#term-options-body">${L('ctrl.lbl.options', 'Options')}</button>
+                </h2>
+                <div id="term-options-body" class="accordion-collapse collapse" data-bs-parent="#term-options-accordion">
+                    <div class="accordion-body">
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
+                            <input id="term-opt-workingdir" type="text" class="form-control form-control-sm" placeholder="./" autocomplete="off">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.key', 'Key')}</label>
+                            <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="${L('ctrl.ph.sessionKey', 'Session key (optional)')}" autocomplete="off">
+                        </div>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
+                                <label class="form-check-label small text-secondary" for="term-opt-mcp">${L('ctrl.lbl.mcp', 'MCP')}</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="term-opt-mdcopy" checked>
+                                <label class="form-check-label small text-secondary" for="term-opt-mdcopy">${L('ctrl.lbl.mdcopy', 'Copy MD')}</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="d-flex justify-content-between">
@@ -3819,9 +3902,28 @@ async function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | '
     modal.SetHeader(L('ctrl.hdr.newTerminal', 'New Terminal'));
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
+    // auto 크기면 Provider/Model 셀렉트 폭에만 맞춰져 너무 좁게 잡힌다. 폭은 고정하고,
+    // 높이는 Open 이후 실측해서 맞춘다(아래 fitHeight) — 고정 높이면 Options 접힘 상태에서 버튼 밑이 남는다.
+    const TERM_MODAL_W = 560;
+    modal.SetSize(TERM_MODAL_W, 430);
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
+        // 카드 높이 = 헤더 + body 컨텐츠 + body 패딩(card-body p-2 = 상하 8px) + 카드 테두리/반올림 여유 12px.
+        // 여유가 없으면 1~2px 모자라 body(overflow-auto)에 스크롤바가 생긴다.
+        // Options 아코디언을 여닫을 때마다 다시 맞춰 버튼 아래 빈 공간이나 불필요한 스크롤이 안 생기게 한다.
+        const fitHeight = (_recenter = false) => {
+            const headerH = (modal.GetHeader() as HTMLElement | null)?.offsetHeight ?? 0;
+            modal.SetSize(TERM_MODAL_W, headerH + container.offsetHeight + 16 + 12);
+            if (_recenter) modal.SetPosition(CModal.ePos.Center);
+        };
+        // 최초 1회는 Open이 430 기준으로 잡아둔 위치가 어긋나므로 다시 중앙 정렬한다.
+        // 이후 아코디언 토글은 위치를 유지한 채 아래로만 늘었다 줄었다 하게 둔다(사용자가 옮겼을 수도 있으므로).
+        fitHeight(true);
+        const optionsAccordion = container.querySelector<HTMLElement>('#term-options-accordion')!;
+        optionsAccordion.addEventListener('shown.bs.collapse', () => fitHeight());
+        optionsAccordion.addEventListener('hidden.bs.collapse', () => fitHeight());
+
         const providerSelect = container.querySelector<HTMLSelectElement>('#term-opt-provider')!;
         const modelSelect    = container.querySelector<HTMLSelectElement>('#term-opt-model')!;
         const mcpCheck    = container.querySelector<HTMLInputElement>('#term-opt-mcp')!;

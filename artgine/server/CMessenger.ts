@@ -1,6 +1,8 @@
 import { CORMField, CRDBMS } from '../network/CORM.js';
 import { CSQLite } from '../network/CSQLite.js';
 import { marked, Renderer } from '../external/esnext/md/marked.esm.js';
+import { CMail } from '../network/CMail.js';
+import { CMailAccount } from '../network/CMailAccount.js';
 
 // 텔레그램 HTML parse_mode가 아는 태그(b/strong, i/em, u, s/del, a, code, pre, blockquote)만 남기고
 // 나머지(h1~h6, ul/ol/li, table, img 등 — 텔레그램이 모르는 태그가 하나라도 섞이면 sendMessage가
@@ -48,7 +50,7 @@ const sTelegramRenderer: any = Object.assign(Object.create(new (Renderer as any)
 
 export type MessengerSessionRecord = {
     id: number;
-    platform: string;   // 'telegram' | 'discord'
+    platform: string;   // 'telegram' | 'discord' | 'email'
     token: string;
     botName: string;    // 봇 표시 이름
     chatKey: string;    // 보낼 곳. ''이면 아직 유저가 말을 걸지 않음(미바인딩)
@@ -69,12 +71,13 @@ export class CMessenger {
     private static sSessionTable = 'messenger_session';
     private static sQueueTable = 'messenger_queue';
 
-    public static readonly ePlatform = { Telegram: 'telegram', Discord: 'discord' };
+    public static readonly ePlatform = { Telegram: 'telegram', Discord: 'discord', Email: 'email' };
 
     // 메시지 1건 상한: 텔레그램 4096, 디스코드 2000. 이모지·한글이 UTF-16 서로게이트로 쪼개지면
     // 400이 나므로 여유를 두고 자른다. 자르기는 Send 시점에 하고 큐에는 '조각 1개 = 행 1개'로 넣는다 —
     // 그래야 Flush가 행 하나당 API 한 번이라 부분 실패 처리가 단순해진다.
-    private static readonly sTextLimit: { [k: string]: number } = { telegram: 3800, discord: 1900 };
+    // 이메일은 사실상 길이 제한이 없어(수백 KB도 통과) 자를 필요가 없는 큰 값을 둔다.
+    private static readonly sTextLimit: { [k: string]: number } = { telegram: 3800, discord: 1900, email: 1000000 };
     // Flush 재시도 상한. 넘으면 'failed'로 떨궈 무한 재시도를 막는다.
     private static readonly sFailMax = 5;
 
@@ -148,19 +151,21 @@ export class CMessenger {
     // ---------------- 공개 API ----------------
 
     // 토큰 생김새로 플랫폼을 알아낸다. 모르면 ''.
-    // 두 형식은 겹치지 않는다 — 텔레그램은 '<봇id>:<시크릿>'이라 콜론이 있고 점이 없으며,
+    // 세 형식은 겹치지 않는다 — 텔레그램은 '<봇id>:<시크릿>'이라 콜론이 있고 점이 없으며,
     // 디스코드는 '<봇id를 base64한 것>.<타임스탬프>.<HMAC>'이라 점이 둘이고 콜론이 없다.
+    // 이메일은 '<로컬파트>@<도메인>' 형태라 앞 둘과 겹칠 일이 없다.
     // 덕분에 호출부가 플랫폼을 따로 물어보지 않아도 된다.
     public static Detect(_token: string): string {
         const token = (_token ?? '').trim();
         if (/^\d{5,}:[\w-]{20,}$/.test(token)) return CMessenger.ePlatform.Telegram;
         if (/^[\w-]{20,}\.[\w-]{4,}\.[\w-]{20,}$/.test(token)) return CMessenger.ePlatform.Discord;
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(token)) return CMessenger.ePlatform.Email;
         return '';
     }
 
-    // 봇 토큰을 검증하고 세션을 연다. 같은 토큰의 기존 세션은 전부 'dead'로 내린다.
-    // 반환값이 이후 Send/Recv에 쓰는 세션 번호다.
-    // _platform을 비우거나 'auto'로 주면 토큰 형식으로 판별한다.
+    // 봇 토큰(텔레그램/디스코드) 또는 상대 이메일 주소(이메일)로 세션을 연다. 같은 token의 기존
+    // 세션은 전부 'dead'로 내린다. 반환값이 이후 Send/Recv에 쓰는 세션 번호다.
+    // _platform을 비우거나 'auto'로 주면 형식으로 판별한다.
     public static async Create(_platform: string, _token: string): Promise<number> {
         const token = (_token ?? '').trim();
         if (token === '') throw new Error('CMessenger: token is empty');
@@ -168,28 +173,45 @@ export class CMessenger {
         let platform = (_platform ?? '').trim().toLowerCase();
         if (platform === '' || platform === 'auto') {
             platform = CMessenger.Detect(token);
-            if (platform === '') throw new Error('CMessenger: cannot tell the platform from this token (expected a Telegram or Discord bot token)');
+            if (platform === '') throw new Error('CMessenger: cannot tell the platform from this token (expected a Telegram/Discord bot token or an email address)');
         }
-        if (platform !== CMessenger.ePlatform.Telegram && platform !== CMessenger.ePlatform.Discord) {
+        if (platform !== CMessenger.ePlatform.Telegram && platform !== CMessenger.ePlatform.Discord && platform !== CMessenger.ePlatform.Email) {
             throw new Error(`CMessenger: unsupported platform '${_platform}'`);
         }
 
+        // 이메일은 '봇'이 아니라 상대방 주소다 — 발신/수신은 별도로 설정해둔 계정(SMTP/IMAP) 하나를
+        // 공유해서 쓴다. 그 계정이 아직 설정 안 돼 있으면 세션을 만들기 전에 여기서 막는다.
+        if (platform === CMessenger.ePlatform.Email) {
+            const account = CMailAccount.Load();
+            if (!CMailAccount.IsConfigured(account)) {
+                throw new Error('CMessenger: mail account is not configured yet — set it up first (Email button)');
+            }
+        }
+
         // 토큰이 살아있는지 여기서 확인해 둔다. 잘못된 토큰이면 세션을 만들기 전에 실패하는 게 낫다.
-        const me = await CMessenger.GetMe(platform, token);
+        // 이메일은 '봇 신원 조회' 개념이 없어(상대 주소를 그대로 표시 이름으로 쓴다) 건너뛴다.
+        const me = platform === CMessenger.ePlatform.Email
+            ? { name: token, link: '' }
+            : await CMessenger.GetMe(platform, token);
 
         const db = await CMessenger.Init();
         await db.Send(`UPDATE ${CMessenger.sSessionTable} SET state = 'dead' WHERE token = ?`, [token]);
 
         // 등록 시점을 기준선으로 삼는다 — 밀려 있던 과거 메시지는 버리고 이후 것만 받는다.
         // (CConversationReader가 "등록 시 커서를 현재 끝에 둔다"고 한 것과 같은 원칙.)
-        // 디스코드는 '지금'에 해당하는 가짜 스노플레이크를 만들어 커서 초기값으로 쓴다. 텔레그램은
+        // 디스코드는 '지금'에 해당하는 가짜 스노플레이크를 만들어 커서 초기값으로 쓴다. 텔레그램/이메일은
         // 커서를 미리 알 수 없어 0으로 두고, 아래에서 한 번 드레인해 끝으로 옮긴다.
         const cursor = platform === CMessenger.ePlatform.Discord ? CMessenger.DiscordNowKey() : '0';
 
+        // 텔레그램/디스코드는 상대가 먼저 말을 걸어야 chatKey가 붙지만(pending), 이메일은 주소를
+        // 이미 알고 있으므로 등록 즉시 그 주소로 바인딩하고 active로 시작한다.
+        const initialChatKey = platform === CMessenger.ePlatform.Email ? token : '';
+        const initialState = platform === CMessenger.ePlatform.Email ? 'active' : 'pending';
+
         const createdAt = CMessenger.Now();
         await db.Send(
-            `INSERT INTO ${CMessenger.sSessionTable} (platform, token, botName, chatKey, cursor, link, state, createdAt) VALUES (?, ?, ?, '', ?, ?, 'pending', ?)`,
-            [platform, token, me.name, cursor, me.link, createdAt]
+            `INSERT INTO ${CMessenger.sSessionTable} (platform, token, botName, chatKey, cursor, link, state, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [platform, token, me.name, initialChatKey, cursor, me.link, initialState, createdAt]
         );
         const rows = await db.Recv(
             `SELECT id FROM ${CMessenger.sSessionTable} WHERE token = ? AND state != 'dead' ORDER BY id DESC LIMIT 1`,
@@ -198,14 +220,16 @@ export class CMessenger {
         if (rows == null || rows.length === 0) throw new Error('CMessenger: failed to create session');
         const id = Number(rows[0][0]);
 
-        // 텔레그램 기준선 드레인.
-        // 이게 없으면 실제로 사고가 난다: 텔레그램은 그 offset으로 getUpdates를 '실제 호출'해야 이전
-        // 업데이트를 지운다. 커서를 로컬에만 적어두고 다음 호출 전에 세션이 바뀌면(같은 봇 재등록 등)
-        // 새 세션이 offset=0부터 시작해 옛 메시지를 다시 읽고, 그게 터미널에 그대로 주입된다.
+        // 텔레그램/이메일 기준선 드레인.
+        // 텔레그램은 그 offset으로 getUpdates를 '실제 호출'해야 이전 업데이트를 지운다. 커서를 로컬에만
+        // 적어두고 다음 호출 전에 세션이 바뀌면(같은 봇 재등록 등) 새 세션이 offset=0부터 시작해 옛
+        // 메시지를 다시 읽고, 그게 터미널에 그대로 주입된다.
+        // 이메일은 계정 받은편지함에 이미 쌓여 있던 과거 메일을 전부 새 메시지로 읽어버리는 걸 막으려고
+        // 커서만 지금 시점(최신 UID)까지 전진시킨다(본문은 버린다).
         //
-        // 단 chatKey 바인딩은 살린다. 유저가 등록 전에 이미 /start를 눌러둔 경우까지 버리면 연결하려고
-        // 한 번 더 말을 걸어야 한다 — "누구와 연결됐는가"는 읽고 본문만 버린다.
-        if (platform === CMessenger.ePlatform.Telegram) {
+        // 단 chatKey 바인딩은 살린다(텔레그램: 유저가 등록 전에 이미 /start를 눌러둔 경우). 이메일은
+        // 어차피 위에서 바로 바인딩했으므로 영향 없다.
+        if (platform === CMessenger.ePlatform.Telegram || platform === CMessenger.ePlatform.Email) {
             const ses = await CMessenger.GetSession(id);
             try { await CMessenger.Poll(ses, false); } catch { /* 첫 드레인 실패는 치명적이지 않다 — 다음 Recv가 이어받는다 */ }
         }
@@ -285,6 +309,19 @@ export class CMessenger {
         }));
     }
 
+    // 커서를 '지금'으로 다시 당긴다(본문은 버림) — 링크할 때 부른다. 등록(Create) 시점 이후 링크
+    // 전까지 쌓인 밀린 메시지를 무시하고, 그 시점부터 새로 오는 것만 받고 싶을 때 쓴다.
+    // 텔레그램/이메일은 실제로 한 번 드레인해야 커서가 전진하고(Poll 참조), 디스코드는 '지금'에
+    // 해당하는 스노플레이크를 계산해 바로 대입할 수 있어 API 호출이 필요 없다.
+    public static async ResetCursor(_sessionId: number): Promise<void> {
+        const ses = await CMessenger.GetSession(_sessionId);
+        if (ses.platform === CMessenger.ePlatform.Discord) {
+            await CMessenger.SetCursor(ses, CMessenger.DiscordNowKey());
+            return;
+        }
+        try { await CMessenger.Poll(ses, false); } catch { /* 실패해도 링크 자체는 막지 않는다 — 다음 Recv가 이어받는다 */ }
+    }
+
     // 세션 상태 조회(UI 표시용). 토큰은 그 봇으로 무엇이든 할 수 있는 자격증명이라 일부러 뺀다.
     // 죽은 세션이면 Send/Recv와 마찬가지로 에러다 — 호출부가 연결을 정리할 계기가 된다.
     public static async GetInfo(_sessionId: number): Promise<Omit<MessengerSessionRecord, 'token'>> {
@@ -337,6 +374,7 @@ export class CMessenger {
     // 수신 드레인. _store=false면 바인딩과 커서 전진만 하고 본문은 큐에 넣지 않는다(기준선 드레인).
     private static async Poll(_ses: MessengerSessionRecord, _store = true): Promise<void> {
         if (_ses.platform === CMessenger.ePlatform.Discord) return await CMessenger.PollDiscord(_ses, _store);
+        if (_ses.platform === CMessenger.ePlatform.Email) return await CMessenger.PollEmail(_ses, _store);
         return await CMessenger.PollTelegram(_ses, _store);
     }
 
@@ -384,6 +422,16 @@ export class CMessenger {
             await CMessenger.CallDiscord(_ses.token, `/channels/${_ses.chatKey}/messages`, 'POST', { content: _text });
             return;
         }
+        if (_ses.platform === CMessenger.ePlatform.Email) {
+            // 발신은 계정 설정에서 검증해둔 SMTP를 그대로 쓴다(세션에는 자격증명이 없다 — token은
+            // 상대 이메일 주소일 뿐이다). 이메일 클라이언트는 HTML을 온전히 렌더링하므로 텔레그램처럼
+            // 태그를 제한할 필요 없이 marked 기본 렌더러를 쓴다.
+            const account = CMailAccount.Load();
+            const html = CMessenger.ToEmailHtml(_text);
+            const ok = await CMail.Send(CMailAccount.ToAuthInfo(account.smtp), _ses.chatKey, 'Messenger', html);
+            if (!ok) throw new Error('CMessenger: email send failed');
+            return;
+        }
         // 텔레그램은 parse_mode:'HTML'로 보내 마크다운(굵게·기울임·코드블록·링크 등)을 그대로 렌더링한다.
         // MarkdownV2 대신 HTML을 쓰는 이유: MarkdownV2는 '.', '-', '!' 같은 예약 문자를 전부
         // 이스케이프해야 하는데 CLI 응답엔 그런 문자가 자유롭게 섞여 있어 이스케이프 누락 시 400이 난다.
@@ -401,6 +449,15 @@ export class CMessenger {
         const escaped = _raw
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         const html = marked.parse(escaped, { renderer: sTelegramRenderer }) as string;
+        return html.trim();
+    }
+
+    // 원문(마크다운) → 일반 HTML. 이메일 클라이언트는 임의의 태그를 다 받아주므로 텔레그램처럼
+    // 렌더러를 제한할 필요 없이 marked 기본 렌더러를 쓴다("escape 먼저, parse 나중" 패턴은 동일).
+    private static ToEmailHtml(_raw: string): string {
+        const escaped = _raw
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const html = marked.parse(escaped) as string;
         return html.trim();
     }
 
@@ -583,6 +640,29 @@ export class CMessenger {
         }
         if (res.status === 204) return null;
         return await res.json().catch(() => null);
+    }
+
+    // ---------------- 내부: 이메일 ----------------
+
+    // 계정(IMAP) 받은편지함을 커서(UID) 기준으로 드레인한다. 계정 하나를 여러 이메일 세션이 공유하므로
+    // (세션마다 자기 상대 주소만 필터링), 전체 메일함을 훑되 이 세션의 상대(chatKey) 주소가 보낸
+    // 것만 골라 큐에 넣는다. 필터링 여부와 무관하게 커서는 항상 스캔한 만큼 전진시킨다 — 안 그러면
+    // 다른 사람이 보낸 메일 때문에 커서가 멈춰서 매번 같은 메일함 구간을 다시 훑게 된다.
+    private static async PollEmail(_ses: MessengerSessionRecord, _store: boolean): Promise<void> {
+        const account = CMailAccount.Load();
+        const sinceUid = Number(_ses.cursor) || 0;
+        const result = await CMail.Receive(CMailAccount.ToAuthInfo(account.imap), sinceUid);
+        if (result.messages.length === 0) return;
+
+        const peer = _ses.chatKey.toLowerCase();
+        for (const msg of result.messages) {
+            if (_store && msg.from.toLowerCase() === peer) {
+                const text = msg.subject ? `[${msg.subject}]\n${msg.text}` : msg.text;
+                await CMessenger.Store(_ses, msg.from, msg.date, String(msg.uid), text);
+            }
+        }
+
+        if (result.nextUid > sinceUid) await CMessenger.SetCursor(_ses, String(result.nextUid));
     }
 
     // ---------------- 내부: 유틸 ----------------

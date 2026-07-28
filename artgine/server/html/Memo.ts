@@ -6,6 +6,8 @@ import { CLan } from "../../basic/CLan.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 import { CUtilWeb } from "../../util/CUtilWeb.js";
 import { CStorage } from "../../system/CStorage.js";
+import { CPath } from "../../basic/CPath.js";
+import { authLogin } from "../CAuthToken.js";
 
 // Control.html이 iframe으로 열 때 자신의 현재 테마(light/dark)를 함께 넘겨준다.
 // 값이 없으면(단독 접속 등) 기존과 동일하게 아무 것도 건드리지 않는다(기본 Bootstrap 라이트 모습).
@@ -166,7 +168,8 @@ async function DoAuth(): Promise<void> {
     authSubmitBtn.disabled = true;
     authMsg.textContent = '';
     try {
-        const j = await CFecth.Exe("auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json") as any;
+        const j = await authLogin(CPath.WebRootUrl(), CHash.SHA256('artgine_' + pw),
+            () => { authMsg.textContent = 'Waiting for messenger approval (up to 5 minutes)...'; });
         if (j.ok) {
             authOverlay.style.display = 'none';
             await LoadProviders();

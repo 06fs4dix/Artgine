@@ -455,8 +455,14 @@ export class CFileServer extends CAuthServer
                     let addOut = '';
                     for (let i = 0; i < files.length; i += CHUNK) {
                         const chunk = files.slice(i, i + CHUNK);
-                        const { stdout: s, stderr: e } = await execAsync(`git -C ${quote(path)} add ${chunk.map(quote).join(" ")}`);
-                        addOut += s + e;
+                        try {
+                            const { stdout: s, stderr: e } = await execAsync(`git -C ${quote(path)} add ${chunk.map(quote).join(" ")}`);
+                            addOut += s + e;
+                        } catch (addErr: any) {
+                            // Already-staged deletions with no further change make `git add` fail
+                            // with "pathspec did not match any files" even though there's nothing to do.
+                            addOut += addErr.stderr || addErr.message || String(addErr);
+                        }
                     }
                     const { stdout: commitOut, stderr: commitErr } = await execAsync(`git -C ${quote(path)} commit -m ${quote(message)}`);
                     let pushOut = '';
