@@ -1964,25 +1964,30 @@
       </div>
     </div>
 
-    <!-- Electron app foundation + open Control after start (merged) -->
+    <!-- Electron app: open Control first, then foundation / other modes -->
     <div class="feature-card p-4 mt-4" style="max-width:960px; margin-left:auto; margin-right:auto;">
-      <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-2">
+      <div class="mb-2">
         <h5 class="mb-0"><i class="bi bi-window-sidebar" style="color:#58a6ff;"></i> <span data-CLan="gsArtgineDocsTitle">Electron app &amp; opening Control</span></h5>
-        <a href="https://06fs4dix.github.io/Artgine/help/help.html" class="btn btn-sm btn-outline-info" target="_blank" rel="noopener">
-          <i class="bi bi-box-arrow-up-right"></i> <span data-CLan="gsArtgineDocsBtn">Open full docs</span>
-        </a>
       </div>
-      <p class="text-muted small mb-3" data-CLan="gsArtgineDocsLead">
-        <strong>Artgine Agent (Control)</strong> runs on the <strong>Artgine engine / Electron app</strong> (desktop shell, web server, project host).
-        Modes include <strong>developer</strong>, <strong>server</strong>, and <strong>client</strong>. Install, Run, PWA, plugins, and other engine details are in the Artgine docs — not repeated here.
-      </p>
-      <div class="text-muted small mb-0" data-CLan="gsAfterBody">
-        After the Electron app starts, open a browser (replace <code class="cmd">[port]</code> with the port in the Electron Server panel or <code class="cmd">settings.json</code>):
+      <!-- 1) Control 시작 방법 (브라우저 버튼 우선 → URL 직접 입력) -->
+      <div class="text-muted small mb-3" data-CLan="gsAfterBody">
+        <div class="mb-2" style="color:#c9d1d9; font-weight:600;"><i class="bi bi-play-circle me-1" style="color:#3fb950;"></i> How to open Control</div>
+        After the Electron app is running, open the Control project like this:
+        <ol class="mb-2 mt-2 ps-3">
+          <li class="mb-2"><strong>Easiest — Browser button:</strong> In the Electron app, click the <strong>Browser</strong> button first. Control opens without typing a URL.</li>
+          <li class="mb-0"><strong>Or enter the URL yourself:</strong> In any browser, go to the address below. Replace <code class="cmd">[port]</code> with the port shown in the Electron Server panel or in <code class="cmd">settings.json</code>.</li>
+        </ol>
         <div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">
           http://localhost:[port]
         </div>
-        Or click the <strong>Browser</strong> button in the Electron app to open Control without typing the URL.
-        Default login password: <strong>artgine</strong>. From a phone or another device, use the host PC’s LAN IP instead of <code class="cmd">localhost</code>.
+        Default login password: <strong>artgine</strong>. From a phone or another PC, use the host machine’s LAN IP instead of <code class="cmd">localhost</code>.
+      </div>
+      <!-- 2) 기반 / 다른 모드 접속 -->
+      <div class="text-muted small mb-3" data-CLan="gsArtgineDocsLead">
+        <div class="mb-2" style="color:#c9d1d9; font-weight:600;"><i class="bi bi-layers me-1" style="color:#58a6ff;"></i> Foundation &amp; other modes</div>
+        <strong>Artgine Agent (Control)</strong> runs on the <strong>Artgine engine / Electron app</strong> (desktop shell, web server, project host).
+        You can also connect or run under other modes such as <strong>developer</strong>, <strong>server</strong>, and <strong>client</strong>.
+        Install, Run, PWA, plugins, and other engine details are in the Artgine docs — not repeated here.
       </div>
       <div class="small mt-3 mb-3 p-3" style="background:#1c1608; border:1px solid #6e4f1a; border-radius:8px; color:#c9d1d9;">
         <div class="mb-2" style="color:#d29922; font-weight:600;"><i class="bi bi-exclamation-triangle me-1"></i> <span data-CLan="gsAfterTunnelTitle">If it asks to run through a tunnel</span></div>
@@ -3467,10 +3472,9 @@ CLan.Set({
     gsMethod2Title: '실행파일 다운로드',
     gsMethod2Note: '<div class="mb-1">압축 해제 후 실행:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">Artgine.exe</code></li><li>Linux — <code class="cmd">./Artgine --no-sandbox</code></li><li>macOS — <code class="cmd">Artgine.app</code></li></ul><div class="mb-0">OS가 막으면 아래 권한 / 보안을 확인하세요.</div>',
     gsArtgineDocsTitle: '일렉트론 앱 · Control 접속',
-    gsArtgineDocsBtn: '전체 문서 열기',
-    gsArtgineDocsLead: '<strong>Artgine Agent(Control)</strong>는 <strong>아티젠 엔진 / Electron 앱</strong> 위에서 동작합니다(데스크톱 셸·웹 서버·프로젝트 호스트). 모드 예: <strong>developer</strong>, <strong>server</strong>, <strong>client</strong>. 설치·실행·Run·PWA·플러그인 등 엔진 상세는 아티젠 문서로 넘깁니다.',
+    gsArtgineDocsLead: '<div class="mb-2" style="color:#c9d1d9; font-weight:600;"><i class="bi bi-layers me-1" style="color:#58a6ff;"></i> 기반 · 다른 모드 접속</div><strong>Artgine Agent(Control)</strong>는 <strong>아티젠 엔진 / Electron 앱</strong> 위에서 동작합니다(데스크톱 셸·웹 서버·프로젝트 호스트). <strong>developer</strong>, <strong>server</strong>, <strong>client</strong> 등 다른 모드로도 접속·실행할 수 있습니다. 설치·실행·Run·PWA·플러그인 등 엔진 상세는 아티젠 문서로 넘깁니다.',
     gsArtgineDocsNote: '엔진 전체 안내(모드·설치·워크플로, 영/한): <a href="https://06fs4dix.github.io/Artgine/help/help.html" target="_blank" rel="noopener" style="color:#58a6ff; word-break:break-all;">https://06fs4dix.github.io/Artgine/help/help.html</a>',
-    gsAfterBody: 'Electron 앱이 뜨면 브라우저에서 아래 주소로 접속합니다. <code class="cmd">[port]</code>는 서버가 실제로 쓰는 포트로 바꿉니다(일렉트론 Server 패널 또는 <code class="cmd">settings.json</code>):<div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">http://localhost:[port]</div>또는 일렉트론 앱에서 <strong>브라우저</strong> 버튼을 누르면 URL 없이 Control을 엽니다. 로그인 기본 비밀번호: <strong>artgine</strong>. 폰·다른 PC에서는 <code class="cmd">localhost</code> 대신 호스트 PC LAN IP를 사용하세요.',
+    gsAfterBody: '<div class="mb-2" style="color:#c9d1d9; font-weight:600;"><i class="bi bi-play-circle me-1" style="color:#3fb950;"></i> Control 시작 방법</div>Electron 앱이 실행된 뒤 Control 프로젝트는 이렇게 엽니다:<ol class="mb-2 mt-2 ps-3"><li class="mb-2"><strong>가장 쉬운 방법 — 브라우저 버튼:</strong> 일렉트론 앱에서 먼저 <strong>브라우저</strong> 버튼을 누르세요. URL을 치지 않아도 Control이 열립니다.</li><li class="mb-0"><strong>또는 URL 직접 입력:</strong> 아무 브라우저 주소창에 아래 주소를 입력해 접속할 수 있습니다. <code class="cmd">[port]</code>는 일렉트론 Server 패널 또는 <code class="cmd">settings.json</code>에 표시된 포트로 바꿉니다.</li></ol><div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">http://localhost:[port]</div>로그인 기본 비밀번호: <strong>artgine</strong>. 폰·다른 PC에서는 <code class="cmd">localhost</code> 대신 호스트 PC LAN IP를 사용하세요.',
     gsAfterTunnelTitle: '터널링으로 실행할지 물어본다면',
     gsAfterTunnelBody: '시작 시 포트가 막혀 있으면 터널링으로 실행할지 물어봅니다. 동작은 하지만 <strong>서버를 재시작할 때마다 터널 주소가 바뀌어 매번 새로 인증을 받아야 합니다.</strong> 임시 방편으로만 쓰고, 가급적 포트 문제를 해결하세요 — 실제로 서버가 사용 중인 포트를 방화벽 인바운드에서 허용하고, 외부에서 접속한다면 공유기 포트포워딩까지 설정한 뒤 고정 주소로 접속하는 것이 좋습니다.',
 
