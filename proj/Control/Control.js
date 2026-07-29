@@ -35,7 +35,7 @@ import { CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../../artgine/server/CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin, checkAuthed } from "../../artgine/server/CAuthToken.js";
 import { CIframeMsg } from "../../artgine/server/html/CIframeMsg.js";
 import { CModalStackMsg } from "../../artgine/util/CModalUtil.js";
 import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
@@ -128,6 +128,7 @@ async function twoFactorLoadSessions(_selected) {
 }
 async function twoFactorLoadConfig() {
     try {
+        await ensureLocalAuth();
         const j = await CFecth.Exe('auth/twoFactorConfig', null, 'json');
         if (!j.ok)
             return;
@@ -213,6 +214,14 @@ function registerControlLan() {
             "ctrl.dl.failedStart": "시작 실패",
             "ctrl.dl.serverError": "서버 오류: {0}",
             "ctrl.dl.serverUnavailable": "서버 응답 없음 - 서버가 제외된 버전일 수 있습니다. 서버 상태를 확인하세요",
+            "ctrl.optionHelp": "Help",
+            "ctrl.scF1": "File ↔ Info (오른쪽 사이드바)",
+            "ctrl.scF2": "파일 검색",
+            "ctrl.scF3": "새 터미널",
+            "ctrl.scF4": "사이드바 포커스/토글",
+            "ctrl.scF6": "터미널 SUPER + 입력 포커스",
+            "ctrl.scF7": "터미널 Log 패널",
+            "ctrl.scUpDown": "세션 목록 (사이드바 열림)",
         }
     });
 }
@@ -2289,16 +2298,7 @@ async function rdpSendRemoteGuide(webRootUrl, token) {
     }
 }
 async function rdpCheckRemoteAuth(webRootUrl) {
-    const token = getAuthToken(webRootUrl);
-    if (!token)
-        return false;
-    try {
-        const j = await CFecth.Exe(webRootUrl + "auth/check", { token }, "json");
-        return !!j?.authed;
-    }
-    catch {
-        return false;
-    }
+    return checkAuthed(webRootUrl);
 }
 let localAuthSettled = false;
 let localAuthOk = false;
@@ -4123,10 +4123,10 @@ function tmuxBuildLeafToolbar(paneId) {
     toolbar.className = 'tmux-leaf-toolbar';
     const canMerge = !!tmuxFindParent(tmuxRoot, paneId)?.parent;
     toolbar.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-h" data-CLan-title="ctrl.tmux.splitH" title="좌우 분할"><i class="bi bi-layout-split"></i></button>
-        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-v" data-CLan-title="ctrl.tmux.splitV" title="상하 분할"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
-        ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-merge" data-CLan-title="ctrl.tmux.merge" title="병합"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
-        <button type="button" class="btn btn-sm btn-outline-primary tmux-pane-select" data-CLan-title="ctrl.tmux.select" title="콘텐츠 선택"><i class="bi bi-card-list"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-h" data-CLan-title="ctrl.tmux.splitH" title="Split horizontal"><i class="bi bi-layout-split"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-v" data-CLan-title="ctrl.tmux.splitV" title="Split vertical"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
+        ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-merge" data-CLan-title="ctrl.tmux.merge" title="Merge"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
+        <button type="button" class="btn btn-sm btn-outline-primary tmux-pane-select" data-CLan-title="ctrl.tmux.select" title="Select content"><i class="bi bi-card-list"></i></button>
     `;
     toolbar.querySelector('.tmux-pane-split-h').addEventListener('click', () => tmuxSplitPane(paneId, 'row'));
     toolbar.querySelector('.tmux-pane-split-v').addEventListener('click', () => tmuxSplitPane(paneId, 'col'));
@@ -4154,7 +4154,7 @@ function tmuxBuildEl(pane) {
     if (!pane.contentKey) {
         const empty = document.createElement('div');
         empty.className = 'tmux-leaf-empty';
-        empty.textContent = L('ctrl.tmux.emptyPane', '설정 모드에서 셀렉트로 콘텐츠를 선택하세요');
+        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — Select content in Config mode');
         content.appendChild(empty);
     }
     else {
@@ -4249,11 +4249,11 @@ function tmuxOpenSelectModal(paneId) {
             ${g.items.length ? g.items.map(it => `<button type="button" class="btn btn-sm btn-outline-secondary d-block w-100 text-start mb-1 tmux-select-item" data-key="${aiEscapeHtml(it.key)}">
                 <span class="d-block text-truncate">${aiEscapeHtml(it.label)}</span>
                 ${it.sub ? `<span class="d-block text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(it.sub)}</span>` : ''}
-            </button>`).join('') : `<div class="small text-secondary fst-italic">${L('ctrl.tmux.noSessions', '없음')}</div>`}
+            </button>`).join('') : `<div class="small text-secondary fst-italic">${L('ctrl.tmux.noSessions', 'None')}</div>`}
         </div>`).join('') +
-        `<button type="button" class="btn btn-sm btn-outline-danger w-100 mt-1" id="tmux-select-clear">${L('ctrl.tmux.clearPane', '비우기')}</button>`;
+        `<button type="button" class="btn btn-sm btn-outline-danger w-100 mt-1" id="tmux-select-clear">${L('ctrl.tmux.clearPane', 'Clear')}</button>`;
     const modal = new CModal();
-    modal.SetHeader(L('ctrl.tmux.select', '콘텐츠 선택'));
+    modal.SetHeader(L('ctrl.tmux.select', 'Select content'));
     modal.SetBody(bodyHtml);
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetSize(420, 480);
@@ -4283,7 +4283,7 @@ function tmuxSetPaneContent(paneId, key) {
         if (!key) {
             const empty = document.createElement('div');
             empty.className = 'tmux-leaf-empty';
-            empty.textContent = L('ctrl.tmux.emptyPane', '설정 모드에서 셀렉트로 콘텐츠를 선택하세요');
+            empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — Select content in Config mode');
             el.querySelector('.tmux-leaf-content').appendChild(empty);
         }
         else {
@@ -4327,8 +4327,8 @@ function tmuxApplyMaximize() {
         updateSidebarMode();
     }
     tmuxMaximizeBtn.innerHTML = tmuxMaximized
-        ? `<i class="bi bi-fullscreen-exit"></i> <span data-CLan="ctrl.tmux.minimize">최소</span>`
-        : `<i class="bi bi-arrows-fullscreen"></i> <span data-CLan="ctrl.tmux.maximize">최대</span>`;
+        ? `<i class="bi bi-fullscreen-exit"></i> <span data-CLan="ctrl.tmux.minimize">Minimize</span>`
+        : `<i class="bi bi-arrows-fullscreen"></i> <span data-CLan="ctrl.tmux.maximize">Maximize</span>`;
     applyLanIn(tmuxMaximizeBtn);
 }
 tmuxMaximizeBtn.addEventListener('click', () => {

@@ -1,10 +1,9 @@
 // Browser Session client — Playwright screenshot viewer
 // URL params: ?session=<sessionId>  [&readonly=1]
 
-import { CFecth } from "../../network/CFecth.js";
 import { CPath }  from "../../basic/CPath.js";
 import { CHash }  from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 
 const params     = new URLSearchParams(location.search);
@@ -154,22 +153,15 @@ async function tryLogin(pw: string) {
 }
 
 async function checkAuth() {
-    if (!authToken) {
-        showOverlay();
-        return;
-    }
-    try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/check', { token: authToken }, 'json') as any;
-        if (j.authed) {
-            hideOverlay();
-            boot();
-        } else {
-            authToken = '';
-            removeAuthToken(CPath.WebRootUrl());
-            showOverlay('Session expired. Please sign in again.');
-        }
-    } catch {
-        showOverlay('Server unreachable');
+    const hadToken = !!authToken;
+    const valid = await checkAuthed(CPath.WebRootUrl());
+    if (valid) {
+        authToken = getAuthToken(CPath.WebRootUrl());
+        hideOverlay();
+        boot();
+    } else {
+        authToken = '';
+        showOverlay(hadToken ? 'Session expired. Please sign in again.' : '');
     }
 }
 

@@ -1,18 +1,1 @@
-export class CFecth {
-    static Exe(_url, _data, _returnType = "text", _multi = false) {
-        if (_url[0] == "/")
-            _url = _url.substring(1, _url.length - 1);
-        return new Promise(function (resolve, reject) { });
-    }
-    static GetOSMData(_query, _bbox = "") {
-        return new Promise(function (resolve, reject) { });
-    }
-    static GetNaturalEarthData(_category, _scale = "110m") {
-        return new Promise(function (resolve, reject) { });
-    }
-    static GetGADMData(_countryCode, _level = 0) {
-        return new Promise(function (resolve, reject) { });
-    }
-}
-import CFecth_imple from "../network_imple/CFecth.js";
-CFecth_imple();
+export class CFecth{static Exe(t,e,n="text",r=!1){return"/"==t[0]&&(t=t.substring(1,t.length-1)),new Promise(function(t,e){})}static GetOSMData(t,e=""){return new Promise(function(t,e){})}static GetNaturalEarthData(t,e="110m"){return new Promise(function(t,e){})}static GetGADMData(t,e=0){return new Promise(function(t,e){})}}import t from"../network_imple/CFecth.js";t();

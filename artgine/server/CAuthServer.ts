@@ -343,6 +343,7 @@ export class CAuthServer extends CServerRouter {
                             const r = await fetch(location.pathname + location.search, { method: 'POST' });
                             const j = await r.json().catch(() => ({ ok: false }));
                             document.getElementById('approveMsg').textContent = j.ok ? 'Approved. You can close this page.' : 'This approval link is invalid or expired.';
+                            if (j.ok) window.close();
                         };
                     </script>
                    </body></html>`

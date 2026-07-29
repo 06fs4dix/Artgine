@@ -34,10 +34,9 @@ const LS_PROVIDER = 'ai.provider';
 const LS_MODEL    = 'ai.model';
 // LS_SIDEBAR removed (sidebar moved to Home.ts)
 
-import { CFecth } from "../../network/CFecth.js";
 import { CPath } from "../../basic/CPath.js";
 import { CHash } from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
 import { CLan } from "../../basic/CLan.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 import { CStorage } from "../../system/CStorage.js";
@@ -687,24 +686,16 @@ async function init() {
         await initShareMode();
         return;
     }
-    if (!authToken) {
+    // verify cached token (or session cookie); if invalid, ask again
+    const valid = await checkAuthed(CPath.WebRootUrl());
+    if (valid) {
+        authToken = getAuthToken(CPath.WebRootUrl());
+        hideLoginOverlay();
+        hideComposerLogin();
+        bootChat();
+    } else {
+        authToken = '';
         showLoginOverlay();
-        return;
-    }
-    // verify cached token; if invalid, ask again
-    try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/check", { token: authToken }, "json") as any;
-        if (j.authed) {
-            hideLoginOverlay();
-            hideComposerLogin();
-            bootChat();
-        } else {
-            authToken = '';
-            removeAuthToken(CPath.WebRootUrl());
-            showLoginOverlay();
-        }
-    } catch {
-        showLoginOverlay('Server unreachable');
     }
 }
 // 모바일 키보드 대응: visual viewport 크기가 바뀔 때 body 높이를 실시간 맞춤

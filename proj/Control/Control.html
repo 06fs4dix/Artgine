@@ -158,13 +158,16 @@ body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleB
 .tmux-leaf{position:relative;width:100%;height:100%;overflow:hidden;background-color:var(--bs-tertiary-bg);}
 .tmux-leaf-content{position:absolute;inset:0;}
 .tmux-leaf-content iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
-.tmux-leaf-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--bs-secondary-color);font-size:0.85rem;text-align:center;padding:0.5rem;}
-/* 설정 모드에서만 각 칸 중앙에 분할/병합/셀렉트 버튼 묶음을 띄운다(칸을 고르는 별도 선택 단계 없이
-   버튼이 곧 그 칸의 조작 대상이다). 오버레이 배경은 살짝 어둡게 해 대상 iframe과 구분한다. */
-.tmux-leaf-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background-color:rgba(0,0,0,0.06);}
+/* 빈 칸 안내 문구. 설정 모드 툴바가 상단에 있으므로 padding-top으로 겹침을 피한다. */
+.tmux-leaf-empty{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;color:var(--bs-secondary-color);font-size:0.85rem;text-align:center;padding:0.5rem;padding-top:2.5rem;}
+/* 설정 모드에서만 각 칸 상단에 분할/병합/셀렉트 버튼 묶음을 띄운다(칸을 고르는 별도 선택 단계 없이
+   버튼이 곧 그 칸의 조작 대상이다). 중앙에 두면 빈 칸 안내 문구(.tmux-leaf-empty)와 겹쳐
+   글자가 가려지므로 상단 배치. padding-right는 우상단 ⋯ 메뉴와 겹치지 않게. 오버레이 자체는
+   pointer-events:none, 툴바만 auto로 받아 빈 영역 클릭이 막히지 않게 한다. */
+.tmux-leaf-overlay{position:absolute;inset:0;display:none;align-items:flex-start;justify-content:center;padding-top:0.45rem;padding-right:2.4rem;background-color:rgba(0,0,0,0.06);pointer-events:none;z-index:2;}
 #tmux-tree-root.tmux-config-mode .tmux-leaf-overlay{display:flex;}
 #tmux-tree-root.tmux-config-mode .tmux-leaf{outline:1px dashed var(--bs-border-color);outline-offset:-1px;}
-.tmux-leaf-toolbar{display:flex;gap:0.25rem;background-color:var(--bs-body-bg);padding:0.3rem;border-radius:0.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.35);}
+.tmux-leaf-toolbar{display:flex;gap:0.25rem;background-color:var(--bs-body-bg);padding:0.3rem;border-radius:0.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.35);pointer-events:auto;}
 .log-body-text p:last-child{margin-bottom:0;}
 .log-body-text pre{background:var(--bs-tertiary-bg);padding:.5rem;border-radius:.25rem;overflow-x:auto;}
 .log-body-text code{font-family:var(--bs-font-monospace);font-size:.875em;}
@@ -378,7 +381,7 @@ body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleB
                 </div>
             </div>
             <div class="mb-2">
-                <input type="text" id="logSearchInput" class="form-control form-control-sm" placeholder="검색 후 Enter">
+                <input type="text" id="logSearchInput" class="form-control form-control-sm" data-CLan="ctrl.ph.logSearch" placeholder="Search, then press Enter">
             </div>
             <div id="logAccordionList" class="d-flex flex-column gap-1"></div>
             <div class="d-flex justify-content-center mt-2">
@@ -393,19 +396,19 @@ body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleB
     <div class="tab-pane h-100 position-relative" id="tmux-panel" role="tabpanel" aria-labelledby="tmux-tab">
         <div id="tmux-tree-root" class="position-absolute" style="inset:0;"></div>
         <!-- 아이콘만 있는 작은 드롭다운 버튼: 최대/최소 토글 + 작업/설정 모드 전환 + 종료. -->
-        <div class="dropdown position-absolute" style="top:0.4rem;right:0.4rem;z-index:5;">
+        <div class="dropdown position-absolute" style="top:0.4rem;right:0.4rem;z-index:20;">
             <button id="tmux-menu-btn" type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="dropdown" aria-expanded="false" data-CLan-title="ctrl.tmux.menu" title="Multiplexer Menu">
                 <i class="bi bi-three-dots"></i>
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="tmux-menu-btn">
-                <!-- 최대: 사이드바 숨김 + 폭 전체(탭 바는 보임, 지금까지의 기본 동작). 최소: 사이드바가 보이는 일반 센터 레이아웃.
-                     아이콘/텍스트는 Control.ts의 tmuxApplyMaximize()가 현재 상태에 따라 "전환할 대상"으로 바꿔 넣는다. -->
-                <li><button id="tmux-maximize-btn" type="button" class="dropdown-item"><i class="bi bi-fullscreen-exit"></i> <span data-CLan="ctrl.tmux.minimize">최소</span></button></li>
+                <!-- Maximize: hide sidebars + full width (tab bar stays). Minimize: normal center with sidebars.
+                     Icon/text show the target state via tmuxApplyMaximize() in Control.ts. -->
+                <li><button id="tmux-maximize-btn" type="button" class="dropdown-item"><i class="bi bi-fullscreen-exit"></i> <span data-CLan="ctrl.tmux.minimize">Minimize</span></button></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><button id="tmux-mode-work-btn" type="button" class="dropdown-item"><i class="bi bi-play-fill"></i> <span data-CLan="ctrl.tmux.work">작업</span></button></li>
-                <li><button id="tmux-mode-config-btn" type="button" class="dropdown-item"><i class="bi bi-sliders"></i> <span data-CLan="ctrl.tmux.config">설정</span></button></li>
+                <li><button id="tmux-mode-work-btn" type="button" class="dropdown-item"><i class="bi bi-play-fill"></i> <span data-CLan="ctrl.tmux.work">Work</span></button></li>
+                <li><button id="tmux-mode-config-btn" type="button" class="dropdown-item"><i class="bi bi-sliders"></i> <span data-CLan="ctrl.tmux.config">Config</span></button></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><button id="tmux-close-btn" type="button" class="dropdown-item"><i class="bi bi-box-arrow-right"></i> <span data-CLan="ctrl.tmux.close">종료</span></button></li>
+                <li><button id="tmux-close-btn" type="button" class="dropdown-item"><i class="bi bi-box-arrow-right"></i> <span data-CLan="ctrl.tmux.close">Close</span></button></li>
             </ul>
         </div>
     </div>
@@ -521,6 +524,18 @@ body.tmux-fullscreen #sidebarToggleBtnWrap, body.tmux-fullscreen #sidebarToggleB
                     </div>
                     <!-- 등록된 서브 에이전트 목록. Control.ts의 agentRefresh()가 채운다(생성은 위 New 버튼, 편집은 항목 클릭 → 모달). -->
                     <div id="agentList" class="d-flex flex-column gap-1"></div>
+                    <hr class="my-3">
+                    <!-- 단축키 Help (상세 설명은 More → Help / artgine-agent Getting Started 단축키 목록과 동일) -->
+                    <h6 class="text-secondary mb-2"><i class="bi bi-keyboard"></i> <span data-CLan="ctrl.optionHelp">Help</span></h6>
+                    <div class="small text-secondary" style="font-size:0.78rem; line-height:1.45;">
+                        <div class="mb-1"><kbd class="small">F1</kbd> <span data-CLan="ctrl.scF1">File ↔ Info (right sidebar)</span></div>
+                        <div class="mb-1"><kbd class="small">F2</kbd> <span data-CLan="ctrl.scF2">File Search</span></div>
+                        <div class="mb-1"><kbd class="small">F3</kbd> <span data-CLan="ctrl.scF3">New Terminal</span></div>
+                        <div class="mb-1"><kbd class="small">F4</kbd> <span data-CLan="ctrl.scF4">Focus/toggle sidebar</span></div>
+                        <div class="mb-1"><kbd class="small">F6</kbd> <span data-CLan="ctrl.scF6">Terminal SUPER + input focus</span></div>
+                        <div class="mb-1"><kbd class="small">F7</kbd> <span data-CLan="ctrl.scF7">Terminal Log panel</span></div>
+                        <div class="mb-0"><kbd class="small">↑</kbd>/<kbd class="small">↓</kbd> <span data-CLan="ctrl.scUpDown">Session list (sidebar open)</span></div>
+                    </div>
                 </div>
             </div>
         </div>

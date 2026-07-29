@@ -4,7 +4,7 @@ import { CUtil } from "../../basic/CUtil.js";
 import { CUtilWeb, CSheetData } from "../../util/CUtilWeb.js";
 import { CPath } from "../../basic/CPath.js";
 import { CFecth } from "../../network/CFecth.js";
-import { getAuthToken } from "../CAuthToken.js";
+import { getAuthToken, checkAuthed } from "../CAuthToken.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 
 // path/url은 Control.ts가 file-opened 이벤트로 받은 값을 그대로 쿼리스트링에 실어 iframe src로 넘긴다.
@@ -30,12 +30,7 @@ let gToolbarBound = false;
 // 이 페이지가 로드된 origin(로컬/원격 서버 공통)의 admin 토큰이 이미 저장돼 있는지로 쓰기 가능 여부를 판단한다.
 // Home/Control 쪽에서 로그인하면 같은 origin의 localStorage 토큰을 공유하므로 여기서 별도 로그인 UI는 두지 않는다.
 async function canWrite(): Promise<boolean> {
-    const token = getAuthToken(CPath.WebRootUrl());
-    if (!token) return false;
-    try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/check', { token }, 'json') as any;
-        return !!j.authed;
-    } catch { return false; }
+    return checkAuthed(CPath.WebRootUrl());
 }
 
 // 수정/저장 상태를 부모(Control.ts)에 알린다. 부모는 이 신호로 사이드바 항목의 초록/노랑 점을 갱신한다.

@@ -67,6 +67,12 @@ export function removeAuthToken(origin: string): void {
 
 export interface IAuthLoginResult { ok: boolean; token?: string; msg?: string; pending2FA?: boolean; waitMs?: number; pollMs?: number; }
 
+// ---- 인증 상태 확인 (공용) ------------------------------------------------------------------
+// 저장된 토큰이 있으면 그 유효성을 검사하고, 없어도(같은 origin이면 세션 쿠키만으로) 서버에 확인한다.
+// 토큰이 있었는데 무효/만료로 판정되면 로컬 저장소에서 정리한다(호출부마다 반복하던 정리 로직을 여기 하나로 모음).
+// 여러 화면(File/Memo/Chat/Browser/RemoteDesktop/Editor)이 거의 동일한 "check + cleanup" 코드를
+// 각자 복사해 갖고 있던 것을 통합한 것 — 로그인 프롬프트 UI는 화면마다 달라 여기서 다루지 않는다.
+
 // CFecth를 쓰지 않는 이유: 이 모듈은 Terminal.html처럼 번들 없이 동적 import로 불러 쓰는 곳도 있어
 // 의존성을 늘리지 않는다. 또 폴링 중 403(만료)을 예외가 아니라 본문으로 읽어야 한다.
 async function postJson(url: string, body: unknown): Promise<any> {
@@ -99,4 +105,16 @@ export async function authLogin(webRootUrl: string, passwordHash: string, onPend
         if (w.ok === false) return { ok: false, msg: w.msg ?? '2FA approval timed out' };
     }
     return { ok: false, msg: '2FA approval timed out' };
+}
+
+export async function checkAuthed(webRootUrl: string): Promise<boolean> {
+    const base = webRootUrl.replace(/\/+$/, '') + '/';
+    const token = getAuthToken(webRootUrl);
+    try {
+        const j = await postJson(base + 'auth/check', token ? { token } : {}) as { authed?: boolean };
+        if (!j?.authed && token) removeAuthToken(webRootUrl);
+        return !!j?.authed;
+    } catch {
+        return false;
+    }
 }

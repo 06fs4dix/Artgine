@@ -6,7 +6,7 @@ import { CFecth } from "../../network/CFecth.js";
 import { CPath } from "../../basic/CPath.js";
 import { CStorage } from "../../system/CStorage.js";
 import { CUtilWeb } from "../../util/CUtilWeb.js";
-import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
 import { CFileViewer, CMDViewer, CSheetViewer, CModalMusic, CORMViewer } from "../../util/CModalUtil.js";
 import { CAuthInfo } from "../../network/CAuthInfo.js";
 import { CIframeMsg } from "./CIframeMsg.js";
@@ -580,27 +580,14 @@ function SyncFileRoot(data: {RootPath?: string | null, RootUrl?: string | null, 
     if (data.roots) gRoots=data.roots;
 }
 
-async function fileCheckAuth(): Promise<boolean> {
-    const token = GetFileToken();
-    if (!token) return false;
-    try {
-        const j = await CFecth.Exe(FileApiUrl("auth/check"), { token }, "json") as any;
-        return !!j?.authed;
-    } catch { return false; }
-}
-
 async function refreshFileAuthState() {
     const checkedWebRootUrl = g_fileWebRootUrl;
-    const hasToken = !!GetFileToken();
-    fileAuthed = hasToken;
     applyFileAuthIndicator(false);
-    if (!hasToken) return;
-    const valid = await fileCheckAuth();
-    if (!valid) removeAuthToken(checkedWebRootUrl);
+    const valid = await checkAuthed(checkedWebRootUrl);
     if (checkedWebRootUrl !== g_fileWebRootUrl) return;
     setFileAuthed(valid);
     // RDP 사이드바에서 원격 서버로 전환해 인증이 확인된 시점에 가이드를 갱신한다(로컬 자기 자신은 대상이 아님).
-    if (valid && checkedWebRootUrl !== CPath.WebRootUrl()) SendRemoteGuide(GetFileToken());
+    if (valid && GetFileToken() && checkedWebRootUrl !== CPath.WebRootUrl()) SendRemoteGuide(GetFileToken());
 }
 
 async function InitFileRoot() {
@@ -780,16 +767,14 @@ CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
 }
 
 async function FileBtn() {
-    if (fileAuthed) {
-        // 서버 토큰 유효성 검증 (서버 재시작 시 메모리 토큰 초기화됨)
-        const valid = await fileCheckAuth();
-        if (valid) {
-            setFileAuthed(true);
-            showFileAdminModal();
-            return;
-        }
-        // 토큰 만료/무효 → 재인증 필요
-        setFileAuthed(false);
+    // fileAuthed 캐시값과 무관하게 항상 서버에 새로 물어본다: 이 iframe이 Control 로그인보다
+    // 먼저 로드돼 fileAuthed가 false로 굳어 있을 수 있고(Control은 로그인 성공을 iframe에
+    // 알려주지 않음), 세션 만료 후 재로그인한 경우도 마찬가지라 캐시만으로는 신뢰할 수 없다.
+    const valid = await checkAuthed(g_fileWebRootUrl);
+    setFileAuthed(valid);
+    if (valid) {
+        showFileAdminModal();
+        return;
     }
     promptFileAuth();
 }

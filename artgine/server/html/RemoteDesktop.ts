@@ -3,10 +3,9 @@
 // 원격 서버를 보려면 이 페이지 자체를 그 서버 주소로 iframe에 로드하면 되므로
 // 별도의 ?server= 파라미터나 cross-origin 처리가 필요 없다(Home.ts 쪽에서 처리).
 
-import { CFecth } from "../../network/CFecth.js";
 import { CPath }  from "../../basic/CPath.js";
 import { CHash }  from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken, authLogin } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 
 let authToken: string = getAuthToken(CPath.WebRootUrl());
@@ -123,22 +122,15 @@ async function tryLogin(pw: string) {
 }
 
 async function checkAuth() {
-    if (!authToken) {
-        showOverlay();
-        return;
-    }
-    try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/check', { token: authToken }, 'json') as any;
-        if (j.authed) {
-            hideOverlay();
-            boot();
-        } else {
-            authToken = '';
-            removeAuthToken(CPath.WebRootUrl());
-            showOverlay('Session expired. Please sign in again.');
-        }
-    } catch {
-        showOverlay('Server unreachable');
+    const hadToken = !!authToken;
+    const valid = await checkAuthed(CPath.WebRootUrl());
+    if (valid) {
+        authToken = getAuthToken(CPath.WebRootUrl());
+        hideOverlay();
+        boot();
+    } else {
+        authToken = '';
+        showOverlay(hadToken ? 'Session expired. Please sign in again.' : '');
     }
 }
 

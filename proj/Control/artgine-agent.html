@@ -21,9 +21,40 @@
   /* 화면 레이아웃 4영역 카드 → 해당 상세 섹션으로 스크롤 */
   .d-layout-nav { cursor: pointer; user-select: none; }
   .d-layout-nav:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
-  #d-section-top, #d-section-left, #d-section-center, #d-section-right {
+  #d-section-top, #d-section-left, #d-section-center, #d-section-right,
+  #d-opt-twofactor, #d-center-term, #d-center-messenger, #gsPasswordAccordion,
+  #dTopAccFile, #dTopAccTmuxTop, #dTopAccMore, #dTopAccSearch, #dTopAccMemo,
+  #dTopAccRdp, #dTopAccChat, #dTopAccTerm, #dTopAccBrowser, #dTopAccTeam,
+  #dTopAccDownload, #dTopAccLog, #dTopAccMessenger, #dTopAccHelp {
     scroll-margin-top: 72px; /* sticky 탭 바에 가리지 않도록 */
   }
+  .d-toc {
+    background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+    padding: 1rem 1.2rem 1.15rem; margin-bottom: 2.5rem;
+  }
+  .d-toc-heading { font-size: 1rem; font-weight: 700; margin: 0 0 .65rem; color: #c9d1d9; }
+  .d-toc-tree, .d-toc-tree ul { list-style: none; margin: 0; padding: 0; }
+  .d-toc-tree > li { margin: .45rem 0; }
+  .d-toc-tree ul {
+    margin: .25rem 0 .15rem .55rem; padding-left: 1rem;
+    border-left: 1px solid #30363d;
+  }
+  .d-toc-tree ul li { margin: .18rem 0; }
+  .d-toc-tree ul ul { margin-left: .45rem; }
+  .d-toc-branch {
+    display: inline-block; font-weight: 700; font-size: .92rem; color: #c9d1d9;
+    cursor: pointer; border: 0; background: none; padding: 0; text-align: left;
+  }
+  .d-toc-branch:hover { color: #58a6ff; }
+  .d-toc-tree a, a.d-goto {
+    color: #58a6ff; text-decoration: none; font-size: .88rem; cursor: pointer;
+  }
+  .d-toc-tree a:hover, a.d-goto:hover { color: #79b8ff; text-decoration: underline; }
+  .faq-see {
+    margin-top: .65rem; padding-top: .55rem; border-top: 1px solid #21262d;
+    font-size: .88rem; color: #8b949e;
+  }
+  .faq-see .d-goto { font-weight: 600; }
   .tab-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .7rem; border-radius: 20px; font-size: .82rem; font-weight: 600; }
   .tab-rdp { background: #1a2332; color: #58a6ff; }
   .tab-files { background: #1a2e1f; color: #3fb950; }
@@ -42,8 +73,10 @@
 
   /* ── Main Tabs ── */
   .main-tab-bar { position: sticky; top: 0; z-index: 40; background: #0d1117; border-bottom: 1px solid #30363d; }
-  .main-tabs { border-bottom: 0; gap: .25rem; padding: 0 1rem; flex-wrap: wrap; justify-content: center; }
-  .main-tabs .nav-link { color: #8b949e; border: 1px solid transparent; border-radius: 8px 8px 0 0; padding: .8rem 1.4rem; font-weight: 600; display: flex; align-items: center; gap: .5rem; }
+  /* 4탭이 한 줄에 들어가도록: 아이콘 없음 + nowrap + 여백 축소 (좁은 화면은 가로 스크롤) */
+  .main-tabs { border-bottom: 0; gap: .15rem; padding: 0 .5rem; flex-wrap: nowrap; justify-content: center; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .main-tabs .nav-item { flex: 0 0 auto; }
+  .main-tabs .nav-link { color: #8b949e; border: 1px solid transparent; border-radius: 8px 8px 0 0; padding: .7rem 1rem; font-weight: 600; white-space: nowrap; font-size: .95rem; }
   .main-tabs .nav-link:hover { color: #c9d1d9; }
   .main-tabs .nav-link.active { color: #58a6ff; background: #161b22; border-color: #30363d; border-bottom-color: #161b22; }
   .step-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem; height: 100%; }
@@ -523,8 +556,32 @@
     .mock-rdp-controls { flex-wrap: wrap; }
     .mock-browser-page { grid-template-columns: 1fr; }
     .mock-browser-side { display: none; }
-    .main-tabs .nav-link { padding: .65rem .9rem; font-size: .9rem; }
+    .main-tabs .nav-link { padding: .55rem .75rem; font-size: .88rem; }
   }
+
+  /* ── FAQ / QnA tab ── */
+  .faq-search-wrap { max-width: 720px; margin: 0 auto 1.75rem; position: relative; }
+  .faq-search-wrap .bi-search { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6e7681; pointer-events: none; }
+  .faq-search-input {
+    width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 10px;
+    color: #c9d1d9; padding: .75rem 1rem .75rem 2.5rem; font-size: 1rem;
+  }
+  .faq-search-input:focus { outline: none; border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88,166,255,.15); }
+  .faq-search-input::placeholder { color: #6e7681; }
+  .faq-meta { max-width: 720px; margin: 0 auto .75rem; font-size: .85rem; color: #6e7681; }
+  .faq-list { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: .85rem; }
+  .faq-item {
+    background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.1rem 1.25rem;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .faq-item:hover { border-color: #58a6ff; box-shadow: 0 6px 18px rgba(88,166,255,.1); }
+  .faq-item.faq-hidden { display: none; }
+  .faq-item-head { display: flex; align-items: flex-start; gap: .65rem; margin-bottom: .55rem; }
+  .faq-item-head .faq-ico { font-size: 1.25rem; line-height: 1.4; flex: 0 0 auto; }
+  .faq-item-title { font-size: 1.05rem; font-weight: 700; color: #c9d1d9; margin: 0; }
+  .faq-item-body { color: #8b949e; font-size: .9rem; line-height: 1.55; }
+  .faq-item-body ul { margin-bottom: 0; }
+  .faq-empty { max-width: 720px; margin: 2rem auto 0; text-align: center; color: #6e7681; }
 </style>
 </head>
 <body>
@@ -544,17 +601,22 @@
   <ul class="nav main-tabs" id="mainTabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="tab-btn-promo" data-bs-toggle="tab" data-bs-target="#tab-promo" type="button" role="tab" aria-controls="tab-promo" aria-selected="true">
-        <i class="bi bi-megaphone-fill"></i> <span data-CLan="tabPromo">Promotion</span>
+        <span data-CLan="tabPromo">Promotion</span>
       </button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="tab-btn-install" data-bs-toggle="tab" data-bs-target="#tab-install" type="button" role="tab" aria-controls="tab-install" aria-selected="false">
-        <i class="bi bi-download"></i> <span data-CLan="tabInstall">Getting Started</span>
+        <span data-CLan="tabInstall">Getting Started</span>
       </button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="tab-btn-detail" data-bs-toggle="tab" data-bs-target="#tab-detail" type="button" role="tab" aria-controls="tab-detail" aria-selected="false">
-        <i class="bi bi-book"></i> <span data-CLan="tabDetail">Guide</span>
+        <span data-CLan="tabDetail">Guide</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-btn-faq" data-bs-toggle="tab" data-bs-target="#tab-faq" type="button" role="tab" aria-controls="tab-faq" aria-selected="false">
+        <span data-CLan="tabFaq">FAQ</span>
       </button>
     </li>
   </ul>
@@ -665,7 +727,7 @@
         <div class="feature-card p-4 h-100">
           <i class="bi bi-chat-dots-fill fs-2" style="color:#58a6ff;"></i>
           <h5 class="mt-3" data-CLan="fMessengerTitle">Messenger</h5>
-          <p class="text-muted mb-0 small" data-CLan="fMessengerDesc">Register Telegram or Discord bots, share a join link, link a Terminal session, send direct messages, and watch the conversation log in the Messenger panel (More → Messenger).</p>
+          <p class="text-muted mb-0 small" data-CLan="fMessengerDesc">Telegram/Discord: create a bot and paste its token. Email: first save SMTP+IMAP on the server (Email button), then register the peer address that may reply. Link a Terminal, chat, and use the same sessions for 2FA (More → Messenger).</p>
         </div>
       </div>
     </div>
@@ -805,7 +867,7 @@
             <span class="text-muted small" data-CLan="ucTag12">Messenger + Terminal</span>
           </div>
           <div class="uc-msg mb-3" data-CLan="ucMsg12">Link Telegram to my coding terminal so I can ask the agent from my phone</div>
-          <p class="text-muted small mb-0" data-CLan="ucDesc12">Register a Telegram or Discord bot under More → Messenger, open the join link, then Link an open Terminal session. Chat from the messenger goes to that PTY; replies and Control direct messages show up in the live log.</p>
+          <p class="text-muted small mb-0" data-CLan="ucDesc12">Under More → Messenger: Telegram/Discord — create a bot, paste the token, open the join/invite link; Email — configure SMTP+IMAP (Email button), then register the peer address. Link an open Terminal so chat goes to that PTY; replies and Control direct messages show in the live log. Step-by-step: FAQ tab.</p>
         </div>
       </div>
 
@@ -951,14 +1013,15 @@
       <div data-key="dMoreTeam" data-CLan="dMoreTeam"><strong>Team (new).</strong> Opens the New Team dialog — pick sub agents and a goal; the main terminal shows up in the Terminal panel (Agent list).</div>
       <div data-key="dMoreDownload" data-CLan="dMoreDownload"><strong>Download.</strong> Opens the download tool: yt-dlp/ffmpeg status, paste a YouTube or direct file URL, pick MP3/MP4/Direct, then Start Download and watch job progress.</div>
       <div data-key="dMoreLog" data-CLan="dMoreLog"><strong>Log.</strong> Opens a tab listing past provider (CLI) conversation logs as an accordion, with refresh/delete controls.</div>
-      <div data-key="dMoreMessenger" data-CLan="dMoreMessenger"><strong>Messenger.</strong> Register Telegram/Discord bot tokens, copy the join link, link/unlink a Terminal session, send direct messages, and poll the chat log (accordion per bot).</div>
-      <div data-key="dMoreHelp" data-CLan="dMoreHelp"><strong>Help.</strong> Opens this guide (Promo / Getting Started / Guide) in the center — same as the default first-open panel.</div>
+      <div data-key="dMoreMessenger" data-CLan="dMoreMessenger"><strong>Messenger.</strong> Center panel (no dialog). Paste bot token or peer email → Register; Email button for SMTP/IMAP first. Full Telegram/Discord/Email steps: Guide → Center → Messenger.</div>
+      <div data-key="dMoreHelp" data-CLan="dMoreHelp"><strong>Help.</strong> Opens this guide (Promo / Getting Started / Guide / FAQ) in the center — same as the default first-open panel.</div>
       <div data-key="dMoreTmux" data-CLan="dMoreTmux"><strong>Multiplexer (top tab).</strong> Split the center into a grid of panes (like tmux) and show several sessions at once — Chat, Terminal, Browser, RDP. Config mode: split/merge/select content per pane. Work mode: interact with the iframes. Menu: maximize, work/config, close.</div>
       <div data-key="dRInfo" data-CLan="dRInfo"><strong>Right sidebar · Info.</strong> Provider Status shows Node.js and each AI provider with install/auth state, version, and remaining usage (5h / Weekly). Below that, completed Chat/Terminal notifications are listed.</div>
       <div data-key="dRFile" data-CLan="dRFile"><strong>Right sidebar · File.</strong> A lightweight file browser separate from the full File tab — navigate folders and open a file straight into the Editor tab.</div>
-      <div data-key="dROption" data-CLan="dROption"><strong>Right sidebar · Option.</strong> Theme, local model registration, database viewers, history cleanup, Schedule, Sub Agent, and the shortcut list — click the list items on the right to learn about each.</div>
+      <div data-key="dROption" data-CLan="dROption"><strong>Right sidebar · Option.</strong> Theme, local model registration, Two-Factor Auth, database viewers, history cleanup, Schedule, Sub Agent, and the shortcut list — click the list items on the right to learn about each.</div>
       <div data-key="dOTheme" data-CLan="dOTheme"><strong>Theme.</strong> Switches the whole app between Light and Dark.</div>
       <div data-key="dOLocalModel" data-CLan="dOLocalModel"><strong>Add OpenCode Model / Status.</strong> Registers a local Ollama/LM Studio server and checks its connection status.</div>
+      <div data-key="dOTwoFactor" data-CLan="dOTwoFactor"><strong>Two-Factor Auth.</strong> Pick a Messenger bot session so login requires messenger approval (or choose Disabled). Local-server setting; change saves immediately. Messenger sessions must be registered under More → Messenger first.</div>
       <div data-key="dODatabase" data-CLan="dODatabase"><strong>Database.</strong> SQLite viewer and a generic DB (MySQL/MSSQL/SQLite) viewer for browsing local data files.</div>
       <div data-key="dODeleteHistory" data-CLan="dODeleteHistory"><strong>Delete history.</strong> Bulk-deletes old AI conversation logs older than the given number of months.</div>
       <div data-key="dOSchedule" data-CLan="dOSchedule"><strong>Schedule.</strong> Create Interval or Time jobs for a Sub Agent (work orders). Interval: delay/count/start/end + auto-delete when count ends. Time: days of week + hour:minute + optional run-once-then-delete. List below: click to edit, trash to delete.</div>
@@ -1053,6 +1116,14 @@
           </div>
         </div>
         <hr class="ctrlmock-opt-hr">
+        <div class="ctrlmock-opt-block" data-group="opt" tabindex="0" role="button" data-explain="dOTwoFactor">
+          <div class="ctrlmock-optlabel h6like mb-1"><i class="bi bi-shield-lock"></i> Two-Factor Auth</div>
+          <select class="ctrlmock-select-mini" disabled>
+            <option>Disabled</option>
+            <option selected>telegram - ArtgineBot</option>
+          </select>
+        </div>
+        <hr class="ctrlmock-opt-hr">
         <div class="ctrlmock-opt-block" data-group="opt" tabindex="0" role="button" data-explain="dODatabase">
           <div class="ctrlmock-optrow">
             <span class="ctrlmock-optlabel h6like"><i class="bi bi-database"></i> Database</span>
@@ -1093,6 +1164,22 @@
             <div class="ctrlmock-opt-list-item"><i class="bi bi-person-badge"></i> writer <small>codex · 88</small></div>
           </div>
         </div>
+        <hr class="ctrlmock-opt-hr">
+        <!-- Option → Help (단축키 요약). 상세 목록은 Getting Started 탭 Keyboard Shortcuts와 동일 -->
+        <div class="ctrlmock-opt-block" data-group="opt" tabindex="0" role="button" data-explain="dOShortcuts">
+          <div class="ctrlmock-optlabel h6like mb-1"><i class="bi bi-keyboard"></i> Help</div>
+          <div class="ctrlmock-opt-help">
+            <div class="help-title" data-CLan="optKbGlobal">Global shortcuts</div>
+            <ul>
+              <li><kbd>F1</kbd> File ↔ Info</li>
+              <li><kbd>F2</kbd> File Search</li>
+              <li><kbd>F3</kbd> New Terminal</li>
+              <li><kbd>F4</kbd> Sidebar</li>
+              <li><kbd>F6</kbd> SUPER / focus</li>
+              <li><kbd>F7</kbd> Terminal Log</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1105,7 +1192,7 @@
         <div class="d-flex flex-column align-items-center justify-content-center text-center gap-2" style="min-height:300px;">
           <i class="bi bi-question-circle" style="font-size:2rem;color:#58a6ff;"></i>
           <div class="fw-semibold" data-CLan="helpCenterTitle">Help (this guide)</div>
-          <span class="text-secondary small" data-CLan="helpCenterDesc">Default landing panel. Promo / Install / Detail tabs explain layout, shortcuts, and each Control feature.</span>
+          <span class="text-secondary small" data-CLan="helpCenterDesc">Default landing panel. Promo / Getting Started / Guide / FAQ tabs explain layout, shortcuts, and essential how-tos.</span>
         </div>
       </div>
       <div data-key="rdp-local">
@@ -1473,13 +1560,14 @@
           <button type="button" class="btn btn-sm btn-outline-secondary" disabled data-CLan="logLoadMore">Load more</button>
         </div>
       </div>
-      <!-- Messenger: 봇 등록 + 세션 아코디언 (Messenger/MessengerTab.ts) -->
+      <!-- Messenger: 봇/이메일 등록 + 세션 아코디언 (Messenger/MessengerTab.ts) -->
       <div data-key="messenger">
         <div class="d-flex flex-column gap-2" style="min-height:280px;">
-          <div class="d-flex align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="fw-semibold small text-nowrap"><i class="bi bi-chat-dots-fill"></i> Messenger</span>
-            <input type="text" class="form-control form-control-sm" placeholder="Paste bot token to register (Telegram / Discord)" disabled>
+            <input type="text" class="form-control form-control-sm" style="min-width:12rem;flex:1;" placeholder="Paste bot token or peer email (Telegram / Discord / Email)" disabled>
             <button type="button" class="btn btn-sm btn-primary text-nowrap" disabled data-CLan="msgRegister">Register</button>
+            <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" disabled><i class="bi bi-envelope-plus"></i> Email</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
           </div>
           <div class="border rounded p-2 bg-body-tertiary">
@@ -1774,6 +1862,7 @@
               <li>Windows — <code class="cmd">start.bat</code></li>
               <li>Linux / macOS — <code class="cmd">./start.sh</code></li>
               <li>Web server only — <code class="cmd">npm run start_web [port]</code> (omit the port to use the one from <code class="cmd">settings.json</code>)</li>
+              <li>App (Electron) — <code class="cmd">npm run start_local</code></li>
             </ul>
             <div class="mb-0">Requires Node.js and Git.</div>
           </div>
@@ -1870,7 +1959,7 @@
           <div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-download me-1" style="color:#3fb950;"></i> Install &amp; run</div>
           <ul class="mb-0 ps-3">
             <li><code class="cmd">git clone</code> · <code class="cmd">npm install</code> · <code class="cmd">start.bat</code> / <code class="cmd">start.sh</code></li>
-            <li><code class="cmd">npm start</code> — Electron GUI · <code class="cmd">npm run start_web [port]</code> — web only</li>
+            <li><code class="cmd">npm start</code> — Electron GUI · <code class="cmd">npm run start_web [port]</code> — web only · <code class="cmd">npm run start_local</code> — app (local)</li>
           </ul>
         </div>
         <div class="col-md-6">
@@ -2046,11 +2135,11 @@
       <div class="col-md-4">
         <div class="feature-card p-4 h-100">
           <h5 class="mb-2"><i class="bi bi-person-check" style="color:#d29922;"></i> <span data-CLan="providerAuthTitle">Auth &amp; subscription (you)</span></h5>
-          <p class="text-muted small mb-0" data-CLan="providerAuthDesc">Installation is automatic — <strong>login and subscription are not</strong>. Each provider needs its own account, plan, and sign-in (API key or browser login) done by you in that CLI. Until authenticated, Provider Status may show <em>Not Authenticated</em> and the agent cannot run real tasks. Complete auth in the Terminal session, then refresh Info if needed.</p>
+          <p class="text-muted small mb-0" data-CLan="providerAuthDesc">Installation is automatic — <strong>login and subscription are not</strong>. Link your <strong>personal account</strong> for each provider in advance (API key or browser login). Use the provider’s normal linking flow on its <strong>web site</strong> or inside a <strong>Terminal</strong> session — same as using the CLI alone. Until authenticated, Provider Status may show <em>Not Authenticated</em> and the agent cannot run real tasks. After auth, refresh Info if needed.</p>
         </div>
       </div>
     </div>
-    <p class="text-muted small text-center mt-3 mb-0" style="max-width:720px; margin-left:auto; margin-right:auto;" data-CLan="providerNote">Tip: open Terminal once per provider after install so auto-setup can finish, sign in when prompted, then confirm status under the right sidebar Info tab.</p>
+    <p class="text-muted small text-center mt-3 mb-0" style="max-width:720px; margin-left:auto; margin-right:auto;" data-CLan="providerNote">Tip: open Terminal once per provider so auto-install can finish, complete personal-account linking on the web or in Terminal when prompted, then confirm status under the right sidebar Info tab.</p>
 
     <!-- Keyboard Shortcuts — 비밀번호 안내 아래에 배치 -->
     <h2 class="section-title text-center mt-5" data-CLan="shortcutsTitle">Keyboard Shortcuts</h2>
@@ -2079,37 +2168,117 @@
 
     <!-- Layout overview -->
     <h3 class="mb-3" data-CLan="dLayoutHeading">Screen Layout</h3>
-    <p class="text-muted mb-4" data-CLan="dLayoutDesc">The screen is split into four areas: a top bar, a left sidebar, a center panel, and a right sidebar.</p>
-    <div class="row g-3 mb-5">
+    <p class="text-muted mb-3" data-CLan="dLayoutDesc">Four areas. Click a card or a TOC entry to jump.</p>
+    <div class="row g-3 mb-4">
       <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center d-layout-nav" role="button" tabindex="0" data-scroll-target="d-section-top" title="Scroll to Top Bar">
           <i class="bi bi-layout-text-window-reverse fs-3" style="color:#58a6ff;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutTopTitle">Top</h6>
-          <p class="text-muted small mb-0" data-CLan="dLayoutTopDesc">File and Multiplexer tabs, plus the More menu (Memo, Chat, Terminal, Messenger, Help, …).</p>
+          <p class="text-muted small mb-0" data-CLan="dLayoutTopDesc">File · Multiplexer · More</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center d-layout-nav" role="button" tabindex="0" data-scroll-target="d-section-left" title="Scroll to Left Sidebar">
           <i class="bi bi-layout-sidebar fs-3" style="color:#3fb950;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutLeftTitle">Left</h6>
-          <p class="text-muted small mb-0" data-CLan="dLayoutLeftDesc">RDP targets, then Agent / Other sessions (path groups vs flat list).</p>
+          <p class="text-muted small mb-0" data-CLan="dLayoutLeftDesc">RDP · Agent · Other</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center d-layout-nav" role="button" tabindex="0" data-scroll-target="d-section-center" title="Scroll to Center Panel">
           <i class="bi bi-square fs-3" style="color:#d2a8ff;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutCenterTitle">Center</h6>
-          <p class="text-muted small mb-0" data-CLan="dLayoutCenterDesc">Shows whichever tab or session you selected — RDP, File, Help, Terminal, Chat, Messenger, Multiplexer, and more.</p>
+          <p class="text-muted small mb-0" data-CLan="dLayoutCenterDesc">Active tab / session view</p>
         </div>
       </div>
       <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center d-layout-nav" role="button" tabindex="0" data-scroll-target="d-section-right" title="Scroll to Right Sidebar">
           <i class="bi bi-layout-sidebar-reverse fs-3" style="color:#d29922;"></i>
           <h6 class="mt-2 mb-1" data-CLan="dLayoutRightTitle">Right</h6>
-          <p class="text-muted small mb-0" data-CLan="dLayoutRightDesc">Info / File / Option sub-tabs.</p>
+          <p class="text-muted small mb-0" data-CLan="dLayoutRightDesc">Info · File · Option</p>
         </div>
       </div>
     </div>
+
+    <!-- Tree TOC -->
+    <nav class="d-toc" aria-label="Guide table of contents">
+      <div class="d-toc-heading" data-CLan="dTocHeading">Contents</div>
+      <ul class="d-toc-tree">
+        <li>
+          <button type="button" class="d-toc-branch d-goto" data-goto-tab="detail" data-goto-scroll="d-section-top" data-CLan="dLayoutTopTitle">Top</button>
+          <ul>
+            <li><a class="d-goto" href="#dTopAccFile" data-goto-tab="detail" data-goto-scroll="dTopAccFile" data-goto-collapse="dTopAccFile" data-CLan="dTopFileHeading">File</a></li>
+            <li><a class="d-goto" href="#dTopAccTmuxTop" data-goto-tab="detail" data-goto-scroll="dTopAccTmuxTop" data-goto-collapse="dTopAccTmuxTop" data-CLan="dTopTmuxTopHeading">Multiplexer</a></li>
+            <li>
+              <a class="d-goto" href="#dTopAccMore" data-goto-tab="detail" data-goto-scroll="dTopAccMore" data-goto-collapse="dTopAccMore" data-CLan="dTopMoreHeading">More</a>
+              <ul>
+                <li><a class="d-goto" href="#dTopAccSearch" data-goto-tab="detail" data-goto-scroll="dTopAccSearch" data-goto-collapse="dTopAccSearch" data-CLan="dTopSearchHeading">File Search (⋯ / F2)</a></li>
+                <li><a class="d-goto" href="#dTopAccMemo" data-goto-tab="detail" data-goto-scroll="dTopAccMemo" data-goto-collapse="dTopAccMemo" data-CLan="dTopMemoHeading">Memo</a></li>
+                <li><a class="d-goto" href="#dTopAccRdp" data-goto-tab="detail" data-goto-scroll="dTopAccRdp" data-goto-collapse="dTopAccRdp" data-CLan="dTopRdpHeading">RDP</a></li>
+                <li><a class="d-goto" href="#dTopAccChat" data-goto-tab="detail" data-goto-scroll="dTopAccChat" data-goto-collapse="dTopAccChat" data-CLan="dTopChatHeading">Chat</a></li>
+                <li><a class="d-goto" href="#dTopAccTerm" data-goto-tab="detail" data-goto-scroll="dTopAccTerm" data-goto-collapse="dTopAccTerm" data-CLan="dTopTermHeading">Terminal</a></li>
+                <li><a class="d-goto" href="#dTopAccBrowser" data-goto-tab="detail" data-goto-scroll="dTopAccBrowser" data-goto-collapse="dTopAccBrowser" data-CLan="dTopBrowserHeading">Browser</a></li>
+                <li><a class="d-goto" href="#dTopAccTeam" data-goto-tab="detail" data-goto-scroll="dTopAccTeam" data-goto-collapse="dTopAccTeam" data-CLan="dTopTeamHeading">Team</a></li>
+                <li><a class="d-goto" href="#dTopAccDownload" data-goto-tab="detail" data-goto-scroll="dTopAccDownload" data-goto-collapse="dTopAccDownload" data-CLan="dTopDownloadHeading">Download</a></li>
+                <li><a class="d-goto" href="#dTopAccLog" data-goto-tab="detail" data-goto-scroll="dTopAccLog" data-goto-collapse="dTopAccLog" data-CLan="dTopLogHeading">Log</a></li>
+                <li><a class="d-goto" href="#dTopAccMessenger" data-goto-tab="detail" data-goto-scroll="dTopAccMessenger" data-goto-collapse="dTopAccMessenger" data-CLan="dTopMessengerHeading">Messenger</a></li>
+                <li><a class="d-goto" href="#dTopAccHelp" data-goto-tab="detail" data-goto-scroll="dTopAccHelp" data-goto-collapse="dTopAccHelp" data-CLan="dTopHelpHeading">Help</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <button type="button" class="d-toc-branch d-goto" data-goto-tab="detail" data-goto-scroll="d-section-left" data-CLan="dLayoutLeftTitle">Left</button>
+          <ul>
+            <li><a class="d-goto" href="#d-section-left" data-goto-tab="detail" data-goto-scroll="d-section-left" data-CLan="uLeftRdpLabel">RDP</a></li>
+            <li><a class="d-goto" href="#d-section-left" data-goto-tab="detail" data-goto-scroll="d-section-left" data-CLan="dSbAgentShort">Agent / Other</a></li>
+            <li><a class="d-goto" href="#d-section-left" data-goto-tab="detail" data-goto-scroll="d-section-left" data-CLan="dPathGroupShort">Path groups · Chat / Terminal / Search</a></li>
+          </ul>
+        </li>
+        <li>
+          <button type="button" class="d-toc-branch d-goto" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dLayoutCenterTitle">Center</button>
+          <ul>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterRdpHeading">RDP</a></li>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterFileHeading">File</a></li>
+            <li><a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term" data-CLan="dCenterTermHeading">Terminal</a></li>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterChatHeading">Chat</a></li>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterBrowserHeading">Browser</a></li>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterEditorHeading">Editor</a></li>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterMemoHeading">Memo</a></li>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterDownloadHeading">Download</a></li>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterLogHeading">Log</a></li>
+            <li><a class="d-goto" href="#d-center-messenger" data-goto-tab="detail" data-goto-scroll="d-center-messenger" data-CLan="dCenterMessengerHeading">Messenger</a></li>
+            <li><a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center" data-CLan="dCenterTmuxHeading">Multiplexer</a></li>
+          </ul>
+        </li>
+        <li>
+          <button type="button" class="d-toc-branch d-goto" data-goto-tab="detail" data-goto-scroll="d-section-right" data-CLan="dLayoutRightTitle">Right</button>
+          <ul>
+            <li><a class="d-goto" href="#d-section-right" data-goto-tab="detail" data-goto-scroll="d-section-right" data-CLan="uRightInfoTitle">Info</a></li>
+            <li><a class="d-goto" href="#d-section-right" data-goto-tab="detail" data-goto-scroll="d-section-right" data-CLan="uRightFileTitle">File</a></li>
+            <li>
+              <a class="d-goto" href="#d-section-right" data-goto-tab="detail" data-goto-scroll="d-section-right" data-CLan="uRightOptionTitle">Option</a>
+              <ul>
+                <li><a class="d-goto" href="#d-opt-twofactor" data-goto-tab="detail" data-goto-scroll="d-opt-twofactor" data-CLan="dOptTwoFactorHeading">Two-Factor Auth</a></li>
+                <li><a class="d-goto" href="#d-section-right" data-goto-tab="detail" data-goto-scroll="d-section-right" data-CLan="dOptThemeHeading">Theme</a></li>
+                <li><a class="d-goto" href="#d-section-right" data-goto-tab="detail" data-goto-scroll="d-section-right" data-CLan="dOptScheduleHeading">Schedule</a></li>
+                <li><a class="d-goto" href="#d-section-right" data-goto-tab="detail" data-goto-scroll="d-section-right" data-CLan="dOptSubAgentHeading">Sub Agent</a></li>
+                <li><a class="d-goto" href="#d-opt-help" data-goto-tab="detail" data-goto-scroll="d-opt-help" data-CLan="dOptShortcutsHeading">Help</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <button type="button" class="d-toc-branch d-goto" data-goto-tab="faq" data-CLan="tabFaq">FAQ</button>
+          <ul>
+            <li><a class="d-goto" href="#tab-faq" data-goto-tab="faq" data-CLan="faq2faTitle">How to enable Two-Factor Auth</a></li>
+            <li><a class="d-goto" href="#tab-faq" data-goto-tab="faq" data-CLan="faqPasswordTitle">How to change the login password</a></li>
+            <li><a class="d-goto" href="#tab-faq" data-goto-tab="faq" data-CLan="faqMessengerTitle">How to register Messenger</a></li>
+            <li><a class="d-goto" href="#tab-faq" data-goto-tab="faq" data-CLan="faqTermProviderTitle">How to use Terminal providers</a></li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
 
     <!-- Top bar detail -->
     <h3 class="mb-2" id="d-section-top" data-CLan="dTopHeading">Top Bar</h3>
@@ -2148,7 +2317,7 @@
         </h2>
         <div id="dTopAccFile" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-0" data-CLan="dTopFileDesc">No dialog — switches the center panel to the full file manager for the current root right away.</p>
+            <p class="text-muted small mb-0" data-CLan="dTopFileDesc"><strong>Center panel</strong> (top tab) — opens the full file manager for the current root. Details: <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">Center → File</a>.</p>
           </div>
         </div>
       </div>
@@ -2161,7 +2330,7 @@
         </h2>
         <div id="dTopAccTmuxTop" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-0" data-CLan="dTopTmuxTopDesc">Top-level tab (not under More). Opens a multi-pane layout so several sessions share the center. See Center Panel → Multiplexer for modes, split/merge, and content select.</p>
+            <p class="text-muted small mb-0" data-CLan="dTopTmuxTopDesc"><strong>Center panel</strong> (top tab, not under More) — multi-pane layout in the center. Full modes / split / merge / content select: <a class="d-goto" href="#dSampleCenterTmux" data-goto-tab="detail" data-goto-scroll="dSampleCenterTmux">Center → Multiplexer</a>.</p>
           </div>
         </div>
       </div>
@@ -2174,7 +2343,7 @@
         </h2>
         <div id="dTopAccMore" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-0" data-CLan="dTopMoreDesc">Dropdown for everything that is not File / Multiplexer — Memo, new sessions (including Terminal), Download, Log, Messenger, Help. File search is <kbd>F2</kbd> / path ⋯ → Search (multi-path checkboxes), not here. Each item is detailed below.</p>
+            <p class="text-muted small mb-0" data-CLan="dTopMoreDesc">Dropdown for everything that is not File / Multiplexer. <strong>Two open styles:</strong> (1) <em>Modal then center</em> — RDP / Chat / Terminal / Browser / Team: create dialog is documented here under More; after Open, check <strong>Center Panel</strong> for the live UI (each item links there). (2) <em>Center only</em> — Memo / Download / Log / Messenger / Help: no dialog; full how-to is under Center only (More is a short link). File search is <kbd>F2</kbd> / path ⋯ → Search, not in this menu.</p>
           </div>
         </div>
       </div>
@@ -2208,14 +2377,7 @@
         </h2>
         <div id="dTopAccMemo" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-2" data-CLan="dTopMemoDesc">No dialog — switches the center panel to the Memo page (same as Artgine’s Memo.html). Notes are scoped to a folder path; use categories, modes, and slash commands in the composer.</p>
-            <div class="text-muted small mb-0" data-CLan="dTopMemoOpts">
-              <ul class="mb-0 ps-3">
-                <li><strong>Folder path:</strong> which project folder’s memos load (e.g. <code class="cmd">proj/Control</code>).</li>
-                <li><strong>Modes:</strong> Write <code class="cmd">/w</code>, Search <code class="cmd">/s</code>·<code class="cmd">/r</code>, Delete <code class="cmd">/d</code>, Move <code class="cmd">/m</code> — dropdown or one-shot prefix on send.</li>
-                <li><strong>Provider / model:</strong> used for AI Search (and related AI steps). Help (?) opens the full in-page command list.</li>
-              </ul>
-            </div>
+            <p class="text-muted small mb-0" data-CLan="dTopMemoDesc"><strong>Center panel</strong> (no dialog) — opens the Memo page in the center. Full layout, modes, and slash commands: <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="dSampleCenterMemo">Center → Memo</a>.</p>
           </div>
         </div>
       </div>
@@ -2228,7 +2390,7 @@
         </h2>
         <div id="dTopAccRdp" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-3" data-CLan="dTopRdpDesc">Opens a one-field modal — paste a remote Control.html URL and Add — to register it in the left sidebar's RDP list.</p>
+            <p class="text-muted small mb-3" data-CLan="dTopRdpDesc">Opens a one-field modal — paste a remote Control.html URL and Add — to register it in the left sidebar's RDP list. After it is listed, select it on the left to open the live screen in the center — details: <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">Center → RDP</a>.</p>
             <div class="dtop-modal-frame" data-modal-key="addrdp"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
           </div>
         </div>
@@ -2242,13 +2404,14 @@
         </h2>
         <div id="dTopAccChat" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-3" data-CLan="dTopChatDesc">Opens a modal for a new AI chat session — Working Directory plus the same <strong>MCP</strong> / <strong>Copy MD</strong> switches as New Terminal, then Open. The session appears under left <strong>Agent</strong> in that path group.</p>
+            <p class="text-muted small mb-3" data-CLan="dTopChatDesc">Opens a modal for a new AI chat session — Working Directory plus the same <strong>MCP</strong> / <strong>Copy MD</strong> switches as New Terminal, then Open. The session appears under left <strong>Agent</strong> in that path group. This block is only the <strong>create dialog</strong>; the live chat UI is under <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">Center → Chat</a>.</p>
             <div class="dtop-modal-frame mb-3" data-modal-key="newchat"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
             <div class="text-muted small mb-0" data-CLan="dTopChatOpts">
               <ul class="mb-0 ps-3">
                 <li><strong>Working Directory:</strong> folder context for the chat agent.</li>
                 <li><strong>MCP (default off in Chat):</strong> enable to allow MCP tool servers during the chat. Leave off for a lighter, tools-minimal session.</li>
                 <li><strong>Copy MD (default on):</strong> same as Terminal — when cwd differs from the server Artgine path, seed that folder with the provider role markdown (<code class="cmd">CLAUDE.md</code> / <code class="cmd">AGENTS.md</code> / …).</li>
+                <li><strong>After Open:</strong> use the session from left Agent; panel behavior → <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">Center → Chat</a>.</li>
               </ul>
             </div>
           </div>
@@ -2263,7 +2426,7 @@
         </h2>
         <div id="dTopAccTerm" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-3" data-CLan="dTopTermDesc">Always opens the New Terminal modal first (also <kbd>F3</kbd>). Pick mode, optional Key, Working Directory, then <strong>MCP</strong> / <strong>Copy MD</strong>, and Open. Existing sessions open from left <strong>Agent</strong> path groups — not this button.</p>
+            <p class="text-muted small mb-3" data-CLan="dTopTermDesc">Always opens the New Terminal modal first (also <kbd>F3</kbd>). Pick mode, optional Key, Working Directory, then <strong>MCP</strong> / <strong>Copy MD</strong>, and Open. Existing sessions open from left <strong>Agent</strong> path groups — not this button. This block is only the <strong>create dialog</strong>; input bar, SUPER, handoff, Log: <a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term">Center → Terminal</a>.</p>
             <div class="dtop-modal-frame mb-3" data-modal-key="newterm"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
             <div class="text-muted small mb-0" data-CLan="dTopTermOpts">
               <ul class="mb-0 ps-3">
@@ -2272,6 +2435,7 @@
                 <li><strong>Working Directory:</strong> folder the PTY starts in (defaults from the last Agent path / server default if empty).</li>
                 <li><strong>MCP (default on):</strong> when checked, the AI CLI keeps MCP tool servers (e.g. Artgine-linked tools). Uncheck to start with MCP disabled — the agent uses only its built-in tools (safer / less prompt noise).</li>
                 <li><strong>Copy MD (default on):</strong> when the working directory is <em>not</em> the server’s main Artgine path, copies that provider’s role file into the folder (<code class="cmd">CLAUDE.md</code>, <code class="cmd">AGENTS.md</code>, …) so project rules and paths apply. No-op for <code class="cmd">cmd</code> or when cwd is already the server root.</li>
+                <li><strong>After Open:</strong> live PTY / SUPER / slash handoff → <a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term">Center → Terminal</a>.</li>
               </ul>
             </div>
           </div>
@@ -2286,7 +2450,7 @@
         </h2>
         <div id="dTopAccBrowser" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-3" data-CLan="dTopBrowserDesc">Opens a modal for a new web session — URL, Browser (auto/chrome/msedge/firefox), TTL, screen size, and Stealth time.</p>
+            <p class="text-muted small mb-3" data-CLan="dTopBrowserDesc">Opens a modal for a new web session — URL, Browser (auto/chrome/msedge/firefox), TTL, screen size, and Stealth time. This is only the <strong>create dialog</strong>; live page / Frame / Input after open: <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">Center → Browser</a>.</p>
             <div class="dtop-modal-frame" data-modal-key="newbrowser"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
           </div>
         </div>
@@ -2300,7 +2464,7 @@
         </h2>
         <div id="dTopAccTeam" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-3" data-CLan="dTopTeamDesc">Opens a modal to pick the main agent's Provider/Model, a Goal, sub agents to dispatch to, and a time limit — the running team shows up as a Terminal session.</p>
+            <p class="text-muted small mb-3" data-CLan="dTopTeamDesc">Opens a modal to pick the main agent's Provider/Model, a Goal, sub agents to dispatch to, and a time limit — the running team shows up as a Terminal session under left Agent. Create options are here; the live PTY UI: <a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term">Center → Terminal</a>.</p>
             <div class="dtop-modal-frame" data-modal-key="newteam"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
           </div>
         </div>
@@ -2314,7 +2478,7 @@
         </h2>
         <div id="dTopAccDownload" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-0" data-CLan="dTopDownloadDesc">No dialog — switches to the yt-dlp/ffmpeg download helper. Paste a YouTube or direct file URL, fetch info, pick MP3/MP4/Direct, and track job progress.</p>
+            <p class="text-muted small mb-0" data-CLan="dTopDownloadDesc"><strong>Center panel</strong> (no dialog) — opens the yt-dlp/ffmpeg download helper in the center. Full UI (URL, MP3/MP4/Direct, jobs): <a class="d-goto" href="#dSampleCenterDownload" data-goto-tab="detail" data-goto-scroll="dSampleCenterDownload">Center → Download</a>.</p>
           </div>
         </div>
       </div>
@@ -2327,7 +2491,7 @@
         </h2>
         <div id="dTopAccLog" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-0" data-CLan="dTopLogDesc">No dialog — switches the center panel to an accordion of past provider (CLI) conversation logs, with refresh/delete controls.</p>
+            <p class="text-muted small mb-0" data-CLan="dTopLogDesc"><strong>Center panel</strong> (no dialog) — opens provider conversation logs in the center. Full accordion / refresh / delete: <a class="d-goto" href="#dSampleCenterLog" data-goto-tab="detail" data-goto-scroll="dSampleCenterLog">Center → Log</a>.</p>
           </div>
         </div>
       </div>
@@ -2340,15 +2504,7 @@
         </h2>
         <div id="dTopAccMessenger" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-2" data-CLan="dTopMessengerDesc">No dialog — opens the Messenger panel. Register a Telegram or Discord bot with its token (saved on the server). Expand a bot to copy the join link, link/unlink a running Terminal session, send a direct message, and watch the conversation log (polled while expanded).</p>
-            <div class="text-muted small mb-0" data-CLan="dTopMessengerOpts">
-              <ul class="mb-0 ps-3">
-                <li><strong>Register:</strong> paste bot token → Register. Session stays in SQLite across restarts.</li>
-                <li><strong>Join link / chat:</strong> user opens the link; state shows pending → active when linked.</li>
-                <li><strong>Terminal Link:</strong> pick an open Terminal session and Link so chat bridges to that PTY; Unlink to detach.</li>
-                <li><strong>Direct message / log:</strong> send from Control; in/out bubbles with markdown; log refreshes about every 3s while open.</li>
-              </ul>
-            </div>
+            <p class="text-muted small mb-0" data-CLan="dTopMessengerDesc"><strong>Center panel</strong> (no dialog) — opens the Messenger panel in the center (top text box + Register + Email button, session list). Full Telegram / Discord / Email setup (where to paste the token, SMTP/IMAP then peer): <a class="d-goto" href="#d-center-messenger" data-goto-tab="detail" data-goto-scroll="d-center-messenger">Center → Messenger</a>.</p>
           </div>
         </div>
       </div>
@@ -2361,7 +2517,7 @@
         </h2>
         <div id="dTopAccHelp" class="accordion-collapse collapse" data-bs-parent="#dTopAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-0" data-CLan="dTopHelpDesc">Opens this guide in the center (also the default panel on first open). Entering with <code class="cmd">?path=</code> opens File instead.</p>
+            <p class="text-muted small mb-0" data-CLan="dTopHelpDesc"><strong>Center panel</strong> (no dialog) — opens this guide (Promo / Getting Started / Guide / FAQ) in the center; also the default first-open panel. <code class="cmd">?path=</code> entry opens File instead.</p>
           </div>
         </div>
       </div>
@@ -2533,7 +2689,7 @@
         </div>
       </div>
       <div class="col-12 col-lg-7">
-        <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleCenterTerm" tabindex="0">
+        <div class="feature-card p-4 dleft-desc h-100" id="d-center-term" data-highlight="dSampleCenterTerm" tabindex="0">
           <h5 class="mb-2"><i class="bi bi-terminal" style="color:#f778ba;"></i> <span data-CLan="dCenterTermHeading">Terminal</span></h5>
           <p class="text-muted small mb-3" data-CLan="dCenterTermDesc">A live PTY session (xterm) in one of six modes — <code class="cmd">cmd</code>, <code class="cmd">claude</code>, <code class="cmd">codex</code>, <code class="cmd">agy</code>, <code class="cmd">opencode</code>, <code class="cmd">grok</code>. AI modes show a running transcript with a bottom input bar; plain <code class="cmd">cmd</code> is a normal shell. Open new ones from <strong>More → Terminal</strong> (F3) or a path-group ⋯; switch existing ones from the left <strong>Agent</strong> list.</p>
           <div class="text-muted small mb-0" data-CLan="dCenterTermDetail">
@@ -2702,15 +2858,73 @@
         </div>
       </div>
       <div class="col-12 col-lg-7">
-        <div class="feature-card p-4 dleft-desc h-100" data-highlight="dSampleCenterMessenger" tabindex="0">
+        <div class="feature-card p-4 dleft-desc h-100" id="d-center-messenger" data-highlight="dSampleCenterMessenger" tabindex="0">
           <h5 class="mb-2"><i class="bi bi-chat-dots-fill" style="color:#58a6ff;"></i> <span data-CLan="dCenterMessengerHeading">Messenger</span></h5>
-          <p class="text-muted small mb-3" data-CLan="dCenterMessengerDesc">Open from <strong>More → Messenger</strong>. Register Telegram/Discord bots, share join links, bridge chat to a Terminal session, and watch the live log.</p>
-          <div class="text-muted small mb-0" data-CLan="dCenterMessengerDetail">
-            <ul class="mb-0 ps-3">
-              <li><strong>Register:</strong> paste a bot token once — stored on the server; no need to re-enter after restart.</li>
-              <li><strong>Accordion per bot:</strong> platform badge, name, state (pending/active). Expanded body shows join URL, linked chat, and linked terminal key.</li>
-              <li><strong>Terminal:</strong> select an open session → Link / Unlink so messenger I/O bridges to that PTY.</li>
-              <li><strong>Direct message + log:</strong> send from Control; in/out bubbles with markdown; log polls while the item stays expanded.</li>
+          <div class="text-muted small mb-0" data-CLan="dCenterMessengerDesc">
+            <p class="mb-2">Open with <strong>More → Messenger</strong> (center panel, no extra dialog). <strong>Top toolbar of this panel:</strong></p>
+            <ul class="ps-3 mb-2">
+              <li>Wide text box — placeholder like <em>Paste bot token or peer email…</em> — this is where you paste the Telegram/Discord <strong>bot token</strong> or the email <strong>peer address</strong>.</li>
+              <li><strong>Register</strong> — saves a session from whatever is in that text box (platform auto-detected).</li>
+              <li><strong>Email</strong> (envelope) — opens <em>Add Email Messenger</em> to set the server’s SMTP/IMAP mail account <strong>first</strong> (required before any email peer can be registered).</li>
+              <li>Refresh — reloads the session list below.</li>
+            </ul>
+            <p class="mb-0">Below: accordion of registered sessions (Telegram / Discord / Email). Expand one for join/invite link, Terminal Link, direct message, log.</p>
+          </div>
+          <div class="text-muted small mt-3 mb-0" data-CLan="dCenterMessengerDetail">
+            <p class="fw-semibold mb-1" style="color:#c9d1d9;">1) Telegram — create bot → paste token → Register</p>
+            <ol class="ps-3 mb-3">
+              <li>Phone/PC Telegram → open chat with <code class="cmd">@BotFather</code>.</li>
+              <li>Send <code class="cmd">/newbot</code> → set display name and username (must end with <code class="cmd">bot</code>).</li>
+              <li>BotFather replies with a <strong>HTTP API token</strong>, e.g. <code class="cmd">7123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw</code> (digits + <code class="cmd">:</code> + secret). Copy the whole string.</li>
+              <li>Control: <strong>More → Messenger</strong>.</li>
+              <li>Paste the token into the <strong>top text box</strong> of the Messenger panel (not a browser URL bar, not settings.json).</li>
+              <li>Click <strong>Register</strong>. On success a Telegram row appears in the list (server stores it).</li>
+              <li>Expand that row → open the join link <code class="cmd">https://t.me/YourBotUsername</code> → send <code class="cmd">/start</code> (or any message). State <em>pending → active</em>.</li>
+            </ol>
+            <p class="fw-semibold mb-1" style="color:#c9d1d9;">2) Discord — create bot app → paste token → Register → invite</p>
+            <ol class="ps-3 mb-3">
+              <li>Browser: <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">discord.com/developers/applications</a> → <strong>New Application</strong> → name it.</li>
+              <li>Left menu <strong>Bot</strong> → <strong>Add Bot</strong> if needed → <strong>Reset Token</strong> / Copy. Token looks like <code class="cmd">MTIz.ABC.xyz</code> (three segments separated by <code class="cmd">.</code>, no colon).</li>
+              <li>Control: <strong>More → Messenger</strong> → paste that token into the <strong>same top text box</strong> → <strong>Register</strong>.</li>
+              <li>Expand the new Discord row → open the OAuth <strong>invite link</strong> shown in the session info line.</li>
+              <li>Pick your server → authorize (bot needs View Channel, Send Messages, Read History).</li>
+              <li>In a channel the bot can read, post any message. State <em>pending → active</em> when the channel binds.</li>
+            </ol>
+            <p class="fw-semibold mb-1" style="color:#c9d1d9;">3) Email — first server mail account, then register who may reply</p>
+            <p class="mb-2">Email is two steps. Do <strong>not</strong> put SMTP passwords into the Register text box. Order matters.</p>
+            <p class="mb-1"><strong>Step A — add the server’s mail account (must be first)</strong></p>
+            <ol class="ps-3 mb-2">
+              <li>In Messenger top bar click <strong>Email</strong> (not Register). Modal title: <em>Add Email Messenger</em>.</li>
+              <li><em>Send (SMTP)</em> block — how Artgine <strong>sends</strong> mail:
+                <ul class="mt-1">
+                  <li>Address = SMTP host (e.g. <code class="cmd">smtp.gmail.com</code>)</li>
+                  <li>Port (e.g. <code class="cmd">465</code> or <code class="cmd">587</code>)</li>
+                  <li>ID = <strong>full mailbox</strong> <code class="cmd">you@gmail.com</code> (not just <code class="cmd">you</code>)</li>
+                  <li>Password = SMTP password / app password</li>
+                </ul>
+              </li>
+              <li><em>Receive (IMAP)</em> block — how Artgine <strong>reads</strong> mail (can be the same or another mailbox):
+                <ul class="mt-1">
+                  <li>Address = IMAP host (e.g. <code class="cmd">imap.gmail.com</code>)</li>
+                  <li>Port (e.g. <code class="cmd">993</code>)</li>
+                  <li>ID = full email again</li>
+                  <li>Password</li>
+                </ul>
+              </li>
+              <li>Click <strong>Verify &amp; Save</strong>. Both SMTP and IMAP are tested; save only if both succeed. This account is stored on the server for all email chats. Reopen the modal later: password fields stay empty (leave blank to keep saved secrets).</li>
+              <li>If you skip Step A, Step B fails with <em>mail account is not configured yet</em>.</li>
+            </ol>
+            <p class="mb-1"><strong>Step B — register the peer address (who is allowed to talk back)</strong></p>
+            <ol class="ps-3 mb-2">
+              <li>Close the Email modal. In the Messenger <strong>top text box</strong> paste the <strong>other person’s email</strong> (the peer inbox), e.g. <code class="cmd">friend@example.com</code>.</li>
+              <li>Click <strong>Register</strong> (same button as bots). This is not the SMTP ID from Step A — it is the conversation partner.</li>
+              <li>An Email session appears as <em>active</em> immediately (no join link). Outbound → SMTP to that peer; inbound → IMAP messages from that peer.</li>
+            </ol>
+            <p class="fw-semibold mb-1" style="color:#c9d1d9;">After registration (any platform)</p>
+            <ul class="ps-3 mb-0">
+              <li>Expand session → Terminal dropdown → <strong>Link</strong> to bridge chat to a PTY; <strong>Unlink</strong> to detach.</li>
+              <li>Direct message box + log (polls ~3s while expanded).</li>
+              <li>Optional: right sidebar <strong>Option → Two-Factor Auth</strong> pick this session for login approval.</li>
             </ul>
           </div>
         </div>
@@ -2792,7 +3006,7 @@
       <div class="col-12 col-lg-7 d-flex flex-column gap-3">
         <div class="feature-card p-4 dleft-desc" data-highlight="dSampleOptionPanel" tabindex="0">
           <h5 class="mb-2"><i class="bi bi-gear" style="color:#d29922;"></i> <span data-CLan="uRightOptionTitle">Option</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dRightOptionDesc">Bundles seven controls in one panel: Theme, local model registration, Database viewers, history cleanup, Schedule, Sub Agent, and the shortcut list. Each is broken down individually below.</p>
+          <p class="text-muted small mb-0" data-CLan="dRightOptionDesc">Bundles eight controls in one panel: Theme, local model registration, Two-Factor Auth, Database viewers, history cleanup, Schedule, Sub Agent, and the shortcut list. Each is broken down individually below.</p>
         </div>
 
         <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOTheme" tabindex="0">
@@ -2807,6 +3021,17 @@
           <div class="dtop-modal-frame mb-3" data-modal-key="addmodel"><div class="dtop-modal-frame-body"></div></div>
           <div class="dopt-modal-label" data-CLan="mOpencodeStatusTitle">OpenCode Provider Status</div>
           <div class="dtop-modal-frame" data-modal-key="opencodestatus"><div class="dtop-modal-frame-body"></div></div>
+        </div>
+
+        <div class="feature-card p-4 dleft-desc ms-md-4" id="d-opt-twofactor" data-highlight="dSampleOpt-dOTwoFactor" tabindex="0">
+          <h5 class="mb-2"><i class="bi bi-shield-lock" style="color:#d29922;"></i> <span data-CLan="dOptTwoFactorHeading">Option → Two-Factor Auth</span></h5>
+          <div class="text-muted small mb-0" data-CLan="dOptTwoFactorDesc">
+            <ul class="mb-0 ps-3">
+              <li><strong>What it does:</strong> after the password check, login waits for approval on a Messenger bot (Telegram/Discord) — up to about 5 minutes.</li>
+              <li><strong>Select:</strong> <em>Disabled</em> turns 2FA off; any other entry is a registered Messenger session (<code class="cmd">platform - botName</code>).</li>
+              <li><strong>Save:</strong> choosing a value saves immediately (local-server setting). Register bots first under <strong>More → Messenger</strong>; if the list is empty only Disabled appears.</li>
+            </ul>
+          </div>
         </div>
 
         <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dODatabase" tabindex="0">
@@ -2848,14 +3073,94 @@
           <div class="dtop-modal-frame" data-modal-key="subagentmodal"><div class="dtop-modal-frame-head"></div><div class="dtop-modal-frame-body"></div></div>
         </div>
 
-        <div class="feature-card p-4 dleft-desc ms-md-4" data-highlight="dSampleOpt-dOShortcuts" tabindex="0">
+        <div class="feature-card p-4 dleft-desc ms-md-4" id="d-opt-help" data-highlight="dSampleOpt-dOShortcuts" tabindex="0">
           <h5 class="mb-2"><i class="bi bi-keyboard" style="color:#d2a8ff;"></i> <span data-CLan="dOptShortcutsHeading">Option → Help</span></h5>
-          <p class="text-muted small mb-0" data-CLan="dOptShortcutsDesc">The same keyboard shortcut list shown in the Install tab.</p>
+          <p class="text-muted small mb-0" data-CLan="dOptShortcutsDesc">Keyboard shortcut summary at the bottom of the Option panel (F1–F7, arrows). Full list with descriptions is also under Getting Started → Keyboard Shortcuts. Present in Control UI: right sidebar Option → Help.</p>
         </div>
       </div>
     </div>
 
 
+  </div>
+</div>
+
+<!-- ============================= FAQ / QnA TAB ============================= -->
+<div class="tab-pane fade" id="tab-faq" role="tabpanel" aria-labelledby="tab-btn-faq">
+  <div class="container py-5">
+    <h2 class="section-title text-center" data-CLan="faqTitle">FAQ</h2>
+    <p class="section-sub text-center" data-CLan="faqSub">Short answers — use the links for full screen detail (no long duplicates here)</p>
+
+    <div class="faq-search-wrap">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" id="faqSearchInput" class="faq-search-input" autocomplete="off"
+        data-CLan="faqSearchPh" placeholder="Search FAQ… e.g. 2FA, password, messenger, terminal">
+    </div>
+    <div class="faq-meta" id="faqResultMeta">Showing all items</div>
+
+    <!-- 항목 추가 시: .faq-item 복제 후 data-faq-q(검색어, 한/영), title/body data-CLan 키만 맞추면 됨 -->
+    <div class="faq-list" id="faqList">
+
+      <article class="faq-item" data-faq-q="2fa two-factor twofactor 2차 2차인증 이차인증 메신저 승인 messenger approval option shield login auth">
+        <div class="faq-item-head">
+          <i class="bi bi-shield-lock faq-ico" style="color:#d29922;"></i>
+          <h3 class="faq-item-title" data-CLan="faq2faTitle">How to enable Two-Factor Auth</h3>
+        </div>
+        <div class="faq-item-body" data-CLan="faq2faBody">
+          <p class="mb-0">1) Register an active Messenger session. 2) Right sidebar <strong>Option → Two-Factor Auth</strong> → pick that session (saves immediately). Login then waits for messenger approval (~5 min). <em>Disabled</em> turns it off.</p>
+          <div class="faq-see" data-CLan="faq2faSee">Details:
+            <a class="d-goto" href="#dTopAccMessenger" data-goto-tab="detail" data-goto-scroll="dTopAccMessenger" data-goto-collapse="dTopAccMessenger">Guide → More → Messenger</a>
+            ·
+            <a class="d-goto" href="#d-opt-twofactor" data-goto-tab="detail" data-goto-scroll="d-opt-twofactor">Guide → Option → Two-Factor Auth</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="faq-item" data-faq-q="password 암호 비밀번호 change settings electron server artgine hash login security">
+        <div class="faq-item-head">
+          <i class="bi bi-key faq-ico" style="color:#f85149;"></i>
+          <h3 class="faq-item-title" data-CLan="faqPasswordTitle">How to change the login password</h3>
+        </div>
+        <div class="faq-item-body" data-CLan="faqPasswordBody">
+          <p class="mb-0">Default is <strong>artgine</strong>. Change it in the Electron <strong>Server</strong> panel, or set <code class="cmd">password</code> in <code class="cmd">settings.json</code> (plain text is hashed on next check).</p>
+          <div class="faq-see" data-CLan="faqPasswordSee">Details:
+            <a class="d-goto" href="#gsPasswordAccordion" data-goto-tab="install" data-goto-scroll="gsPasswordAccordion" data-goto-collapse="gsPasswordCollapse">Getting Started → Password</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="faq-item" data-faq-q="messenger 메신저 telegram discord email 이메일 bot token 토큰 botfather smtp imap peer register join link terminal link unlink chat 봇">
+        <div class="faq-item-head">
+          <i class="bi bi-chat-dots-fill faq-ico" style="color:#58a6ff;"></i>
+          <h3 class="faq-item-title" data-CLan="faqMessengerTitle">How to register Messenger (Telegram / Discord / Email)</h3>
+        </div>
+        <div class="faq-item-body" data-CLan="faqMessengerBody">
+          <p class="mb-0"><strong>More → Messenger</strong> top text box = bot token or peer email → <strong>Register</strong>. Telegram/Discord: create bot outside, paste token there. Email: click <strong>Email</strong> first (SMTP+IMAP Verify&amp;Save), then paste peer address → Register. Optional: Terminal Link / 2FA.</p>
+          <div class="faq-see" data-CLan="faqMessengerSee">Full steps (where to paste token, Email A then B):
+            <a class="d-goto" href="#d-center-messenger" data-goto-tab="detail" data-goto-scroll="d-center-messenger">Guide → Center → Messenger</a>
+            ·
+            <a class="d-goto" href="#dTopAccMessenger" data-goto-tab="detail" data-goto-scroll="dTopAccMessenger" data-goto-collapse="dTopAccMessenger">More → Messenger</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="faq-item" data-faq-q="terminal 터미널 provider 프로바이더 claude codex opencode grok agy cmd f3 slash handoff super f6 f7 auth 인증 연동 계정 login 로그인">
+        <div class="faq-item-head">
+          <i class="bi bi-terminal-fill faq-ico" style="color:#f778ba;"></i>
+          <h3 class="faq-item-title" data-CLan="faqTermProviderTitle">How to use Terminal providers</h3>
+        </div>
+        <div class="faq-item-body" data-CLan="faqTermProviderBody">
+          <p class="mb-0">Open <strong>More → Terminal</strong> / <kbd>F3</kbd>, pick mode (<code class="cmd">cmd</code> / <code class="cmd">claude</code> / <code class="cmd">codex</code> / …). AI providers need your <strong>personal account linked in advance</strong> (login / subscription). Complete that with the same normal linking flow you would use on the provider’s <strong>web UI</strong> or inside a <strong>Terminal</strong> session — Artgine does not replace that step. Handoff with <code class="cmd">/codex</code> etc.; SUPER via <kbd>F6</kbd> or <code class="cmd">/super</code>. Install/auth status: right <strong>Info</strong> tab.</p>
+          <div class="faq-see" data-CLan="faqTermProviderSee">Details:
+            <a class="d-goto" href="#dTopAccTerm" data-goto-tab="detail" data-goto-scroll="dTopAccTerm" data-goto-collapse="dTopAccTerm">Guide → More → Terminal</a>
+            ·
+            <a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term">Guide → Center → Terminal</a>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="faq-empty d-none" id="faqEmpty" data-CLan="faqEmpty">No matching FAQ items.</div>
   </div>
 </div>
 
@@ -2931,6 +3236,27 @@ CLan.Set({
 
     tabPromo: '소개',
     tabInstall: '시작하기',
+    tabDetail: '설명',
+    tabFaq: 'FAQ',
+
+    faqTitle: 'FAQ',
+    faqSub: '짧은 답변 — 자세한 화면 설명은 아래 링크로(여기서 긴 설명 중복 없음)',
+    faqSearchPh: 'FAQ 검색… 예: 2차인증, 암호, 메신저, 터미널',
+    faqResultAll: '전체 항목 표시',
+    faqResultCount: '{0} / {1}개 표시',
+    faqEmpty: '일치하는 FAQ가 없습니다.',
+    faq2faTitle: '2차인증 하는 법',
+    faq2faBody: '<p class="mb-0">1) Messenger 세션을 active로 등록. 2) 오른쪽 <strong>Option → Two-Factor Auth</strong>에서 그 세션 선택(즉시 저장). 이후 로그인 시 메신저 승인 대기(약 5분). <em>Disabled</em>는 끔.</p>',
+    faq2faSee: '상세: <a class="d-goto" href="#dTopAccMessenger" data-goto-tab="detail" data-goto-scroll="dTopAccMessenger" data-goto-collapse="dTopAccMessenger">설명 → More → Messenger</a> · <a class="d-goto" href="#d-opt-twofactor" data-goto-tab="detail" data-goto-scroll="d-opt-twofactor">설명 → Option → Two-Factor Auth</a>',
+    faqPasswordTitle: '암호 변경법',
+    faqPasswordBody: '<p class="mb-0">기본값은 <strong>artgine</strong>. Electron <strong>Server</strong> 패널에서 바꾸거나, <code class="cmd">settings.json</code>의 <code class="cmd">password</code>를 수정합니다(평문은 다음 검사 때 해시).</p>',
+    faqPasswordSee: '상세: <a class="d-goto" href="#gsPasswordAccordion" data-goto-tab="install" data-goto-scroll="gsPasswordAccordion" data-goto-collapse="gsPasswordCollapse">시작하기 → 암호</a>',
+    faqMessengerTitle: '메신저 등록법 (Telegram / Discord / Email)',
+    faqMessengerBody: '<p class="mb-0"><strong>More → Messenger</strong> 맨 위 입력칸 = 봇 토큰 또는 상대 이메일 → <strong>Register</strong>. Telegram/Discord: 외부에서 봇 생성 후 그 칸에 토큰. Email: 먼저 <strong>Email</strong> 버튼(SMTP+IMAP Verify&amp;Save) → 그다음 상대 주소 Register. 선택: Terminal Link / 2FA.</p>',
+    faqMessengerSee: '토큰 넣는 위치·Email A/B 전체 단계: <a class="d-goto" href="#d-center-messenger" data-goto-tab="detail" data-goto-scroll="d-center-messenger">설명 → 중앙 → Messenger</a> · <a class="d-goto" href="#dTopAccMessenger" data-goto-tab="detail" data-goto-scroll="dTopAccMessenger" data-goto-collapse="dTopAccMessenger">More → Messenger</a>',
+    faqTermProviderTitle: '터미널 프로바이더 사용법',
+    faqTermProviderBody: '<p class="mb-0"><strong>More → Terminal</strong> / <kbd>F3</kbd>에서 모드 선택(<code class="cmd">cmd</code>/<code class="cmd">claude</code>/<code class="cmd">codex</code>/…). AI 프로바이더는 먼저 <strong>개인 계정을 미리 연동</strong>(로그인·구독)해 두어야 합니다. 연동은 해당 프로바이더 <strong>웹 화면</strong>이나 <strong>Terminal</strong> 환경에서, 평소 CLI를 쓸 때와 같은 일반적인 연동 작업으로 하면 됩니다(Artgine이 대신 로그인하지 않음). 핸드오프는 <code class="cmd">/codex</code> 등, SUPER는 <kbd>F6</kbd> 또는 <code class="cmd">/super</code>. 설치·인증 상태는 오른쪽 <strong>Info</strong>.</p>',
+    faqTermProviderSee: '상세: <a class="d-goto" href="#dTopAccTerm" data-goto-tab="detail" data-goto-scroll="dTopAccTerm" data-goto-collapse="dTopAccTerm">설명 → More → Terminal</a> · <a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term">설명 → 중앙 → Terminal</a>',
 
     featuresTitle: '주요 기능',
     fRdpTitle: 'RDP',
@@ -2960,7 +3286,7 @@ CLan.Set({
     fLogTitle: '로그',
     fLogDesc: 'Chat·Terminal 등 모든 AI 세션의 과거 기록을 모아 확인합니다. 세션별로 삭제하거나 전체 로그를 한 번에 지울 수 있습니다.',
     fMessengerTitle: '메신저',
-    fMessengerDesc: 'Telegram·Discord 봇 토큰을 등록하고 입장 링크를 공유한 뒤, Terminal 세션을 Link하고 직접 메시지를 보내며 대화 로그를 봅니다(More → Messenger).',
+    fMessengerDesc: 'Telegram/Discord는 봇을 만들어 토큰을 넣습니다. Email은 먼저 서버에 SMTP·IMAP을 등록(Email 버튼)한 뒤, 응답 받을 상대 메일 주소를 Register합니다. Terminal Link·대화 로그·2FA 승인 채널로 사용(More → Messenger).',
 
     useCasesTitle: '사용 예시',
     useCasesSub: 'AI에게 자연어로 지시만 하면 됩니다',
@@ -2975,7 +3301,7 @@ CLan.Set({
     ucTag9: '자동 반복 품질 개선', ucMsg9: '결과가 만족스러울 때까지 계속 개선해줘',            ucDesc9: 'Sub Agent의 Retry 설정을 켜두면 작업 완료 후 자동으로 검토·개선 지시를 반복해 품질을 높입니다.',
     ucTag10: '코드 리뷰 자동화', ucMsg10: '커밋하기 전에 코드 리뷰 에이전트한테 먼저 검토시켜줘', ucDesc10: 'reviewer 서브 에이전트를 등록해두면 커밋 전 자동으로 코드를 분석하고 개선 사항을 보고합니다.',
     ucTag11: '프로바이더 핸드오프', ucMsg11: '여기서부터는 Codex로 이어서 해줘',                ucDesc11: '터미널에서 다른 프로바이더를 슬래시로 지목하면(/codex, /claude, /agy, /opencode) 현재 대화를 요약 파일로 남기고, 같은 작업 폴더에 새 세션이 열려 그 요약을 읽고 하던 작업을 그대로 이어갑니다. 맥락을 다시 설명할 필요가 없습니다.',
-    ucTag12: '메신저 + 터미널', ucMsg12: '텔레그램을 코딩 터미널에 연결해서 폰으로 에이전트에게 지시하고 싶어', ucDesc12: 'More → Messenger에서 Telegram/Discord 봇을 등록하고 입장 링크를 연 뒤, 열린 Terminal 세션을 Link합니다. 메신저 채팅이 그 PTY로 전달되고, 응답과 Control에서 보낸 직접 메시지는 실시간 로그에 표시됩니다.',
+    ucTag12: '메신저 + 터미널', ucMsg12: '텔레그램을 코딩 터미널에 연결해서 폰으로 에이전트에게 지시하고 싶어', ucDesc12: 'More → Messenger: Telegram/Discord는 봇 생성 후 토큰 등록·입장/초대 링크, Email은 Email 버튼으로 SMTP·IMAP 설정 후 상대 주소 등록. 열린 Terminal을 Link하면 채팅이 그 PTY로 전달됩니다. 상세 절차는 FAQ 탭.',
 
     previewTitle: '화면 미리보기',
     previewSub: '실제 앱과 동일한 구조의 화면 구성입니다',
@@ -3071,7 +3397,7 @@ CLan.Set({
     quickStartSub: '두 가지 방법으로 바로 시작할 수 있습니다',
     gsBadge1: '방법 1',
     gsMethod1Title: '소스 설치 & 실행',
-    gsMethod1Note: '<div class="mb-1">다른 실행 방법:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">start.bat</code></li><li>Linux / macOS — <code class="cmd">./start.sh</code></li><li>웹 서버만 — <code class="cmd">npm run start_web [포트]</code> (포트 생략 시 <code class="cmd">settings.json</code>에 설정된 포트 사용)</li></ul><div class="mb-0">Node.js·Git 필요.</div>',
+    gsMethod1Note: '<div class="mb-1">다른 실행 방법:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">start.bat</code></li><li>Linux / macOS — <code class="cmd">./start.sh</code></li><li>웹 서버만 — <code class="cmd">npm run start_web [포트]</code> (포트 생략 시 <code class="cmd">settings.json</code>에 설정된 포트 사용)</li><li>앱(Electron) 실행 — <code class="cmd">npm run start_local</code></li></ul><div class="mb-0">Node.js·Git 필요.</div>',
     gsPort: '포트',
     gsDefaultPort: '기본 포트 8050',
     gsBadge2: '방법 2',
@@ -3080,7 +3406,7 @@ CLan.Set({
     gsArtgineDocsTitle: '아티젠 일렉트론 앱 · 엔진 문서',
     gsArtgineDocsBtn: '전체 문서 열기',
     gsArtgineDocsLead: '이 <strong>시작하기</strong> 탭은 <strong>Artgine Agent(Control)</strong> — 원격 화면·파일·AI 에이전트용입니다. 링크된 페이지는 <strong>아티젠 Electron IDE + 렌더링 엔진</strong> 공식 가이드(프로젝트 생성, Run, 모드, PWA, 플러그인)입니다. Agent로 원격 AI 작업을, 엔진 문서로 프로젝트 개발·호스팅을 보면 됩니다.',
-    gsArtgineDocsBody: '<div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-download me-1" style="color:#3fb950;"></i> 설치 · 실행</div><ul class="mb-0 ps-3"><li><code class="cmd">git clone</code> · <code class="cmd">npm install</code> · <code class="cmd">start.bat</code> / <code class="cmd">start.sh</code></li><li><code class="cmd">npm start</code> — Electron GUI · <code class="cmd">npm run start_web [port]</code> — 웹 서버만</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-layers me-1" style="color:#d2a8ff;"></i> Electron 모드 3종</div><ul class="mb-0 ps-3"><li><strong>developer</strong> — 설정 UI, Folder → Run(<kbd>F9</kbd>), 프로젝트 파일 생성</li><li><strong>server</strong> — 호스팅 + URL / IP / QR 연결 화면</li><li><strong>client</strong> — 완성된 프로젝트 창 실행(전시·키오스크)</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-play-circle me-1" style="color:#58a6ff;"></i> 워크플로</div><ul class="mb-0 ps-3"><li>App 탭: <code class="cmd">program</code>, <code class="cmd">server</code>(local / remote / webServer), Include, Plugin, PWA</li><li>Run(F9)가 <code class="cmd">[Name].ts</code> / <code class="cmd">.html</code> / <code class="cmd">.json</code> 생성·갱신 — <strong>EntryPoint</strong> 아래만 직접 수정</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-link-45deg me-1" style="color:#d29922;"></i> 관련 저장소</div><ul class="mb-0 ps-3"><li><a href="https://github.com/06fs4dix/Artgine" target="_blank" rel="noopener">Artgine</a> — 엔진 · Electron 앱</li><li><a href="https://github.com/06fs4dix/Artgine-Project" target="_blank" rel="noopener">Artgine-Project</a> — 샘플 · <a href="https://github.com/06fs4dix/Artgine-Agent" target="_blank" rel="noopener">Artgine-Agent</a> — 이 Control 도구</li></ul></div>',
+    gsArtgineDocsBody: '<div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-download me-1" style="color:#3fb950;"></i> 설치 · 실행</div><ul class="mb-0 ps-3"><li><code class="cmd">git clone</code> · <code class="cmd">npm install</code> · <code class="cmd">start.bat</code> / <code class="cmd">start.sh</code></li><li><code class="cmd">npm start</code> — Electron GUI · <code class="cmd">npm run start_web [port]</code> — 웹 서버만 · <code class="cmd">npm run start_local</code> — 앱(로컬)</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-layers me-1" style="color:#d2a8ff;"></i> Electron 모드 3종</div><ul class="mb-0 ps-3"><li><strong>developer</strong> — 설정 UI, Folder → Run(<kbd>F9</kbd>), 프로젝트 파일 생성</li><li><strong>server</strong> — 호스팅 + URL / IP / QR 연결 화면</li><li><strong>client</strong> — 완성된 프로젝트 창 실행(전시·키오스크)</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-play-circle me-1" style="color:#58a6ff;"></i> 워크플로</div><ul class="mb-0 ps-3"><li>App 탭: <code class="cmd">program</code>, <code class="cmd">server</code>(local / remote / webServer), Include, Plugin, PWA</li><li>Run(F9)가 <code class="cmd">[Name].ts</code> / <code class="cmd">.html</code> / <code class="cmd">.json</code> 생성·갱신 — <strong>EntryPoint</strong> 아래만 직접 수정</li></ul></div><div class="col-md-6"><div class="fw-semibold mb-1" style="color:#c9d1d9;"><i class="bi bi-link-45deg me-1" style="color:#d29922;"></i> 관련 저장소</div><ul class="mb-0 ps-3"><li><a href="https://github.com/06fs4dix/Artgine" target="_blank" rel="noopener">Artgine</a> — 엔진 · Electron 앱</li><li><a href="https://github.com/06fs4dix/Artgine-Project" target="_blank" rel="noopener">Artgine-Project</a> — 샘플 · <a href="https://github.com/06fs4dix/Artgine-Agent" target="_blank" rel="noopener">Artgine-Agent</a> — 이 Control 도구</li></ul></div>',
     gsArtgineDocsNote: '전체 안내(Install · Electron Modes · Workflow, 영/한): <a href="https://06fs4dix.github.io/Artgine/help/help.html" target="_blank" rel="noopener" style="color:#58a6ff; word-break:break-all;">https://06fs4dix.github.io/Artgine/help/help.html</a>',
     gsAfterTitle: '일렉트론 앱 시작 후',
     gsAfterBody: '브라우저에서 아래 주소로 접속하세요. <code class="cmd">[port]</code>는 서버가 실제로 쓰는 포트로 바꿉니다(일렉트론 Server 패널 또는 <code class="cmd">settings.json</code> 확인):<div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">http://localhost:[port]</div>또는 일렉트론 앱에서 <strong>브라우저</strong> 버튼을 누르면 URL을 치지 않고 Control을 열 수 있습니다. 로그인 기본 비밀번호: <strong>artgine</strong>. 폰·다른 PC에서는 <code class="cmd">localhost</code> 대신 호스트 PC의 LAN IP를 사용하세요.',
@@ -3116,8 +3442,8 @@ CLan.Set({
     providerAutoTitle: 'Terminal 실행 시 자동 설치',
     providerAutoDesc: '각 프로바이더 CLI를 직접 미리 설치할 필요는 <strong>없습니다</strong>. <code class="cmd">claude</code>, <code class="cmd">codex</code>, <code class="cmd">opencode</code>, <code class="cmd">agy</code>, <code class="cmd">grok</code> 등으로 새 Terminal(또는 Chat)을 열면, 없는 도구는 <strong>첫 실행 때 자동으로 설치</strong>됩니다. 세션이 busy / 설치 중이면 끝날 때까지 잠시 기다리세요.',
     providerAuthTitle: '인증·구독은 사용자가',
-    providerAuthDesc: '설치는 자동이지만, <strong>로그인과 구독은 자동이 아닙니다</strong>. 프로바이더마다 계정·요금제·로그인(API 키 또는 브라우저 로그인)을 해당 CLI에서 직접 완료해야 합니다. 인증 전에는 Provider Status에 <em>Not Authenticated</em>가 뜨고 실제 작업을 돌릴 수 없습니다. Terminal 세션에서 인증을 마친 뒤 필요하면 Info를 새로고침하세요.',
-    providerNote: '팁: 설치 후 프로바이더별로 Terminal을 한 번 열어 자동 설치를 끝낸 다음, 안내에 따라 로그인하고 오른쪽 Info 탭에서 상태를 확인하세요.',
+    providerAuthDesc: '설치는 자동이지만, <strong>로그인과 구독은 자동이 아닙니다</strong>. 프로바이더마다 <strong>개인 계정을 미리 연동</strong>해야 합니다(API 키 또는 브라우저 로그인). 연동은 해당 서비스 <strong>웹 화면</strong>이나 <strong>Terminal</strong> 안에서, 평소 CLI와 같은 일반적인 연동 작업으로 하면 됩니다. 인증 전에는 Provider Status에 <em>Not Authenticated</em>가 뜨고 실제 작업을 돌릴 수 없습니다. 인증 후 필요하면 Info를 새로고침하세요.',
+    providerNote: '팁: 프로바이더별로 Terminal을 한 번 열어 자동 설치를 끝낸 뒤, 웹 또는 Terminal에서 개인 계정 연동을 마치고 오른쪽 Info 탭에서 상태를 확인하세요.',
 
     uHintDefault: '아래 목업의 아무 곳이나 눌러보면 그 부분이 무엇을 하는지 여기에 나옵니다.',
     uCenterHint: '어떤 탭이나 세션을 누르느냐에 따라 여기(RDP, File, Help, Terminal, Chat, Browser, Editor, Memo, Download, Log, Messenger, Multiplexer 중 하나)가 바뀝니다.',
@@ -3130,7 +3456,7 @@ CLan.Set({
     uRightOptionTitle: 'Option',
     uNotSignedIn: '로그인 안 됨',
     helpCenterTitle: 'Help (이 가이드)',
-    helpCenterDesc: '기본 진입 패널입니다. 소개 / 시작하기 / 설명 탭에서 레이아웃·단축키·각 기능을 안내합니다.',
+    helpCenterDesc: '기본 진입 패널입니다. 소개 / 시작하기 / 설명 / FAQ 탭에서 레이아웃·단축키·필수 사용법을 안내합니다.',
     tmuxEmptyPane: '비어 있음 — 설정 모드에서 선택',
 
     dRootAddFolder: '<strong>워킹 폴더 추가.</strong> Agent 탭에 있습니다. 서버가 허용하는 루트 폴더 목록(한 줄에 하나씩)을 편집합니다. 등록된 경로는 세션이 없어도 빈 경로 그룹으로 남습니다. 저장하면 서버가 재시작됩니다.',
@@ -3156,16 +3482,17 @@ CLan.Set({
     dMoreTeam: '<strong>Team (새로 만들기).</strong> New Team 대화상자를 엽니다 — 서브 에이전트와 목표를 고르면 메인 터미널이 Terminal 패널(Agent 목록)에 나타납니다.',
     dMoreDownload: '<strong>Download.</strong> yt-dlp/ffmpeg 상태 확인 후 YouTube·직접 URL을 넣고 MP3/MP4/Direct 중 포맷을 고른 뒤 Start Download로 내려받습니다. 진행 중인 job 목록과 진행률이 아래에 표시됩니다.',
     dMoreLog: '<strong>Log.</strong> 지난 프로바이더(CLI) 대화 로그를 아코디언 목록으로 보여주는 탭을 엽니다. 새로고침/삭제 버튼이 있습니다.',
-    dMoreMessenger: '<strong>Messenger.</strong> Telegram/Discord 봇 토큰 등록, 입장 링크, Terminal Link/Unlink, 직접 메시지 발송, 봇별 아코디언 대화 로그.',
-    dMoreHelp: '<strong>Help.</strong> 이 가이드(소개 / 시작하기 / 화면 가이드)를 가운데에 엽니다 — 최초 진입 기본 패널과 동일.',
+    dMoreMessenger: '<strong>Messenger.</strong> 중앙 패널(모달 없음). 봇 토큰/상대 이메일 → Register, Email 버튼은 SMTP/IMAP 먼저. 전체 절차: 설명 → 중앙 → Messenger.',
+    dMoreHelp: '<strong>Help.</strong> 이 가이드(소개 / 시작하기 / 화면 가이드 / FAQ)를 가운데에 엽니다 — 최초 진입 기본 패널과 동일.',
     dMoreTmux: '<strong>Multiplexer (상단 탭).</strong> 센터를 그리드로 나눠 Chat·Terminal·Browser·RDP를 동시에 표시합니다(tmux 스타일). 설정 모드: 분할/병합/콘텐츠 선택. 작업 모드: iframe 직접 조작. 메뉴: 최대화, 작업/설정, 종료.',
     dRInfo: '<strong>오른쪽 사이드바 · 인포.</strong> Provider Status에 Node.js와 각 AI 프로바이더의 설치·인증 상태, 버전, 잔여 사용량(5h / Weekly)이 표시됩니다. 그 아래에는 완료된 Chat/Terminal 알림 로그가 쌓입니다.',
     dRFile: '<strong>오른쪽 사이드바 · 파일.</strong> File 탭(전체 매니저)과는 별개인 가벼운 파일 탐색기입니다 — 폴더를 이동하고 파일은 바로 Editor 탭에서 엽니다.',
-    dROption: '<strong>오른쪽 사이드바 · 옵션.</strong> Theme, 로컬 모델 등록, DB 뷰어, 기록 삭제, Schedule, Sub Agent, 단축키 목록이 모여 있습니다 — 오른쪽 목록 항목을 눌러 하나씩 확인해보세요.',
+    dROption: '<strong>오른쪽 사이드바 · 옵션.</strong> Theme, 로컬 모델 등록, Two-Factor Auth(2차 인증), DB 뷰어, 기록 삭제, Schedule, Sub Agent, 단축키 목록이 모여 있습니다 — 오른쪽 목록 항목을 눌러 하나씩 확인해보세요.',
 
     uHelp: '도움말',
     dOTheme: '<strong>Theme.</strong> 앱 전체를 Light/Dark로 전환합니다.',
     dOLocalModel: '<strong>Add OpenCode Model / Status.</strong> 로컬 Ollama/LM Studio 서버를 등록하고 연결 상태를 확인합니다.',
+    dOTwoFactor: '<strong>Two-Factor Auth.</strong> 로그인 시 메신저 봇 승인까지 받도록 세션을 고르거나 Disabled로 끕니다. 로컬 서버 설정이며 선택 즉시 저장됩니다. 봇은 먼저 More → Messenger에서 등록해야 합니다.',
     dODatabase: '<strong>Database.</strong> 로컬 데이터 파일을 보는 SQLite 뷰어와 범용 DB(MySQL/MSSQL/SQLite) 뷰어입니다.',
     dODeleteHistory: '<strong>Delete history.</strong> 지정한 개월 수보다 오래된 AI 대화 로그를 일괄 삭제합니다.',
     dOSchedule: '<strong>Schedule.</strong> Sub Agent용 Interval/Time 작업(work order). Interval: delay·count·start/end + 횟수 소진 시 자동 삭제. Time: 요일 + 시:분 + 1회 후 삭제 옵션. 목록 클릭=편집, 휴지통=삭제.',
@@ -3267,20 +3594,22 @@ CLan.Set({
     footerBuilt: 'Artgine Engine 기반',
     footerLicense: 'MIT License',
 
-    tabDetail: '설명',
     dTitle: '화면 설명',
     dSub: '화면의 각 구성 요소를 자세히 설명합니다',
 
     dLayoutHeading: '화면 구성',
-    dLayoutDesc: '화면은 상단 바, 왼쪽 사이드바, 중앙 패널, 오른쪽 사이드바 네 영역으로 나뉩니다.',
+    dLayoutDesc: '화면은 네 영역입니다. 카드나 아래 목차를 누르면 해당 위치로 이동합니다.',
     dLayoutTopTitle: '상단',
-    dLayoutTopDesc: 'File·Multiplexer 탭과 More 메뉴(Memo, Chat, Terminal, Messenger, Help 등)가 있습니다.',
+    dLayoutTopDesc: 'File · Multiplexer · More',
     dLayoutLeftTitle: '왼쪽',
-    dLayoutLeftDesc: 'RDP 대상, 이어서 Agent / Other 세션(경로 그룹 vs 평면 목록)이 있습니다.',
+    dLayoutLeftDesc: 'RDP · Agent · Other',
     dLayoutCenterTitle: '중앙',
-    dLayoutCenterDesc: '선택한 탭이나 세션의 내용이 표시됩니다 — RDP, File, Help, Terminal, Chat, Messenger, Multiplexer 등.',
+    dLayoutCenterDesc: '활성 탭 / 세션 화면',
     dLayoutRightTitle: '오른쪽',
-    dLayoutRightDesc: 'Info / File / Option 서브 탭이 있습니다.',
+    dLayoutRightDesc: 'Info · File · Option',
+    dTocHeading: '목차',
+    dSbAgentShort: 'Agent / Other',
+    dPathGroupShort: '경로 그룹 · Chat / Terminal / Search',
 
     dLeftHeading: '왼쪽 사이드바',
     dLeftSub: '위에서부터 RDP 목록, 그다음 Agent / Other 하위 탭. Agent는 Chat·Terminal을 working directory 경로별로 묶고, Other는 Browser·Editor를 최신순 평면 목록으로 보여줍니다.',
@@ -3305,37 +3634,37 @@ CLan.Set({
     dTopHeading: '상단 바',
     dTopSub: '중앙 패널 위: <strong>File</strong>, <strong>Multiplexer</strong>, <strong>More</strong> 드롭다운(Memo, RDP, Chat, Terminal, Browser, Team, Download, Log, Messenger, Help). 파일 검색은 상단 탭이 아니라 <kbd>F2</kbd> 또는 경로 <strong>⋯ → Search</strong>(다중 경로 체크박스 모달). 아래 항목을 하나씩 펼쳐보세요.',
     dTopFileHeading: 'File',
-    dTopFileDesc: '모달 없음 — 바로 현재 루트의 전체 파일 관리자로 중앙 패널이 전환됩니다.',
+    dTopFileDesc: '<strong>중앙 패널</strong>(상단 탭) — 현재 루트 전체 파일 관리자. 상세: <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">중앙 → File</a>.',
     dTopTmuxTopHeading: 'Multiplexer',
-    dTopTmuxTopDesc: '상단 탭(More 아래 아님). 여러 세션을 한 화면에 나눠 봅니다. 모드·분할/병합은 Center Panel → Multiplexer 참고.',
+    dTopTmuxTopDesc: '<strong>중앙 패널</strong>(상단 탭, More 아님) — 센터 다중 분할. 모드·분할/병합 상세: <a class="d-goto" href="#dSampleCenterTmux" data-goto-tab="detail" data-goto-scroll="dSampleCenterTmux">중앙 → Multiplexer</a>.',
     dTopSearchHeading: '파일 검색 (경로 ⋯ / F2)',
     dTopSearchDesc: '<p class="mb-2">상단 Search 탭은 없습니다. 두 진입 모두 Control 페이지의 <strong>같은</strong> 검색 모달입니다(File iframe 아님):</p><ul class="mb-2 ps-3"><li><kbd>F2</kbd> — 등록된 모든 경로 <strong>체크</strong>(로컬 워킹 폴더 + 인증된 원격 루트).</li><li>경로 그룹 <strong>⋯ → Search</strong> — <strong>그 경로만</strong> 미리 체크, 나머지는 목록에 두어 추가로 켤 수 있음.</li></ul><p class="mb-0">체크박스 라벨은 <code class="cmd">serverLabel:rootPath</code>. 부분 파일명 → Search/Stop, 체크된 루트마다 <code class="cmd">/</code>부터 스캔(<code class="cmd">node_modules</code>·숨김 제외), 합계 최대 200건. 결과는 <code class="cmd">server:folder</code>, 파일 → Editor, 폴더 → 현재 File 루트와 같을 때만 오른쪽 File 목록.</p>',
     dTopHelpHeading: 'More → Help',
-    dTopHelpDesc: '이 가이드를 가운데에 엽니다(최초 진입 기본 패널). <code class="cmd">?path=</code>로 들어오면 File이 대신 열립니다.',
+    dTopHelpDesc: '<strong>중앙 패널</strong>(모달 없음) — 이 가이드(소개/시작하기/설명/FAQ)를 가운데에 엽니다. 최초 진입 기본 화면. <code class="cmd">?path=</code>면 File이 대신 열림.',
     dTopTermHeading: 'More → Terminal (F3)',
-    dTopTermDesc: '항상 New Terminal 모달이 먼저 뜹니다(<kbd>F3</kbd>도 동일). 모드, (선택) Key, Working Directory, <strong>MCP</strong> / <strong>Copy MD</strong>를 정한 뒤 Open. 이미 열린 세션은 왼쪽 <strong>Agent</strong> 경로 그룹에서 엽니다.',
-    dTopTermOpts: '<ul class="mb-0 ps-3"><li><strong>Mode:</strong> <code class="cmd">cmd</code>(일반 셸) 또는 AI CLI <code class="cmd">claude</code> / <code class="cmd">codex</code> / <code class="cmd">agy</code>(antigravity) / <code class="cmd">opencode</code> / <code class="cmd">grok</code>. 없는 CLI는 첫 실행 때 자동 설치됩니다.</li><li><strong>Key:</strong> 선택 사항. 사이드바에서 여러 터미널을 구분할 세션 라벨입니다.</li><li><strong>Working Directory:</strong> PTY가 시작되는 폴더(비우면 최근 Agent 경로/서버 기본값).</li><li><strong>MCP (기본 켜짐):</strong> 켜면 AI CLI가 MCP 툴 서버(Artgine 연동 툴 등)를 유지합니다. 끄면 MCP 비활성으로 시작 — 내장 툴만 써서 더 단순·안전합니다.</li><li><strong>Copy MD (기본 켜짐):</strong> Working Directory가 서버의 메인 Artgine 경로와 <em>다를 때</em>, 그 폴더에 프로바이더 역할 파일(<code class="cmd">CLAUDE.md</code>, <code class="cmd">AGENTS.md</code> 등)을 복사해 프로젝트 규칙·경로가 적용되게 합니다. <code class="cmd">cmd</code>이거나 cwd가 이미 서버 루트면 동작하지 않습니다.</li></ul>',
+    dTopTermDesc: 'New Terminal 모달이 먼저 뜸(<kbd>F3</kbd> 동일). 모드·Key·Working Directory·MCP/Copy MD 후 Open. 기존 세션은 왼쪽 Agent. 여기는 <strong>생성 대화상자만</strong>; 입력바·SUPER·핸드오프·Log는 <a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term">중앙 → Terminal</a>.',
+    dTopTermOpts: '<ul class="mb-0 ps-3"><li><strong>Mode:</strong> <code class="cmd">cmd</code> 또는 AI CLI <code class="cmd">claude</code>/<code class="cmd">codex</code>/<code class="cmd">agy</code>/<code class="cmd">opencode</code>/<code class="cmd">grok</code>.</li><li><strong>Key:</strong> 사이드바 구분용 라벨(선택).</li><li><strong>Working Directory:</strong> PTY 시작 폴더.</li><li><strong>MCP (기본 켜짐):</strong> MCP 툴 서버 유지 여부.</li><li><strong>Copy MD (기본 켜짐):</strong> cwd가 서버 루트가 아닐 때 역할 MD 복사.</li><li><strong>Open 이후:</strong> 실시간 PTY/SUPER/핸드오프 → <a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term">중앙 → Terminal</a>.</li></ul>',
     dTopMoreHeading: 'More',
-    dTopMoreDesc: 'File / Multiplexer가 아닌 나머지를 모은 드롭다운입니다 — Memo, 새 세션(Terminal 포함), Download, Log, Messenger, Help. 파일 검색은 <kbd>F2</kbd> / 경로 ⋯ → Search(다중 경로 체크박스), 여기 메뉴에는 없음. 아래에 각 항목을 자세히 설명합니다.',
+    dTopMoreDesc: 'File / Multiplexer 외 기능 드롭다운. <strong>열기 방식 2종:</strong> (1) <em>모달 후 중앙</em> — RDP/Chat/Terminal/Browser/Team: 생성 모달은 More에, Open 이후 실시간 UI는 <strong>중앙 패널</strong>(각 항목에서 링크). (2) <em>중앙만</em> — Memo/Download/Log/Messenger/Help: 모달 없음, 상세는 중앙만(More는 짧은 링크). 파일 검색은 <kbd>F2</kbd>/경로 ⋯ → Search.',
     dTopMemoHeading: 'More → Memo',
-    dTopMemoDesc: '모달 없음 — Artgine Memo.html과 동일한 페이지로 중앙 패널이 전환됩니다. 메모는 폴더 경로 단위이며, 카테고리·모드·입력창 슬래시 명령을 사용합니다.',
-    dTopMemoOpts: '<ul class="mb-0 ps-3"><li><strong>폴더 경로:</strong> 어떤 프로젝트 폴더의 메모를 볼지 (예: <code class="cmd">proj/Control</code>).</li><li><strong>모드:</strong> Write <code class="cmd">/w</code>, Search <code class="cmd">/s</code>·<code class="cmd">/r</code>, Delete <code class="cmd">/d</code>, Move <code class="cmd">/m</code> — 드롭다운 또는 전송 시 한 번만 적용되는 접두어.</li><li><strong>프로바이더 / 모델:</strong> AI 검색 등에 사용. 도움말(?)에 전체 명령 목록이 있습니다.</li></ul>',
+    dTopMemoDesc: '<strong>중앙 패널</strong>(모달 없음) — Memo 페이지를 가운데에 엽니다. 레이아웃·모드·슬래시 명령 전체: <a class="d-goto" href="#dSampleCenterMemo" data-goto-tab="detail" data-goto-scroll="dSampleCenterMemo">중앙 → Memo</a>.',
+    dTopMemoOpts: '',
     dTopRdpHeading: 'More → RDP',
-    dTopRdpDesc: '필드 하나짜리 모달을 엽니다 — 원격 Control.html URL을 붙여넣고 Add를 누르면 왼쪽 사이드바 RDP 목록에 등록됩니다.',
+    dTopRdpDesc: '필드 하나짜리 모달 — 원격 Control.html URL을 붙여넣고 Add → 왼쪽 RDP 목록에 등록. 목록에서 고르면 중앙에 화면이 열림. 실시간 화면 UI: <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">중앙 → RDP</a>.',
     dTopChatHeading: 'More → Chat',
-    dTopChatDesc: '새 AI 채팅 세션을 여는 모달입니다 — Working Directory와 New Terminal과 같은 <strong>MCP</strong> / <strong>Copy MD</strong> 스위치를 정한 뒤 Open. 세션은 왼쪽 <strong>Agent</strong> 해당 경로 그룹에 나타납니다.',
-    dTopChatOpts: '<ul class="mb-0 ps-3"><li><strong>Working Directory:</strong> 채팅 에이전트의 작업 폴더 컨텍스트.</li><li><strong>MCP (Chat 기본 꺼짐):</strong> 켜면 채팅 중 MCP 툴 서버를 허용합니다. 끄면 툴을 최소로 쓰는 가벼운 세션.</li><li><strong>Copy MD (기본 켜짐):</strong> Terminal과 동일 — cwd가 서버 Artgine 경로와 다르면 해당 폴더에 역할 마크다운(<code class="cmd">CLAUDE.md</code> / <code class="cmd">AGENTS.md</code> 등)을 심습니다.</li></ul>',
+    dTopChatDesc: '새 AI 채팅 생성 모달 — Working Directory, <strong>MCP</strong>/<strong>Copy MD</strong> 후 Open. 세션은 왼쪽 Agent 경로 그룹에 표시. 여기는 <strong>생성 대화상자만</strong>; 말풍선·입력창 등 실시간 UI는 <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">중앙 → Chat</a>.',
+    dTopChatOpts: '<ul class="mb-0 ps-3"><li><strong>Working Directory:</strong> 채팅 에이전트 작업 폴더.</li><li><strong>MCP (Chat 기본 꺼짐):</strong> 켜면 MCP 툴 서버 허용.</li><li><strong>Copy MD (기본 켜짐):</strong> cwd가 서버 Artgine 경로와 다르면 역할 마크다운 시드.</li><li><strong>Open 이후:</strong> 왼쪽 Agent에서 세션 선택 · 패널 동작은 <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">중앙 → Chat</a>.</li></ul>',
     dTopBrowserHeading: 'More → Browser',
-    dTopBrowserDesc: '새 웹 세션을 여는 모달입니다 — URL, Browser(auto/chrome/msedge/firefox), TTL, 화면 크기, Stealth 시간을 설정합니다.',
+    dTopBrowserDesc: '새 웹 세션 생성 모달 — URL, Browser, TTL, 화면 크기, Stealth. 여기는 <strong>생성 대화상자만</strong>; 실행 중 페이지/Frame/Input은 <a class="d-goto" href="#d-section-center" data-goto-tab="detail" data-goto-scroll="d-section-center">중앙 → Browser</a>.',
     dTopTeamHeading: 'More → Team',
-    dTopTeamDesc: '메인 에이전트의 Provider/Model, Goal, 발주할 서브 에이전트, 시간 제한을 고르는 모달입니다 — 실행 중인 팀은 Terminal 세션으로 나타납니다.',
+    dTopTeamDesc: '메인 Provider/Model, Goal, 서브 에이전트, 시간 제한을 고르는 생성 모달. 실행 중인 팀은 왼쪽 Agent의 Terminal 세션으로 뜸. 실시간 PTY UI: <a class="d-goto" href="#d-center-term" data-goto-tab="detail" data-goto-scroll="d-center-term">중앙 → Terminal</a>.',
     dTopDownloadHeading: 'More → Download',
-    dTopDownloadDesc: '모달 없음 — yt-dlp/ffmpeg 다운로드 도우미로 전환됩니다. YouTube·직접 URL을 넣고 정보를 조회한 뒤 MP3/MP4/Direct를 골라 진행률을 확인합니다.',
+    dTopDownloadDesc: '<strong>중앙 패널</strong>(모달 없음) — yt-dlp/ffmpeg 다운로드 도우미. UI 상세: <a class="d-goto" href="#dSampleCenterDownload" data-goto-tab="detail" data-goto-scroll="dSampleCenterDownload">중앙 → Download</a>.',
     dTopLogHeading: 'More → Log',
-    dTopLogDesc: '모달 없음 — 지난 프로바이더(CLI) 대화 로그를 아코디언으로 보여주는 화면으로 전환됩니다. 새로고침/삭제 버튼이 있습니다.',
+    dTopLogDesc: '<strong>중앙 패널</strong>(모달 없음) — 프로바이더 대화 로그. 아코디언/새로고침/삭제: <a class="d-goto" href="#dSampleCenterLog" data-goto-tab="detail" data-goto-scroll="dSampleCenterLog">중앙 → Log</a>.',
     dTopMessengerHeading: 'More → Messenger',
-    dTopMessengerDesc: '모달 없음 — Messenger 패널을 엽니다. Telegram/Discord 봇 토큰 등록, 입장 링크, Terminal Link/Unlink, 직접 메시지, 펼친 동안 폴링되는 대화 로그.',
-    dTopMessengerOpts: '<ul class="mb-0 ps-3"><li><strong>등록:</strong> 봇 토큰 붙여넣기 → Register. 서버 SQLite에 유지됩니다.</li><li><strong>입장 링크 / 채팅:</strong> 유저가 링크를 열면 pending → active.</li><li><strong>Terminal Link:</strong> 열린 Terminal을 골라 Link하면 채팅이 그 PTY로 연결됩니다.</li><li><strong>직접 메시지 / 로그:</strong> Control에서 발송, 마크다운 말풍선, 펼침 중 약 3초 폴링.</li></ul>',
+    dTopMessengerDesc: '<strong>중앙 패널</strong>(모달 없음) — Messenger 패널(입력칸+Register+Email, 세션 목록). Telegram/Discord 토큰 위치·Email SMTP/IMAP→상대 주소 전체 절차: <a class="d-goto" href="#d-center-messenger" data-goto-tab="detail" data-goto-scroll="d-center-messenger">중앙 → Messenger</a>.',
+    dTopMessengerOpts: '',
     dTopTmuxHeading: 'Multiplexer (상단 탭)',
     dTopTmuxDesc: '상단 File 옆 Multiplexer 탭으로 엽니다(More 아님). 여러 세션을 동시에 보는 분할 레이아웃(tmux 스타일). 레이아웃은 브라우저에 저장됩니다. 모드·분할/병합·콘텐츠 선택은 중앙 패널 → Multiplexer 설명을 보세요.',
 
@@ -3343,11 +3672,13 @@ CLan.Set({
     dRightSub: '오른쪽 사이드바는 Info, File, Option 세 서브 탭으로 구성되며, 아래에서 하나씩 설명합니다. Option 하나에는 8개의 개별 컨트롤이 묶여 있어 — 각각 따로 풀어서 설명합니다.',
     dRightInfoDesc: 'Provider Status에 Node.js와 각 AI 프로바이더의 설치·인증 상태, 버전, 잔여 사용량(5h / Weekly)이 표시됩니다. 그 아래에는 완료된 Chat/Terminal 알림 로그가 쌓입니다.',
     dRightFileDesc: 'File 탭(전체 매니저)과는 별개인 가벼운 파일 탐색기입니다 — 폴더를 이동하고 파일은 바로 Editor 탭에서 엽니다.',
-    dRightOptionDesc: '한 패널에 7개 컨트롤이 묶여 있습니다: Theme, 로컬 모델 등록, Database 뷰어, 기록 삭제, Schedule, Sub Agent, 단축키 목록. 아래에 하나씩 자세히 설명합니다.',
+    dRightOptionDesc: '한 패널에 8개 컨트롤이 묶여 있습니다: Theme, 로컬 모델 등록, Two-Factor Auth(2차 인증), Database 뷰어, 기록 삭제, Schedule, Sub Agent, 단축키 목록. 아래에 하나씩 자세히 설명합니다.',
     dOptThemeHeading: 'Option → Theme',
     dOptThemeDesc: '앱 전체를 Light/Dark로 전환합니다.',
     dOptLocalModelHeading: 'Option → Add OpenCode Model / Status',
     dOptLocalModelDesc: '로컬 Ollama/LM Studio 서버를 등록하고 연결 상태를 확인합니다.',
+    dOptTwoFactorHeading: 'Option → Two-Factor Auth',
+    dOptTwoFactorDesc: '<ul class="mb-0 ps-3"><li><strong>하는 일:</strong> 비밀번호 확인 뒤, 메신저 봇(Telegram/Discord) 승인까지 기다려 로그인을 완료합니다(최대 약 5분).</li><li><strong>선택:</strong> <em>Disabled</em>는 2차 인증 끔, 그 외는 등록된 Messenger 세션(<code class="cmd">platform - botName</code>).</li><li><strong>저장:</strong> 값을 바꾸면 즉시 저장(로컬 서버 설정). 봇은 먼저 <strong>More → Messenger</strong>에서 등록해야 하며, 목록이 비어 있으면 Disabled만 보입니다.</li></ul>',
     dOptDatabaseHeading: 'Option → Database',
     dOptDatabaseDesc: '로컬 데이터 파일을 보는 SQLite 뷰어와 범용 DB(MySQL/MSSQL/SQLite) 뷰어입니다.',
     dOptDeleteHistoryHeading: 'Option → Delete history',
@@ -3357,7 +3688,7 @@ CLan.Set({
     dOptSubAgentHeading: 'Option → Sub Agent',
     dOptSubAgentDesc: '<ul class="mb-0 ps-3"><li><strong>저장 시:</strong> 서버가 그 key로 터미널 세션을 영구적으로 유지합니다 — 즉시 스폰되고, 강제 종료되거나 죽어도 자동으로 다시 뜹니다.</li><li><strong>Working Directory / Super:</strong> 그 세션의 작업 폴더와, 자동 승인(SUPER) 모드로 시작할지 여부입니다.</li><li><strong>Score / Traits:</strong> 아무것도 강제하지 않는 순수 힌트로, Team 감독 에이전트(또는 Schedule)가 "이 작업엔 어떤 에이전트가 맞는지" 판단할 때만 참고합니다.</li><li><strong>Retry Text / Count:</strong> 자동 품질 개선 루프 — 이 에이전트가 idle 상태가 되면, 마지막 진짜 작업 이후 Count 횟수까지 Retry Text를 자동으로 재발주합니다.</li><li><strong>저장된 목록:</strong> 에이전트를 클릭하면 "Edit Sub Agent"로 값을 채운 채 다시 열리고, 휴지통 아이콘은 삭제 전에 확인을 한 번 더 묻습니다.</li></ul>',
     dOptShortcutsHeading: 'Option → Help',
-    dOptShortcutsDesc: '설치 탭에 있는 것과 같은 키보드 단축키 목록입니다.',
+    dOptShortcutsDesc: '오른쪽 Option 패널 맨 아래 단축키 요약(F1–F7, 방향키). 설명 포함 전체 목록은 시작하기 → Keyboard Shortcuts. Control UI: 오른쪽 사이드바 Option → Help.',
 
     dCenterHeading: '중앙 패널',
     dCenterSub: '중앙 패널에는 활성화된 탭이나 세션의 내용이 표시됩니다. 아래에서 각 종류를 실제 샘플 화면과 함께 하나씩 설명합니다.',
@@ -3384,8 +3715,8 @@ CLan.Set({
     dCenterLogDesc: '모든 프로바이더의 과거 AI 대화를 모아 보여주는 아코디언입니다 — Chat과 Terminal 세션이 모두 여기에 기록됩니다. 각 항목은 모델 배지, 한 줄 미리보기, 작업 경로, 시각을 보여주며 펼치면 전체 대화를 읽을 수 있습니다. 새로고침/전체 삭제는 헤더에, 개별 삭제는 각 항목에 있습니다.',
     dCenterTmuxHeading: 'Multiplexer',
     dCenterMessengerHeading: 'Messenger',
-    dCenterMessengerDesc: '<strong>More → Messenger</strong>에서 엽니다. Telegram/Discord 봇 등록, 입장 링크, Terminal 브릿지, 실시간 로그.',
-    dCenterMessengerDetail: '<ul class="mb-0 ps-3"><li><strong>등록:</strong> 봇 토큰 한 번만 — 서버에 저장, 재시작 후에도 유지.</li><li><strong>봇별 아코디언:</strong> 플랫폼·이름·상태(pending/active). 펼치면 입장 URL·연결 채팅·터미널 키.</li><li><strong>Terminal:</strong> 열린 세션 선택 후 Link/Unlink.</li><li><strong>직접 메시지 + 로그:</strong> Control에서 발송, 입·출력 말풍선(마크다운), 펼침 중 폴링.</li></ul>',
+    dCenterMessengerDesc: '<p class="mb-2"><strong>More → Messenger</strong>로 엽니다(중앙 패널, 추가 모달 없음). <strong>이 패널 맨 위 툴바:</strong></p><ul class="ps-3 mb-2"><li>긴 입력칸 — 안내 문구 <em>Paste bot token or peer email…</em> — 여기에 텔레그램/디스코드 <strong>봇 토큰</strong> 또는 이메일 <strong>상대 주소</strong>를 붙여넣습니다.</li><li><strong>Register</strong> — 입력칸 내용으로 세션 저장(플랫폼 자동 판별).</li><li><strong>Email</strong>(봉투 아이콘) — <em>Add Email Messenger</em> 모달. 서버 SMTP/IMAP 메일 계정을 <strong>먼저</strong> 등록(이메일 상대 Register 전에 필수).</li><li>새로고침 — 아래 세션 목록 다시 불러오기.</li></ul><p class="mb-0">아래: 등록된 세션 아코디언(Telegram/Discord/Email). 펼치면 입장·초대 링크, Terminal Link, 직접 메시지, 로그.</p>',
+    dCenterMessengerDetail: '<p class="fw-semibold mb-1" style="color:#c9d1d9;">1) Telegram — 봇 생성 → 토큰 붙여넣기 → Register</p><ol class="ps-3 mb-3"><li>텔레그램 앱에서 <code class="cmd">@BotFather</code> 채팅을 엽니다.</li><li><code class="cmd">/newbot</code> 전송 → 표시 이름·유저명 설정(유저명은 보통 <code class="cmd">bot</code>으로 끝남).</li><li>BotFather가 <strong>HTTP API token</strong>을 줍니다. 예: <code class="cmd">7123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw</code> (숫자 + <code class="cmd">:</code> + 시크릿). 전체를 복사합니다.</li><li>Control에서 <strong>More → Messenger</strong>를 엽니다.</li><li>토큰을 Messenger 패널 <strong>맨 위 입력칸</strong>에 붙여넣습니다(브라우저 주소창·settings.json이 아님).</li><li><strong>Register</strong> 클릭. 성공하면 목록에 Telegram 행이 생깁니다(서버에 저장).</li><li>그 행을 펼침 → 입장 링크 <code class="cmd">https://t.me/봇유저명</code> 열기 → <code class="cmd">/start</code>(또는 아무 메시지) 전송. 상태 <em>pending → active</em>.</li></ol><p class="fw-semibold mb-1" style="color:#c9d1d9;">2) Discord — 봇 앱 생성 → 토큰 붙여넣기 → Register → 서버 초대</p><ol class="ps-3 mb-3"><li>브라우저: <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">discord.com/developers/applications</a> → <strong>New Application</strong> → 이름 입력.</li><li>왼쪽 <strong>Bot</strong> → 필요 시 <strong>Add Bot</strong> → <strong>Reset Token</strong>/Copy. 토큰 예: <code class="cmd">MTIz.ABC.xyz</code> (점 두 개로 세 구간, 콜론 없음).</li><li>Control: <strong>More → Messenger</strong> → <strong>같은 맨 위 입력칸</strong>에 토큰 붙여넣기 → <strong>Register</strong>.</li><li>새 Discord 행을 펼침 → 세션 정보에 나온 OAuth <strong>초대 링크</strong>를 엽니다.</li><li>서버 선택 → 승인(봇 권한: 채널 보기, 메시지 보내기, 기록 읽기).</li><li>봇이 읽을 수 있는 채널에 아무 메시지를 올립니다. 채널이 묶이면 <em>pending → active</em>.</li></ol><p class="fw-semibold mb-1" style="color:#c9d1d9;">3) Email — 먼저 서버 메일 계정, 그다음 응답 상대 등록</p><p class="mb-2">이메일은 두 단계입니다. SMTP 비밀번호를 Register 입력칸에 넣지 마세요. 순서가 중요합니다.</p><p class="mb-1"><strong>A단계 — 서버 메일 계정 추가(반드시 먼저)</strong></p><ol class="ps-3 mb-2"><li>Messenger 상단에서 <strong>Email</strong> 버튼 클릭(Register 아님). 모달 제목: <em>Add Email Messenger</em>.</li><li><em>Send (SMTP)</em> — Artgine이 메일을 <strong>보내는</strong> 계정: Address=SMTP 호스트(예 <code class="cmd">smtp.gmail.com</code>), Port(예 <code class="cmd">465</code>/<code class="cmd">587</code>), ID=<strong>전체 주소</strong> <code class="cmd">you@gmail.com</code>(로컬파트만 불가), Password.</li><li><em>Receive (IMAP)</em> — 메일을 <strong>읽는</strong> 계정(같은 메일함 가능): Address=IMAP 호스트(예 <code class="cmd">imap.gmail.com</code>), Port(예 <code class="cmd">993</code>), ID=전체 이메일, Password.</li><li><strong>Verify &amp; Save</strong> 클릭. SMTP·IMAP 둘 다 검사하고, 둘 다 성공해야 저장됩니다. 이 계정은 서버에 남아 모든 이메일 채팅이 공유합니다. 모달을 다시 열면 비밀번호 칸은 비어 있음(비워 두면 기존 유지).</li><li>A단계를 건너뛰면 B단계에서 <em>mail account is not configured yet</em> 오류.</li></ol><p class="mb-1"><strong>B단계 — 응답 받을 상대 주소 등록</strong></p><ol class="ps-3 mb-2"><li>Email 모달을 닫고, Messenger <strong>맨 위 입력칸</strong>에 <strong>상대방 이메일</strong>(대화할 인박스)을 붙여넣습니다. 예: <code class="cmd">friend@example.com</code>.</li><li><strong>Register</strong> 클릭(봇과 같은 버튼). 여기는 A단계 SMTP ID가 아니라 <strong>대화 상대</strong>입니다.</li><li>Email 세션이 바로 <em>active</em>로 생깁니다(입장 링크 없음). 발신=SMTP로 그 상대에게, 수신=IMAP에서 그 상대로부터.</li></ol><p class="fw-semibold mb-1" style="color:#c9d1d9;">등록 후 (공통)</p><ul class="ps-3 mb-0"><li>세션 펼침 → Terminal 선택 → <strong>Link</strong>(채팅↔PTY) / <strong>Unlink</strong>.</li><li>직접 메시지 + 로그(펼침 중 약 3초 폴링).</li><li>선택: 오른쪽 <strong>Option → Two-Factor Auth</strong>에서 이 세션을 로그인 승인 채널로 지정.</li></ul>',
     dCenterTmuxDesc: '상단 <strong>Multiplexer</strong> 탭으로 엽니다. 센터를 여러 칸으로 나눠 Chat·Terminal·Browser·RDP 세션을 동시에 표시합니다. 레이아웃은 localStorage에 저장됩니다.',
     dCenterTmuxDetail: '<p class="fw-semibold mb-1" style="color:#c9d1d9;">모드</p><ul class="mb-3 ps-3"><li><strong>작업:</strong> 오버레이 없음 — 각 칸 iframe을 직접 조작합니다.</li><li><strong>설정:</strong> 칸마다 도구 모음 — 좌우 분할, 상하 분할, 병합(루트가 아닐 때), 콘텐츠 선택.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">메뉴 (우상단 ⋯)</p><ul class="mb-3 ps-3"><li><strong>최대/최소:</strong> 좌우 사이드바를 숨겨 전체 폭 그리드(탭 바는 유지) 또는 일반 레이아웃으로 복귀.</li><li><strong>작업 / 설정:</strong> 모드 전환.</li><li><strong>종료:</strong> Multiplexer 패널을 닫습니다.</li></ul><p class="fw-semibold mb-1" style="color:#c9d1d9;">콘텐츠 선택</p><ul class="mb-0 ps-3"><li>설정 모드에서 열린 Chat / Terminal / Browser / RDP 세션 중 무엇을 그 칸에 넣을지 고릅니다.</li><li>빈 칸은 설정 모드에서 콘텐츠를 선택하라는 안내를 보여줍니다.</li></ul>'
   }
@@ -3561,6 +3892,66 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
   });
 })();
 
+// ---- Cross-tab / in-page links (TOC, FAQ "see also") ----
+// data-goto-tab: promo | install | detail | faq
+// data-goto-scroll: element id to scrollIntoView
+// data-goto-collapse: Bootstrap collapse id to expand (optional)
+(function initGotoNav() {
+  function showMainTab(tabKey) {
+    const btn = document.getElementById('tab-btn-' + tabKey);
+    if (!btn || !window.bootstrap?.Tab) return null;
+    const tab = bootstrap.Tab.getOrCreateInstance(btn);
+    tab.show();
+    return btn;
+  }
+
+  function expandAndScroll(scrollId, collapseId) {
+    if (collapseId) {
+      const col = document.getElementById(collapseId);
+      if (col && window.bootstrap?.Collapse) {
+        try { bootstrap.Collapse.getOrCreateInstance(col, { toggle: false }).show(); } catch { /* ignore */ }
+      }
+    }
+    const targetId = scrollId || collapseId;
+    if (!targetId) return;
+    const el = document.getElementById(targetId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function navigate(el) {
+    const tabKey = el.getAttribute('data-goto-tab');
+    const scrollId = el.getAttribute('data-goto-scroll') || '';
+    const collapseId = el.getAttribute('data-goto-collapse') || '';
+    if (!tabKey && !scrollId && !collapseId) return;
+
+    const run = () => setTimeout(() => expandAndScroll(scrollId, collapseId), 60);
+
+    if (tabKey) {
+      const btn = document.getElementById('tab-btn-' + tabKey);
+      const already = btn && btn.classList.contains('active');
+      if (btn && !already) {
+        const onShown = () => { btn.removeEventListener('shown.bs.tab', onShown); run(); };
+        btn.addEventListener('shown.bs.tab', onShown);
+        showMainTab(tabKey);
+      } else {
+        if (tabKey) showMainTab(tabKey);
+        run();
+      }
+    } else {
+      run();
+    }
+  }
+
+  document.addEventListener('click', e => {
+    const el = e.target.closest('.d-goto[data-goto-tab], .d-goto[data-goto-scroll], .d-goto[data-goto-collapse]');
+    if (!el) return;
+    // allow real external links without data-goto-*
+    if (el.tagName === 'A' && el.getAttribute('href')?.startsWith('http')) return;
+    e.preventDefault();
+    navigate(el);
+  });
+})();
+
 // ---- Top-bar live sample (Guide tab) ----
 // 실제 Control 상단: File / Multiplexer / More (Search·Help 상단 탭 없음)
 (function initDetailTopSample() {
@@ -3731,6 +4122,49 @@ document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
   copy('log', 'dSampleCenterLog');
   copy('messenger', 'dSampleCenterMessenger');
   copy('tmux', 'dSampleCenterTmux');
+})();
+
+// ---- FAQ / QnA tab: client-side search (title + body + data-faq-q keywords) ----
+(function initFaqSearch() {
+  const input = document.getElementById('faqSearchInput');
+  const list = document.getElementById('faqList');
+  const empty = document.getElementById('faqEmpty');
+  const meta = document.getElementById('faqResultMeta');
+  if (!input || !list) return;
+
+  const items = Array.from(list.querySelectorAll('.faq-item'));
+  const total = items.length;
+
+  function setMeta(visible, query) {
+    if (!meta) return;
+    if (!query) {
+      meta.textContent = CLan.Get('faqResultAll', 'Showing all items');
+      return;
+    }
+    const tpl = CLan.Get('faqResultCount', 'Showing {0} of {1}');
+    meta.textContent = tpl.replace('{0}', String(visible)).replace('{1}', String(total));
+  }
+
+  function filter() {
+    const raw = (input.value || '').trim().toLowerCase();
+    const terms = raw.split(/\s+/).filter(Boolean);
+    let visible = 0;
+    items.forEach(item => {
+      const hay = (
+        (item.getAttribute('data-faq-q') || '') + ' ' +
+        (item.textContent || '')
+      ).toLowerCase();
+      const ok = terms.length === 0 || terms.every(t => hay.includes(t));
+      item.classList.toggle('faq-hidden', !ok);
+      if (ok) visible++;
+    });
+    if (empty) empty.classList.toggle('d-none', visible !== 0);
+    setMeta(visible, raw);
+  }
+
+  input.addEventListener('input', filter);
+  input.addEventListener('search', filter);
+  setMeta(total, '');
 })();
 </script>
 </body>
