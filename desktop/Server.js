@@ -64,6 +64,7 @@ async function Init() {
     else {
         await offerCloudflareTunnelIfNeeded();
     }
+    document.getElementById("browser_btn").disabled = false;
     CDOM.IDValue("auth_password_txt", appJSON.password ?? "");
     const commitAuth = () => CWebView.Call("UpdateExtraSettings", {
         password: document.getElementById("auth_password_txt").value,

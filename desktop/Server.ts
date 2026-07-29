@@ -79,6 +79,10 @@ async function Init()
         await offerCloudflareTunnelIfNeeded();
     }
 
+    // 포트 접속 테스트/클라우드플레어 터널 시도가 모두 끝난 뒤에만 브라우저 버튼 활성화
+    // (진행 중에 누르면 아직 확정되지 않은 gIpInfo로 열게 되어 애매해짐)
+    (document.getElementById("browser_btn") as HTMLButtonElement).disabled = false;
+
     CDOM.IDValue("auth_password_txt", appJSON.password ?? "");
 
     const commitAuth = () => CWebView.Call("UpdateExtraSettings", {

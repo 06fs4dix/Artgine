@@ -1014,17 +1014,28 @@ async function startCloudflareTunnel() {
             return;
         }
         gCloudflaredProc = proc;
+        let urlFound = false;
         const onChunk = (chunk) => {
             const text = chunk.toString();
             buf += text;
             CConsol.Log("[cloudflared] " + text.trim());
             const m = buf.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
-            if (m) {
+            if (m && !urlFound) {
+                urlFound = true;
                 const tunnelOrigin = m[0];
                 const pageUrl = buildProjectPageUrl(tunnelOrigin);
-                gCloudflareTunnelUrl = pageUrl;
-                CConsol.Log("[Cloudflare] tunnel ready: " + pageUrl);
-                finish({ ok: true, url: pageUrl });
+                CConsol.Log("[Cloudflare] tunnel URL received, verifying page is live: " + pageUrl);
+                checkHttpRetry(pageUrl, 5, 3000).then((live) => {
+                    if (settled)
+                        return;
+                    if (!live) {
+                        finish({ ok: false, msg: "Cloudflare tunnel started but the page did not respond." });
+                        return;
+                    }
+                    gCloudflareTunnelUrl = pageUrl;
+                    CConsol.Log("[Cloudflare] tunnel ready: " + pageUrl);
+                    finish({ ok: true, url: pageUrl });
+                });
             }
         };
         proc.stdout?.on("data", onChunk);

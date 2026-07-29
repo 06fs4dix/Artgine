@@ -1402,18 +1402,29 @@ async function startCloudflareTunnel(): Promise<{ ok: boolean; url?: string; msg
 		}
 		gCloudflaredProc = proc;
 
+		let urlFound = false;
 		const onChunk = (chunk: Buffer) => {
 			const text = chunk.toString();
 			buf += text;
 			CConsol.Log("[cloudflared] " + text.trim());
 			// Quick Tunnel URL: https://xxxx.trycloudflare.com
 			const m = buf.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
-			if (m) {
+			if (m && !urlFound) {
+				urlFound = true;
 				const tunnelOrigin = m[0];
 				const pageUrl = buildProjectPageUrl(tunnelOrigin);
-				gCloudflareTunnelUrl = pageUrl;
-				CConsol.Log("[Cloudflare] tunnel ready: " + pageUrl);
-				finish({ ok: true, url: pageUrl });
+				CConsol.Log("[Cloudflare] tunnel URL received, verifying page is live: " + pageUrl);
+				// 터널이 뜬 것과 실제로 페이지가 응답하는 것은 다르므로, GetIPInfo와 동일하게 실제 HTTP 200을 확인한 뒤에만 접속 가능으로 표시한다.
+				checkHttpRetry(pageUrl, 5, 3000).then((live) => {
+					if (settled) return;
+					if (!live) {
+						finish({ ok: false, msg: "Cloudflare tunnel started but the page did not respond." });
+						return;
+					}
+					gCloudflareTunnelUrl = pageUrl;
+					CConsol.Log("[Cloudflare] tunnel ready: " + pageUrl);
+					finish({ ok: true, url: pageUrl });
+				});
 			}
 		};
 		proc.stdout?.on("data", onChunk);
