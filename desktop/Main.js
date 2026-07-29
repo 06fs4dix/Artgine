@@ -1004,7 +1004,7 @@ async function startCloudflareTunnel() {
         };
         let proc;
         try {
-            proc = spawn(binPath, ["tunnel", "--url", localTarget], {
+            proc = spawn(binPath, ["tunnel", "--protocol", "http2", "--url", localTarget], {
                 stdio: ["ignore", "pipe", "pipe"],
                 windowsHide: true,
             });
@@ -1022,10 +1022,11 @@ async function startCloudflareTunnel() {
             const m = buf.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
             if (m && !urlFound) {
                 urlFound = true;
+                clearTimeout(timer);
                 const tunnelOrigin = m[0];
                 const pageUrl = buildProjectPageUrl(tunnelOrigin);
                 CConsol.Log("[Cloudflare] tunnel URL received, verifying page is live: " + pageUrl);
-                checkHttpRetry(pageUrl, 5, 3000).then((live) => {
+                checkHttpRetry(pageUrl, 24, 4000).then((live) => {
                     if (settled)
                         return;
                     if (!live) {
@@ -1070,7 +1071,7 @@ async function startCloudflareTunnel() {
             catch { }
             gCloudflaredProc = null;
             finish({ ok: false, msg: "Timed out waiting for Cloudflare tunnel URL." });
-        }, 45000);
+        }, 60000);
     });
 }
 ipcMain.handle("StartCloudflareTunnel", async (_event) => {

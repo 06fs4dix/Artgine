@@ -1392,7 +1392,9 @@ async function startCloudflareTunnel(): Promise<{ ok: boolean; url?: string; msg
 
 		let proc: ChildProcess;
 		try {
-			proc = spawn(binPath, ["tunnel", "--url", localTarget], {
+			// QUIC(UDP)은 공인 포트가 막힌 네트워크에서 같이 막혀 있는 경우가 많아 연결 시도가 지연/실패하기 쉽다.
+			// 웹 브라우징이 되는 환경이면 거의 항상 열려있는 TCP 443 기반 http2로 강제해 지연 요인을 없앤다.
+			proc = spawn(binPath, ["tunnel", "--protocol", "http2", "--url", localTarget], {
 				stdio: ["ignore", "pipe", "pipe"],
 				windowsHide: true,
 			});
@@ -1411,11 +1413,14 @@ async function startCloudflareTunnel(): Promise<{ ok: boolean; url?: string; msg
 			const m = buf.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
 			if (m && !urlFound) {
 				urlFound = true;
+				clearTimeout(timer); // URL 대기 타임아웃 해제: 검증 단계는 별도 재시도 예산(아래)으로 진행
 				const tunnelOrigin = m[0];
 				const pageUrl = buildProjectPageUrl(tunnelOrigin);
 				CConsol.Log("[Cloudflare] tunnel URL received, verifying page is live: " + pageUrl);
-				// 터널이 뜬 것과 실제로 페이지가 응답하는 것은 다르므로, GetIPInfo와 동일하게 실제 HTTP 200을 확인한 뒤에만 접속 가능으로 표시한다.
-				checkHttpRetry(pageUrl, 5, 3000).then((live) => {
+				// 로컬 오리진은 이미 떠 있는 서버라 항상 즉시 200이 나와 검증 의미가 없다.
+				// 실제 지연은 Cloudflare 엣지↔오리진 터널 라우팅이 자리잡는 시간이므로 공개 URL로 확인해야 하며,
+				// 사용자 실측상 계속 재시도하면 결국 뜨는 경우가 많아 재시도 예산을 넉넉히 준다(최대 약 2분).
+				checkHttpRetry(pageUrl, 24, 4000).then((live) => {
 					if (settled) return;
 					if (!live) {
 						finish({ ok: false, msg: "Cloudflare tunnel started but the page did not respond." });
@@ -1451,7 +1456,7 @@ async function startCloudflareTunnel(): Promise<{ ok: boolean; url?: string; msg
 			} catch { /* ignore */ }
 			gCloudflaredProc = null;
 			finish({ ok: false, msg: "Timed out waiting for Cloudflare tunnel URL." });
-		}, 45000);
+		}, 60000); // 최초 실행 시 바이너리 준비 직후 cloudflared가 엣지에 등록되는 데 시간이 걸릴 수 있어 넉넉히 잡는다.
 	});
 }
 
