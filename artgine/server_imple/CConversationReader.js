@@ -1,1 +1,798 @@
-var G=JSON['\x70\x61\x72\x73\x65'](await CWASM['\x53\x6f\x75\x72\x63\x65\x45\x78\x63\x75\x74\x65']('\x43\x43\x6f\x6e\x76\x65\x72\x73\x61\x74\x69\x6f\x6e\x52\x65\x61\x64\x65\x72\x2e\x6a\x73','\x67\x39\x49\x54\x67\x31\x67\x58\x67\x58\x67\x49\x49\x59\x49\x7a\x49\x61\x67\x5a\x67\x64\x67\x33\x67\x52\x67\x41\x49\x30\x49\x54\x49\x63\x49\x54\x67\x39\x67\x55\x67\x66\x67\x43\x67\x34\x67\x6f\x67\x35\x67\x34\x67\x33\x49\x56\x49\x32\x49\x34\x49\x41\x67\x30\x67\x61\x67\x76\x67\x5a\x67\x73\x67\x55\x67\x75\x49\x59\x49\x7a\x49\x61\x67\x34\x67\x34\x67\x33\x67\x39\x67\x74\x49\x4b\x67\x6a\x67\x78\x67\x30\x67\x59\x67\x58\x49\x6a\x49\x66\x49\x59\x67\x75\x67\x35\x67\x61\x67\x61\x67\x79\x67\x45\x67\x52\x49\x57\x67\x30\x67\x38\x67\x76\x67\x6e\x67\x57\x67\x71\x67\x7a\x67\x37\x49\x31\x49\x63\x49\x4c\x49\x49\x67\x36\x67\x45\x67\x77\x67\x6e\x49\x77\x49\x61\x67\x34\x67\x43\x67\x51\x67\x47\x49\x6f\x49\x39\x49\x31\x67\x78\x67\x70\x67\x72\x67\x79\x67\x32\x67\x6c\x49\x6a\x67\x76\x49\x61\x49\x77\x49\x75\x67\x6b\x67\x71\x67\x71\x67\x62\x67\x37\x67\x63\x49\x67\x49\x6c\x49\x64\x49\x62\x67\x64\x49\x45\x67\x68\x49\x61\x49\x77\x49\x75\x67\x69\x67\x59\x67\x39\x67\x4f\x67\x6d\x67\x79\x49\x4c\x49\x35\x49\x56\x67\x45\x67\x30\x49\x6f\x67\x68\x49\x61\x49\x77\x49\x75\x67\x39\x67\x55\x67\x42\x49\x73\x49\x31\x49\x63\x49\x4c\x67\x4c\x67\x77\x67\x75\x67\x4a\x67\x6e\x49\x77\x49\x61\x67\x5a\x67\x6d\x67\x6f\x67\x57\x67\x51\x67\x69\x67\x37\x67\x63\x67\x34\x49\x6c\x49\x64\x49\x62\x67\x4c\x49\x6f\x67\x33\x67\x61\x67\x6a\x67\x45\x67\x6f\x67\x47\x49\x6f\x49\x39\x49\x31\x67\x30\x67\x36\x67\x74\x67\x6d\x67\x45\x67\x64\x49\x45\x67\x77\x49\x61\x49\x77\x49\x75\x67\x58\x67\x49\x67\x43\x67\x39\x67\x75\x67\x66\x67\x4e\x67\x4a\x67\x65\x49\x62\x49\x68\x67\x6e\x67\x4a\x67\x35\x67\x64\x67\x47\x67\x50\x67\x4f\x67\x6e\x67\x62\x67\x6f\x67\x61\x49\x49\x67\x64\x67\x79\x49\x62\x49\x68\x67\x6e\x67\x4c\x67\x30\x67\x64\x67\x6b\x67\x69\x67\x6f\x67\x51\x67\x4f\x67\x38\x67\x76\x67\x34\x67\x63\x67\x44\x49\x62\x49\x68\x67\x6e\x67\x35\x67\x30\x67\x64\x67\x6d\x67\x73\x67\x43\x67\x43\x49\x59\x49\x7a\x49\x61\x67\x70\x67\x30\x67\x35\x67\x31\x67\x4c\x49\x5a\x67\x4a\x67\x30\x67\x79\x67\x31\x49\x6d\x49\x75\x49\x6f\x67\x6a\x67\x62\x67\x63\x67\x56\x67\x64\x67\x4a\x67\x6a\x67\x41\x49\x5a\x67\x74\x67\x35\x67\x68\x67\x59\x49\x6d\x49\x75\x49\x6f\x49\x30\x67\x6d\x67\x74\x49\x67\x67\x63\x67\x76\x49\x62\x49\x68\x67\x6e\x67\x64\x67\x30\x67\x64\x67\x6d\x67\x55\x67\x71\x67\x66\x67\x4d\x49\x31\x49\x63\x49\x4c\x67\x46\x67\x4c\x67\x4f\x67\x78\x49\x6f\x67\x46\x67\x79\x49\x33\x49\x75\x49\x37\x49\x6a\x49\x75\x67\x66\x67\x6e\x67\x74\x67\x36\x67\x72\x49\x56\x49\x32\x49\x34\x49\x31\x67\x76\x67\x4e\x67\x64\x67\x43\x67\x69\x67\x6f\x67\x63\x67\x62\x67\x45\x67\x79\x67\x64\x49\x6c\x49\x64\x49\x62\x49\x78\x49\x75\x67\x68\x67\x35\x67\x46\x67\x75\x67\x58\x49\x6a\x49\x66\x49\x59\x67\x6f\x67\x38\x67\x50\x67\x35\x67\x79\x67\x66\x67\x4c\x49\x31\x49\x54\x49\x63\x49\x54\x49\x6f\x67\x31\x67\x69\x67\x6e\x67\x6e\x49\x31\x49\x63\x49\x4c\x67\x54\x67\x46\x67\x6f\x67\x4c\x49\x5a\x67\x41\x67\x76\x67\x64\x67\x31\x67\x69\x67\x69\x67\x45\x49\x30\x67\x55\x67\x4e\x67\x50\x67\x30\x67\x56\x49\x62\x49\x68\x67\x6e\x49\x61\x67\x61\x67\x33\x67\x6e\x67\x73\x67\x66\x49\x6f\x49\x39\x49\x31\x67\x4e\x67\x65\x67\x34\x67\x33\x67\x75\x49\x34\x67\x4f\x49\x54\x67\x74\x67\x44\x67\x62\x67\x53\x67\x4f\x67\x6e\x67\x59\x67\x45\x49\x61\x49\x44\x49\x6c\x67\x4c\x67\x37\x67\x74\x49\x71\x67\x74\x67\x74\x67\x54\x67\x62\x49\x51\x67\x42\x67\x6a\x49\x59\x49\x7a\x49\x61\x67\x6b\x67\x6d\x67\x6f\x67\x46\x67\x31\x49\x34\x49\x63\x67\x76\x67\x54\x49\x6a\x49\x45\x67\x42\x67\x4f\x67\x69\x67\x37\x49\x63\x49\x4a\x67\x64\x67\x4a\x67\x59\x67\x74\x49\x5a\x67\x74\x67\x38\x67\x76\x67\x71\x67\x57\x67\x47\x67\x52\x49\x39\x49\x73\x67\x79\x67\x70\x67\x78\x67\x79\x67\x33\x67\x64\x49\x6d\x67\x54\x67\x35\x67\x4a\x67\x62\x67\x4b\x49\x6f\x67\x70\x67\x72\x67\x77\x67\x6b\x49\x4a\x67\x78\x67\x79\x67\x73\x67\x46\x49\x66\x67\x6c\x67\x30\x49\x63\x67\x34\x67\x78\x67\x65\x67\x33\x67\x36\x49\x73\x67\x4e\x49\x49\x67\x4a\x67\x77\x67\x52\x67\x30\x49\x71\x67\x6a\x67\x76\x67\x54\x49\x66\x49\x6f\x49\x6f\x49\x45\x49\x42\x67\x61\x67\x6d\x67\x57\x49\x48\x67\x30\x67\x52\x67\x72\x49\x39\x67\x6a\x67\x33\x67\x4c\x67\x62\x67\x73\x67\x55\x67\x43\x67\x59\x49\x73\x49\x4a\x49\x4a\x49\x65\x49\x4e\x67\x4e\x67\x62\x4d\x67\x67\x31\x67\x32\x49\x63\x67\x64\x67\x70\x49\x6f\x67\x49\x67\x71\x67\x53\x67\x30\x67\x69\x67\x54\x67\x33\x67\x75\x67\x6c\x49\x4b\x67\x76\x67\x41\x49\x63\x67\x44\x67\x56\x67\x36\x49\x6f\x49\x39\x49\x31\x67\x6a\x67\x39\x67\x55\x67\x43\x67\x64\x67\x6e\x67\x71\x67\x54\x67\x35\x67\x4a\x67\x71\x49\x45\x67\x48\x67\x33\x49\x67\x67\x68\x49\x77\x67\x63\x67\x34\x67\x33\x67\x45\x49\x79\x49\x48\x67\x67\x67\x49\x67\x6e\x67\x4a\x49\x45\x67\x6e\x67\x43\x67\x4d\x67\x6e\x67\x35\x67\x46\x67\x63\x67\x6d\x67\x52\x67\x63\x67\x71\x49\x4e\x49\x77\x49\x56\x49\x75\x49\x37\x49\x6a\x67\x51\x67\x69\x67\x45\x67\x36\x49\x56\x67\x5a\x67\x4a\x67\x32\x67\x33\x49\x31\x67\x41\x49\x61\x49\x77\x49\x75\x49\x51\x67\x43\x67\x43\x67\x62\x67\x67\x67\x63\x67\x70\x49\x6c\x49\x64\x49\x62\x67\x6c\x49\x71\x67\x4a\x67\x76\x67\x6c\x67\x73\x67\x73\x67\x49\x67\x62\x67\x69\x67\x43\x49\x74\x67\x56\x67\x72\x67\x4a\x49\x62\x49\x68\x67\x6e\x67\x74\x67\x74\x67\x77\x67\x58\x67\x58\x67\x69\x67\x51\x67\x43\x67\x75\x67\x76\x67\x50\x67\x30\x67\x77\x49\x62\x49\x68\x67\x6e\x67\x66\x67\x49\x67\x53\x67\x4a\x67\x5a\x67\x72\x49\x6a\x67\x4d\x67\x75\x67\x30\x67\x63\x67\x43\x67\x35\x67\x6f\x67\x4e\x49\x32\x67\x33\x67\x35\x67\x54\x49\x66\x67\x54\x67\x35\x67\x4c\x67\x4a\x49\x73\x67\x4e\x67\x34\x67\x63\x67\x35\x67\x73\x49\x79\x49\x48\x67\x67\x67\x49\x67\x6e\x67\x4a\x49\x45\x67\x53\x67\x49\x67\x4f\x67\x6f\x67\x66\x67\x34\x67\x38\x67\x35\x67\x75\x49\x79\x67\x69\x49\x63\x49\x46\x49\x63\x67\x38\x67\x44\x67\x70\x67\x79\x67\x72\x49\x73\x67\x51\x67\x55\x49\x48\x67\x4a\x67\x62\x67\x38\x67\x71\x67\x6b\x67\x6a\x67\x73\x49\x66\x67\x77\x49\x67\x67\x44\x67\x44\x67\x46\x49\x77\x49\x76\x49\x6c\x49\x64\x49\x62\x67\x61\x49\x42\x67\x68\x67\x30\x49\x36\x49\x71\x49\x7a\x49\x6e\x49\x6f\x49\x39\x49\x31\x67\x6a\x67\x39\x67\x55\x67\x43\x67\x64\x67\x6e\x67\x71\x67\x69\x67\x69\x67\x43\x49\x42\x67\x55\x67\x42\x67\x31\x49\x6e\x49\x73\x67\x4d\x67\x37\x67\x67\x67\x71\x49\x6e\x67\x46\x49\x4b\x67\x76\x67\x36\x67\x64\x49\x75\x49\x37\x49\x6a\x67\x77\x67\x36\x67\x35\x67\x49\x67\x6f\x67\x66\x49\x4e\x67\x52\x67\x63\x49\x4d\x49\x77\x49\x77\x67\x64\x67\x31\x67\x58\x67\x7a\x67\x63\x67\x69\x67\x43\x67\x36\x49\x49\x49\x35\x49\x4e\x67\x73\x67\x4c\x49\x39\x67\x44\x67\x66\x67\x44\x67\x71\x67\x42\x67\x66\x67\x6e\x67\x43\x67\x31\x49\x77\x67\x62\x67\x75\x67\x6e\x67\x50\x49\x79\x49\x31\x67\x4a\x67\x30\x67\x44\x67\x6d\x49\x45\x67\x41\x67\x46\x67\x36\x67\x64\x67\x49\x49\x4a\x67\x77\x67\x48\x67\x67\x49\x79\x67\x51\x49\x63\x49\x46\x49\x63\x67\x38\x67\x44\x67\x70\x67\x79\x67\x72\x49\x73\x67\x51\x67\x55\x49\x48\x67\x4a\x67\x62\x67\x38\x67\x71\x67\x6b\x67\x6a\x67\x73\x49\x75\x49\x37\x49\x6a\x67\x77\x67\x36\x67\x35\x67\x49\x67\x6f\x67\x66\x49\x4e\x67\x52\x67\x63\x67\x71\x67\x4b\x67\x32\x67\x7a\x67\x36\x49\x45\x67\x53\x67\x43\x67\x4d\x67\x6e\x67\x76\x67\x50\x67\x30\x49\x4e\x67\x6c\x67\x51\x4d\x49\x67\x6e\x67\x49\x49\x63\x67\x75\x67\x55\x67\x69\x67\x43\x67\x47\x67\x75\x67\x74\x67\x61\x67\x38\x49\x4e\x49\x7a\x49\x79\x67\x7a\x49\x54\x49\x63\x49\x54\x49\x6f\x67\x4b\x67\x59\x49\x6f\x67\x54'));import*as y from'\x66\x73';import*as O from'\x70\x61\x74\x68';import*as Z from'\x6f\x73';import{CSQLite}from'\x2e\x2e\x2f\x6e\x65\x74\x77\x6f\x72\x6b\x2f\x43\x53\x51\x4c\x69\x74\x65\x2e\x6a\x73';import{CAI}from'\x2e\x2e\x2f\x75\x74\x69\x6c\x2f\x43\x41\x49\x2e\x6a\x73';import{CWASM}from'\x2e\x2e\x2f\x62\x61\x73\x69\x63\x2f\x43\x57\x41\x53\x4d\x2e\x6a\x73';CWASM['\x49\x73\x57\x41\x53\x4d']();const M=0xd*-0x136+-0x174c+0x3a92,F=-0x2c8a+-0xdc6d+0x1*0x1f357,v=new Map(),g=new Set();let s=0x1bd0+-0x610+-0xae0*0x2;const V=Date['\x6e\x6f\x77']();function m(G9,GG){try{return y['\x72\x65\x61\x64\x64\x69\x72\x53\x79\x6e\x63'](G9)['\x66\x69\x6c\x74\x65\x72'](GG);}catch{return[];}}const q=[/<system-reminder>[\s\S]*?<\/system-reminder>/g,/<local-command-caveat>[\s\S]*?<\/local-command-caveat>/g,/<local-command-stdout>[\s\S]*?<\/local-command-stdout>/g,/<command-(?:name|message|args)>[\s\S]*?<\/command-(?:name|message|args)>/g,/<user_info>[\s\S]*?<\/user_info>/g,/<environment_context>[\s\S]*?<\/environment_context>/g];function E(G9){let GG=G9;for(const Gy of q)GG=GG['\x72\x65\x70\x6c\x61\x63\x65'](Gy,'');return GG['\x74\x72\x69\x6d']();}const D=(G9,GG=G[-0x125e+-0x24ec+0x374a])=>typeof G9===G[-0xbe4*-0x1+0x388+0x1*-0xf6b]?G9:Array['\x69\x73\x41\x72\x72\x61\x79'](G9)?G9['\x66\x69\x6c\x74\x65\x72'](Gy=>Gy?.['\x74\x79\x70\x65']===GG)['\x6d\x61\x70'](Gy=>String(Gy['\x74\x65\x78\x74']??''))['\x6a\x6f\x69\x6e'](''):'',W=[G[-0x927+-0x1395+-0x11b*-0x1a],G[0x1*0x527+0x1*0x1352+-0x1876],G[-0x12f7+-0x1a33*-0x1+-0x738],G[0x573*0x5+0xf6a+-0x2aa4*0x1],G[-0x63e*0x6+-0x95b+0x2ed5],G[0x2368+0x607+0x1a8*-0x19],G[0xcd9+0xd27+-0x19f8],G[0xd*0x11+-0x1973*0x1+0x3*0x835],G[0x877+-0x222a+0x19bd]];function A(G9){if(G9==null)return'';let GG=G9;if(typeof G9===G[0xce3*-0x1+0x4*0x709+-0xf40]){const Gy=G9['\x74\x72\x69\x6d']();if(!Gy)return'';try{GG=JSON['\x70\x61\x72\x73\x65'](Gy);}catch{return'';}}if(typeof GG!==G[-0x1b65*0x1+0x180a+-0x3a*-0xf])return'';for(const GO of W){const GZ=GG[GO];if(typeof GZ===G[-0xd73*-0x2+0x1c8b+-0x3770]&&GZ['\x74\x72\x69\x6d']())return GZ['\x74\x72\x69\x6d']();if(Array['\x69\x73\x41\x72\x72\x61\x79'](GZ)&&typeof GZ[-0x8b*-0x2b+-0x8*0x271+-0x3d1]===G[0x24a0+0x3*0x964+-0x40cb]&&GZ[-0x257b+0x12f0+0x128b]['\x74\x72\x69\x6d']())return GZ[-0xd7d+0x25*0x35+-0x2*-0x2ea]['\x74\x72\x69\x6d']();}return'';}function X(G9,GG,Gy,GO){return{'\x72\x6f\x6c\x65':G[-0x1f28*0x1+0x7*-0x4a1+0x3f9b],'\x74\x65\x78\x74':'','\x6d\x6f\x64\x65\x6c':Gy,'\x69\x73\x6f':GO,'\x74\x6f\x6f\x6c':String(G9||'\x3f'),'\x66\x69\x6c\x65':A(GG)};}function J(G9){return G9['\x72\x65\x70\x6c\x61\x63\x65'](/\r\n/g,'\x0a')['\x72\x65\x70\x6c\x61\x63\x65'](/\r/g,'\x0a')['\x72\x65\x70\x6c\x61\x63\x65'](/[ \t\u00a0]+/g,'\x20')['\x72\x65\x70\x6c\x61\x63\x65'](/\n{3,}/g,'\x0a\x0a')['\x74\x72\x69\x6d']();}function K(G9,GG){if(G9===GG)return!![];const Gy=J(G9),GO=J(GG);if(!Gy||!GO)return![];if(Gy===GO)return!![];const GZ=0x21a1+-0xb*-0x43+-0x1a*0x167;if(Gy['\x6c\x65\x6e\x67\x74\x68']>=GZ&&GO['\x6c\x65\x6e\x67\x74\x68']>=GZ){if(Gy['\x69\x6e\x63\x6c\x75\x64\x65\x73'](GO)||GO['\x69\x6e\x63\x6c\x75\x64\x65\x73'](Gy))return!![];}return![];}function f(G9,GG,Gy){const GO=O['\x72\x65\x73\x6f\x6c\x76\x65'](GG);return Gy['\x66\x69\x6c\x74\x65\x72'](GZ=>GZ['\x70\x72\x6f\x76\x69\x64\x65\x72']===G9&&O['\x72\x65\x73\x6f\x6c\x76\x65'](GZ['\x63\x77\x64'])===GO);}function n(G9,GG,Gy){const GO=f(G9,GG,Gy);return GO['\x6c\x65\x6e\x67\x74\x68']===-0x29*-0x7+0x231*0xc+-0x1b6a?GO[-0x4*-0x60c+0x1bc8+-0x8*0x67f]['\x6b\x65\x79']:'';}function x(G9,GG,Gy,GO){const GZ=f(G9,GG,GO);if(GZ['\x6c\x65\x6e\x67\x74\x68']===-0x2*0x12bf+-0xb39+0x30b7)return'';const GM=[];for(const Gv of GZ){const Gg=Gv['\x69\x6e\x70\x75\x74\x73']['\x66\x69\x6e\x64'](Gs=>!Gs['\x75\x73\x65\x64']&&K(Gs['\x74\x65\x78\x74'],Gy));if(Gg)GM['\x70\x75\x73\x68']({'\x6b\x65\x79':Gv['\x6b\x65\x79'],'\x69\x6e\x70\x75\x74':Gg});}if(GM['\x6c\x65\x6e\x67\x74\x68']===-0x1296+0x1*0x18f9+-0x662)return GM[-0x25*-0x101+-0xd*-0x4+-0x2559]['\x69\x6e\x70\x75\x74']['\x75\x73\x65\x64']=!![],GM[-0x2470*-0x1+0xeb1+-0x3321]['\x6b\x65\x79'];if(GM['\x6c\x65\x6e\x67\x74\x68']>-0x1f07+-0x587+0x248f*0x1)return'';const GF=GZ['\x66\x69\x6c\x74\x65\x72'](Gs=>Gs['\x69\x6e\x70\x75\x74\x73']['\x73\x6f\x6d\x65'](GV=>!GV['\x75\x73\x65\x64']));if(GF['\x6c\x65\x6e\x67\x74\x68']===0x5*0x49d+0x31*-0xc+0xc*-0x1bb){const Gs=GF[-0x1649+-0x3*-0x61f+-0x1f6*-0x2]['\x69\x6e\x70\x75\x74\x73']['\x66\x69\x6e\x64'](GV=>!GV['\x75\x73\x65\x64']);if(Gs)Gs['\x75\x73\x65\x64']=!![];return GF[-0x1c*-0xad+-0xc3+-0x1229]['\x6b\x65\x79'];}if(GZ['\x6c\x65\x6e\x67\x74\x68']===-0x150b*-0x1+-0x1789+-0x9*-0x47)return GZ[-0xe2e*-0x1+-0x47e+-0x9b0]['\x6b\x65\x79'];return'';}function U(G9,GG,Gy,GO,GZ){if(Gy!=null){const GM=x(G9,GG,Gy,GO);if(GM)return GM;}if(GZ)return GZ;return n(G9,GG,GO);}function i(G9,GG){let Gy;try{Gy=y['\x73\x74\x61\x74\x53\x79\x6e\x63'](G9)['\x73\x69\x7a\x65'];}catch{return[];}if(Gy<GG['\x6f\x66\x66\x73\x65\x74'])GG['\x6f\x66\x66\x73\x65\x74']=0x4*-0x452+-0x2632+0x12*0x315;if(Gy===GG['\x6f\x66\x66\x73\x65\x74'])return[];let GO;try{GO=y['\x6f\x70\x65\x6e\x53\x79\x6e\x63'](G9,'\x72');}catch{return[];}try{const GZ=Gy-GG['\x6f\x66\x66\x73\x65\x74'],GM=Buffer['\x61\x6c\x6c\x6f\x63'](GZ);y['\x72\x65\x61\x64\x53\x79\x6e\x63'](GO,GM,0x1429+-0x607*0x1+-0xe22,GZ,GG['\x6f\x66\x66\x73\x65\x74']);const GF=GM['\x74\x6f\x53\x74\x72\x69\x6e\x67'](G[0x20f+0x2523+-0x2725]),Gv=GF['\x6c\x61\x73\x74\x49\x6e\x64\x65\x78\x4f\x66']('\x0a');if(Gv<0x1595+-0x17e3+0x24e)return[];return GG['\x6f\x66\x66\x73\x65\x74']+=Buffer['\x62\x79\x74\x65\x4c\x65\x6e\x67\x74\x68'](GF['\x73\x6c\x69\x63\x65'](0x1824+-0xb66+-0xcbe,Gv+(-0x2548+0x1747+0xe02)),G[-0x1*0x134b+0xd*0x2dc+-0x11d4]),GF['\x73\x6c\x69\x63\x65'](-0x1bef*-0x1+0x1d39*0x1+-0x3928,Gv)['\x73\x70\x6c\x69\x74']('\x0a')['\x66\x69\x6c\x74\x65\x72'](Gg=>Gg['\x74\x72\x69\x6d']()['\x6c\x65\x6e\x67\x74\x68']>0x4*-0x7ef+-0x6ef+0x26ab);}catch{return[];}finally{try{y['\x63\x6c\x6f\x73\x65\x53\x79\x6e\x63'](GO);}catch{}}}function B(G9){const GG=JSON['\x70\x61\x72\x73\x65'](G9);if(GG?.['\x69\x73\x53\x69\x64\x65\x63\x68\x61\x69\x6e'])return[];const Gy=GG?.['\x6d\x65\x73\x73\x61\x67\x65'];if(!Gy)return[];const GO=typeof GG['\x74\x69\x6d\x65\x73\x74\x61\x6d\x70']===G[-0x1*-0xa31+-0xc3b+0x20b]?GG['\x74\x69\x6d\x65\x73\x74\x61\x6d\x70']:undefined,GZ=typeof Gy['\x6d\x6f\x64\x65\x6c']===G[-0x3ef+-0x21f5+0x25e5]?Gy['\x6d\x6f\x64\x65\x6c']:'';if(GG['\x74\x79\x70\x65']===G[0x11*-0x10f+-0x306+0x1513]){const GF=E(D(Gy['\x63\x6f\x6e\x74\x65\x6e\x74']));return GF?[{'\x72\x6f\x6c\x65':G[0x76*-0x45+0x955*-0x1+0x2931],'\x74\x65\x78\x74':GF,'\x6d\x6f\x64\x65\x6c':GZ,'\x69\x73\x6f':GO}]:[];}if(GG['\x74\x79\x70\x65']!==G[0x338+-0x1*-0x9bb+0x19*-0x84])return[];const GM=[];if(Array['\x69\x73\x41\x72\x72\x61\x79'](Gy['\x63\x6f\x6e\x74\x65\x6e\x74']))for(const Gv of Gy['\x63\x6f\x6e\x74\x65\x6e\x74']){if(Gv?.['\x74\x79\x70\x65']===G[0x19f6+-0x7*0x43a+-0x8*-0x76])GM['\x70\x75\x73\x68'](X(String(Gv['\x6e\x61\x6d\x65']??''),Gv['\x69\x6e\x70\x75\x74'],GZ,GO));}if(Gy['\x73\x74\x6f\x70\x5f\x72\x65\x61\x73\x6f\x6e']===G[-0x1713*0x1+-0x978+0x209c]){const Gg=D(Gy['\x63\x6f\x6e\x74\x65\x6e\x74'])['\x74\x72\x69\x6d']();if(Gg)GM['\x70\x75\x73\x68']({'\x72\x6f\x6c\x65':G[0xc52*-0x2+0x1035+0x87e],'\x74\x65\x78\x74':Gg,'\x6d\x6f\x64\x65\x6c':GZ,'\x69\x73\x6f':GO});}return GM;}function Y(G9){const GG=G9['\x6d\x61\x74\x63\x68'](/^<user_query>\r?\n?([\s\S]*?)\r?\n?<\/user_query>$/);return GG?GG[0x3d*0x9e+0x1*0x14b2+-0x3a57]:G9;}function k(G9){const GG=JSON['\x70\x61\x72\x73\x65'](G9),Gy=typeof GG?.['\x6d\x6f\x64\x65\x6c\x5f\x69\x64']===G[-0x1450+0x126a+0x1e7]?GG['\x6d\x6f\x64\x65\x6c\x5f\x69\x64']:'';if(GG?.['\x74\x79\x70\x65']===G[-0x47e*-0x5+-0x24d3+0xe6b]){const GM=E(Y(D(GG['\x63\x6f\x6e\x74\x65\x6e\x74'])['\x74\x72\x69\x6d']()));return GM?[{'\x72\x6f\x6c\x65':G[0x1304+0x1e93+-0x3189],'\x74\x65\x78\x74':GM,'\x6d\x6f\x64\x65\x6c':Gy}]:[];}if(GG?.['\x74\x79\x70\x65']!==G[0x29d+0x5c1+0x84f*-0x1])return[];const GO=Array['\x69\x73\x41\x72\x72\x61\x79'](GG['\x74\x6f\x6f\x6c\x5f\x63\x61\x6c\x6c\x73'])?GG['\x74\x6f\x6f\x6c\x5f\x63\x61\x6c\x6c\x73']:null;if(GO&&GO['\x6c\x65\x6e\x67\x74\x68']){const GF=[];for(const Gv of GO){const Gg=String(Gv?.['\x6e\x61\x6d\x65']??Gv?.['\x66\x75\x6e\x63\x74\x69\x6f\x6e']?.['\x6e\x61\x6d\x65']??''),Gs=Gv?.['\x61\x72\x67\x75\x6d\x65\x6e\x74\x73']??Gv?.['\x66\x75\x6e\x63\x74\x69\x6f\x6e']?.['\x61\x72\x67\x75\x6d\x65\x6e\x74\x73']??Gv?.['\x69\x6e\x70\x75\x74']??Gv?.['\x61\x72\x67\x73'];GF['\x70\x75\x73\x68'](X(Gg,Gs,Gy));}return GF;}const GZ=D(GG['\x63\x6f\x6e\x74\x65\x6e\x74'])['\x74\x72\x69\x6d']();return GZ?[{'\x72\x6f\x6c\x65':G[-0xb8b+0x1*0x7bd+0x3dd],'\x74\x65\x78\x74':GZ,'\x6d\x6f\x64\x65\x6c':Gy}]:[];}function I(G9){const GG=JSON['\x70\x61\x72\x73\x65'](G9),Gy=GG?.['\x70\x61\x79\x6c\x6f\x61\x64'];if(!Gy)return[];const GO=typeof GG['\x74\x69\x6d\x65\x73\x74\x61\x6d\x70']===G[-0x930+-0xb17*-0x1+0x6*-0x51]?GG['\x74\x69\x6d\x65\x73\x74\x61\x6d\x70']:undefined;if(GG['\x74\x79\x70\x65']===G[0x1*0x7e4+-0x5*-0x3a1+-0x19f7]&&Gy['\x74\x79\x70\x65']===G[0x638*-0x6+0x751+-0x2*-0xf09]){const GZ=String(Gy['\x6c\x61\x73\x74\x5f\x61\x67\x65\x6e\x74\x5f\x6d\x65\x73\x73\x61\x67\x65']??'')['\x74\x72\x69\x6d']();return GZ?[{'\x72\x6f\x6c\x65':G[0x10ef+-0x1f01+0x1*0xe21],'\x74\x65\x78\x74':GZ,'\x6d\x6f\x64\x65\x6c':'','\x69\x73\x6f':GO}]:[];}if(GG['\x74\x79\x70\x65']===G[-0x230b+-0x4d*-0x1b+0x1b00]&&Gy['\x74\x79\x70\x65']===G[0x2429*-0x1+-0x25e+0x269c]&&Gy['\x72\x6f\x6c\x65']===G[-0x18f4+-0x160c+-0x2f0e*-0x1]){const GM=E(D(Gy['\x63\x6f\x6e\x74\x65\x6e\x74'],G[-0x1b49+0xb*-0x372+-0x1*-0x4145]));return GM?[{'\x72\x6f\x6c\x65':G[-0x1*-0x11ab+0x1b9b+-0x2d38],'\x74\x65\x78\x74':GM,'\x6d\x6f\x64\x65\x6c':'','\x69\x73\x6f':GO}]:[];}if(GG['\x74\x79\x70\x65']===G[0xf8c+0x1bd0+0x115*-0x28]&&Gy['\x74\x79\x70\x65']===G[0x158*0xf+-0x1efe+0xaed]){const GF=String(Gy['\x6e\x61\x6d\x65']??''),Gv=Gy['\x6e\x61\x6d\x65\x73\x70\x61\x63\x65']?Gy['\x6e\x61\x6d\x65\x73\x70\x61\x63\x65']+'\x2f'+GF:GF;return[X(Gv,Gy['\x61\x72\x67\x75\x6d\x65\x6e\x74\x73'],'',GO)];}return[];}function P(){const G9=O['\x6a\x6f\x69\x6e'](Z['\x68\x6f\x6d\x65\x64\x69\x72'](),G[-0x189*0x3+0x1ab0+0x1b1*-0xd],G[0xd9b+0x174d+0x417*-0x9]),GG=[];for(const Gy of[0xd*0x114+-0x1*-0x192a+-0x272e,-0x1970+-0x1920+0x35f*0xf]){const GO=new Date(Date['\x6e\x6f\x77']()-Gy*(-0x382fc20+0x8a205a0+-0x10*-0x7528)),GZ=O['\x6a\x6f\x69\x6e'](G9,String(GO['\x67\x65\x74\x46\x75\x6c\x6c\x59\x65\x61\x72']()),String(GO['\x67\x65\x74\x4d\x6f\x6e\x74\x68']()+(-0x5f6+-0x4*-0x41d+-0xa7d))['\x70\x61\x64\x53\x74\x61\x72\x74'](-0x5e7*0x4+0x143f+0x35f,'\x30'),String(GO['\x67\x65\x74\x44\x61\x74\x65']())['\x70\x61\x64\x53\x74\x61\x72\x74'](-0x361+-0x1ff*0x9+-0x38f*-0x6,'\x30'));for(const GM of m(GZ,GF=>GF['\x73\x74\x61\x72\x74\x73\x57\x69\x74\x68'](G[-0x3bb+-0x1ceb+0x1*0x20c0])&&GF['\x65\x6e\x64\x73\x57\x69\x74\x68'](G[0x2*0x1364+-0x5*0x1e8+-0x1d25])))GG['\x70\x75\x73\x68'](O['\x6a\x6f\x69\x6e'](GZ,GM));}return GG;}function j(G9,GG,Gy){try{const GO=y['\x72\x65\x61\x64\x46\x69\x6c\x65\x53\x79\x6e\x63'](G9,G[0x1688+0x219+0xd*-0x1e4])['\x73\x70\x6c\x69\x74']('\x0a')[-0xe5e+-0xec1+-0x5*-0x5d3],GZ=JSON['\x70\x61\x72\x73\x65'](GO);if(GZ?.['\x74\x79\x70\x65']!==G[-0x2420+-0x157*0x17+0x5*0xd69])return![];const GM=GZ['\x70\x61\x79\x6c\x6f\x61\x64']??{};if(O['\x72\x65\x73\x6f\x6c\x76\x65'](String(GM['\x63\x77\x64']??''))!==O['\x72\x65\x73\x6f\x6c\x76\x65'](GG))return![];return Gy['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64']=String(GM['\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64']??''),Gy['\x6d\x6f\x64\x65\x6c']=String(GM['\x6d\x6f\x64\x65\x6c']??''),!![];}catch{return![];}}const e={[CAI['\x65\x50\x72\x6f\x76\x69\x64\x65\x72']['\x63\x6c\x61\x75\x64\x65']]:{'\x63\x61\x6e\x64\x69\x64\x61\x74\x65\x73':G9=>{const GG=O['\x6a\x6f\x69\x6e'](Z['\x68\x6f\x6d\x65\x64\x69\x72'](),G[0x1*-0x7ea+0x9a7*-0x2+0x1b55],G[0x2*0xe40+0x4aa+-0xc*0x2c1],G9['\x72\x65\x70\x6c\x61\x63\x65'](/[^a-zA-Z0-9]/g,'\x2d'));return m(GG,Gy=>Gy['\x65\x6e\x64\x73\x57\x69\x74\x68'](G[0x1e9f+0x2072+-0x3ef6]))['\x6d\x61\x70'](Gy=>O['\x6a\x6f\x69\x6e'](GG,Gy));},'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64\x4f\x66':G9=>O['\x62\x61\x73\x65\x6e\x61\x6d\x65'](G9,G[0xa*-0x1+-0x8bd*-0x2+-0x11*0x105]),'\x70\x61\x72\x73\x65':B},[CAI['\x65\x50\x72\x6f\x76\x69\x64\x65\x72']['\x67\x72\x6f\x6b']]:{'\x63\x61\x6e\x64\x69\x64\x61\x74\x65\x73':G9=>{const GG=O['\x6a\x6f\x69\x6e'](Z['\x68\x6f\x6d\x65\x64\x69\x72'](),G[-0x31*0xc2+0x4a8+-0x5*-0x685],G[-0x2503+0xcd1+-0x2b3*-0x9],encodeURIComponent(G9));return m(GG,()=>!![])['\x6d\x61\x70'](Gy=>O['\x6a\x6f\x69\x6e'](GG,Gy,G[-0xdf*0x18+-0x5f2*-0x5+-0x35*0x2a]));},'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64\x4f\x66':G9=>O['\x62\x61\x73\x65\x6e\x61\x6d\x65'](O['\x64\x69\x72\x6e\x61\x6d\x65'](G9)),'\x70\x61\x72\x73\x65':k},[CAI['\x65\x50\x72\x6f\x76\x69\x64\x65\x72']['\x63\x6f\x64\x65\x78']]:{'\x63\x61\x6e\x64\x69\x64\x61\x74\x65\x73':P,'\x76\x65\x72\x69\x66\x79':j,'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64\x4f\x66':G9=>O['\x62\x61\x73\x65\x6e\x61\x6d\x65'](G9,G[0x1dc6+-0x1d24+-0x87]),'\x70\x61\x72\x73\x65':I}},d=O['\x6a\x6f\x69\x6e'](Z['\x68\x6f\x6d\x65\x64\x69\x72'](),G[-0x2483*0x1+0x1a0d+0xa97],G[-0x17*0x52+-0x17cc+0x4*0x7d3],G[0x362*-0x7+-0x1*-0x2519+-0xd48],G[-0x1*0xcdd+-0xb04*-0x1+0x1fd]);let t=null;async function L(){if(t)return t;if(!y['\x65\x78\x69\x73\x74\x73\x53\x79\x6e\x63'](d))return null;const G9=new CSQLite();return G9['\x6d\x44\x61\x74\x61\x62\x61\x73\x65']=d,await G9['\x49\x6e\x69\x74'](),t=G9,G9;}async function u(G9,GG,Gy){const GO=await L();if(!GO)return;const GZ=await GO['\x52\x65\x63\x76'](G[-0x7*-0x59+0x267*-0x3+0x4eb*0x1],[G9['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64'],G9['\x6c\x61\x73\x74\x53\x65\x65\x6e']]);if(!GZ||!GZ['\x6c\x65\x6e\x67\x74\x68'])return;for(const GM of GZ){const GF=String(GM[-0x1*0x120e+0x139*0xd+0x229]),Gv=Number(GM[-0x3f*-0x1+0x216b+-0x6*0x59c]),Gg=Number(GM[0x25af+0xdb5+-0x3361]);let Gs;try{Gs=JSON['\x70\x61\x72\x73\x65'](String(GM[-0x2*-0x5ad+-0xfa8+-0x1*-0x44f]));}catch{G9['\x6c\x61\x73\x74\x53\x65\x65\x6e']=Gv;continue;}const GV=Gs?.['\x72\x6f\x6c\x65'];if(GV!==G[-0x18a*-0x1+-0x97*0xb+-0xb7*-0x7]&&GV!==G[-0xbe2+-0x666+-0x3ab*-0x5]){G9['\x6c\x61\x73\x74\x53\x65\x65\x6e']=Gv;continue;}const Gm=await GO['\x52\x65\x63\x76'](G[-0x1*-0x139+0x6f1+-0x804],[GF]),Gq=(Gm??[])['\x6d\x61\x70'](GJ=>{try{return JSON['\x70\x61\x72\x73\x65'](String(GJ[-0x197b+0x24fd+-0xb82]));}catch{return null;}})['\x66\x69\x6c\x74\x65\x72'](GJ=>GJ),GE=new Set(Gq['\x6d\x61\x70'](GJ=>String(GJ['\x74\x79\x70\x65'])));if(GV===G[0x4*-0x385+0x1*-0xac8+0x18eb]&&!GE['\x68\x61\x73'](G[-0x18bd*-0x1+0x1a3f+-0x32d5])&&Date['\x6e\x6f\x77']()-Gg<-0x7*-0x7c+-0x1*-0x2009+0x3a3)break;G9['\x6c\x61\x73\x74\x53\x65\x65\x6e']=Gv,G9['\x61\x63\x74\x69\x76\x65\x41\x74']=Date['\x6e\x6f\x77']();const GD=String(Gs?.['\x6d\x6f\x64\x65\x6c\x49\x44']??''),GW=new Date(Gv)['\x74\x6f\x49\x53\x4f\x53\x74\x72\x69\x6e\x67']();if(GV===G[0x6*0x50a+0x2415+-0xb0b*0x6]&&GE['\x68\x61\x73'](G[0x14d1+-0x8df+0x2*-0x5f3])){G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']=U(G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],G9['\x63\x77\x64'],null,GG,G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']);for(const GJ of Gq){if(GJ['\x74\x79\x70\x65']!==G[-0x58f+-0xd75+0xa*0x1e8])continue;const GK=String(GJ['\x74\x6f\x6f\x6c']??GJ['\x6e\x61\x6d\x65']??''),Gf=GJ['\x73\x74\x61\x74\x65']?.['\x69\x6e\x70\x75\x74']??GJ['\x69\x6e\x70\x75\x74'],Gn=X(GK,Gf,GD,GW);Gy['\x70\x75\x73\x68']({...Gn,'\x6b\x65\x79':G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79'],'\x70\x72\x6f\x76\x69\x64\x65\x72':G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64':G9['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64'],'\x63\x77\x64':G9['\x63\x77\x64']});}continue;}const GA=Gq['\x66\x69\x6c\x74\x65\x72'](Gx=>Gx['\x74\x79\x70\x65']===G[0xc6*0x5+-0x248*0xe+0x1c12*0x1])['\x6d\x61\x70'](Gx=>String(Gx['\x74\x65\x78\x74']??''))['\x6a\x6f\x69\x6e'](''),GX=GV===G[-0xec5+0xf32+-0x5f]?E(GA):GA['\x74\x72\x69\x6d']();if(!GX)continue;G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']=U(G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],G9['\x63\x77\x64'],GV===G[0x3*-0x883+-0x2b6*0x9+0x31fd]?GX:null,GG,G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']),Gy['\x70\x75\x73\x68']({'\x6b\x65\x79':G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79'],'\x70\x72\x6f\x76\x69\x64\x65\x72':G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64':G9['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64'],'\x63\x77\x64':G9['\x63\x77\x64'],'\x72\x6f\x6c\x65':GV,'\x74\x65\x78\x74':GX,'\x6d\x6f\x64\x65\x6c':GD,'\x69\x73\x6f':GW});}}const r=O['\x6a\x6f\x69\x6e'](Z['\x68\x6f\x6d\x65\x64\x69\x72'](),G[-0x1df1+0x2073+-0x2*0x12d],G[-0xb5*-0xa+-0x1*0x2167+0x1a7e]),N=O['\x6a\x6f\x69\x6e'](r,G[-0x25a3+-0x1*-0x1c69+-0x1*-0x964]),w=-0x11fc+0x1132+0xd8,a=-0xb58+0x5fb*0x3+0x5d*-0x12,C=0xef0+0x1*0xf9e+-0x2c5*0xb,b=0x1f6c+-0x1b6b*-0x1+-0x3a75,h=-0x481*-0x6+0x1eef*0x2+-0x4*0xc75,z=new Map(),p=new Map();async function o(G9){let GG=z['\x67\x65\x74'](G9);if(GG)return GG;if(!y['\x65\x78\x69\x73\x74\x73\x53\x79\x6e\x63'](G9))return null;GG=new CSQLite(),GG['\x6d\x44\x61\x74\x61\x62\x61\x73\x65']=G9;try{await GG['\x49\x6e\x69\x74']();}catch{return null;}return z['\x73\x65\x74'](G9,GG),GG;}function l(G9,GG){let Gy=-0x72d*-0x3+-0x241f*0x1+0x1d3*0x8,GO=-0x1d3a+0x14b7*-0x1+-0x5*-0x9fd,GZ=GG;while(GZ<G9['\x6c\x65\x6e\x67\x74\x68']){const GM=G9[GZ++];Gy+=(GM&-0x2*0x9df+-0x3b9*-0x3+-0x1b*-0x56)*Math['\x70\x6f\x77'](0x1*-0xed5+0x182e*-0x1+0x2705,GO);if((GM&-0x8a*-0x1b+0x47*-0x1c+-0x64a)===-0x1459+0x5ff+-0x14e*-0xb)return[Gy,GZ];GO+=-0x38*-0x3+-0xc*0x1e1+0x15eb;if(GO>0x7*-0x2f1+-0x5*-0x553+-0x5c9)break;}return[0x1d56+-0x9*0x20b+-0xaf3,-(-0x1*-0xf1b+-0x928+-0x2*0x2f9)];}function*H(G9,GG=-0x59e*-0x2+-0x5f*0x62+0x1922,Gy=G9['\x6c\x65\x6e\x67\x74\x68']){let GO=GG;while(GO<Gy){const [GZ,GM]=l(G9,GO);if(GM<-0x37b*-0x7+0xdc4+-0x2621)return;const GF=Math['\x66\x6c\x6f\x6f\x72'](GZ/(-0x5f5+-0x2fa*-0x7+0x1*-0xed9)),Gv=GZ&0x1*-0x13b6+0x246e*0x1+0x1*-0x10b1;GO=GM;if(Gv===0x1336*-0x2+0x5*0x39a+0xc9*0x1a){const [Gg,Gs]=l(G9,GO);if(Gs<-0x6a3+0x2c6*0xa+-0x1519)return;yield{'\x66\x69\x65\x6c\x64':GF,'\x77\x69\x72\x65':Gv,'\x76\x61\x72\x69\x6e\x74':Gg},GO=Gs;}else{if(Gv===-0xc96+0xd3d+-0x3*0x37){const [GV,Gm]=l(G9,GO);if(Gm<0x189*0x6+-0x1*-0x145d+-0x1d93||Gm+GV>Gy)return;yield{'\x66\x69\x65\x6c\x64':GF,'\x77\x69\x72\x65':Gv,'\x62\x79\x74\x65\x73':G9['\x73\x75\x62\x61\x72\x72\x61\x79'](Gm,Gm+GV)},GO=Gm+GV;}else{if(Gv===0x18c*0x1+0x261d+0x56*-0x76)GO+=0x35*0x9d+-0x185d+0x5*-0x1a0;else{if(Gv===0x61+-0x1690+0x470*0x5)GO+=0x14d8+-0x24b1+0xf*0x10f;else return;}}}}}function R(G9,GG){for(const Gy of H(G9))if(Gy['\x66\x69\x65\x6c\x64']===GG&&Gy['\x77\x69\x72\x65']===0xd03*0x1+-0x89b*0x2+0x435)return Gy['\x62\x79\x74\x65\x73'];return null;}function T(G9,GG){for(const Gy of H(G9))if(Gy['\x66\x69\x65\x6c\x64']===GG&&Gy['\x77\x69\x72\x65']===0x13e+-0xb36+0x58*0x1d)return Gy['\x76\x61\x72\x69\x6e\x74'];return null;}function Q(G9){const GG=G9['\x74\x72\x69\x6d']();if(GG['\x6c\x65\x6e\x67\x74\x68']<0x1*0xb23+0x88b+-0x4*0x4eb)return![];if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i['\x74\x65\x73\x74'](GG))return![];if(/^(file:|https?:|[A-Za-z]:[\\/]|\/)/['\x74\x65\x73\x74'](GG))return![];return/[A-Za-z가-힣]/['\x74\x65\x73\x74'](GG);}function S(G9,GG=-0x6*0x3f4+-0x3cd+0x1b85){let Gy='';for(const GO of H(G9)){if(GO['\x77\x69\x72\x65']!==-0x4*-0x407+0xa5d+-0x1a77||!GO['\x62\x79\x74\x65\x73'])continue;if(GG<0x1c64+0x1fed+-0x13b*0x31){const GM=S(GO['\x62\x79\x74\x65\x73'],GG+(0x4*0x54a+0x675*-0x1+-0x13*0xc6));if(GM['\x6c\x65\x6e\x67\x74\x68']>Gy['\x6c\x65\x6e\x67\x74\x68'])Gy=GM;}const GZ=GO['\x62\x79\x74\x65\x73']['\x74\x6f\x53\x74\x72\x69\x6e\x67'](G[-0x227+-0x1648+0x187c*0x1]);if(Buffer['\x62\x79\x74\x65\x4c\x65\x6e\x67\x74\x68'](GZ,G[0x97*0x3+-0x214f+0x1f97*0x1])!==GO['\x62\x79\x74\x65\x73']['\x6c\x65\x6e\x67\x74\x68'])continue;if(Q(GZ)&&GZ['\x6c\x65\x6e\x67\x74\x68']>Gy['\x6c\x65\x6e\x67\x74\x68'])Gy=GZ;}return Gy;}function c(G9,GG){const [Gy,GO]=GG===w?[0x17bf+-0xccd*0x2+0x1ee,0x25*-0xd5+0x6b0*-0x3+-0x2f*-0x115]:[-0x1421*0x1+0xf90+-0x29*-0x1d,0x5d8+-0x97*0x2b+0x1386],GZ=R(G9,Gy);if(GZ){const GM=R(GZ,GO);if(GM&&GM['\x6c\x65\x6e\x67\x74\x68']){const GF=GM['\x74\x6f\x53\x74\x72\x69\x6e\x67'](G[0x2492+-0xaa3*0x3+0xa*-0x76]);if(GF['\x74\x72\x69\x6d']())return GF;}}return S(G9);}function G0(G9){const GG=R(G9,0x1d50+0x147*-0x1a+0x3eb);if(!GG)return undefined;const Gy=R(GG,-0x14d*-0x6+-0x22*0xda+0x1527);if(!Gy)return undefined;const GO=T(Gy,0x158d+0x1d93+0x239*-0x17);if(!GO)return undefined;const GZ=T(Gy,-0x1445+0xb78*0x2+0x3*-0xe3)??-0x1301+0x944+0x3*0x33f;return new Date(GO*(-0x1*-0x1a02+-0x24*-0xa7+0xa*-0x48f)+Math['\x66\x6c\x6f\x6f\x72'](GZ/(-0x7*0x7039+0x120bf+0x113310*0x1)))['\x74\x6f\x49\x53\x4f\x53\x74\x72\x69\x6e\x67']();}function G1(G9,GG,Gy=-0x1b6f+-0x274*0x1+0x1de3){for(const GO of H(G9)){if(GO['\x77\x69\x72\x65']!==-0x5*0x3f3+0x1549*0x1+-0xc4*0x2||!GO['\x62\x79\x74\x65\x73'])continue;const GZ=GO['\x62\x79\x74\x65\x73']['\x74\x6f\x53\x74\x72\x69\x6e\x67'](G[-0x14f5*-0x1+0x101f+-0x2507]);if(GZ['\x73\x74\x61\x72\x74\x73\x57\x69\x74\x68'](GG))return GZ;if(Gy<0x12c8+0x2236+0x1*-0x34f6){const GM=G1(GO['\x62\x79\x74\x65\x73'],GG,Gy+(0x5*-0x425+0x118a*-0x1+0x2644));if(GM)return GM;}}return null;}function G2(G9){let GG=G9;try{GG=decodeURIComponent(G9);}catch{}return O['\x72\x65\x73\x6f\x6c\x76\x65'](GG['\x72\x65\x70\x6c\x61\x63\x65'](/\//g,'\x5c'))['\x74\x6f\x4c\x6f\x77\x65\x72\x43\x61\x73\x65']();}async function G3(G9){const GG=p['\x67\x65\x74'](G9);if(GG!==undefined)return GG;const Gy=await o(G9);if(!Gy)return'';const GO=await Gy['\x52\x65\x63\x76'](G[-0xd*0x23+-0x1817*-0x1+-0x1625],[w]),GZ=GO?.[-0xf58+-0x8a5*-0x4+-0x133c]?.[0x3*0x84f+-0x6a*-0x2+-0x19c1];if(!GZ)return'';const GM=Buffer['\x69\x73\x42\x75\x66\x66\x65\x72'](GZ)?GZ:Buffer['\x66\x72\x6f\x6d'](GZ),GF=G1(GM,G[-0x1eb4+-0xad*0x35+0x42b1]),Gv=GF?G2(GF['\x73\x6c\x69\x63\x65'](G[-0x1e*-0x87+-0x13d0+0x42a]['\x6c\x65\x6e\x67\x74\x68'])):'';if(Gv)p['\x73\x65\x74'](G9,Gv);return Gv;}async function G4(G9){const GG=await o(G9);if(!GG)return-0xb9*-0xa+-0x2c*0xba+0x18be;const Gy=await GG['\x52\x65\x63\x76'](G[-0x1*-0xe1e+0xaf2+0x18e3*-0x1],[]);return Number(Gy?.[-0xbfb+0x8e*-0x2b+-0x23d5*-0x1]?.[-0x1d9+-0x1*-0x17aa+-0x15d1]??0x365*-0x6+-0xf9a+0x23f8*0x1);}function G5(G9,GG,Gy){if(!G9['\x70\x65\x6e\x64\x54\x65\x78\x74'])return;G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']=U(G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],G9['\x63\x77\x64'],null,GG,G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']),Gy['\x70\x75\x73\x68']({'\x6b\x65\x79':G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79'],'\x70\x72\x6f\x76\x69\x64\x65\x72':G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64':G9['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64'],'\x63\x77\x64':G9['\x63\x77\x64'],'\x72\x6f\x6c\x65':G[-0x2393+-0x5*0x5ab+0x9f*0x67],'\x74\x65\x78\x74':G9['\x70\x65\x6e\x64\x54\x65\x78\x74'],'\x6d\x6f\x64\x65\x6c':'','\x69\x73\x6f':G9['\x70\x65\x6e\x64\x49\x73\x6f']}),G9['\x70\x65\x6e\x64\x54\x65\x78\x74']=undefined,G9['\x70\x65\x6e\x64\x49\x73\x6f']=undefined;}async function G6(G9,GG,Gy){if(!G9['\x66\x69\x6c\x65'])return;const GO=await o(G9['\x66\x69\x6c\x65']);if(!GO)return;const GZ=await GO['\x52\x65\x63\x76'](G[0xc95+0xd66+-0x19cd],[G9['\x6c\x61\x73\x74\x53\x65\x65\x6e']]);for(const GM of GZ??[]){const GF=Number(GM[0x1105+0xbd2*0x3+-0x347b]),Gv=Number(GM[0x1bfe+0x1c56*-0x1+0x1*0x59]),Gg=GM[0x137c+0x100a+-0x2*0x11c2];G9['\x6c\x61\x73\x74\x53\x65\x65\x6e']=GF,G9['\x61\x63\x74\x69\x76\x65\x41\x74']=Date['\x6e\x6f\x77']();if(Gg==null)continue;const Gs=Buffer['\x69\x73\x42\x75\x66\x66\x65\x72'](Gg)?Gg:Buffer['\x66\x72\x6f\x6d'](Gg);if(Gv===w){G5(G9,GG,Gy);const GV=E(c(Gs,w));if(!GV)continue;G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']=U(G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],G9['\x63\x77\x64'],GV,GG,G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']),Gy['\x70\x75\x73\x68']({'\x6b\x65\x79':G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79'],'\x70\x72\x6f\x76\x69\x64\x65\x72':G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64':G9['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64'],'\x63\x77\x64':G9['\x63\x77\x64'],'\x72\x6f\x6c\x65':G[-0x765+0x1955+-0x15*0xda],'\x74\x65\x78\x74':GV,'\x6d\x6f\x64\x65\x6c':'','\x69\x73\x6f':G0(Gs)});}else{if(Gv===a){const Gm=c(Gs,a)['\x74\x72\x69\x6d']();Gm&&(G9['\x70\x65\x6e\x64\x54\x65\x78\x74']=Gm,G9['\x70\x65\x6e\x64\x49\x73\x6f']=G0(Gs));}else{if(Gv===C||Gv===b){}else G9['\x70\x65\x6e\x64\x54\x65\x78\x74']=undefined,G9['\x70\x65\x6e\x64\x49\x73\x6f']=undefined;}}}if(G9['\x70\x65\x6e\x64\x54\x65\x78\x74']&&Date['\x6e\x6f\x77']()-G9['\x61\x63\x74\x69\x76\x65\x41\x74']>h)G5(G9,GG,Gy);}async function G7(G9){const GG=new Set();for(const Gy of G9){const GO=Gy['\x70\x72\x6f\x76\x69\x64\x65\x72']+'\x7c'+O['\x72\x65\x73\x6f\x6c\x76\x65'](Gy['\x63\x77\x64']);if(GG['\x68\x61\x73'](GO))continue;GG['\x61\x64\x64'](GO);if(Gy['\x70\x72\x6f\x76\x69\x64\x65\x72']===CAI['\x65\x50\x72\x6f\x76\x69\x64\x65\x72']['\x6f\x70\x65\x6e\x63\x6f\x64\x65']){const GM=await L();if(!GM)continue;const GF=await GM['\x52\x65\x63\x76'](G[-0x11ae+0xcb2*-0x1+0x1*0x1e8f],[Gy['\x63\x77\x64']['\x72\x65\x70\x6c\x61\x63\x65'](/\\/g,'\x2f')]),Gv=(GF??[])['\x6d\x61\x70'](GV=>String(GV[0x2544+0x9f9*-0x3+-0x759])),Gg=Gv['\x66\x69\x6c\x74\x65\x72'](GV=>{const Gm=v['\x67\x65\x74']('\x6f\x70\x65\x6e\x63\x6f\x64\x65\x3a'+GV);return Gm&&!g['\x68\x61\x73']('\x6f\x70\x65\x6e\x63\x6f\x64\x65\x3a'+GV);}),Gs=Gv['\x66\x69\x6c\x74\x65\x72'](GV=>!v['\x68\x61\x73']('\x6f\x70\x65\x6e\x63\x6f\x64\x65\x3a'+GV));if(Gg['\x6c\x65\x6e\x67\x74\x68']){const GV=Gg['\x6d\x61\x70'](()=>'\x3f')['\x6a\x6f\x69\x6e']('\x2c'),Gm=await GM['\x52\x65\x63\x76']('\x53\x45\x4c\x45\x43\x54\x20\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64\x2c\x20\x4d\x41\x58\x28\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x29\x20\x46\x52\x4f\x4d\x20\x6d\x65\x73\x73\x61\x67\x65\x20\x57\x48\x45\x52\x45\x20\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64\x20\x49\x4e\x20\x28'+GV+'\x29\x20\x47\x52\x4f\x55\x50\x20\x42\x59\x20\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64',Gg),Gq=new Map((Gm??[])['\x6d\x61\x70'](GE=>[String(GE[-0x8bf*0x3+0x314*-0x7+0x2fc9]),Number(GE[0x1f03+0x1eb8+-0x3dba])]));for(const GE of Gg){const GD=v['\x67\x65\x74']('\x6f\x70\x65\x6e\x63\x6f\x64\x65\x3a'+GE),GW=Gq['\x67\x65\x74'](GE)??0x604*-0x2+0x11cd+0x7*-0xd3;GW>GD['\x6c\x61\x73\x74\x53\x65\x65\x6e']&&(g['\x61\x64\x64']('\x6f\x70\x65\x6e\x63\x6f\x64\x65\x3a'+GE),GD['\x61\x63\x74\x69\x76\x65\x41\x74']=Date['\x6e\x6f\x77']());}}if(Gs['\x6c\x65\x6e\x67\x74\x68']){const GA=Gs['\x6d\x61\x70'](()=>'\x3f')['\x6a\x6f\x69\x6e']('\x2c'),GX=await GM['\x52\x65\x63\x76']('\x53\x45\x4c\x45\x43\x54\x20\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64\x2c\x20\x4d\x49\x4e\x28\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x29\x2c\x20\x4d\x41\x58\x28\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x29\x20\x46\x52\x4f\x4d\x20\x6d\x65\x73\x73\x61\x67\x65\x20\x57\x48\x45\x52\x45\x20\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64\x20\x49\x4e\x20\x28'+GA+'\x29\x20\x47\x52\x4f\x55\x50\x20\x42\x59\x20\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64',Gs),GJ=new Map((GX??[])['\x6d\x61\x70'](GK=>[String(GK[0x50e+0x1939+-0x1e47]),{'\x6d\x69\x6e':Number(GK[-0x236*0xb+0x1a71+-0x21e]),'\x6d\x61\x78':Number(GK[-0x1bcc+0x2*0x9b4+0x866])}]));for(const GK of Gs){const Gf=GJ['\x67\x65\x74'](GK)??{'\x6d\x69\x6e':0x0,'\x6d\x61\x78':0x0},Gn=Gf['\x6d\x69\x6e']===0x1*-0xe0a+-0x1fed+0x2df7||Gf['\x6d\x69\x6e']>=V,Gx='\x6f\x70\x65\x6e\x63\x6f\x64\x65\x3a'+GK;v['\x73\x65\x74'](Gx,{'\x70\x72\x6f\x76\x69\x64\x65\x72':Gy['\x70\x72\x6f\x76\x69\x64\x65\x72'],'\x63\x77\x64':Gy['\x63\x77\x64'],'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64':GK,'\x6f\x66\x66\x73\x65\x74':0x0,'\x6c\x61\x73\x74\x53\x65\x65\x6e':Gn?0x727*-0x4+-0x1d27*-0x1+-0x1*0x8b:Gf['\x6d\x61\x78'],'\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79':'','\x61\x63\x74\x69\x76\x65\x41\x74':Date['\x6e\x6f\x77']()});if(Gn)g['\x61\x64\x64'](Gx);}}continue;}if(Gy['\x70\x72\x6f\x76\x69\x64\x65\x72']===CAI['\x65\x50\x72\x6f\x76\x69\x64\x65\x72']['\x61\x6e\x74\x69\x67\x72\x61\x76\x69\x74\x79']){const GU=G2(Gy['\x63\x77\x64']);for(const Gi of m(N,GB=>GB['\x65\x6e\x64\x73\x57\x69\x74\x68'](G[0x2*-0xf97+-0x4ee+-0x17*-0x194]))){const GB=O['\x6a\x6f\x69\x6e'](N,Gi),GY=v['\x67\x65\x74'](GB);if(GY){if(!g['\x68\x61\x73'](GB))try{const Gj=y['\x73\x74\x61\x74\x53\x79\x6e\x63'](GB)['\x6d\x74\x69\x6d\x65\x4d\x73'];Gj>(GY['\x6d\x74\x69\x6d\x65']??0x1fed+0x4d*-0x25+-0x14cc)&&(g['\x61\x64\x64'](GB),GY['\x61\x63\x74\x69\x76\x65\x41\x74']=Date['\x6e\x6f\x77'](),GY['\x6d\x74\x69\x6d\x65']=Gj);}catch{}continue;}const Gk=await G3(GB);if(!Gk||Gk!==GU)continue;const GI={'\x70\x72\x6f\x76\x69\x64\x65\x72':Gy['\x70\x72\x6f\x76\x69\x64\x65\x72'],'\x63\x77\x64':Gy['\x63\x77\x64'],'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64':O['\x62\x61\x73\x65\x6e\x61\x6d\x65'](GB,G[-0x105*0xf+-0x2016+0x2f91]),'\x66\x69\x6c\x65':GB,'\x6f\x66\x66\x73\x65\x74':0x0,'\x6c\x61\x73\x74\x53\x65\x65\x6e':0x0,'\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79':'','\x61\x63\x74\x69\x76\x65\x41\x74':Date['\x6e\x6f\x77']()};let GP=![];try{const Ge=y['\x73\x74\x61\x74\x53\x79\x6e\x63'](GB),Gd=Ge['\x62\x69\x72\x74\x68\x74\x69\x6d\x65\x4d\x73']||Ge['\x6d\x74\x69\x6d\x65\x4d\x73'];GP=Gd>=V,GI['\x6d\x74\x69\x6d\x65']=Ge['\x6d\x74\x69\x6d\x65\x4d\x73'];}catch{continue;}if(!GP)GI['\x6c\x61\x73\x74\x53\x65\x65\x6e']=await G4(GB);v['\x73\x65\x74'](GB,GI);if(GP)g['\x61\x64\x64'](GB);}continue;}const GZ=e[Gy['\x70\x72\x6f\x76\x69\x64\x65\x72']];if(!GZ)continue;for(const Gt of GZ['\x63\x61\x6e\x64\x69\x64\x61\x74\x65\x73'](Gy['\x63\x77\x64'])){const GL=v['\x67\x65\x74'](Gt);if(GL){if(!g['\x68\x61\x73'](Gt))try{y['\x73\x74\x61\x74\x53\x79\x6e\x63'](Gt)['\x73\x69\x7a\x65']>GL['\x6f\x66\x66\x73\x65\x74']&&(g['\x61\x64\x64'](Gt),GL['\x61\x63\x74\x69\x76\x65\x41\x74']=Date['\x6e\x6f\x77']());}catch{}continue;}const Gu={'\x70\x72\x6f\x76\x69\x64\x65\x72':Gy['\x70\x72\x6f\x76\x69\x64\x65\x72'],'\x63\x77\x64':Gy['\x63\x77\x64'],'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64':'','\x6f\x66\x66\x73\x65\x74':0x0,'\x6c\x61\x73\x74\x53\x65\x65\x6e':0x0,'\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79':'','\x61\x63\x74\x69\x76\x65\x41\x74':Date['\x6e\x6f\x77']()};if(GZ['\x76\x65\x72\x69\x66\x79']&&!GZ['\x76\x65\x72\x69\x66\x79'](Gt,Gy['\x63\x77\x64'],Gu))continue;if(!Gu['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64'])Gu['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64']=GZ['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64\x4f\x66'](Gt);Gu['\x66\x69\x6c\x65']=Gt;let Gr=![];try{const GN=y['\x73\x74\x61\x74\x53\x79\x6e\x63'](Gt),Gw=GN['\x62\x69\x72\x74\x68\x74\x69\x6d\x65\x4d\x73']||GN['\x6d\x74\x69\x6d\x65\x4d\x73'];Gr=Gw>=V,Gu['\x6f\x66\x66\x73\x65\x74']=Gr?-0x68d+0x82d+-0x1a0:GN['\x73\x69\x7a\x65'];}catch{continue;}v['\x73\x65\x74'](Gt,Gu);if(Gr)g['\x61\x64\x64'](Gt);}}}function G8(G9,GG,Gy){const GO=e[G9['\x70\x72\x6f\x76\x69\x64\x65\x72']];if(!GO||!G9['\x66\x69\x6c\x65'])return;const GZ=i(G9['\x66\x69\x6c\x65'],G9);if(!GZ['\x6c\x65\x6e\x67\x74\x68'])return;G9['\x61\x63\x74\x69\x76\x65\x41\x74']=Date['\x6e\x6f\x77']();for(const GM of GZ){try{const GF=GO['\x70\x61\x72\x73\x65'](GM);for(const Gv of GF){if(!Gv['\x6d\x6f\x64\x65\x6c']&&G9['\x6d\x6f\x64\x65\x6c'])Gv['\x6d\x6f\x64\x65\x6c']=G9['\x6d\x6f\x64\x65\x6c'];G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']=U(G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],G9['\x63\x77\x64'],Gv['\x72\x6f\x6c\x65']===G[0x389+0x4e3+-0x85e]?Gv['\x74\x65\x78\x74']:null,GG,G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79']),Gy['\x70\x75\x73\x68']({...Gv,'\x6b\x65\x79':G9['\x63\x75\x72\x72\x65\x6e\x74\x4b\x65\x79'],'\x70\x72\x6f\x76\x69\x64\x65\x72':G9['\x70\x72\x6f\x76\x69\x64\x65\x72'],'\x73\x65\x73\x73\x69\x6f\x6e\x49\x64':G9['\x73\x65\x73\x73\x69\x6f\x6e\x49\x64'],'\x63\x77\x64':G9['\x63\x77\x64']});}}catch{}}}export async function Poll(G9){const GG=[];try{const Gy=Date['\x6e\x6f\x77']();Gy>=s&&(s=Gy+M,await G7(G9));for(const GO of[...g]){const GZ=v['\x67\x65\x74'](GO);if(!GZ){g['\x64\x65\x6c\x65\x74\x65'](GO);continue;}if(GZ['\x70\x72\x6f\x76\x69\x64\x65\x72']===CAI['\x65\x50\x72\x6f\x76\x69\x64\x65\x72']['\x6f\x70\x65\x6e\x63\x6f\x64\x65'])await u(GZ,G9,GG);else{if(GZ['\x70\x72\x6f\x76\x69\x64\x65\x72']===CAI['\x65\x50\x72\x6f\x76\x69\x64\x65\x72']['\x61\x6e\x74\x69\x67\x72\x61\x76\x69\x74\x79'])await G6(GZ,G9,GG);else G8(GZ,G9,GG);}if(Date['\x6e\x6f\x77']()-GZ['\x61\x63\x74\x69\x76\x65\x41\x74']>F)g['\x64\x65\x6c\x65\x74\x65'](GO);}}catch{}return GG;}
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import { CSQLite } from '../network/CSQLite.js';
+import { CAI } from '../util/CAI.js';
+import { CWASM } from '../basic/CWASM.js';
+CWASM.IsSIMD();
+const SCAN_MS = 0x1388;
+const HOT_MS = 0xea60;
+const gTracked = new Map();
+const gHot = new Set();
+let gNextScanAt = 0x0;
+const gStartAt = Date.now();
+function _listDir(dir, filter) {
+    try {
+        return fs.readdirSync(dir).filter(filter);
+    }
+    catch {
+        return [];
+    }
+}
+const _SYS_BLOCKS = [
+    /<system-reminder>[\s\S]*?<\/system-reminder>/g,
+    /<local-command-caveat>[\s\S]*?<\/local-command-caveat>/g,
+    /<local-command-stdout>[\s\S]*?<\/local-command-stdout>/g,
+    /<command-(?:name|message|args)>[\s\S]*?<\/command-(?:name|message|args)>/g,
+    /<user_info>[\s\S]*?<\/user_info>/g,
+    /<environment_context>[\s\S]*?<\/environment_context>/g,
+];
+function _cleanUserText(text) {
+    let out = text;
+    for (const re of _SYS_BLOCKS)
+        out = out.replace(re, "");
+    return out.trim();
+}
+const _textOf = (c, blockType = "\x74\x65\x78\x74") => typeof c === "\x73\x74\x72\x69\x6e\x67" ? c
+    : Array.isArray(c) ? c.filter((b) => b?.type === blockType).map((b) => String(b.text ?? "")).join("")
+        : "";
+const _FILE_KEYS = ["\x66\x69\x6c\x65\x5f\x70\x61\x74\x68", "\x66\x69\x6c\x65\x50\x61\x74\x68", "\x74\x61\x72\x67\x65\x74\x5f\x66\x69\x6c\x65", "\x74\x61\x72\x67\x65\x74\x5f\x64\x69\x72\x65\x63\x74\x6f\x72\x79", "\x70\x61\x74\x68", "\x66\x69\x6c\x65", "\x66\x69\x6c\x65\x6e\x61\x6d\x65", "\x63\x6f\x6d\x6d\x61\x6e\x64", "\x75\x72\x6c"];
+function _fileFromArgs(args) {
+    if (args == null)
+        return "";
+    let obj = args;
+    if (typeof args === "\x73\x74\x72\x69\x6e\x67") {
+        const s = args.trim();
+        if (!s)
+            return "";
+        try {
+            obj = JSON.parse(s);
+        }
+        catch {
+            return "";
+        }
+    }
+    if (typeof obj !== "\x6f\x62\x6a\x65\x63\x74")
+        return "";
+    for (const k of _FILE_KEYS) {
+        const v = obj[k];
+        if (typeof v === "\x73\x74\x72\x69\x6e\x67" && v.trim())
+            return v.trim();
+        if (Array.isArray(v) && typeof v[0x0] === "\x73\x74\x72\x69\x6e\x67" && v[0x0].trim())
+            return v[0x0].trim();
+    }
+    return "";
+}
+function _toolChunk(name, args, model, iso) {
+    return { role: "\x74\x6f\x6f\x6c", text: "", model, iso, tool: String(name || "\x3f"), file: _fileFromArgs(args) };
+}
+function _normMatchText(text) {
+    return text
+        .replace(/\r\n/g, "\x0a")
+        .replace(/\r/g, "\x0a")
+        .replace(/[ \t\u00a0]+/g, "\x20")
+        .replace(/\n{3,}/g, "\x0a\x0a")
+        .trim();
+}
+function _textsMatch(a, b) {
+    if (a === b)
+        return true;
+    const na = _normMatchText(a);
+    const nb = _normMatchText(b);
+    if (!na || !nb)
+        return false;
+    if (na === nb)
+        return true;
+    const minLen = 0xc;
+    if (na.length >= minLen && nb.length >= minLen) {
+        if (na.includes(nb) || nb.includes(na))
+            return true;
+    }
+    return false;
+}
+function _peersOf(provider, cwd, live) {
+    const resolved = path.resolve(cwd);
+    return live.filter(s => s.provider === provider && path.resolve(s.cwd) === resolved);
+}
+function _soleLiveKey(provider, cwd, live) {
+    const peers = _peersOf(provider, cwd, live);
+    return peers.length === 0x1 ? peers[0x0].key : "";
+}
+function _matchKey(provider, cwd, text, live) {
+    const peers = _peersOf(provider, cwd, live);
+    if (peers.length === 0x0)
+        return "";
+    const hits = [];
+    for (const s of peers) {
+        const input = s.inputs.find(i => !i.used && _textsMatch(i.text, text));
+        if (input)
+            hits.push({ key: s.key, input });
+    }
+    if (hits.length === 0x1) {
+        hits[0x0].input.used = true;
+        return hits[0x0].key;
+    }
+    if (hits.length > 0x1)
+        return "";
+    const withUnused = peers.filter(s => s.inputs.some(i => !i.used));
+    if (withUnused.length === 0x1) {
+        const input = withUnused[0x0].inputs.find(i => !i.used);
+        if (input)
+            input.used = true;
+        return withUnused[0x0].key;
+    }
+    if (peers.length === 0x1)
+        return peers[0x0].key;
+    return "";
+}
+function _resolveKey(provider, cwd, text, live, prevKey) {
+    if (text != null) {
+        const k = _matchKey(provider, cwd, text, live);
+        if (k)
+            return k;
+    }
+    if (prevKey)
+        return prevKey;
+    return _soleLiveKey(provider, cwd, live);
+}
+function _readAppended(file, t) {
+    let size;
+    try {
+        size = fs.statSync(file).size;
+    }
+    catch {
+        return [];
+    }
+    if (size < t.offset)
+        t.offset = 0x0;
+    if (size === t.offset)
+        return [];
+    let fd;
+    try {
+        fd = fs.openSync(file, "\x72");
+    }
+    catch {
+        return [];
+    }
+    try {
+        const len = size - t.offset;
+        const buf = Buffer.alloc(len);
+        fs.readSync(fd, buf, 0x0, len, t.offset);
+        const text = buf.toString("\x75\x74\x66\x38");
+        const lastNl = text.lastIndexOf("\x0a");
+        if (lastNl < 0x0)
+            return [];
+        t.offset += Buffer.byteLength(text.slice(0x0, lastNl + 0x1), "\x75\x74\x66\x38");
+        return text.slice(0x0, lastNl).split("\x0a").filter(l => l.trim().length > 0x0);
+    }
+    catch {
+        return [];
+    }
+    finally {
+        try {
+            fs.closeSync(fd);
+        }
+        catch { }
+    }
+}
+function _claudeParse(line) {
+    const rec = JSON.parse(line);
+    if (rec?.isSidechain)
+        return [];
+    const msg = rec?.message;
+    if (!msg)
+        return [];
+    const iso = typeof rec.timestamp === "\x73\x74\x72\x69\x6e\x67" ? rec.timestamp : undefined;
+    const model = typeof msg.model === "\x73\x74\x72\x69\x6e\x67" ? msg.model : "";
+    if (rec.type === "\x75\x73\x65\x72") {
+        const text = _cleanUserText(_textOf(msg.content));
+        return text ? [{ role: "\x75\x73\x65\x72", text, model, iso }] : [];
+    }
+    if (rec.type !== "\x61\x73\x73\x69\x73\x74\x61\x6e\x74")
+        return [];
+    const out = [];
+    if (Array.isArray(msg.content)) {
+        for (const b of msg.content) {
+            if (b?.type === "\x74\x6f\x6f\x6c\x5f\x75\x73\x65")
+                out.push(_toolChunk(String(b.name ?? ""), b.input, model, iso));
+        }
+    }
+    if (msg.stop_reason === "\x65\x6e\x64\x5f\x74\x75\x72\x6e") {
+        const text = _textOf(msg.content).trim();
+        if (text)
+            out.push({ role: "\x61\x73\x73\x69\x73\x74\x61\x6e\x74", text, model, iso });
+    }
+    return out;
+}
+function _grokUnwrapQuery(text) {
+    const m = text.match(/^<user_query>\r?\n?([\s\S]*?)\r?\n?<\/user_query>$/);
+    return m ? m[0x1] : text;
+}
+function _grokParse(line) {
+    const rec = JSON.parse(line);
+    const model = typeof rec?.model_id === "\x73\x74\x72\x69\x6e\x67" ? rec.model_id : "";
+    if (rec?.type === "\x75\x73\x65\x72") {
+        const text = _cleanUserText(_grokUnwrapQuery(_textOf(rec.content).trim()));
+        return text ? [{ role: "\x75\x73\x65\x72", text, model }] : [];
+    }
+    if (rec?.type !== "\x61\x73\x73\x69\x73\x74\x61\x6e\x74")
+        return [];
+    const calls = Array.isArray(rec.tool_calls) ? rec.tool_calls : null;
+    if (calls && calls.length) {
+        const out = [];
+        for (const t of calls) {
+            const name = String(t?.name ?? t?.function?.name ?? "");
+            const args = t?.arguments ?? t?.function?.arguments ?? t?.input ?? t?.args;
+            out.push(_toolChunk(name, args, model));
+        }
+        return out;
+    }
+    const text = _textOf(rec.content).trim();
+    return text ? [{ role: "\x61\x73\x73\x69\x73\x74\x61\x6e\x74", text, model }] : [];
+}
+function _codexParse(line) {
+    const rec = JSON.parse(line);
+    const p = rec?.payload;
+    if (!p)
+        return [];
+    const iso = typeof rec.timestamp === "\x73\x74\x72\x69\x6e\x67" ? rec.timestamp : undefined;
+    if (rec.type === "\x65\x76\x65\x6e\x74\x5f\x6d\x73\x67" && p.type === "\x74\x61\x73\x6b\x5f\x63\x6f\x6d\x70\x6c\x65\x74\x65") {
+        const text = String(p.last_agent_message ?? "").trim();
+        return text ? [{ role: "\x61\x73\x73\x69\x73\x74\x61\x6e\x74", text, model: "", iso }] : [];
+    }
+    if (rec.type === "\x72\x65\x73\x70\x6f\x6e\x73\x65\x5f\x69\x74\x65\x6d" && p.type === "\x6d\x65\x73\x73\x61\x67\x65" && p.role === "\x75\x73\x65\x72") {
+        const text = _cleanUserText(_textOf(p.content, "\x69\x6e\x70\x75\x74\x5f\x74\x65\x78\x74"));
+        return text ? [{ role: "\x75\x73\x65\x72", text, model: "", iso }] : [];
+    }
+    if (rec.type === "\x72\x65\x73\x70\x6f\x6e\x73\x65\x5f\x69\x74\x65\x6d" && p.type === "\x66\x75\x6e\x63\x74\x69\x6f\x6e\x5f\x63\x61\x6c\x6c") {
+        const name = String(p.name ?? "");
+        const full = p.namespace ? `${p.namespace}/${name}` : name;
+        return [_toolChunk(full, p.arguments, "", iso)];
+    }
+    return [];
+}
+function _codexCandidates() {
+    const base = path.join(os.homedir(), "\x2e\x63\x6f\x64\x65\x78", "\x73\x65\x73\x73\x69\x6f\x6e\x73");
+    const out = [];
+    for (const off of [0x0, 0x1]) {
+        const d = new Date(Date.now() - off * 0x5265c00);
+        const dir = path.join(base, String(d.getFullYear()), String(d.getMonth() + 0x1).padStart(0x2, "\x30"), String(d.getDate()).padStart(0x2, "\x30"));
+        for (const n of _listDir(dir, x => x.startsWith("\x72\x6f\x6c\x6c\x6f\x75\x74\x2d") && x.endsWith("\x2e\x6a\x73\x6f\x6e\x6c")))
+            out.push(path.join(dir, n));
+    }
+    return out;
+}
+function _codexVerify(file, cwd, t) {
+    try {
+        const head = fs.readFileSync(file, "\x75\x74\x66\x38").split("\x0a")[0x0];
+        const rec = JSON.parse(head);
+        if (rec?.type !== "\x73\x65\x73\x73\x69\x6f\x6e\x5f\x6d\x65\x74\x61")
+            return false;
+        const p = rec.payload ?? {};
+        if (path.resolve(String(p.cwd ?? "")) !== path.resolve(cwd))
+            return false;
+        t.sessionId = String(p.session_id ?? "");
+        t.model = String(p.model ?? "");
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+const SPECS = {
+    [CAI.eProvider.claude]: {
+        candidates: cwd => {
+            const dir = path.join(os.homedir(), "\x2e\x63\x6c\x61\x75\x64\x65", "\x70\x72\x6f\x6a\x65\x63\x74\x73", cwd.replace(/[^a-zA-Z0-9]/g, "\x2d"));
+            return _listDir(dir, n => n.endsWith("\x2e\x6a\x73\x6f\x6e\x6c")).map(n => path.join(dir, n));
+        },
+        sessionIdOf: f => path.basename(f, "\x2e\x6a\x73\x6f\x6e\x6c"),
+        parse: _claudeParse,
+    },
+    [CAI.eProvider.grok]: {
+        candidates: cwd => {
+            const dir = path.join(os.homedir(), "\x2e\x67\x72\x6f\x6b", "\x73\x65\x73\x73\x69\x6f\x6e\x73", encodeURIComponent(cwd));
+            return _listDir(dir, () => true).map(n => path.join(dir, n, "\x63\x68\x61\x74\x5f\x68\x69\x73\x74\x6f\x72\x79\x2e\x6a\x73\x6f\x6e\x6c"));
+        },
+        sessionIdOf: f => path.basename(path.dirname(f)),
+        parse: _grokParse,
+    },
+    [CAI.eProvider.codex]: {
+        candidates: _codexCandidates,
+        verify: _codexVerify,
+        sessionIdOf: f => path.basename(f, "\x2e\x6a\x73\x6f\x6e\x6c"),
+        parse: _codexParse,
+    },
+};
+const _OPENCODE_DB = path.join(os.homedir(), "\x2e\x6c\x6f\x63\x61\x6c", "\x73\x68\x61\x72\x65", "\x6f\x70\x65\x6e\x63\x6f\x64\x65", "\x6f\x70\x65\x6e\x63\x6f\x64\x65\x2e\x64\x62");
+let gOpencodeDb = null;
+async function _opencodeDb() {
+    if (gOpencodeDb)
+        return gOpencodeDb;
+    if (!fs.existsSync(_OPENCODE_DB))
+        return null;
+    const db = new CSQLite();
+    db.mDatabase = _OPENCODE_DB;
+    await db.Init();
+    gOpencodeDb = db;
+    return db;
+}
+async function _opencodeRead(t, live, out) {
+    const db = await _opencodeDb();
+    if (!db)
+        return;
+    const rows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x69\x64\x2c\x20\x64\x61\x74\x61\x2c\x20\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x2c\x20\x74\x69\x6d\x65\x5f\x75\x70\x64\x61\x74\x65\x64\x20\x46\x52\x4f\x4d\x20\x6d\x65\x73\x73\x61\x67\x65\x20\x57\x48\x45\x52\x45\x20\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64\x20\x3d\x20\x3f\x20\x41\x4e\x44\x20\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x20\x3e\x20\x3f\x20\x4f\x52\x44\x45\x52\x20\x42\x59\x20\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x20\x41\x53\x43", [t.sessionId, t.lastSeen]);
+    if (!rows || !rows.length)
+        return;
+    for (const r of rows) {
+        const mid = String(r[0x0]);
+        const tCreated = Number(r[0x2]);
+        const tUpdated = Number(r[0x3]);
+        let md;
+        try {
+            md = JSON.parse(String(r[0x1]));
+        }
+        catch {
+            t.lastSeen = tCreated;
+            continue;
+        }
+        const role = md?.role;
+        if (role !== "\x75\x73\x65\x72" && role !== "\x61\x73\x73\x69\x73\x74\x61\x6e\x74") {
+            t.lastSeen = tCreated;
+            continue;
+        }
+        const partRows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x64\x61\x74\x61\x20\x46\x52\x4f\x4d\x20\x70\x61\x72\x74\x20\x57\x48\x45\x52\x45\x20\x6d\x65\x73\x73\x61\x67\x65\x5f\x69\x64\x20\x3d\x20\x3f", [mid]);
+        const parts = (partRows ?? []).map((p) => { try {
+            return JSON.parse(String(p[0x0]));
+        }
+        catch {
+            return null;
+        } })
+            .filter((p) => p);
+        const types = new Set(parts.map((p) => String(p.type)));
+        if (role === "\x61\x73\x73\x69\x73\x74\x61\x6e\x74" && !types.has("\x73\x74\x65\x70\x2d\x66\x69\x6e\x69\x73\x68") && Date.now() - tUpdated < 0x2710)
+            break;
+        t.lastSeen = tCreated;
+        t.activeAt = Date.now();
+        const model = String(md?.modelID ?? "");
+        const iso = new Date(tCreated).toISOString();
+        if (role === "\x61\x73\x73\x69\x73\x74\x61\x6e\x74" && types.has("\x74\x6f\x6f\x6c")) {
+            t.currentKey = _resolveKey(t.provider, t.cwd, null, live, t.currentKey);
+            for (const p of parts) {
+                if (p.type !== "\x74\x6f\x6f\x6c")
+                    continue;
+                const name = String(p.tool ?? p.name ?? "");
+                const input = p.state?.input ?? p.input;
+                const chunk = _toolChunk(name, input, model, iso);
+                out.push({ ...chunk, key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd });
+            }
+            continue;
+        }
+        const raw = parts.filter((p) => p.type === "\x74\x65\x78\x74").map((p) => String(p.text ?? "")).join("");
+        const text = role === "\x75\x73\x65\x72" ? _cleanUserText(raw) : raw.trim();
+        if (!text)
+            continue;
+        t.currentKey = _resolveKey(t.provider, t.cwd, role === "\x75\x73\x65\x72" ? text : null, live, t.currentKey);
+        out.push({
+            key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd,
+            role, text, model, iso,
+        });
+    }
+}
+const AGY_BASE = path.join(os.homedir(), "\x2e\x67\x65\x6d\x69\x6e\x69", "\x61\x6e\x74\x69\x67\x72\x61\x76\x69\x74\x79\x2d\x63\x6c\x69");
+const AGY_CONV_DIR = path.join(AGY_BASE, "\x63\x6f\x6e\x76\x65\x72\x73\x61\x74\x69\x6f\x6e\x73");
+const AGY_USER = 0xe, AGY_ASST = 0xf, AGY_TITLE = 0x17, AGY_START = 0x62;
+const AGY_SETTLE_MS = 0x2710;
+const gAgyDb = new Map();
+const gAgyCwd = new Map();
+async function _agyDb(file) {
+    let db = gAgyDb.get(file);
+    if (db)
+        return db;
+    if (!fs.existsSync(file))
+        return null;
+    db = new CSQLite();
+    db.mDatabase = file;
+    try {
+        await db.Init();
+    }
+    catch {
+        return null;
+    }
+    gAgyDb.set(file, db);
+    return db;
+}
+function _pbVarint(buf, p) {
+    let result = 0x0, shift = 0x0, pos = p;
+    while (pos < buf.length) {
+        const b = buf[pos++];
+        result += (b & 0x7f) * Math.pow(0x2, shift);
+        if ((b & 0x80) === 0x0)
+            return [result, pos];
+        shift += 0x7;
+        if (shift > 0x3f)
+            break;
+    }
+    return [0x0, -0x1];
+}
+function* _pbFields(buf, start = 0x0, end = buf.length) {
+    let p = start;
+    while (p < end) {
+        const [tag, p1] = _pbVarint(buf, p);
+        if (p1 < 0x0)
+            return;
+        const field = Math.floor(tag / 0x8), wire = tag & 0x7;
+        p = p1;
+        if (wire === 0x0) {
+            const [v, p2] = _pbVarint(buf, p);
+            if (p2 < 0x0)
+                return;
+            yield { field, wire, varint: v };
+            p = p2;
+        }
+        else if (wire === 0x2) {
+            const [len, p2] = _pbVarint(buf, p);
+            if (p2 < 0x0 || p2 + len > end)
+                return;
+            yield { field, wire, bytes: buf.subarray(p2, p2 + len) };
+            p = p2 + len;
+        }
+        else if (wire === 0x5)
+            p += 0x4;
+        else if (wire === 0x1)
+            p += 0x8;
+        else
+            return;
+    }
+}
+function _pbGetBytes(buf, field) {
+    for (const f of _pbFields(buf))
+        if (f.field === field && f.wire === 0x2)
+            return f.bytes;
+    return null;
+}
+function _pbGetVarint(buf, field) {
+    for (const f of _pbFields(buf))
+        if (f.field === field && f.wire === 0x0)
+            return f.varint;
+    return null;
+}
+function _agyProse(s) {
+    const t = s.trim();
+    if (t.length < 0x2)
+        return false;
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t))
+        return false;
+    if (/^(file:|https?:|[A-Za-z]:[\\/]|\/)/.test(t))
+        return false;
+    return /[A-Za-z가-힣]/.test(t);
+}
+function _agyFallbackText(buf, depth = 0x0) {
+    let best = "";
+    for (const f of _pbFields(buf)) {
+        if (f.wire !== 0x2 || !f.bytes)
+            continue;
+        if (depth < 0x6) {
+            const nested = _agyFallbackText(f.bytes, depth + 0x1);
+            if (nested.length > best.length)
+                best = nested;
+        }
+        const s = f.bytes.toString("\x75\x74\x66\x38");
+        if (Buffer.byteLength(s, "\x75\x74\x66\x38") !== f.bytes.length)
+            continue;
+        if (_agyProse(s) && s.length > best.length)
+            best = s;
+    }
+    return best;
+}
+function _agyStepText(payload, stepType) {
+    const [outer, inner] = stepType === AGY_USER ? [0x13, 0x2] : [0x14, 0x1];
+    const content = _pbGetBytes(payload, outer);
+    if (content) {
+        const s = _pbGetBytes(content, inner);
+        if (s && s.length) {
+            const txt = s.toString("\x75\x74\x66\x38");
+            if (txt.trim())
+                return txt;
+        }
+    }
+    return _agyFallbackText(payload);
+}
+function _agyIso(payload) {
+    const meta = _pbGetBytes(payload, 0x5);
+    if (!meta)
+        return undefined;
+    const ts = _pbGetBytes(meta, 0x1);
+    if (!ts)
+        return undefined;
+    const secs = _pbGetVarint(ts, 0x1);
+    if (!secs)
+        return undefined;
+    const nanos = _pbGetVarint(ts, 0x2) ?? 0x0;
+    return new Date(secs * 0x3e8 + Math.floor(nanos / 0xf4240)).toISOString();
+}
+function _agyFindMarker(buf, prefix, depth = 0x0) {
+    for (const f of _pbFields(buf)) {
+        if (f.wire !== 0x2 || !f.bytes)
+            continue;
+        const s = f.bytes.toString("\x75\x74\x66\x38");
+        if (s.startsWith(prefix))
+            return s;
+        if (depth < 0x8) {
+            const r = _agyFindMarker(f.bytes, prefix, depth + 0x1);
+            if (r)
+                return r;
+        }
+    }
+    return null;
+}
+function _agyNormCwd(s) {
+    let raw = s;
+    try {
+        raw = decodeURIComponent(s);
+    }
+    catch { }
+    return path.resolve(raw.replace(/\//g, "\x5c")).toLowerCase();
+}
+async function _agyResolveCwd(file) {
+    const cached = gAgyCwd.get(file);
+    if (cached !== undefined)
+        return cached;
+    const db = await _agyDb(file);
+    if (!db)
+        return "";
+    const rows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x73\x74\x65\x70\x5f\x70\x61\x79\x6c\x6f\x61\x64\x20\x46\x52\x4f\x4d\x20\x73\x74\x65\x70\x73\x20\x57\x48\x45\x52\x45\x20\x73\x74\x65\x70\x5f\x74\x79\x70\x65\x20\x3d\x20\x3f\x20\x4f\x52\x44\x45\x52\x20\x42\x59\x20\x69\x64\x78\x20\x41\x53\x43\x20\x4c\x49\x4d\x49\x54\x20\x31", [AGY_USER]);
+    const raw = rows?.[0x0]?.[0x0];
+    if (!raw)
+        return "";
+    const payload = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+    const url = _agyFindMarker(payload, "\x66\x69\x6c\x65\x3a\x2f\x2f\x2f");
+    const cwd = url ? _agyNormCwd(url.slice("\x66\x69\x6c\x65\x3a\x2f\x2f\x2f".length)) : "";
+    if (cwd)
+        gAgyCwd.set(file, cwd);
+    return cwd;
+}
+async function _agyMaxIdx(file) {
+    const db = await _agyDb(file);
+    if (!db)
+        return 0x0;
+    const r = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x4d\x41\x58\x28\x69\x64\x78\x29\x20\x46\x52\x4f\x4d\x20\x73\x74\x65\x70\x73", []);
+    return Number(r?.[0x0]?.[0x0] ?? 0x0);
+}
+function _agyFlushPending(t, live, out) {
+    if (!t.pendText)
+        return;
+    t.currentKey = _resolveKey(t.provider, t.cwd, null, live, t.currentKey);
+    out.push({ key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd,
+        role: "\x61\x73\x73\x69\x73\x74\x61\x6e\x74", text: t.pendText, model: "", iso: t.pendIso });
+    t.pendText = undefined;
+    t.pendIso = undefined;
+}
+async function _agyRead(t, live, out) {
+    if (!t.file)
+        return;
+    const db = await _agyDb(t.file);
+    if (!db)
+        return;
+    const rows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x69\x64\x78\x2c\x20\x73\x74\x65\x70\x5f\x74\x79\x70\x65\x2c\x20\x73\x74\x65\x70\x5f\x70\x61\x79\x6c\x6f\x61\x64\x20\x46\x52\x4f\x4d\x20\x73\x74\x65\x70\x73\x20\x57\x48\x45\x52\x45\x20\x69\x64\x78\x20\x3e\x20\x3f\x20\x4f\x52\x44\x45\x52\x20\x42\x59\x20\x69\x64\x78\x20\x41\x53\x43", [t.lastSeen]);
+    for (const r of rows ?? []) {
+        const idx = Number(r[0x0]);
+        const stype = Number(r[0x1]);
+        const raw = r[0x2];
+        t.lastSeen = idx;
+        t.activeAt = Date.now();
+        if (raw == null)
+            continue;
+        const payload = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+        if (stype === AGY_USER) {
+            _agyFlushPending(t, live, out);
+            const text = _cleanUserText(_agyStepText(payload, AGY_USER));
+            if (!text)
+                continue;
+            t.currentKey = _resolveKey(t.provider, t.cwd, text, live, t.currentKey);
+            out.push({ key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd,
+                role: "\x75\x73\x65\x72", text, model: "", iso: _agyIso(payload) });
+        }
+        else if (stype === AGY_ASST) {
+            const text = _agyStepText(payload, AGY_ASST).trim();
+            if (text) {
+                t.pendText = text;
+                t.pendIso = _agyIso(payload);
+            }
+        }
+        else if (stype === AGY_TITLE || stype === AGY_START) {
+        }
+        else {
+            t.pendText = undefined;
+            t.pendIso = undefined;
+        }
+    }
+    if (t.pendText && Date.now() - t.activeAt > AGY_SETTLE_MS)
+        _agyFlushPending(t, live, out);
+}
+async function _scan(live) {
+    const seen = new Set();
+    for (const s of live) {
+        const scope = `${s.provider}|${path.resolve(s.cwd)}`;
+        if (seen.has(scope))
+            continue;
+        seen.add(scope);
+        if (s.provider === CAI.eProvider.opencode) {
+            const db = await _opencodeDb();
+            if (!db)
+                continue;
+            const rows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x69\x64\x20\x46\x52\x4f\x4d\x20\x73\x65\x73\x73\x69\x6f\x6e\x20\x57\x48\x45\x52\x45\x20\x64\x69\x72\x65\x63\x74\x6f\x72\x79\x20\x3d\x20\x3f", [s.cwd.replace(/\\/g, "\x2f")]);
+            const sids = (rows ?? []).map((r) => String(r[0x0]));
+            const coldIds = sids.filter(sid => { const k = gTracked.get(`opencode:${sid}`); return k && !gHot.has(`opencode:${sid}`); });
+            const newIds = sids.filter(sid => !gTracked.has(`opencode:${sid}`));
+            if (coldIds.length) {
+                const ph = coldIds.map(() => "\x3f").join("\x2c");
+                const mx = await db.Recv(`SELECT session_id, MAX(time_created) FROM message WHERE session_id IN (${ph}) GROUP BY session_id`, coldIds);
+                const maxMap = new Map((mx ?? []).map((r) => [String(r[0x0]), Number(r[0x1])]));
+                for (const sid of coldIds) {
+                    const known = gTracked.get(`opencode:${sid}`);
+                    const lastMax = maxMap.get(sid) ?? 0x0;
+                    if (lastMax > known.lastSeen) {
+                        gHot.add(`opencode:${sid}`);
+                        known.activeAt = Date.now();
+                    }
+                }
+            }
+            if (newIds.length) {
+                const ph = newIds.map(() => "\x3f").join("\x2c");
+                const mm = await db.Recv(`SELECT session_id, MIN(time_created), MAX(time_created) FROM message WHERE session_id IN (${ph}) GROUP BY session_id`, newIds);
+                const rangeMap = new Map((mm ?? []).map((r) => [String(r[0x0]), { min: Number(r[0x1]), max: Number(r[0x2]) }]));
+                for (const sid of newIds) {
+                    if (CAI.gHeadlessSessionIds.has(sid))
+                        continue;
+                    const range = rangeMap.get(sid) ?? { min: 0x0, max: 0x0 };
+                    const fresh = (range.min === 0x0 || range.min >= gStartAt);
+                    const id = `opencode:${sid}`;
+                    gTracked.set(id, {
+                        provider: s.provider, cwd: s.cwd, sessionId: sid,
+                        offset: 0x0, lastSeen: fresh ? 0x0 : range.max, currentKey: "", activeAt: Date.now(),
+                    });
+                    if (fresh)
+                        gHot.add(id);
+                }
+            }
+            continue;
+        }
+        if (s.provider === CAI.eProvider.antigravity) {
+            const wantCwd = _agyNormCwd(s.cwd);
+            for (const name of _listDir(AGY_CONV_DIR, n => n.endsWith("\x2e\x64\x62"))) {
+                const file = path.join(AGY_CONV_DIR, name);
+                const known = gTracked.get(file);
+                if (known) {
+                    if (!gHot.has(file)) {
+                        try {
+                            const mt = fs.statSync(file).mtimeMs;
+                            if (mt > (known.mtime ?? 0x0)) {
+                                gHot.add(file);
+                                known.activeAt = Date.now();
+                                known.mtime = mt;
+                            }
+                        }
+                        catch { }
+                    }
+                    continue;
+                }
+                const cwd = await _agyResolveCwd(file);
+                if (!cwd || cwd !== wantCwd)
+                    continue;
+                const agySessionId = path.basename(file, "\x2e\x64\x62");
+                if (CAI.gHeadlessSessionIds.has(agySessionId))
+                    continue;
+                const t = {
+                    provider: s.provider, cwd: s.cwd, sessionId: agySessionId, file,
+                    offset: 0x0, lastSeen: 0x0, currentKey: "", activeAt: Date.now(),
+                };
+                let fresh = false;
+                try {
+                    const st = fs.statSync(file);
+                    const birth = st.birthtimeMs || st.mtimeMs;
+                    fresh = birth >= gStartAt;
+                    t.mtime = st.mtimeMs;
+                }
+                catch {
+                    continue;
+                }
+                if (!fresh)
+                    t.lastSeen = await _agyMaxIdx(file);
+                gTracked.set(file, t);
+                if (fresh)
+                    gHot.add(file);
+            }
+            continue;
+        }
+        const spec = SPECS[s.provider];
+        if (!spec)
+            continue;
+        for (const file of spec.candidates(s.cwd)) {
+            const known = gTracked.get(file);
+            if (known) {
+                if (!gHot.has(file)) {
+                    try {
+                        if (fs.statSync(file).size > known.offset) {
+                            gHot.add(file);
+                            known.activeAt = Date.now();
+                        }
+                    }
+                    catch { }
+                }
+                continue;
+            }
+            const t = {
+                provider: s.provider, cwd: s.cwd, sessionId: "",
+                offset: 0x0, lastSeen: 0x0, currentKey: "", activeAt: Date.now(),
+            };
+            if (spec.verify && !spec.verify(file, s.cwd, t))
+                continue;
+            if (!t.sessionId)
+                t.sessionId = spec.sessionIdOf(file);
+            if (CAI.gHeadlessSessionIds.has(t.sessionId))
+                continue;
+            t.file = file;
+            let fresh = false;
+            try {
+                const st = fs.statSync(file);
+                const birth = st.birthtimeMs || st.mtimeMs;
+                fresh = birth >= gStartAt;
+                t.offset = fresh ? 0x0 : st.size;
+            }
+            catch {
+                continue;
+            }
+            gTracked.set(file, t);
+            if (fresh)
+                gHot.add(file);
+        }
+    }
+}
+function _readFile(t, live, out) {
+    const spec = SPECS[t.provider];
+    if (!spec || !t.file)
+        return;
+    const lines = _readAppended(t.file, t);
+    if (!lines.length)
+        return;
+    t.activeAt = Date.now();
+    for (const line of lines) {
+        try {
+            const chunks = spec.parse(line);
+            for (const c of chunks) {
+                if (!c.model && t.model)
+                    c.model = t.model;
+                t.currentKey = _resolveKey(t.provider, t.cwd, c.role === "\x75\x73\x65\x72" ? c.text : null, live, t.currentKey);
+                out.push({ ...c, key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd });
+            }
+        }
+        catch { }
+    }
+}
+export async function Poll(live) {
+    const out = [];
+    try {
+        const now = Date.now();
+        if (now >= gNextScanAt) {
+            gNextScanAt = now + SCAN_MS;
+            await _scan(live);
+        }
+        for (const id of [...gHot]) {
+            const t = gTracked.get(id);
+            if (!t) {
+                gHot.delete(id);
+                continue;
+            }
+            if (t.provider === CAI.eProvider.opencode)
+                await _opencodeRead(t, live, out);
+            else if (t.provider === CAI.eProvider.antigravity)
+                await _agyRead(t, live, out);
+            else
+                _readFile(t, live, out);
+            if (Date.now() - t.activeAt > HOT_MS)
+                gHot.delete(id);
+        }
+    }
+    catch { }
+    return out;
+}

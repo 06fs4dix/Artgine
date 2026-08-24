@@ -1,1 +1,41 @@
-import{CObject as t}from"../basic/CObject.js";export class CFontRef{mKey="";mXSize=0;mYSize=0;mRXSize=0;mRYSize=0;constructor(){}GetRX(){return.5*(this.mXSize-this.mRXSize)}}export class CFontOption extends t{mSize;mExp=!0;mMaxX=1e5;mMaxY=1e5;mStrokeStyle="Black";mFillStyle="Black";mLineWidth=0;mLineCap="round";mLineJoin="round";constructor(t=32,e="Black",i="Black",m=0){super(),this.mSize=t,this.mFillStyle=e,this.mStrokeStyle=i,this.mLineWidth=m}}export class CFont{static Init(t=null){}static TextToTexName(t,e,i){return null}}import e from"../util_imple/CFont.js";e();
+import { CObject } from "../basic/CObject.js";
+export class CFontRef {
+    mKey = "";
+    mXSize = 0;
+    mYSize = 0;
+    mRXSize = 0;
+    mRYSize = 0;
+    constructor() {
+    }
+    GetRX() {
+        return (this.mXSize - this.mRXSize) * 0.5;
+    }
+}
+export class CFontOption extends CObject {
+    mSize;
+    mExp = true;
+    mMaxX = 100000;
+    mMaxY = 100000;
+    mStrokeStyle = 'Black';
+    mFillStyle = 'Black';
+    mLineWidth = 0;
+    mLineCap = "round";
+    mLineJoin = "round";
+    constructor(_size = 32, _fillStyle = 'Black', _strokeStyle = 'Black', _lineWidth = 0) {
+        super();
+        this.mSize = _size;
+        this.mFillStyle = _fillStyle;
+        this.mStrokeStyle = _strokeStyle;
+        this.mLineWidth = _lineWidth;
+    }
+}
+export class CFont {
+    static Init(pa_ttfName = null) {
+    }
+    static TextToTexName(_render, pa_text, _option) {
+        return null;
+    }
+}
+;
+import CFont_imple from "../util_imple/CFont.js";
+CFont_imple();

@@ -16,11 +16,12 @@ export class CFloat32 extends CObject
 	}
 	NewWASM()
 	{
-		this.mF32A=CWASM.ProductF32A(this.mF32A.length);	
-		
+		this.mF32A=CWASM.ProductF32A(this.mF32A.length);
+		CWASM.RegisterF32A(this);
 	}
 	ReleaseWASM()
 	{
+		CWASM.UnregisterF32A(this);
 		CWASM.Recycle(this.mF32A);
 	}
 	

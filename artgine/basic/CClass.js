@@ -1,1 +1,207 @@
-import{CUtil as t}from"./CUtil.js";var e=new Map;export class CClass{static ExtendsList(t,o=!1){"object"==typeof t&&(t=t.constructor);var r=new Array;for(var n of e.values())if(n.constructor&&n.constructor!==Object&&null!=n.prototype)if(n.prototype.constructor.name!=t.name)for(var c=Object.getPrototypeOf(n);""!=c.name;){if(c.name==t.name){o?r.push(n.prototype.constructor.name):r.push(new n.prototype.constructor);break}c=Object.getPrototypeOf(c)}else o?r.push(n.prototype.constructor.name):r.push(new n.prototype.constructor);return r}static Call(e,o,r=new Array){if(null==o)return alert("FunctionFinder error!"),null;const n=null!=e||t.IsNode()?e:window;return null==n[o]?null:n[o](...r)}static async CallAsync(e,o,r=new Array){if(null==o)return alert("FunctionFinder error!"),null;const n=null!=e||t.IsNode()?e:window;return null==n[o]?null:await n[o](...r)}static New(t,o=new Array){"function"==typeof t?t=t.name:"object"==typeof t&&(t=t.constructor.name),null==t&&alert("ClassFinder error!");let r=e.get(t);if(null!=r){if(null==o||0==o.length)return new r.prototype.constructor;if(1==o.length)return new r.prototype.constructor(o[0]);if(2==o.length)return new r.prototype.constructor(o[0],o[1]);if(3==o.length)return new r.prototype.constructor(o[0],o[1],o[2]);if(4==o.length)return new r.prototype.constructor(o[0],o[1],o[2],o[3]);if(5==o.length)return new r.prototype.constructor(o[0],o[1],o[2],o[3],o[4])}else""!=t&&console.log(t+"Null");return null}static Push(o,r=null){r&&"object"!=typeof r&&"function"!=typeof r||("string"==typeof o?(0==t.IsNode()&&(window[o]=r),e.set(o,r)):null!=o.name&&(0==t.IsNode()&&(window[o.name]=o),e.set(o.name,o)))}static MethodName(t,e=!1){const o=new Set;if(!t)return[];let r="function"==typeof t?t.prototype:Object.getPrototypeOf(t);for(;r&&r!==Object.prototype;){const t=Object.getOwnPropertyNames(r);for(const e of t){if("constructor"===e)continue;const t=Object.getOwnPropertyDescriptor(r,e);t&&"function"==typeof t.value&&o.add(e)}if(!e)break;r=Object.getPrototypeOf(r)}return Array.from(o).sort()}static StaticMethodName(t){const e=new Set;if(!t||"function"!=typeof t)return[];const o=Object.getOwnPropertyNames(t);for(const r of o){if("length"===r||"name"===r||"prototype"===r)continue;const o=Object.getOwnPropertyDescriptor(t,r);o&&"function"==typeof o.value&&e.add(r)}return Array.from(e).sort()}static StaticMemberName(t){const e=new Set;if(!t||"function"!=typeof t)return[];const o=Object.getOwnPropertyNames(t);for(const r of o){if("length"===r||"name"===r||"prototype"===r)continue;const o=Object.getOwnPropertyDescriptor(t,r);if(o){const t="function"==typeof o.value,n=!!o.get||!!o.set;t||n||e.add(r)}}return Array.from(e).sort()}static MemberName(t,e=!1){const o=new Set;if(!t)return[];const r="function"==typeof t?new t:t,n=Object.getOwnPropertyNames(r);for(const t of n){const e=Object.getOwnPropertyDescriptor(r,t);e&&"function"!=typeof e.value&&o.add(t)}if(e){let t=Object.getPrototypeOf(r);for(;t&&t!==Object.prototype;){const e=Object.getOwnPropertyNames(t);for(const r of e){if("constructor"===r)continue;const e=Object.getOwnPropertyDescriptor(t,r),n=e&&"function"==typeof e.value,c=e&&(e.get||e.set);n||c||o.add(r)}t=Object.getPrototypeOf(t)}}return Array.from(o).sort()}static ClassName(){return Array.from(e.values()).map(t=>t.name).filter(t=>!!t).sort()}static EnumName(t){return t&&"object"==typeof t?Object.keys(t).filter(t=>isNaN(Number(t))):[]}}
+import { CUtil } from "./CUtil.js";
+var gClassMap = new Map();
+export class CClass {
+    static ExtendsList(_type, _nameStr = false) {
+        if (typeof _type === "object") {
+            _type = _type.constructor;
+        }
+        var list = new Array();
+        for (var each0 of gClassMap.values()) {
+            if (!(each0.constructor && each0.constructor !== Object) || each0.prototype == null) {
+                continue;
+            }
+            if (each0.prototype.constructor.name == _type.name) {
+                if (_nameStr)
+                    list.push(each0.prototype.constructor.name);
+                else
+                    list.push(new each0.prototype.constructor());
+                continue;
+            }
+            var fc = Object.getPrototypeOf(each0);
+            while (fc.name != "") {
+                if (fc.name == _type.name) {
+                    if (_nameStr)
+                        list.push(each0.prototype.constructor.name);
+                    else
+                        list.push(new each0.prototype.constructor());
+                    break;
+                }
+                fc = Object.getPrototypeOf(fc);
+            }
+        }
+        return list;
+    }
+    static Call(_class, _function, _para = new Array()) {
+        if (_function == null) {
+            alert("FunctionFinder error!");
+            return null;
+        }
+        const obj = (_class == null && !CUtil.IsNode()) ? window : _class;
+        if (obj[_function] == null)
+            return null;
+        return obj[_function](..._para);
+    }
+    static async CallAsync(_class, _function, _para = new Array()) {
+        if (_function == null) {
+            alert("FunctionFinder error!");
+            return null;
+        }
+        const obj = (_class == null && !CUtil.IsNode()) ? window : _class;
+        if (obj[_function] == null)
+            return null;
+        return await obj[_function](..._para);
+    }
+    static New(_class, _para = new Array) {
+        if (typeof _class === "function")
+            _class = _class.name;
+        else if (typeof _class === "object")
+            _class = _class.constructor.name;
+        if (_class == null)
+            alert("ClassFinder error!");
+        let classInfo = gClassMap.get(_class);
+        if (classInfo != null) {
+            if (_para == null || _para.length == 0)
+                return new classInfo["prototype"].constructor();
+            else if (_para.length == 1)
+                return new classInfo["prototype"].constructor(_para[0]);
+            else if (_para.length == 2)
+                return new classInfo["prototype"].constructor(_para[0], _para[1]);
+            else if (_para.length == 3)
+                return new classInfo["prototype"].constructor(_para[0], _para[1], _para[2]);
+            else if (_para.length == 4)
+                return new classInfo["prototype"].constructor(_para[0], _para[1], _para[2], _para[3]);
+            else if (_para.length == 5)
+                return new classInfo["prototype"].constructor(_para[0], _para[1], _para[2], _para[3], _para[4]);
+        }
+        else if (_class != "")
+            console.log(_class + "Null");
+        return null;
+    }
+    static Find(_class) {
+        return gClassMap.get(_class);
+    }
+    static Push(_key, _val = null) {
+        if (_val && typeof _val != "object" && typeof _val != "function")
+            return;
+        if (typeof _key == "string") {
+            if (CUtil.IsNode() == false)
+                window[_key] = _val;
+            gClassMap.set(_key, _val);
+        }
+        else if (_key.name != null) {
+            if (CUtil.IsNode() == false)
+                window[_key.name] = _key;
+            gClassMap.set(_key.name, _key);
+        }
+    }
+    static MethodName(_target, _all = false) {
+        const methodSet = new Set();
+        if (!_target)
+            return [];
+        let proto = typeof _target === "function" ? _target.prototype : Object.getPrototypeOf(_target);
+        while (proto && proto !== Object.prototype) {
+            const names = Object.getOwnPropertyNames(proto);
+            for (const name of names) {
+                if (name === "constructor")
+                    continue;
+                const desc = Object.getOwnPropertyDescriptor(proto, name);
+                if (desc) {
+                    if (typeof desc.value === "function") {
+                        methodSet.add(name);
+                    }
+                }
+            }
+            if (!_all)
+                break;
+            proto = Object.getPrototypeOf(proto);
+        }
+        return Array.from(methodSet).sort();
+    }
+    static StaticMethodName(_target) {
+        const methodSet = new Set();
+        if (!_target || typeof _target !== "function")
+            return [];
+        const names = Object.getOwnPropertyNames(_target);
+        for (const name of names) {
+            if (name === "length" || name === "name" || name === "prototype")
+                continue;
+            const desc = Object.getOwnPropertyDescriptor(_target, name);
+            if (desc && typeof desc.value === "function") {
+                methodSet.add(name);
+            }
+        }
+        return Array.from(methodSet).sort();
+    }
+    static StaticMemberName(_target) {
+        const memberSet = new Set();
+        if (!_target || typeof _target !== "function")
+            return [];
+        const names = Object.getOwnPropertyNames(_target);
+        for (const name of names) {
+            if (name === "length" || name === "name" || name === "prototype")
+                continue;
+            const desc = Object.getOwnPropertyDescriptor(_target, name);
+            if (desc) {
+                const isFunction = typeof desc.value === "function";
+                const isGetterSetter = !!desc.get || !!desc.set;
+                if (!isFunction && !isGetterSetter) {
+                    memberSet.add(name);
+                }
+            }
+        }
+        return Array.from(memberSet).sort();
+    }
+    static MemberName(_target, _all = false) {
+        const memberSet = new Set();
+        if (!_target)
+            return [];
+        const instance = typeof _target === "function" ? new _target() : _target;
+        const ownKeys = Object.getOwnPropertyNames(instance);
+        for (const key of ownKeys) {
+            const desc = Object.getOwnPropertyDescriptor(instance, key);
+            if (desc && typeof desc.value !== "function") {
+                memberSet.add(key);
+            }
+        }
+        if (_all) {
+            let proto = Object.getPrototypeOf(instance);
+            while (proto && proto !== Object.prototype) {
+                const names = Object.getOwnPropertyNames(proto);
+                for (const name of names) {
+                    if (name === "constructor")
+                        continue;
+                    const desc = Object.getOwnPropertyDescriptor(proto, name);
+                    const isMethod = desc && typeof desc.value === "function";
+                    const hasGetterSetter = desc && (desc.get || desc.set);
+                    if (!isMethod && !hasGetterSetter) {
+                        memberSet.add(name);
+                    }
+                }
+                proto = Object.getPrototypeOf(proto);
+            }
+        }
+        return Array.from(memberSet).sort();
+    }
+    static Get(_obj, _member) {
+        if (!_obj)
+            return null;
+        return _obj[_member];
+    }
+    static Set(_obj, _member, _val) {
+        if (!_obj)
+            return;
+        _obj[_member] = _val;
+    }
+    static ClassName() {
+        return Array.from(gClassMap.values())
+            .map(cls => cls.name)
+            .filter(name => !!name)
+            .sort();
+    }
+    static EnumName(_target) {
+        if (!_target || typeof _target !== "object")
+            return [];
+        const keys = Object.keys(_target);
+        return keys.filter(k => isNaN(Number(k)));
+    }
+}

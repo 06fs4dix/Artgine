@@ -10,6 +10,11 @@
 <script type='text/javascript' src='../../external/legacy/monaco-editor/min/vs/loader.js'></script>
 <link rel='stylesheet' href='../../external/legacy/diff2html/diff2html.min.css'>
 <script src='../../external/legacy/diff2html/diff2html-ui-slim.min.js'></script>
+<script type="module">
+import * as pdfjs from '../../external/legacy/pdfjs/pdf.min.mjs';
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('../../external/legacy/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
+window.pdfjsLib = pdfjs;
+</script>
 <style>
 html,body{height:100%;}
 body{ font-size:14px; }

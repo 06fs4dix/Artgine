@@ -1,5 +1,6 @@
 import { CORMField, CRDBMS } from "./CORM.js";
 import { CCMDMgr } from "../system/CCMDMgr.js";
+import { CPath } from "../basic/CPath.js";
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -32,7 +33,11 @@ export class CSQLite extends CRDBMS {
     override async Init(): Promise<void> {
         //this.mType=CRDBMS.eType.Sqlite;
         const { sqlite3, open } = await CSQLite.EnsureModule();
-        const filename = this.mDatabase || './db/artgine.sqlite';
+        // 기본 db는 워킹 폴더의 db/ 안에 둔다(CNe.mDbPath와 같은 기준). './db/...' 상대경로로 두면
+        // 실행 위치(cwd)에 따라 열리는 파일이 달라지므로, 기준을 CPath.WorkingPath()로 명시한다.
+        // mDatabase를 직접 지정하는 호출부(CMemo, CAIInfoRouter, CConversationReader)는 각자의 기준이
+        // 있으므로 여기서 건드리지 않는다.
+        const filename = this.mDatabase || (CPath.WorkingPath() + 'db/artgine.sqlite');
         fs.mkdirSync(path.dirname(filename), { recursive: true });
         this.mConn = await open({
             filename,

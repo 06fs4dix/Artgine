@@ -121,7 +121,6 @@ function WatchInputChanges() {
             xr: "mXR",
             devTool: "mDeveloper",
             IAuto: "mIAuto",
-            wasm: "mWASM",
         };
         return map[id] ?? id;
     };
@@ -205,7 +204,6 @@ async function Init() {
         CDOM.IDInput("xr").checked = !!pref.mXR;
         CDOM.IDInput("devTool").checked = !!pref.mDeveloper;
         CDOM.IDInput("IAuto").checked = !!pref.mIAuto;
-        CDOM.IDInput("wasm").checked = !!pref.mWASM;
         CDOM.IDInput("targetWidth").value = pref.mTargetWidth ?? 0;
         CDOM.IDInput("targetHeight").value = pref.mTargetHeight ?? 0;
         CDOM.IDInput("canvas_txt").value = pref.mCanvas ?? "";

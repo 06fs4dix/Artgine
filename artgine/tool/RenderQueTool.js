@@ -1,1 +1,300 @@
-import{CBrush as e}from"../app/canvas/CBrush.js";import{CCanvas as n}from"../app/canvas/CCanvas.js";import{CPaint2D as t,CPaintHTML as r}from"../app/component/paint/CPaint2D.js";import{CSubject as o}from"../app/subject/CSubject.js";import{CDOM as a}from"../basic/CDOM.js";import{CEvent as s}from"../basic/CEvent.js";import{CModal as i}from"../basic/CModal.js";import{CPreferences as l}from"../basic/CPreferences.js";import{CVec2 as m}from"../geometry/CVec2.js";import{CVec3 as d}from"../geometry/CVec3.js";import{CVec4 as u}from"../geometry/CVec4.js";import{CCamCon2DFreeMove as p}from"../util/CCamCon.js";import{CChecker as c}from"../util/CChecker.js";import{CFrame as h}from"../util/CFrame.js";let f,v,y=new Map;new Map;export function RenderQueTool(e){f=e,v=new i("RenderOrderModal"),v.mResize=!0,v.SetSize(1400,600),v.SetTitle(i.eTitle.TextMinFullClose),v.SetHeader("RenderOrderModal"),v.SetBody("<div style='height:100%;' id='RenderOrderTool_div'>\n            <canvas id='renderOrderCanvas'/>\n        </div>"),v.SetZIndex(i.eSort.Manual,i.eSort.ZIndexTool),v.On(s.eType.Open,()=>{!async function(){let e=new l;e.mParallelShader=!1,(w=new h(e,"renderOrderCanvas")).PushEvent(s.eType.Load,new s(S)),w.PushEvent(s.eType.Init,new s($)),w.PushEvent(s.eType.Update,new s(T)),w.PushEvent(s.eType.Render,new s(R)),await w.Process()}()}),v.On(s.eType.Close,()=>{w&&(w.Win().Handle().remove(),w.Destroy(),w=null),f=null,y.clear()}),v.Open()}var w=null,C=null,P=null;async function S(){}function $(){(C=new e(w)).InitCamera(),P=new n(w,C,null),C.GetCam2D().SetCamCon(new p(w.Input())),P.PushSub(new o).PushComp(new t(w.Pal().GetNoneTex(),new m(128,128)));let s=0,i=new Array,l=[];for(let[e,n]of f.mRenInfoMap){if(!n.mRP||null==n.mShader)continue;const t=n.mRP,u=[];u.push(`show: ${n.mShow}`);const p=n.mTag&&n.mTag.size>0?Array.from(n.mTag).join(", "):"-";if(u.push(`tag: ${p}`),null!=t.mDepthTest&&u.push(`depthTest: ${t.mDepthTest}`),null!=t.mDepthWrite&&u.push(`depthWrite: ${t.mDepthWrite}`),null!=t.mAlpha&&u.push(`alpha: ${t.mAlpha}`),null!=t.mCullFace&&u.push(`cullFace: ${t.mCullFace}`),t.mCamera&&u.push(`camera: ${t.mCamera}`),null!=t.mPriority&&u.push(`priority: ${t.mPriority}`),t.mRenderTarget&&u.push(`renderTarget: ${t.mRenderTarget}`),null!=t.mRenderTargetUse){const e=Array.from(t.mRenderTargetUse).join(", ");u.push(`renderTargetUse: ${e}`)}if(t.mShaderAttr&&t.mShaderAttr.length>0)for(let e of t.mShaderAttr)u.push(`shaderAttr: ${e.ToLog()}`);if(n.mShader.mDefault.length>0)for(let e of n.mShader.mDefault)u.push(`default: ${e.ToLog()}`);u.push(`shader: ${n.mShader.mKey}`),t.mShader&&u.push(`shaderKey: ${t.mShader}`),null!=t.mClearDepth&&u.push(`clearDepth: ${t.mClearDepth}`),null!=t.mClearColor&&u.push(`clearColor: ${t.mClearColor}`),null!=t.mCycle&&u.push(`cycle: ${t.mCycle}`);const c=`\n        <div class="border rounded bg-light p-2" style="width: 256px; font-size: 12px;">\n            <h6 class="text-center text-danger mb-2">RenderPass: ${e}</h6>\n            <ul class="list-group">\n                ${u.map(e=>`<li class="list-group-item p-1">${e}</li>`).join("")}\n            </ul>\n        </div>\n        `,h=P.PushSub(new o);h.SetKey(e);let f=h.PushComp(new r(a.DataToDom(c),new m(256,0),a.ID("RenderOrderTool_div")));f.SetPivot(new d(0,1,0)),h.SetPos(new d(s,0)),i.push(f),l.push({div:f,key:e}),s+=280}const u=Array.from(f.mRenPriMap.entries()).sort((e,n)=>e[0]-n[0]);s=0;for(let[e,n]of u){let t="";const l=n.mAlphaList;let u=null,p=1,c="";for(let e=0;e<=l.Size();e++){const n=l.Find(e),r=n?.mRenInfoKey??"-",o=n?.mShow,a=n?.mPaint?.constructor?.name??"-",s=u&&u.mRenInfoKey===r&&u.mShow===o&&(u.mPaint?.constructor?.name??"-")===a;null!=n&&null!=n.mPaint&&(c+=n.mPaint.GetOwner().Key()+","),e>0&&s?p++:(u&&(t+=`\n                    <li class="list-group-item p-1 ${0!==u.mShow?"text-warning":""}">\n                        <div>key: <span style="cursor: pointer; color: blue; text-decoration: underline; pointer-events:auto;" \n                            onclick="focusOnRenderPass('${u.mRenInfoKey}')">${u.mRenInfoKey??"-"}</span></div>\n                        <div>show: ${u.mShow}</div>\n                        <div>type: ${u.mPaint?.constructor?.name??"-"}</div>\n                        ${p>1?`<div>+${p-1} more <br><textarea style="pointer-events:auto;">${c}</textarea></div>`:`<div>${u.mPaint.GetOwner().Key()}</div>`}\n                    </li>\n                `,c=""),u=n,p=1)}c="";let h="";const f=n.mDistanceList;for(let e=0;e<=f.Size();e++){const n=f.Find(e),r=n?.mRenInfoKey??"-",o=n?.mShow,a=n?.mPaint?.constructor?.name??"-",s=u&&u.mRenInfoKey===r&&u.mShow===o&&(u.mPaint?.constructor?.name??"-")===a;null!=n&&null!=n.mPaint&&(c+=n.mPaint.GetOwner().Key()+","),e>0&&s?p++:(u&&(t+=`\n                    <li class="list-group-item p-1  ${0!==u.mShow?"text-warning":""}">\n                        <div>key: <span style="cursor: pointer; color: blue; text-decoration: underline; pointer-events:auto;" onclick="focusOnRenderPass('${u.mRenInfoKey}')">${u.mRenInfoKey??"-"}</span></div>\n                        <div>show: ${u.mShow}</div>\n                        <div>type: ${u.mPaint?.constructor?.name??"-"}</div>\n                        ${p>1?`<div>+${p-1} more <br><textarea style="pointer-events:auto;">${c}</textarea></div>`:`<div>${u.mPaint.GetOwner().Key()}</div>`}\n                    </li>\n                `,c=""),u=n,p=1)}const v=`\n        <div class="border rounded bg-light p-2" style="width: 256px; font-size: 12px;">\n            <h6 class="text-center text-primary mb-2">Priority: ${e}</h6>\n\n            <div>\n                <strong>Alpha List</strong>\n                <ul class="list-group mb-2">${t}</ul>\n            </div>\n\n            <div>\n                <strong>Distance List</strong>\n                <ul class="list-group">${h}</ul>\n            </div>\n        </div>\n        `,y=P.PushSub(new o);let w=y.PushComp(new r(a.DataToDom(v),new m(256,0),a.ID("RenderOrderTool_div")));w.SetPivot(new d(0,-1,0)),y.SetPos(new d(s,-50)),i.push(w),s+=280}setTimeout(async()=>{for(let e of i){await c.Exe(async()=>!e.mAttach,1);let n=new m,t=e.GetElement();n.x=t.clientWidth||150,n.y=t.clientHeight||100,e.SetSize(n)}}),window.focusOnRenderPass=function(e){let n=P.Find(e);C.GetCam2D().EyeMoveAndViewCac(n.GetPos()),null!=g&&g.classList.remove("border-danger","border-3");let t=n.FindComp(r);(g=t.GetElement()).classList.add("border-danger","border-3")}}var g=null;function T(e){C.Update(e),P.Update(e)}function R(){w.Dev().SetClearColor(!0,new u(1,1,1,1)),w.Ren().Begin(),n.RenderCanvas(C,[P]),w.Ren().End()}
+import { CModal } from "../basic/CModal.js";
+import { CEvent } from "../basic/CEvent.js";
+import { CModalFlex } from "../util/CModalUtil.js";
+let gModal = null;
+let gBrush = null;
+let gSelectedKey = null;
+let gFilter = "";
+let gUsersCache = new Map();
+let gSnapshotTime = "";
+export function RenderQueTool(_brush) {
+    gBrush = _brush;
+    gSelectedKey = null;
+    gFilter = "";
+    gUsersCache = new Map();
+    gModal = new CModalFlex([0.3, 0.7], "RenderOrderModal");
+    gModal.mResize = true;
+    gModal.SetSize(1400, 800);
+    gModal.SetTitle(CModal.eTitle.TextMinFullClose);
+    gModal.SetHeader("Render Queue");
+    gModal.SetZIndex(CModal.eSort.Manual, CModal.eSort.ZIndexTool);
+    gModal.On(CEvent.eType.Close, () => { Close(); });
+    gModal.Open();
+    const leftPanel = gModal.FindFlex(0);
+    const rightPanel = gModal.FindFlex(1);
+    leftPanel.style.display = "flex";
+    leftPanel.style.flexDirection = "column";
+    leftPanel.style.overflow = "hidden";
+    rightPanel.style.display = "flex";
+    rightPanel.style.flexDirection = "column";
+    rightPanel.style.overflow = "hidden";
+    leftPanel.innerHTML =
+        `<div style="padding:6px; border-bottom:1px solid #ddd; display:flex; flex-direction:column; gap:4px;">` +
+            `<button id="rq_refresh" class="btn btn-sm btn-primary">새로고침 (현재 프레임 스냅샷)</button>` +
+            `<div id="rq_time" class="text-muted" style="font-size:11px;"></div>` +
+            `<input type="search" id="rq_search" class="form-control form-control-sm" placeholder="Search render pass / tag...">` +
+            `</div>` +
+            `<div id="rq_list" style="flex:1 1 auto; overflow-y:auto;"></div>`;
+    rightPanel.innerHTML =
+        `<div id="rq_detail" style="flex:0 0 42%; overflow-y:auto; border-bottom:3px solid #999; padding:8px;"></div>` +
+            `<div id="rq_frame" style="flex:1 1 auto; overflow-y:auto; padding:8px;"></div>`;
+    const search = leftPanel.querySelector("#rq_search");
+    search.oninput = () => {
+        gFilter = search.value.toLowerCase();
+        RefreshList();
+    };
+    const refreshBtn = leftPanel.querySelector("#rq_refresh");
+    refreshBtn.onclick = () => { TakeSnapshot(); };
+    TakeSnapshot();
+}
+function Close() {
+    gBrush = null;
+    gModal = null;
+    gSelectedKey = null;
+    gUsersCache = new Map();
+}
+function Esc(_s) {
+    return String(_s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
+}
+function CollectUsers() {
+    const map = new Map();
+    if (gBrush == null)
+        return map;
+    for (let [priority, renPri] of gBrush.mRenPriMap) {
+        CollectList(map, renPri.mAlphaList, priority, "Alpha");
+        CollectList(map, renPri.mDistanceList, priority, "Distance");
+        CollectList(map, renPri.mRAlphaList, priority, "RAlpha");
+    }
+    return map;
+}
+function CollectList(_map, _list, _priority, _listType) {
+    const size = _list.Size();
+    for (let i = 0; i < size; ++i) {
+        const cur = _list.Find(i);
+        if (cur == null || cur.mRenInfoKey == null)
+            continue;
+        let arr = _map.get(cur.mRenInfoKey);
+        if (arr == null) {
+            arr = [];
+            _map.set(cur.mRenInfoKey, arr);
+        }
+        arr.push({
+            mOwnerKey: cur.mPaint?.GetOwner()?.Key() ?? "-",
+            mType: cur.mPaint?.constructor?.name ?? "-",
+            mShow: cur.mShow,
+            mPriority: _priority,
+            mListType: _listType,
+        });
+    }
+}
+function TakeSnapshot() {
+    if (gBrush == null || gModal == null)
+        return;
+    gUsersCache = CollectUsers();
+    const now = new Date();
+    gSnapshotTime = now.toLocaleTimeString();
+    const timeDiv = document.getElementById("rq_time");
+    if (timeDiv != null)
+        timeDiv.textContent = `스냅샷: ${gSnapshotTime}`;
+    RefreshList();
+    RefreshDetail();
+    RefreshFrame();
+}
+function RefreshList() {
+    const listDiv = document.getElementById("rq_list");
+    if (listDiv == null || gBrush == null)
+        return;
+    const scrollTop = listDiv.scrollTop;
+    let entries = Array.from(gBrush.mRenInfoMap.entries())
+        .filter(([, info]) => info.mRP != null && info.mShader != null);
+    if (gFilter) {
+        entries = entries.filter(([key, info]) => {
+            if (key.toLowerCase().includes(gFilter))
+                return true;
+            for (let t of info.mTag)
+                if (t.toLowerCase().includes(gFilter))
+                    return true;
+            return false;
+        });
+    }
+    entries.sort((a, b) => {
+        const pa = a[1].mRP?.mPriority ?? 0;
+        const pb = b[1].mRP?.mPriority ?? 0;
+        if (pa !== pb)
+            return pa - pb;
+        return a[0].localeCompare(b[0]);
+    });
+    let html = "";
+    for (let [key, info] of entries) {
+        const users = gUsersCache.get(key) ?? [];
+        const active = key === gSelectedKey ? "list-group-item-primary" : "";
+        const dot = info.mShow ? "#28a745" : "#adb5bd";
+        html += `
+        <div class="list-group-item list-group-item-action py-1 px-2 ${active}" style="cursor:pointer; font-size:12px;" data-key="${Esc(key)}">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:${dot}; flex:none;"></span>
+                <span style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${Esc(key)}">${Esc(key)}</span>
+                <span class="badge bg-secondary">P${info.mRP.mPriority ?? "-"}</span>
+                <span class="badge bg-info text-dark" title="사용 중인 오브젝트 수">${users.length}</span>
+            </div>
+        </div>`;
+    }
+    listDiv.innerHTML = html || `<div class="text-muted p-2" style="font-size:12px;">렌더패스 없음</div>`;
+    listDiv.scrollTop = scrollTop;
+    listDiv.querySelectorAll("[data-key]").forEach((el) => {
+        el.onclick = () => {
+            gSelectedKey = el.dataset.key;
+            RefreshList();
+            RefreshDetail();
+        };
+    });
+}
+function RefreshDetail() {
+    const div = document.getElementById("rq_detail");
+    if (div == null || gBrush == null)
+        return;
+    if (gSelectedKey == null || !gBrush.mRenInfoMap.has(gSelectedKey)) {
+        div.innerHTML = `<div class="text-muted">좌측에서 렌더패스를 선택하세요.</div>`;
+        return;
+    }
+    const scrollTop = div.scrollTop;
+    const info = gBrush.mRenInfoMap.get(gSelectedKey);
+    const rp = info.mRP;
+    const fields = [];
+    fields.push(`show: ${info.mShow}`);
+    fields.push(`tag: ${info.mTag && info.mTag.size > 0 ? Array.from(info.mTag).join(", ") : "-"}`);
+    if (rp.mDepthTest != null)
+        fields.push(`depthTest: ${rp.mDepthTest}`);
+    if (rp.mDepthWrite != null)
+        fields.push(`depthWrite: ${rp.mDepthWrite}`);
+    if (rp.mAlpha != null)
+        fields.push(`alpha: ${rp.mAlpha}`);
+    if (rp.mCullFace != null)
+        fields.push(`cullFace: ${rp.mCullFace}`);
+    if (rp.mCamera)
+        fields.push(`camera: ${rp.mCamera}`);
+    if (rp.mPriority != null)
+        fields.push(`priority: ${rp.mPriority}`);
+    if (rp.mRenderTarget)
+        fields.push(`renderTarget: ${rp.mRenderTarget}`);
+    if (rp.mRenderTargetUse != null)
+        fields.push(`renderTargetUse: ${Array.from(rp.mRenderTargetUse).join(", ")}`);
+    if (rp.mShaderAttr && rp.mShaderAttr.length > 0)
+        for (let sa of rp.mShaderAttr)
+            fields.push(`shaderAttr: ${sa.ToLog()}`);
+    if (info.mShader.mDefault.length > 0)
+        for (let sa of info.mShader.mDefault)
+            fields.push(`default: ${sa.ToLog()}`);
+    fields.push(`shader: ${info.mShader.mKey}`);
+    if (rp.mShader)
+        fields.push(`shaderKey: ${rp.mShader}`);
+    if (rp.mClearDepth != null)
+        fields.push(`clearDepth: ${rp.mClearDepth}`);
+    if (rp.mClearColor != null)
+        fields.push(`clearColor: ${rp.mClearColor}`);
+    if (rp.mCycle != null)
+        fields.push(`cycle: ${rp.mCycle}`);
+    const users = gUsersCache.get(gSelectedKey) ?? [];
+    const grouped = new Map();
+    for (let u of users) {
+        const k = u.mOwnerKey + "" + u.mType;
+        const g = grouped.get(k);
+        if (g)
+            g.mCount++;
+        else
+            grouped.set(k, { mType: u.mType, mCount: 1 });
+    }
+    let usersHtml;
+    if (grouped.size === 0) {
+        usersHtml = `<div class="text-muted" style="font-size:12px;">현재 프레임에 이 렌더패스를 사용하는 오브젝트가 없습니다.</div>`;
+    }
+    else {
+        usersHtml = `<ul class="list-group">`;
+        for (let [k, g] of grouped) {
+            const ownerKey = k.substring(0, k.length - g.mType.length - 1);
+            usersHtml += `
+            <li class="list-group-item p-1" style="font-size:12px;">
+                ${Esc(ownerKey)} <span class="text-muted">(${Esc(g.mType)})</span>
+                ${g.mCount > 1 ? `<span class="badge bg-secondary">x${g.mCount}</span>` : ""}
+            </li>`;
+        }
+        usersHtml += `</ul>`;
+    }
+    div.innerHTML = `
+        <h6 class="text-danger mb-2">RenderPass: ${Esc(gSelectedKey)}</h6>
+        <ul class="list-group mb-3">
+            ${fields.map((f) => `<li class="list-group-item p-1" style="font-size:12px;">${Esc(f)}</li>`).join("")}
+        </ul>
+        <h6 class="text-primary mb-1">Used By (${users.length})</h6>
+        ${usersHtml}
+    `;
+    div.scrollTop = scrollTop;
+}
+function RenderCompressedList(_label, _list) {
+    const size = _list.Size();
+    if (size === 0)
+        return `<div class="text-muted" style="font-size:11px;">${_label}: -</div>`;
+    let rows = "";
+    let prev = null;
+    let count = 0;
+    const flush = () => {
+        if (prev == null)
+            return;
+        const ownerKey = prev.mPaint?.GetOwner()?.Key() ?? "-";
+        const type = prev.mPaint?.constructor?.name ?? "-";
+        const warn = prev.mShow !== 0 ? "text-warning" : "";
+        rows += `
+        <li class="list-group-item p-1 ${warn}" style="font-size:11px;">
+            <span style="cursor:pointer; color:#0d6efd; text-decoration:underline;" data-jump="${Esc(prev.mRenInfoKey)}">${Esc(prev.mRenInfoKey ?? "-")}</span>
+            &rarr; ${Esc(ownerKey)} <span class="text-muted">(${Esc(type)})</span>
+            ${count > 1 ? `<span class="badge bg-secondary">x${count}</span>` : ""}
+        </li>`;
+    };
+    for (let i = 0; i < size; ++i) {
+        const cur = _list.Find(i);
+        const sameAsPrev = prev != null &&
+            prev.mRenInfoKey === cur.mRenInfoKey &&
+            prev.mShow === cur.mShow &&
+            (prev.mPaint?.constructor?.name ?? "-") === (cur.mPaint?.constructor?.name ?? "-");
+        if (sameAsPrev) {
+            count++;
+            continue;
+        }
+        flush();
+        prev = cur;
+        count = 1;
+    }
+    flush();
+    return `<div class="fw-bold" style="font-size:11px;">${_label} (${size})</div><ul class="list-group mb-1">${rows}</ul>`;
+}
+function RefreshFrame() {
+    const div = document.getElementById("rq_frame");
+    if (div == null || gBrush == null)
+        return;
+    const scrollTop = div.scrollTop;
+    const sorted = Array.from(gBrush.mRenPriMap.entries()).sort((a, b) => a[0] - b[0]);
+    let html = `<h6 class="text-primary">현재 프레임 렌더 큐 (Priority 순)</h6>`;
+    if (sorted.length === 0) {
+        html += `<div class="text-muted">비어 있음</div>`;
+    }
+    else {
+        for (let [priority, renPri] of sorted) {
+            html += `
+            <div class="border rounded p-2 mb-2">
+                <div class="fw-bold mb-1">Priority ${priority}</div>
+                ${RenderCompressedList("Alpha", renPri.mAlphaList)}
+                ${RenderCompressedList("Distance", renPri.mDistanceList)}
+                ${RenderCompressedList("Reverse Alpha", renPri.mRAlphaList)}
+            </div>`;
+        }
+    }
+    div.innerHTML = html;
+    div.scrollTop = scrollTop;
+    div.querySelectorAll("[data-jump]").forEach((el) => {
+        el.onclick = () => {
+            gSelectedKey = el.dataset.jump;
+            RefreshList();
+            RefreshDetail();
+        };
+    });
+}

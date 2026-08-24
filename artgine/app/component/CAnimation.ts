@@ -325,6 +325,7 @@ export class CClipMesh extends CClip
 	public mMesh : string;
 	public mAutoCreate=true;
 	mBake=false;
+    mAniFrame=100;
 	
 	constructor(_time : number,_delay : number,_key : string);
 	constructor(_time : number,_delay : number,_key : string,_mesh : string);

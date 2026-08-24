@@ -7,12 +7,15 @@ import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
 import { GetAppJSON, GetRootPaths, GetLoadedSettingsFileName } from '../../desktop/MainFunc.js';
 import { CUtilSystem } from '../system/CUtilSystem.js';
 import { CStorage } from '../system/CStorage.js';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import * as nodePath from 'path';
+import * as fs from 'fs/promises';
 
 const _exec = promisify(exec);
 const execAsync = (cmd: string, opts?: { cwd?: string }) => _exec(cmd, { maxBuffer: 64 * 1024 * 1024, ...opts });
+const _execFile = promisify(execFile);
+const execFileAsync = (cmd: string, args: string[], opts?: { cwd?: string }) => _execFile(cmd, args, { maxBuffer: 64 * 1024 * 1024, ...opts });
 
 type VcsStatus = "M" | "A" | "D" | "?";
 type VcsType = "svn" | "git";
@@ -101,6 +104,24 @@ function isInsideRoot(rootPath: string, targetPath: string): boolean {
     return target === base || target.startsWith(base + '/');
 }
 
+// 뮤직 플레이리스트 URL(root.url + 상대경로)을 디스크 절대경로로 되돌린다. onMusicAI의 역변환.
+async function urlToAbsPath(url: string): Promise<string | null> {
+    let pathPart = String(url || '').trim();
+    if (!pathPart) return null;
+    try {
+        pathPart = new URL(pathPart, 'http://dummy.local').pathname;
+    } catch {}
+    const roots = await getRoots();
+    const sorted = [...roots].sort((a, b) => b.url.length - a.url.length);
+    for (const root of sorted) {
+        const rootUrl = root.url.replace(/\/+$/, '');
+        if (pathPart !== rootUrl && !pathPart.startsWith(rootUrl + '/')) continue;
+        const rel = decodeURIComponent(pathPart.slice(rootUrl.length));
+        return resolveAbs(root.path.replace(/\/+$/, '') + rel);
+    }
+    return null;
+}
+
 async function isInsideAnyRoot(targetPath: string): Promise<boolean> {
     const roots = await getRoots();
     return roots.some(r => isInsideRoot(r.path, targetPath));
@@ -139,7 +160,7 @@ function applyVcsStatus(
     });
 }
 
-@URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/VCS", "/File/Restart"])
+@URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/Rename", "/File/VCS", "/File/Restart", "/File/MusicAI", "/File/MusicLyricsEn"])
 export class CFileServer extends CAuthServer
 {
     // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
@@ -158,9 +179,12 @@ export class CFileServer extends CAuthServer
         this.On("/File/List", this.onList.bind(this));
         this.On("/File/Mkdir", this.onMkdir.bind(this));
         this.On("/File/Delete", this.onDelete.bind(this));
+        this.On("/File/Rename", this.onRename.bind(this));
         this.On("/File/Upload", this.onUpload.bind(this));
         this.On("/File/VCS", this.onVCS.bind(this));
         this.On("/File/Restart", this.onRestart.bind(this));
+        this.On("/File/MusicAI", this.onMusicAI.bind(this));
+        this.On("/File/MusicLyricsEn", this.onMusicLyricsEn.bind(this));
     }
 
     async onRestart(_json: CJSON, _req: Request, _res: Response): Promise<string> {
@@ -278,9 +302,15 @@ export class CFileServer extends CAuthServer
         }
 
         list = list.filter((item: { file: boolean; name: string; ext: string }) => !item.name.toLowerCase().includes("secret"));
+        list = list.filter((item: { file: boolean; name: string; ext: string }) => !(!item.file && (item.name === ".git" || item.name === ".svn")));
 
-        const vcsMap = await getVcsStatus(targetPath);
-        if (vcsMap.size > 0) list = applyVcsStatus(list, vcsMap);
+        // skipVcs=true: 검색 인덱싱처럼 폴더를 대량으로(BFS) 훑을 때 매 폴더마다 git/svn 프로세스를
+        // 스폰하는 getVcsStatus 비용을 생략한다. 일반 파일 탐색기 조회는 그대로 VCS 배지를 받는다.
+        const skipVcs = _json.GetStr("skipVcs") === "true";
+        if (!skipVcs) {
+            const vcsMap = await getVcsStatus(targetPath);
+            if (vcsMap.size > 0) list = applyVcsStatus(list, vcsMap);
+        }
 
         list = list.slice().sort((a, b) => {
             if (a.file !== b.file) return a.file ? 1 : -1;
@@ -335,6 +365,66 @@ export class CFileServer extends CAuthServer
             await execAsync(`svn delete "${fullPath}"`);
         } catch {
             await CFile.Delete(fullPath);
+        }
+        return JSON.stringify({ ok: true });
+    }
+
+    /** data: 루트 기준 상대 경로(기존 이름 포함), name: 새 파일/폴더명(경로 구분자 불가).
+     *  비즈니스 오류는 HTTP 200 + {ok:false,msg} (CFecth가 non-2xx 시 body를 버림). 인증 실패만 403. */
+    async onRename(_json: CJSON, _req: Request, _res: Response): Promise<string> {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
+        const currentRoot = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRoot === null) {
+            return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+        }
+        const currentRootPath = currentRoot.path;
+        const data = (_json.GetStr("data") || "").replace(/\\/g, "/");
+        const newName = (_json.GetStr("name") || "").trim();
+        if (!data || !newName) {
+            return JSON.stringify({ ok: false, msg: "Missing data or name" });
+        }
+        if (newName.includes("/") || newName.includes("\\") || newName === "." || newName === "..") {
+            return JSON.stringify({ ok: false, msg: "Invalid name" });
+        }
+        const oldPath = fix(currentRootPath + data);
+        if (!isInsideRoot(currentRootPath, oldPath)) {
+            return JSON.stringify({ ok: false, msg: "Path escapes root" });
+        }
+        const parentSlash = oldPath.lastIndexOf("/");
+        const parentDir = parentSlash >= 0 ? oldPath.slice(0, parentSlash + 1) : "";
+        const newPath = fix(parentDir + newName);
+        if (!isInsideRoot(currentRootPath, newPath)) {
+            return JSON.stringify({ ok: false, msg: "Path escapes root" });
+        }
+        if (resolveAbs(oldPath) === resolveAbs(newPath)) {
+            return JSON.stringify({ ok: true });
+        }
+        const fs = await import("fs/promises");
+        try {
+            await fs.access(oldPath);
+        } catch {
+            return JSON.stringify({ ok: false, msg: "Source not found" });
+        }
+        try {
+            await fs.access(newPath);
+            return JSON.stringify({ ok: false, msg: "Target already exists" });
+        } catch {
+            // destination must not exist
+        }
+        try {
+            await execAsync(`svn info "${oldPath}"`);
+            await execAsync(`svn move "${oldPath}" "${newPath}"`);
+            return JSON.stringify({ ok: true });
+        } catch {
+            // not SVN or svn move failed → plain rename
+        }
+        const ok = await CFile.Rename(oldPath, newPath);
+        if (!ok) {
+            return JSON.stringify({ ok: false, msg: "Rename failed" });
         }
         return JSON.stringify({ ok: true });
     }
@@ -485,6 +575,127 @@ export class CFileServer extends CAuthServer
         } catch (e: any) {
             return JSON.stringify({ ok: false, msg: e.stderr || e.message || String(e) });
         }
+    }
+
+    // 뮤직 모달의 AI 검색 버튼 전용. 검색어 배열을 ai/tool/music.js exe에 넘겨(질의는 하나로 합쳐서
+    // 1회 호출) SELECT 결과(absolute_path 포함)를 받고, 그 절대경로를 다운로드 URL로 변환해 돌려준다.
+    // DB(db/music.sqlite)는 라이브러리 전체(예: E:/music/...)를 스캔해 만들어지므로, 트랙이 현재
+    // 브라우징 중인 RootPath 하나에만 있다고 가정할 수 없다 - 등록된 모든 root를 대상으로 매칭한다.
+    async onMusicAI(_json: CJSON, _req: Request, _res: Response): Promise<string> {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        const queries = (_json.GetArray("queries").mArray as string[])
+            .map(q => String(q).trim()).filter(q => q);
+        if (queries.length === 0) {
+            return JSON.stringify({ ok: false, msg: "No queries" });
+        }
+
+        const dbPath = nodePath.resolve('./db/music.sqlite');
+        try {
+            await fs.access(dbPath);
+        } catch {
+            return JSON.stringify({ ok: false, msg: `DB not found: ${dbPath} (먼저 "node ai/tool/music.js scan <폴더> ${dbPath}"로 스캔하세요)` });
+        }
+
+        const question = queries.join(', ');
+        let rows: { absolute_path?: string }[];
+        let reason = '';
+        try {
+            const { stdout } = await execFileAsync('node', ['ai/tool/music.js', 'exe', dbPath, question, 'claude', 'claude-sonnet-4-6'], { cwd: process.cwd() });
+            // CAI 쪽에서 설치/락 상태 안내 로그(이것도 '{'로 시작할 수 있음, 예: "[CAI] ...")를 stdout에
+            // 같이 찍는 경우가 있어, 결과 JSON 한 줄(exe 모드의 마지막 console.log)만 따로 골라 파싱한다.
+            const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+            const jsonLine = lines[lines.length - 1];
+            if (!jsonLine || !jsonLine.startsWith('{')) throw new Error('music.js exe가 JSON 객체를 출력하지 않음: ' + stdout.trim());
+            const parsed = JSON.parse(jsonLine);
+            rows = parsed.rows;
+            reason = parsed.reason || '';
+        } catch (e: any) {
+            return JSON.stringify({ ok: false, msg: e.stderr || e.message || String(e) });
+        }
+
+        const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
+        const encodeUrlPath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
+        const roots = await getRoots();
+
+        const urls: string[] = [];
+        const seen = new Set<string>();
+        for (const row of rows) {
+            const abs = row.absolute_path;
+            if (!abs || seen.has(abs)) continue;
+            seen.add(abs);
+            const normAbs = fix(resolveAbs(abs));
+            const root = roots.find(r => isInsideRoot(r.path, normAbs));
+            if (!root) continue;
+            const rootAbs = resolveAbs(root.path).replace(/\/+$/, '');
+            urls.push(root.url + encodeUrlPath(normAbs.slice(rootAbs.length)));
+        }
+
+        return JSON.stringify({ ok: true, urls, reason, matched: urls.length, total: rows.length });
+    }
+
+    // 뮤직 모달 Lyrics 버튼. music.js lyrics-en은 원문만 찾고, 영어 번역은 이 프로세스(CAI 이미 로드됨)에서 한다.
+    // lyrics-en 자식에서 CAI를 import하면 CWASM TDZ("Cannot access 'CWASM' before initialization")가 난다.
+    async onMusicLyricsEn(_json: CJSON, _req: Request, _res: Response): Promise<string> {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        const url = String(_json.GetStr("url") ?? '').trim();
+        if (!url) {
+            return JSON.stringify({ ok: false, msg: "No url" });
+        }
+
+        const dbPath = nodePath.resolve('./db/music.sqlite');
+        try {
+            await fs.access(dbPath);
+        } catch {
+            return JSON.stringify({ ok: false, msg: `DB not found: ${dbPath} (먼저 "node ai/tool/music.js scan <폴더> ${dbPath}"로 스캔하세요)` });
+        }
+
+        const absPath = await urlToAbsPath(url);
+        const trackArg = absPath || url;
+        let parsed: { ok?: boolean, msg?: string, lyrics?: string, title?: string, artist?: string };
+        try {
+            const { stdout } = await execFileAsync('node', ['ai/tool/music.js', 'lyrics-en', dbPath, trackArg], { cwd: process.cwd() });
+            const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+            const jsonLine = lines[lines.length - 1];
+            if (!jsonLine || !jsonLine.startsWith('{')) throw new Error('music.js lyrics-en가 JSON 객체를 출력하지 않음: ' + stdout.trim());
+            parsed = JSON.parse(jsonLine);
+        } catch (e: any) {
+            return JSON.stringify({ ok: false, msg: e.stderr || e.message || String(e) });
+        }
+        if (!parsed.ok) return JSON.stringify({ ok: false, msg: parsed.msg || 'lyrics-en failed' });
+
+        let lyrics = parsed.lyrics || '';
+        if (lyrics && /[\u3040-\u30ff\u3400-\u9fff가-힣]/.test(lyrics)) {
+            try {
+                const { CAI } = await import("../util/CAI.js");
+                const os = await import("os");
+                const prompt = [
+                    'Translate the following song lyrics into natural English.',
+                    'Preserve line breaks and stanza structure.',
+                    'Output ONLY the English lyrics. No title, artist, commentary, or markdown.',
+                    '',
+                    `Title: ${parsed.title || ''}`,
+                    `Artist: ${parsed.artist || ''}`,
+                    '',
+                    'Lyrics:',
+                    lyrics,
+                ].join('\n');
+                const result = await CAI.Chat(CAI.eProvider.claude, 'claude-sonnet-4-6', os.tmpdir(), prompt, true, undefined, true, false);
+                let en = String(result.text || '').trim();
+                const fence = en.match(/```(?:\w+)?\s*([\s\S]*?)```/);
+                if (fence) en = fence[1].trim();
+                if (en) lyrics = en;
+            } catch (e: any) {
+                return JSON.stringify({ ok: false, msg: e.message || String(e) });
+            }
+        }
+
+        return JSON.stringify({ ok: true, lyrics, title: parsed.title || '', artist: parsed.artist || '' });
     }
 
 }

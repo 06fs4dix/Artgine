@@ -30,7 +30,8 @@ if (!baseArg || !baseArg.startsWith('http')) {
 const base = await resolveLocalBase(baseArg.replace(/\/$/, ''));
 
 if (cmd === 'login') {
-    const r = await login(base);
+    // 비밀번호를 인자로 줄 수 있다. 생략하면 settings.json 값을 쓴다
+    const r = args[0] ? await login(base, args[0]) : await login(base);
     console.log(r.ok ? (r.reused ? 'ok (reused)' : 'ok') : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'push') {

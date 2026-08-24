@@ -1,1 +1,119 @@
-export class CORMField{mKey="";mValue=null;constructor(e,n){this.mKey=e,this.mValue=n}}export class CORMCondition{constructor(e,n,t,l="and"){this.mKey=e,this.mCondition=n,this.mValue=t,this.mLogical=l}mLogical="and";mKey="";mCondition="";mValue}export class CORMOption{mLimitOffset=0;mLimit=0;mDistinct=null;mOrderBy=null;mDownload=!0;mASC=!0}export class CORM extends n{mFileDB=!0;mAuth;mDatabase="";async Init(){return null}async Insert(e,n){}async Update(e,n,t){}async Select(e,n,t,l){return[]}async Delete(e,n){}async Close(){}async IsCollection(e){return!1}async CreateCollection(e,n,t){}async GetProjection(e){return null}async GetCollection(){return null}}export class CRDBMS extends CORM{async Send(e,n=null){}async Recv(e,n=null){return null}async FileDBChk(){0==await this.IsCollection("grid_fs")&&await this.Send("\n                CREATE TABLE IF NOT EXISTS grid_fs (\n                    _id INTEGER PRIMARY KEY,\n                    _filename TEXT,\n                    _uploadDate DATETIME DEFAULT CURRENT_TIMESTAMP,\n                    _data TEXT\n                );\n            ")}async FileDBUpload(e,n){if(this.mFileDB){await this.FileDBChk();for(const t of n){const n=t.mDoc[t.mKey],l=`${e}_${t.mKey}_${Date.now()}_${Math.floor(1e3*Math.random())}`;await this.Send("INSERT INTO grid_fs (_filename, _data) VALUES (?, ?)",[l,n]),t.mDoc[t.mKey]="#GridFS:"+l}}}async FileDBDownload(e){if(this.mFileDB)for(const n of e){const e=n.mDoc[n.mKey].substring(8),t=await this.Recv("SELECT _data FROM grid_fs WHERE _filename = ?",[e]);t.length>0&&t[0].length>0&&(n.mDoc[n.mKey]=t[0][0])}}async Insert(e,n){return null}async Update(e,n,t){return null}async Select(e,n,t,l){return null}async Delete(e,n){return null}async Close(){}async CreateCollection(e,n,t=null){const l=t?`, PRIMARY KEY (${t})`:"",a=`CREATE TABLE IF NOT EXISTS ${e} (${n.map(e=>{const n="number"==typeof e.mValue?Number.isInteger(e.mValue)?"INT":"DOUBLE":"VARCHAR(255)";return`${e.mKey} ${n}`}).join(", ")}${l})`;return await this.Send(a)}}import e from"../network_imple/CORM.js";import{CObject as n}from"../basic/CObject.js";e();
+export class CORMField {
+    mKey = "";
+    mValue = null;
+    constructor(_key, _value) {
+        this.mKey = _key;
+        this.mValue = _value;
+    }
+}
+export class CORMCondition {
+    constructor(_key, _condition, _value, _logical = "and") {
+        this.mKey = _key;
+        this.mCondition = _condition;
+        this.mValue = _value;
+        this.mLogical = _logical;
+    }
+    mLogical = "and";
+    mKey = "";
+    mCondition = "";
+    mValue;
+}
+export class CORMOption {
+    mLimitOffset = 0;
+    mLimit = 0;
+    mDistinct = null;
+    mOrderBy = null;
+    mDownload = true;
+    mASC = true;
+}
+export class CORM extends CObject {
+    mFileDB = true;
+    mAuth;
+    mDatabase = "";
+    async Init() {
+        return null;
+    }
+    async Insert(_collection, _data) {
+    }
+    async Update(_collection, _condition, _data) {
+    }
+    async Select(_collection, _condition, _projection, _limit) {
+        return [];
+    }
+    async Delete(_collection, _condition) {
+    }
+    async Close() {
+    }
+    async IsCollection(_name) { return false; }
+    async CreateCollection(_name, _data, _primaryKey) { }
+    async GetProjection(_table) { return null; }
+    async GetCollection() { return null; }
+}
+export class CRDBMS extends CORM {
+    async Send(_qurry, _objVec = null) {
+    }
+    async Recv(_qurry, _objVec = null) {
+        return null;
+    }
+    async FileDBChk() {
+        if (await this.IsCollection("grid_fs") == false) {
+            await this.Send(`
+                CREATE TABLE IF NOT EXISTS grid_fs (
+                    _id INTEGER PRIMARY KEY,
+                    _filename TEXT,
+                    _uploadDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    _data TEXT
+                );
+            `);
+        }
+    }
+    async FileDBUpload(_collection, _list) {
+        if (!this.mFileDB)
+            return;
+        await this.FileDBChk();
+        for (const each of _list) {
+            const text = each.mDoc[each.mKey];
+            const id = `${_collection}_${each.mKey}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            await this.Send("INSERT INTO grid_fs (_filename, _data) VALUES (?, ?)", [id, text]);
+            each.mDoc[each.mKey] = "#GridFS:" + id;
+        }
+    }
+    async FileDBDownload(_list) {
+        if (!this.mFileDB)
+            return;
+        for (const each of _list) {
+            const tag = each.mDoc[each.mKey];
+            const id = tag.substring(8);
+            const rows = await this.Recv("SELECT _data FROM grid_fs WHERE _filename = ?", [id]);
+            if (rows.length > 0 && rows[0].length > 0) {
+                each.mDoc[each.mKey] = rows[0][0];
+            }
+        }
+    }
+    async Insert(_collection, _data) {
+        return null;
+    }
+    async Update(_collection, _condition, _data) {
+        return null;
+    }
+    async Select(_collection, _condition, _projection, _limit) {
+        return null;
+    }
+    async Delete(_collection, _condition) {
+        return null;
+    }
+    async Close() {
+    }
+    async CreateCollection(_name, _data, _primaryKey = null) {
+        const cols = _data.map(f => {
+            const type = typeof f.mValue === 'number' ? (Number.isInteger(f.mValue) ? 'INT' : 'DOUBLE') : 'VARCHAR(255)';
+            return `${f.mKey} ${type}`;
+        });
+        const pk = _primaryKey ? `, PRIMARY KEY (${_primaryKey})` : '';
+        const sql = `CREATE TABLE IF NOT EXISTS ${_name} (${cols.join(', ')}${pk})`;
+        return await this.Send(sql);
+    }
+}
+import CORM_imple from "../network_imple/CORM.js";
+import { CObject } from "../basic/CObject.js";
+CORM_imple();

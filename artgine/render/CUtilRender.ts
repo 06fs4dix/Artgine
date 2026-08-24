@@ -1978,12 +1978,14 @@ export class CUtilRender
 
 		// 2) 노멀 재계산 (네 함수)
 		const posEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
-		const norEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
-		if (!posEnt || !norEnt) { console.error("Position or Normal buffer not found."); return; }
+		let norEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
+		if (!posEnt) { console.error("Position buffer not found."); return; }
+		if (!norEnt) norEnt = _ci.Create(CVertexFormat.eIdentifier.Normal);
 
 		const posBuf = posEnt.bufF as CFloat32Mgr;
 		const norBuf = norEnt.bufF as CFloat32Mgr;
 		const vertCount = posEnt.bufF.Size(3);
+		norBuf.Resize(vertCount * 3);
 
 		const accNormals: CVec3[] = new Array(vertCount);
 		for (let i = 0; i < vertCount; ++i) accNormals[i] = new CVec3(0, 0, 0);
@@ -2045,12 +2047,12 @@ export class CUtilRender
 		}
 	}
 
-	static MeshAniBake(_texture : CTexture,_amesh : CMesh,_pmesh : CMesh,_st : number,_end : number)
+	static MeshAniBake(_texture : CTexture,_amesh : CMesh,_pmesh : CMesh,_st : number,_end : number,_aniFrame : number)
 	{
 
 		let buf=_texture.GetBuf()[0] as Float32Array;
 		let XCount=_pmesh.skin.length*4;
-		let YCount=(_end-_st)*0.01;
+		let YCount=_aniFrame;
 
 
 		if(_texture.GetWidth()<XCount || _texture.GetHeight()<YCount)
@@ -2093,7 +2095,7 @@ export class CUtilRender
 					var all=new CMat();
 					all = CMath.MatMul(_pmesh.skin[i].mat, mpi.pst);
 					for(let j=0;j<16;++j)
-						buf[(j+i*16)+((YCount-1)-pst*YCount)*XCount*4]=all.mF32A[j];
+						buf[(j+i*16)+((YCount-1)-Math.round(pst*YCount))*XCount*4]=all.mF32A[j];
 				}
 			}
 

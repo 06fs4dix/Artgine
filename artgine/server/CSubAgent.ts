@@ -17,6 +17,7 @@ export type SubAgentRecord = {
     retryText: string; // 워크오더가 done으로 끝나고 더 이상 대기 중인 작업이 없을 때 자동으로 반복 지시할 명령
     retryCount: number; // retryText를 자동으로 반복 발주할 최대 횟수(0=사용 안 함)
     permissions: SubAgentPermissions; // 이 에이전트 세션에만 추가로 적용할 권한(전역 settings.json permissions에 더해짐). deny 우선.
+    hidden: number; // 0|1 — Control 좌측 사이드바 "서브 에이전트 숨기기" 토글이 켜졌을 때 이 에이전트의 세션을 숨길지
 };
 
 // 터미널 라우터(CTerminalRouter)가 등록·조회·삭제하는 서브 에이전트 카탈로그.
@@ -51,6 +52,7 @@ export class CSubAgent {
             new CORMField('retryText', ''),
             new CORMField('retryCount', 0),
             new CORMField('permissions', ''), // JSON 문자열({allow:[],deny:[]}). 빈 문자열이면 규칙 없음.
+            new CORMField('hidden', 0), // 주의: super와 같은 이유로 기본값 0 유지 필수(양수면 AUTOINCREMENT PK로 오인)
         ], 'key');
 
         // super/retryText/retryCount 컬럼 추가 이전에 생성된 기존 테이블 호환: 없으면 채워 넣는다(데이터 보존).
@@ -68,6 +70,9 @@ export class CSubAgent {
             if (!cols.includes('permissions')) {
                 await db.Send(`ALTER TABLE ${CSubAgent.sTable} ADD COLUMN \`permissions\` TEXT NOT NULL DEFAULT ''`);
             }
+            if (!cols.includes('hidden')) {
+                await db.Send(`ALTER TABLE ${CSubAgent.sTable} ADD COLUMN \`hidden\` INTEGER NOT NULL DEFAULT 0`);
+            }
         }
 
         CSubAgent.sDB = db;
@@ -76,7 +81,7 @@ export class CSubAgent {
 
     public static async List(): Promise<SubAgentRecord[]> {
         const db = await CSubAgent.Init();
-        const rows = await db.Recv(`SELECT key, provider, model, score, traits, workingDir, \`super\`, retryText, retryCount, permissions FROM ${CSubAgent.sTable} ORDER BY key ASC`);
+        const rows = await db.Recv(`SELECT key, provider, model, score, traits, workingDir, \`super\`, retryText, retryCount, permissions, hidden FROM ${CSubAgent.sTable} ORDER BY key ASC`);
         if (rows == null) return [];
         return rows.map(CSubAgent.RowToRecord);
     }
@@ -85,9 +90,9 @@ export class CSubAgent {
     public static async Set(_record: SubAgentRecord): Promise<void> {
         const db = await CSubAgent.Init();
         await db.Send(
-            `INSERT INTO ${CSubAgent.sTable} (key, provider, model, score, traits, workingDir, \`super\`, retryText, retryCount, permissions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-             ON CONFLICT(key) DO UPDATE SET provider = excluded.provider, model = excluded.model, score = excluded.score, traits = excluded.traits, workingDir = excluded.workingDir, \`super\` = excluded.\`super\`, retryText = excluded.retryText, retryCount = excluded.retryCount, permissions = excluded.permissions`,
-            [_record.key, _record.provider, _record.model, _record.score, JSON.stringify(_record.traits), _record.workingDir || './', _record.super ? 1 : 0, _record.retryText || '', _record.retryCount || 0, CSubAgent.StringifyPermissions(_record.permissions)]
+            `INSERT INTO ${CSubAgent.sTable} (key, provider, model, score, traits, workingDir, \`super\`, retryText, retryCount, permissions, hidden) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(key) DO UPDATE SET provider = excluded.provider, model = excluded.model, score = excluded.score, traits = excluded.traits, workingDir = excluded.workingDir, \`super\` = excluded.\`super\`, retryText = excluded.retryText, retryCount = excluded.retryCount, permissions = excluded.permissions, hidden = excluded.hidden`,
+            [_record.key, _record.provider, _record.model, _record.score, JSON.stringify(_record.traits), _record.workingDir || './', _record.super ? 1 : 0, _record.retryText || '', _record.retryCount || 0, CSubAgent.StringifyPermissions(_record.permissions), _record.hidden ? 1 : 0]
         );
     }
 
@@ -111,6 +116,7 @@ export class CSubAgent {
             retryText: String(_row[7] ?? ''),
             retryCount: Number(_row[8]) || 0,
             permissions: CSubAgent.ParsePermissions(_row[9]),
+            hidden: Number(_row[10]) ? 1 : 0,
         };
     }
 

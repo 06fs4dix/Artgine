@@ -46,6 +46,11 @@ export class CProviderLog {
             new CORMField('createdAt', 0),
         ]);
 
+        // ListSessions/ListBySession/ListForTerminalKey가 sessionId·key로 찾는다.
+        // 없으면 목록 페이징은 전체 스캔, 세션 펼치기/터미널 로그는 행 수에 비례해 느려진다.
+        await db.Send(`CREATE INDEX IF NOT EXISTS idx_plog_session_id ON ${CProviderLog.sTable}(sessionId, id)`);
+        await db.Send(`CREATE INDEX IF NOT EXISTS idx_plog_key ON ${CProviderLog.sTable}(key)`);
+
         CProviderLog.sDB = db;
         return db;
     }
@@ -133,12 +138,21 @@ export class CProviderLog {
     public static async ListSessions(_beforeId?: number, _limit = 30): Promise<{ name: string; offset: number; model: string; firstText: string; cwd: string; time: number }[]> {
         const db = await CProviderLog.Init();
         const t = CProviderLog.sTable;
+        // 최근 세션 _limit개만 먼저 자른 뒤, 그 sessionId에만 모델/첫 user를 붙인다.
+        // 예전 modelSub/firstUserSub는 테이블 전체에서 MIN(id) 상관쿼리를 돌려 행 수 제곱으로
+        // 목록 API가 수 분 걸렸다(실측 26k행에서 modelSub만 ~100초).
         const group = _beforeId
             ? `SELECT sessionId, MAX(id) AS maxId, MIN(id) AS minId FROM ${t} GROUP BY sessionId HAVING maxId < ? ORDER BY maxId DESC LIMIT ${Number(_limit)}`
             : `SELECT sessionId, MAX(id) AS maxId, MIN(id) AS minId FROM ${t} GROUP BY sessionId ORDER BY maxId DESC LIMIT ${Number(_limit)}`;
-        const modelSub = `SELECT t1.sessionId AS sid, t1.model AS model FROM ${t} t1 WHERE t1.model != '' AND t1.id = (SELECT MIN(t2.id) FROM ${t} t2 WHERE t2.sessionId = t1.sessionId AND t2.model != '')`;
-        const firstUserSub = `SELECT t1.sessionId AS sid, t1.text AS text, t1.cwd AS cwd FROM ${t} t1 WHERE t1.role = 'user' AND t1.id = (SELECT MIN(t2.id) FROM ${t} t2 WHERE t2.sessionId = t1.sessionId AND t2.role = 'user')`;
-        const sql = `SELECT g.sessionId, g.maxId, m.model, COALESCE(u.text, f.text), COALESCE(u.cwd, f.cwd), l.createdAt FROM (${group}) g JOIN ${t} f ON f.id = g.minId JOIN ${t} l ON l.id = g.maxId LEFT JOIN (${modelSub}) m ON m.sid = g.sessionId LEFT JOIN (${firstUserSub}) u ON u.sid = g.sessionId`;
+        const sql = `SELECT g.sessionId, g.maxId,` +
+            ` (SELECT t.model FROM ${t} t WHERE t.sessionId = g.sessionId AND t.model != '' ORDER BY t.id ASC LIMIT 1) AS model,` +
+            ` COALESCE(u.text, f.text) AS firstText, COALESCE(u.cwd, f.cwd) AS cwd, l.createdAt` +
+            ` FROM (${group}) g` +
+            ` JOIN ${t} f ON f.id = g.minId` +
+            ` JOIN ${t} l ON l.id = g.maxId` +
+            ` LEFT JOIN ${t} u ON u.id = (` +
+            ` SELECT t.id FROM ${t} t WHERE t.sessionId = g.sessionId AND t.role = 'user' ORDER BY t.id ASC LIMIT 1` +
+            ` )`;
         const rows = await db.Recv(sql, _beforeId ? [_beforeId] : []);
         if (rows == null) return [];
         return rows

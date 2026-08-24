@@ -1,1 +1,69 @@
-import{CDOM as e}from"../basic/CDOM.js";import{CEvent as l}from"../basic/CEvent.js";import{CModal as o}from"../basic/CModal.js";import{CChecker as t}from"./CChecker.js";export class CTutorial{static eWait={Click:"Click",KeyUp:"KeyUp",ModalClose:"ModalClose",Event:"Event"};static Exe(s,n,i,a={}){const C={pos:null,bodyClose:!0,call:null,overlay:!0,timeOut:0,...a};let r=null;return null!=i&&(r=new o,r.SetCloseEsc(!1),r.SetTitle(o.eTitle.None),r.SetBody(i),r.SetZIndex(o.eSort.Top),r.SetBodyClose(!0),r.SetOverlay(C.overlay),r.SetBodyClose(C.bodyClose),r.Open(o.ePos.Center),0!=C.timeOut&&r.Close(C.timeOut)),new Promise(async(i,a)=>{if(null!=C.call&&C.call(),s==CTutorial.eWait.Click)e.ID(n).addEventListener("click",()=>{null!=r&&r.Close(),i(!0)},{once:!0});else if(s==CTutorial.eWait.KeyUp){const e=l=>{l.keyCode===n&&(document.removeEventListener("keyup",e),null!=r&&r.Close(),i(!0))};document.addEventListener("keyup",e)}else s==CTutorial.eWait.ModalClose&&(null==n?r.On(l.eType.Close,()=>{i(!0)}):(await t.Exe(async()=>null==o.FindModal(n),0),o.FindModal(n).On(l.eType.Close,()=>{i(!0)})))})}}
+import { CDOM } from "../basic/CDOM.js";
+import { CEvent } from "../basic/CEvent.js";
+import { CModal } from "../basic/CModal.js";
+import { CChecker } from "./CChecker.js";
+export class CTutorial {
+    static eWait = {
+        "Click": "Click",
+        "KeyUp": "KeyUp",
+        "ModalClose": "ModalClose",
+        "Event": "Event"
+    };
+    static Exe(_type, _data, _html, _option = {}) {
+        const defaultOption = { pos: null, bodyClose: true, call: null, overlay: true, timeOut: 0 };
+        const option = { ...defaultOption, ..._option };
+        let modal = null;
+        if (_html != null) {
+            modal = new CModal();
+            modal.SetCloseEsc(false);
+            modal.SetTitle(CModal.eTitle.None);
+            modal.SetBody(_html);
+            modal.SetZIndex(CModal.eSort.Top);
+            modal.SetBodyClose(true);
+            modal.SetOverlay(option.overlay);
+            modal.SetBodyClose(option.bodyClose);
+            modal.Open(CModal.ePos.Center);
+            if (option.timeOut != 0)
+                modal.Close(option.timeOut);
+        }
+        return new Promise(async (resolve, reject) => {
+            if (option.call != null)
+                option.call();
+            if (_type == CTutorial.eWait.Click) {
+                CDOM.ID(_data).addEventListener("click", () => {
+                    if (modal != null)
+                        modal.Close();
+                    resolve(true);
+                }, { once: true });
+            }
+            else if (_type == CTutorial.eWait.KeyUp) {
+                const handler = (e) => {
+                    if (e.keyCode === _data) {
+                        document.removeEventListener("keyup", handler);
+                        if (modal != null)
+                            modal.Close();
+                        resolve(true);
+                    }
+                };
+                document.addEventListener("keyup", handler);
+            }
+            else if (_type == CTutorial.eWait.ModalClose) {
+                if (_data == null) {
+                    modal.On(CEvent.eType.Close, () => {
+                        resolve(true);
+                    });
+                }
+                else {
+                    await CChecker.Exe(async () => {
+                        if (CModal.FindModal(_data) != null)
+                            return false;
+                        return true;
+                    }, 0);
+                    CModal.FindModal(_data).On(CEvent.eType.Close, () => {
+                        resolve(true);
+                    });
+                }
+            }
+        });
+    }
+}

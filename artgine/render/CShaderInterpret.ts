@@ -3,10 +3,8 @@ import {CJSON} from "../basic/CJSON.js"
 import {CObject} from "../basic/CObject.js"
 import {CAlert} from "../basic/CAlert.js"
 import {CShader,CShaderList, CVertexFormat} from "./CShader.js"
-import {CString} from "../basic/CString.js"
 import { SDF } from "../z_file/SDF.js"
 import {CFile} from "../system/CFile.js"
-import {CPath} from "../basic/CPath.js"
 //import CRes from "../system/CRes.js"
 
 var gImportFileMap=new Map<string,string>();
@@ -18,7 +16,7 @@ export async function GetImportFile(_rpath,_ifile)
 		text="";
 		var bytes = new Uint8Array( await CFile.Load(_rpath+"/"+_ifile) );
 		var len = bytes.byteLength;
-		for (let k = 0; k < len; k++) 
+		for (let k = 0; k < len; k++)
 		{
 			text += String.fromCharCode( bytes[ k ] );
 		}
@@ -39,7 +37,174 @@ export function ExtractImportPaths(text,_addTS=true){
 	// 중복 제거
 	return matches;
 }
-//var g_map=new Map<string,number>();
+
+// ---- 2차 IR 스키마 ----------------------------------------------------------
+
+/**
+ * 식 노드. k 종류는 imple 의 BuildExpr 참고
+ *
+ * vtype 은 InferType 이 채우는 추론 타입이다. DSL 타입 이름을 그대로 쓴다
+ * (float/int/bool/CVec2/CVec3/CVec4/CMat/CMat3/...). 모르면 "".
+ * GLSL 은 암묵 변환이 있어서 없어도 됐지만 WGSL 은 이 정보 없이 코드 생성이 안 된다.
+ */
+export interface CShaderIRExpr
+{
+	k : string;
+	name? : string;
+	op? : string;
+	v? : string;
+	/** InferType 이 채우는 추론 타입. 백엔드 중립 이름 */
+	vtype? : string;
+	l? : CShaderIRExpr;
+	r? : CShaderIRExpr;
+	e? : CShaderIRExpr;
+	i? : CShaderIRExpr;
+	c? : CShaderIRExpr;
+	t? : CShaderIRExpr;
+	f? : CShaderIRExpr;
+	args? : Array<CShaderIRExpr>;
+	prefix? : boolean;
+	code? : string;
+}
+/** 문장 노드. k 종류는 imple 의 BuildStmtInto 참고 */
+export interface CShaderIRStmt
+{
+	k : string;
+	name? : string;
+	type? : string;
+	/**
+	 * InferType 이 채우는 추론 타입(var 문장). type 은 소스에 적힌 어노테이션 그대로 두고
+	 * 추론 결과는 여기에만 쓴다. 기존 백엔드(GL)가 type 을 읽고 있어서 덮으면 출력이 바뀐다.
+	 */
+	vtype? : string;
+	init? : CShaderIRExpr;
+	expr? : CShaderIRExpr;
+	cond? : CShaderIRExpr;
+	inc? : CShaderIRExpr;
+	forInit? : CShaderIRStmt;
+	then? : Array<CShaderIRStmt>;
+	else? : Array<CShaderIRStmt>;
+	body? : Array<CShaderIRStmt>;
+	tag? : string;
+	code? : string;
+}
+/** 글로벌 변수의 초기화식. Null() / Sam2DArrV4(1,SDF.eUni.V4LightDir) / 0.0 등 */
+export interface CShaderIRInit
+{
+	/** 호출식이면 함수명, 리터럴/식별자면 "Value" */
+	kind : string;
+	/** 인자 텍스트. 문자열 리터럴은 따옴표를 벗겨서 담는다 */
+	params : Array<string>;
+	/**
+	 * 초기화식 원문(공백 정리만 한 DSL 텍스트). 따옴표가 살아있다.
+	 * BuildVSUni 가 Attribute(0,"time") 의 태그를 따옴표째 쓰기 때문에 원문이 필요하다.
+	 */
+	raw : string;
+}
+export interface CShaderIRGlobal
+{
+	name : string;
+	/** 타입 어노테이션 원문. CMat, CVec4, number, Sam2DArrV4, sampler2D 등 */
+	type : string;
+	/** 초기화식 없으면 null */
+	init : CShaderIRInit;
+}
+/** const 선언. uniform 이 아니라 컴파일타임 치환용 매크로다 */
+export interface CShaderIRConst
+{
+	name : string;
+	value : string;
+}
+export interface CShaderIRParam
+{
+	name : string;
+	type : string;
+}
+export interface CShaderIRLocal
+{
+	name : string;
+	type : string;
+	/** InferType 이 채우는 추론 타입. 어노테이션이 있으면 그것과 같다 */
+	vtype? : string;
+}
+/** BranchBegin..BranchEnd 한 구간. CShaderBranch 와 1:1 */
+export interface CShaderIRBranch
+{
+	tag : string;
+	/** 변종 키에 덧붙는 키워드 */
+	keyword : string;
+	/** 이 구간이 선택될 때 추가로 필요한 uniform 이름들 */
+	attribute : Array<string>;
+	/** 빌드 참조 후 "vs" / "ps" 로 채워진다 */
+	type : string;
+
+	code : string;
+	stmts : Array<CShaderIRStmt>;
+	useFun : Array<string>;
+	callFun : Array<string>;
+
+	hasDefault : boolean;
+	defaultCode : string;
+	defaultStmts : Array<CShaderIRStmt>;
+	defaultUseFun : Array<string>;
+	defaultCallFun : Array<string>;
+}
+export interface CShaderIRFun
+{
+	name : string;
+	return : string;
+	params : Array<CShaderIRParam>;
+	/** 병합된 IR에 선언이 존재하는 함수 중 실제로 호출한 것 */
+	useFun : Array<string>;
+	/** 호출한 모든 이름(빌트인 포함). 병합 후 useFun 을 다시 계산하는 근거 */
+	callFun : Array<string>;
+	/** 본문 평문. 디버그/비교용이고 Emit 은 stmts 를 쓴다 */
+	body : string;
+	/** 본문 구조화 트리. Branch 구간은 {k:"branch",tag} 마커로 남는다 */
+	stmts : Array<CShaderIRStmt>;
+	/** 본문 전체(중첩 블록/브랜치 포함)의 지역 변수 선언 평탄화 */
+	locals : Array<CShaderIRLocal>;
+	branches : Array<CShaderIRBranch>;
+}
+export interface CShaderIRBuild
+{
+	key : string;
+	tag : Array<string>;
+	tagMain : Array<string>;
+	vs : string;
+	ps : string;
+	vsUni : Array<string>;
+	vsOut : Array<string>;
+	psOut : Array<string>;
+	insCount : number;
+	branchUse : Array<string>;
+}
+export interface CShaderIRImport
+{
+	from : string;
+	names : Array<string>;
+	/** 본문을 가져와야 하는 import 인지. Shader/SDF 스텁과 엔진 모듈은 false */
+	follow : boolean;
+}
+export interface CShaderIRDiag
+{
+	level : string;
+	msg : string;
+	file : string;
+}
+export interface CShaderIR
+{
+	version : number;
+	source : string;
+	/** 병합된 IR이면 참여한 파일 목록 */
+	files : Array<string>;
+	imports : Array<CShaderIRImport>;
+	consts : Array<CShaderIRConst>;
+	globals : Array<CShaderIRGlobal>;
+	functions : Array<CShaderIRFun>;
+	builds : Array<CShaderIRBuild>;
+	diagnostics : Array<CShaderIRDiag>;
+}
 
 export class CShaderBranch
 {
@@ -58,6 +223,12 @@ export class CShaderFun
 	public mReturn="";
 	public mUseFun=new Set<string>();
 	public mBranch=new Array<CShaderBranch>();
+	/**
+	 * 본문에서 값을 다시 대입하는 파라미터 이름.
+	 * GLSL 은 파라미터가 지역 복사본이라 그냥 되지만 WGSL 은 불변이라
+	 * 백엔드가 지역 변수로 한 번 받아줘야 한다.
+	 */
+	public mAssignPara=new Set<string>();
 }
 export class CShaderIn
 {
@@ -79,51 +250,31 @@ export class CShaderBuild extends CObject
 	public mBranchUse=new Set<CShaderBranch>();
 }
 
-var g_allShader={key:[],ps:[],vs:[]};
-
-export class CShaderInterpret 
+export class CShaderInterpret
 {
 	public mKeyMap=new Map<string,string>();
-	public mString : string;
-	
+
 	mVFDummy=new CVertexFormat();
 	mFile="";
+	public mSource="";
 	public mFunction =new  Map<string,CShaderFun>();
 
-	public mCallStack=new Array<string>;
-	public mKeyword =["var","function","import","Build","{","}","for","const","if","BranchBegin","BranchEnd"];
-
-	//public m_const="";
-	public mGlobalFun=new CShaderFun();
-	public mPstFun=this.mGlobalFun;
 	public mGlobalVar=new Map<string,CShaderIn>();
 	public mBuild=new Array<CShaderBuild>();
-	public mTexMap=new Map<string,number>();
 	public mSam2DCount=0;
 	public mSam2DArrCount=0;
 	public mSamCubeCount=0;
 	public mShaderList=new CShaderList();
-	public mImportFile=new Array<string>();
-	public mInChk=new Set<string>();
-	//public m_shareFun="";
-	
+
+	public mAST : any=null;
+	public mIR : CShaderIR=null;
+
 	constructor()
 	{
 	
 
 	}
 	GetShaderList()	{	return this.mShaderList;	}
-	protected AddTiny(_key,_ps,_vs)
-	{
-		g_allShader.key.push(_key);
-		g_allShader.ps.push(_ps);
-		g_allShader.vs.push(_vs);
-	}
-	protected GetTiny()
-	{
-		return g_allShader;
-	}
-	protected BuildTiny(_tiny : {key:Array<string>,ps:Array<string>,vs:Array<string>}){}
 	New()
 	{
 		var obj=this as any;
@@ -132,31 +283,42 @@ export class CShaderInterpret
 	
 	async Exe(_fileName : string,_source : string)
 	{
-		
-	}
-	protected Compare(_keyword : string,_off) : number
-	{
-		//if(_keyword)
 
-		return 0;
+	}
+	async ExeOne(_fileName : string,_source : string) : Promise<CShaderIR>
+	{
+		return null;
+	}
+	async ExeAll(_fileName : string,_source : string,
+		_load : (_path : string)=>Promise<string>=null) : Promise<CShaderIR>
+	{
+		return null;
+	}
+	async BuildAST(_source : string) : Promise<any>
+	{
+		return null;
+	}
+	BuildIR(_ast : any) : CShaderIR
+	{
+		return null;
+	}
+	GetAST()	{	return this.mAST;	}
+	GetIR()		{	return this.mIR;	}
+	ExportASTJSON(_indent=2)	{	return JSON.stringify(this.mAST,null,_indent);	}
+	ExportIRJSON(_indent=2)		{	return JSON.stringify(this.mIR,null,_indent);	}
+
+	protected Emit(_ir : CShaderIR)
+	{
+
 	}
 	protected Build()
 	{
 
 	}
-	protected FindS(_off)
-	{
-		var pos=this.mString.indexOf(";", _off);
-		var size = pos - _off+1;
-		var sp = this.mString.substr(_off, pos- _off);
-		return {"size":size,"str":sp};
-	}
 	protected DataTypeAddCount(_eachCount){	return "";	};
 	
 	protected CutTypeName(_string : string)
 	{
-		//_string=CString.ReplaceAll(_string," ","");
-		//_string=CString.ReplaceAll(_string,"	","");
 		
 			
 		var type="";
@@ -193,44 +355,6 @@ export class CShaderInterpret
 			let shader=new CShader();
 			shader.ImportJSON(_shaderList.GetDocument().m_shader[i]);
 			this.mShaderList.PushShader(shader);
-
-
-		
-			var source = shader.mVS;
-			if(source.indexOf(".vs")!=-1)
-			{
-				var fname = _fileName;
-				if (fname.indexOf(":") == -1) {
-					fname = CPath.WebPageUrl() + source;
-				}
-				var rpath = CString.PathSub(fname);
-				source="";
-				var bytes = new Uint8Array(await CFile.Load(rpath+"/"+shader.mVS));
-				var len = bytes.byteLength;
-				for (let k = 0; k < len; k++) {
-					source += String.fromCharCode(bytes[k]);
-				}
-			}
-				
-			
-			
-		
-
-			source = shader.mPS;
-			if(source.indexOf(".ps")!=-1)
-			{
-				var fname = _fileName;
-				if (fname.indexOf(":") == -1) {
-					fname = CPath.WebPageUrl() + source;
-				}
-				var rpath = CString.PathSub(fname);
-				source="";
-				var bytes = new Uint8Array(await CFile.Load(rpath+"/"+shader.mPS));
-				var len = bytes.byteLength;
-				for (let k = 0; k < len; k++) {
-					source += String.fromCharCode(bytes[k]);
-				}
-			}
 		}
 	}
 };
@@ -308,9 +432,17 @@ export class CShaderInterpretGL extends CShaderInterpret
 	}
 	
 	
-	override Compare(_keyword : string,_off) : number
+	override Emit(_ir : CShaderIR)
 	{
-		return 0;
+
+	}
+	EmitStmts(_arr : Array<CShaderIRStmt>) : string
+	{
+		return "";
+	}
+	EmitExpr(_e : CShaderIRExpr) : string
+	{
+		return "";
 	}
 	BuildVSUni(_shader : CShader,_in : Array<string>) : string
 	{
@@ -585,6 +717,15 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "{\n";
 		str += "	return pa_mat1*pa_mat0;\n";
 		str += "}\n";
+        str+="mat4 TransposeMat4(mat4 inMatrix)";
+        str+="{\n";
+		str+="  vec4 i0=inMatrix[0];";
+		str+="  vec4 i1=inMatrix[1];";
+		str+="  vec4 i2=inMatrix[2];";
+        str+="  vec4 i3=inMatrix[3];";
+		str+="  mat4 outMat=mat4(vec4(i0.x,i1.x,i2.x,i3.x),vec4(i0.y,i1.y,i2.y,i3.y),vec4(i0.z,i1.z,i2.z,i3.z),vec4(i0.w,i1.w,i2.w,i3.w));";
+		str+="	return outMat;\n";
+        str+="}\n";
 
 		//mat3
 		str+="mat3 TransposeMat3(mat3 inMatrix){";
@@ -1497,12 +1638,333 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "{\n";
         str += "    return vec2(float(i)/float(N), RadicalInverse_VdC(uint(i)));\n";
 		str += "}\n";
-		
+
+		//포인트 그림자 PCF 오프셋. 0번이 (1,1,1) 이라 샘플 1개일 때도 대각으로 한 번은 흩어진다
+        str += "vec3 gridSamplingDisk[20] = vec3[]\n";
+        str += "(\n";
+        str += "    vec3(1, 1, 1), vec3(1, -1, 1), vec3(-1, -1, 1), vec3(-1, 1, 1),\n";
+        str += "    vec3(1, 1, -1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),\n";
+        str += "    vec3(1, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 0), vec3(-1, 1, 0),\n";
+        str += "    vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),\n";
+        str += "    vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1)\n";
+        str += ");\n";
+        str += "vec3 GridSamplingDisk(float i)\n";
+		str += "{\n";
+        str += "    return gridSamplingDisk[clamp(int(i),0,19)];\n";
+		str += "}\n";
+
 		// str += "mat4 Sam2DToMat(vec2 _uni,int _off) {\n";
 		// str += "	return Sam2DToMat(_uni,float(_off));\n";
 		// str += "}\n";
 
 		return str;
+	}
+};
+
+/**
+ * WGSL 백엔드.
+ *
+ * GLSL 과 다른 점이 코드 생성 전략을 가른다.
+ *   - 암묵 변환이 없다. int/float 를 섞으면 에러라 IR 의 vtype 으로 캐스팅을 넣는다
+ *   - 다중 성분 스위즐 대입이 금지다. v.xy=a -> v=vec3f(a,v.z) 로 재구성한다
+ *   - in/out 선언이 없다. 구조체와 진입점 시그니처를 만들어야 한다
+ *   - do-while 이 없다. loop + break 로 바꾼다
+ *   - 텍스처 배열 바인딩이 없다. GLSL 과 똑같이 상수 인덱스 if-체인으로 편다
+ *
+ * 식별자 규약(양쪽 스테이지에서 같은 이름이 같은 곳을 가리키게 만든다)
+ *   정점 입력 vsi.*   / 베링 vso.*   / 픽셀 출력 pso.*   / 유니폼 uni.*
+ * 프래그먼트 진입점의 입력 파라미터 이름도 vso 라서 베링 참조가 스테이지와 무관해진다.
+ */
+export class CShaderInterpretGPU extends CShaderInterpret
+{
+	/** 유니폼 구조체/바인드그룹 이름. 런타임(CRendererGPU)과 맞춰야 한다 */
+	static kUniStruct="TUni";
+	static kUniName="uni";
+	static kVSIn="vsi";
+	static kVSOut="vso";
+	static kPSOut="pso";
+	/** 컴퓨트 진입점 입력 구조체 이름. 렌더의 vsi 와 같은 자리다 */
+	static kCSIn="csi";
+
+	/** 스테이지별 코드 생성 중 표시. 텍스처 샘플링 함수 선택에 쓴다 */
+	mStage="";
+	/** WGSL 라이브러리에 아직 없는 내장 함수. 이식 진행도를 재는 용도 */
+	mMissFun=new Set<string>();
+	/**
+	 * 베링을 참조하는 함수. 호출 그래프를 타고 전파한다.
+	 * 이 함수들은 진입점 구조체(vso)를 인자로 받아야 한다.
+	 * 베링을 var<private> 로 두면 WGSL 균일성 분석이 "비균일"로 보고
+	 * 그 값으로 분기한 안쪽의 밉맵 샘플링을 전부 막아버린다.
+	 */
+	mVsoFun=new Set<string>();
+
+	/**
+	 * 균일 제어흐름 안전 모드.
+	 *
+	 * WGSL 은 밉맵 자동 선택 샘플링(textureSample)을 비균일 분기 안에서 금지한다.
+	 * 밉맵 레벨은 옆 픽셀과의 UV 차이로 정하는데, 옆 픽셀이 다른 가지로 갔으면
+	 * 그 차이를 구할 수 없기 때문이다. GLSL 은 그냥 통과시켰다.
+	 *
+	 * 셰이더 소스를 고치지 않고 자동으로 넘기려면 명시적 LOD 로 떨어뜨리는 수밖에 없다.
+	 * 기본은 false(화질 우선)이고, 컴파일이 균일성 위반으로 실패한 셰이더만
+	 * 이 값을 켜서 다시 생성한다.
+	 *
+	 * static 인 이유: 셰이더 정의 .ts 파일마다(CLoader.ShaderLoad) 별도 인터프리터
+	 * 인스턴스로 파싱되므로, 인스턴스 필드로 두면 한 파일에서 위반이 나도 다른 파일의
+	 * 인터프리터는 여전히 false 라 그쪽 셰이더는 계속 실패한다. 위반은 앱 전역에서
+	 * 드물게만 나므로, 한 번이라도 걸리면 이후 전부 안전판으로 통일해도 손해가 적다
+	 */
+	static mUniformSafe=false;
+
+	/**
+	 * WGSL 내장 라이브러리의 시그니처 표. 라이브러리 텍스트를 스캔해서 만든다.
+	 *   키   : DSL 이름(V3Clamp)
+	 *   값   : 후보 목록. 오버로딩은 이름 뒤에 __ 를 붙여 구분한다(V3Clamp__v)
+	 * 표를 코드에 박지 않고 라이브러리에서 뽑기 때문에, 함수를 추가하면 호출 해석과
+	 * 미이식 검사가 저절로 따라온다.
+	 */
+	mLibSig : Map<string,Array<{name:string,para:Array<string>,ret:string}>>=null;
+
+	/**
+	 * 비균일 제어흐름 안에서 호출되는 함수(전이 포함).
+	 * 본문이 한 번만 만들어지므로, 한 곳이라도 분기 안에서 불리면 그 함수 전체를
+	 * 비균일로 본다. 이 안의 샘플링은 밉맵 자동 선택을 못 쓴다.
+	 */
+	mUnsafeFun=new Set<string>();
+	/** 코드 생성 중의 비균일 깊이. 0보다 크면 샘플러를 Safe 판으로 바꾼다 */
+	mNonUni=0;
+	/** 브랜치 마커가 놓인 자리의 비균일 깊이. 브랜치 본문을 같은 깊이로 만들기 위한 것 */
+	mTagDepth : Map<string,number>=null;
+	/**
+	 * 본문에서 대입이 일어나는 스토리지 버퍼 이름.
+	 * 여기 있으면 read_write, 없으면 read 로 선언한다 - DSL 에 안 적어도 되게 하려는 것이다.
+	 */
+	mBufWrite=new Set<string>();
+
+	/**
+	 * 비균일 분기 안의 샘플링에 넘길 기울기를, 함수 본문 맨 앞에서 미리 잡아 두는 선언들.
+	 *
+	 * WGSL 은 비균일 흐름에서 dpdx/암시적 LOD 샘플링을 금지하지만 textureSampleGrad 는
+	 * 허용한다. 그래서 기울기 계산만 균일 스코프로 끌어올리면 GL 과 같은 밉을 쓸 수 있다.
+	 */
+	mGradPre : Array<string>=null;
+	/** 끌어올린 식이 써도 되는지 판정용. 여기 있는 이름(지역 변수)을 쓰면 못 끌어올린다 */
+	mGradLocal : Set<string>=null;
+	/** 지금 자리에서 기울기를 끌어올려도 되는가(브랜치 본문에서는 불가) */
+	mGradOn=false;
+	/** 끌어올린 기울기 이름의 일련번호 */
+	mGradIdx=0;
+	/** 스테이지마다 다르게 정의되는 기울기 헬퍼 이름(ps 는 dpdx, vs 는 0) */
+	static kDdx="artDdx";
+	static kDdy="artDdy";
+
+	/**
+	 * screenPos(=GL 의 gl_FragCoord)를 쓰는 셰이더인가.
+	 *
+	 * WebGPU 의 @builtin(position) 은 Y 가 아래로 가고 GL 은 위로 간다.
+	 * 그대로 두면 화면 좌표로 텍스처를 읽는 코드(그림자 등)가 위아래로 뒤집힌다.
+	 * 그래서 뷰포트 높이를 받아 Y 를 되돌린 값을 따로 만들어 쓴다.
+	 */
+	mUseScreenPos=false;
+	/** 뷰포트 크기를 넘겨받는 예약 유니폼 이름 */
+	static kViewPort="viewPort";
+	/** 되돌린 화면 좌표를 담는 지역 이름 */
+	static kScreenPos="artScreenPos";
+	/**
+	 * invocationID(컴퓨트 스레드 번호)를 담는 이름.
+	 *
+	 * screenPos 와 같은 이유로 var<private> 다 - 진입점의 지역으로 두면 헬퍼 함수가 못 본다.
+	 * DSL 이 number 로 선언하므로 f32 로 받는다(u32 그대로면 본문의 float 연산과 안 맞는다).
+	 */
+	static kInvID="artInvID";
+	/**
+	 * 이번 디스패치의 스레드 수를 받는 예약 유니폼 이름.
+	 *
+	 * viewPort/renderTarget 과 같은 부류다 - 셰이더가 선언하지 않아도 컴퓨트 빌드에 항상
+	 * 들어가고 런타임(ComputeDispatch)이 채운다. 진입점의 자동 경계 검사가 이걸 본다.
+	 */
+	static kInvCount="invocationCount";
+	/**
+	 * 컴퓨트 스토리지 버퍼의 바인드그룹 번호.
+	 *
+	 * group(1) 은 렌더와 같이 텍스처 자리로 비워둔다 - 컴퓨트에서도 텍스처를 읽게 될 때
+	 * 배치가 렌더와 어긋나지 않게 하려는 것이다(WGSL 은 컴퓨트에서 textureSampleLevel 을
+	 * 허용하고, 라이브러리의 vs 판이 이미 그걸 쓴다).
+	 * 인터프리터와 런타임이 같은 값을 봐야 해서 여기 둔다.
+	 */
+	static kStorageGroup=2;
+	/**
+	 * 워크그룹 크기를 정하는 예약 전역 이름. 셰이더에 `var wgSize : number = 128;` 처럼
+	 * 적으면 그 값이 쓰이고, 없으면 kWGSize 다.
+	 *
+	 * 유니폼으로는 못 받는다 - WGSL 의 @workgroup_size 는 컴파일 타임 상수라서,
+	 * Array<T> 의 크기를 초기값에서 읽는 것과 같은 방식으로 선언에서 가져온다.
+	 */
+	static kWGName="wgSize";
+	/**
+	 * 워크그룹 크기 기본값. 정점 하나에 스레드 하나인 커널에서는 알고리즘과 무관한
+	 * 튜닝값이고, 32(NVIDIA)/64(AMD) 양쪽으로 나누어떨어져 낭비가 없다.
+	 */
+	static kWGSize=64;
+	/**
+	 * 클립 Y 부호를 받는 예약 유니폼 이름.
+	 *
+	 * 엔진은 GL 규약(텍스처 v=0 이 그림의 아래)으로 쓰여 있다. GL 은 렌더타겟을
+	 * 아래에서 위로 채우지만 WebGPU 는 위에서 아래로 채우므로, 그대로 두면
+	 * 렌더타겟을 샘플링하는 셰이더가 전부 상하 반전으로 읽는다.
+	 * 오프스크린 RT 에 그릴 때만 -1 을 넣어 클립 Y 를 뒤집어서, RT 메모리 배치를
+	 * GL 과 동일하게 맞춘다. 화면(캔버스)에 직접 그릴 때는 +1 이다.
+	 */
+	static kRenderTarget="renderTarget";
+	/** OutPosition 전역의 이름. 화면 좌표 보정에 쓴다 */
+	mPosName="";
+	/** 이 셰이더가 선언한 텍스처 개수. 바인드그룹 레이아웃과 맞춰야 한다 */
+	mTexCount=0;
+	mTexArrCount=0;
+	mTexCubeCount=0;
+
+	/**
+	 * group(1) 텍스처 바인딩 번호. 런타임(CRendererGPU)이 같은 식으로 계산해야 한다.
+	 *   2D   : [0,        2*tex)                  텍스처 2j, 샘플러 2j+1
+	 *   Array: [2*tex,    2*tex+2*arr)
+	 *   Cube : [2*tex+2*arr, ...)
+	 */
+	static TexBinding(_kind : string,_index : number,_texMax : number,_arrMax : number)
+	{
+		if(_kind=="2d")		return _index*2;
+		if(_kind=="arr")	return _texMax*2+_index*2;
+		return _texMax*2+_arrMax*2+_index*2;
+	}
+
+	constructor()
+	{
+		super();
+
+		this.mKeyMap.set("CVec2","vec2f");
+		this.mKeyMap.set("CVec3","vec3f");
+		this.mKeyMap.set("CVec4","vec4f");
+		this.mKeyMap.set("CMat3","mat3x3f");
+		this.mKeyMap.set("CMat","mat4x4f");
+		this.mKeyMap.set("CMat12","mat4x3f");
+		this.mKeyMap.set("CMat42","mat2x4f");
+		this.mKeyMap.set("CMat43","mat3x4f");
+		this.mKeyMap.set("number","f32");
+		this.mKeyMap.set("float","f32");
+		this.mKeyMap.set("int","i32");
+		this.mKeyMap.set("bool","bool");
+		this.mKeyMap.set("Instance1","f32");
+		this.mKeyMap.set("Instance2","vec2f");
+		this.mKeyMap.set("Instance3","vec3f");
+		this.mKeyMap.set("Instance4","vec4f");
+		this.mKeyMap.set("Instance16","mat4x4f");
+		this.mKeyMap.set("new","");
+		this.mKeyMap.set("export","");
+
+		this.mKeyMap.set("V3Dot","dot");
+		this.mKeyMap.set("CMath.","");
+		this.mKeyMap.set("Math.","");
+		this.mKeyMap.set(".uniOff","");
+		this.mKeyMap.set(".dummy","");
+		//mod 는 WGSL 예약어라 함수 이름으로 못 쓴다. 라이브러리에서 ModF 로 정의한다
+		this.mKeyMap.set("mod","ModF");
+		//화면 미분 내장 함수는 이름만 다르다
+		this.mKeyMap.set("dFdx","dpdx");
+		this.mKeyMap.set("dFdy","dpdy");
+
+		//WGSL 은 클립 공간이 원래 0..1 이라 reverse-Z 가 공짜다. GL 의 EXT_clip_control 대응값
+		SDF.TexSizeMax=CDevice.GetProperty(CDevice.eProperty.Sam2DSize);
+		SDF.FloatTex16=CDevice.GetProperty(CDevice.eProperty.FloatTex16);
+		SDF.ClipControl=1;
+		for(var each0 in SDF)
+		{
+			if(typeof SDF[each0] =="object")
+			{
+				for(var each1 in SDF[each0])
+					this.mKeyMap.set("SDF"+"."+each0+"."+each1,SDF[each0][each1]+".0");
+			}
+			else
+				this.mKeyMap.set("SDF"+"."+each0,SDF[each0]);
+		}
+	}
+	Init()
+	{
+
+	}
+	override async Exe(_fileName : string,_source : string)
+	{
+		this.Init();
+		await super.Exe(_fileName,_source);
+		this.mShaderList.mKey=_fileName;
+	}
+	override Emit(_ir : CShaderIR)
+	{
+
+	}
+	EmitStmts(_arr : Array<CShaderIRStmt>) : string
+	{
+		return "";
+	}
+	EmitExpr(_e : CShaderIRExpr) : string
+	{
+		return "";
+	}
+	/** 식을 _want 타입으로 맞춰서 낸다. WGSL 은 암묵 변환이 없어서 이게 필수다 */
+	EmitCast(_e : CShaderIRExpr,_want : string) : string
+	{
+		return "";
+	}
+	/**
+	 * wasm(EmitExprGPU)이 "call" 케이스를 위임할 때 쓰는 브리지. mNonUni/mGradPre 등 상태와
+	 * RegExp를 쓰는 EmitCallGPU(모듈 전역 함수)를 그대로 부른다. JSMode 토글과 무관하게 항상
+	 * 존재한다(render_imple/CShaderInterpret.ts에서 채워짐).
+	 */
+	_emitCallGPU_JS(_e : CShaderIRExpr) : string
+	{
+		return "";
+	}
+	/**
+	 * wasm(EmitCastGPU/EmitExprGPU)이 NormType을 위임할 때 쓰는 브리지. gTypeAlias(모듈 전역,
+	 * ParseTypeStub이 채움)에 의존해서 wasm에 복제하지 않고 항상 JS로 왕복한다.
+	 */
+	_normType_JS(_t : string) : string
+	{
+		return "";
+	}
+	/** @param _compute 컴퓨트 빌드인가. 예약 유니폼이 렌더와 다르다 */
+	BuildVSUni(_shader : CShader,_in : Array<string>,_compute=false) : string
+	{
+		return "";
+	}
+	override Build()
+	{
+
+	}
+	override DataTypeAddCount(_eachCount)
+	{
+		switch (_eachCount)
+		{
+		case 16:	return "mat4x4f";
+		case 4:		return "vec4f";
+		case 3:		return "vec3f";
+		case 2:		return "vec2f";
+		case 1:		return "f32";
+		}
+		CAlert.E("error!");
+		return "Null";
+	}
+	AttachFun(_useFun : Set<string>, _functionMap : Map<string, CShaderFun>,_addedFun : Array<string> = null)
+	{
+		return "";
+	}
+	/** 스테이지 공용 내장 함수(WGSL). _stage 는 "vs" 또는 "ps" */
+	WGSLFun(_stage : string)
+	{
+		return "";
+	}
+	/** 내장 라이브러리 시그니처 표. 라이브러리 텍스트를 한 번 스캔해서 캐시한다 */
+	LibSig() : Map<string,Array<{name:string,para:Array<string>,ret:string}>>
+	{
+		return null;
 	}
 };
 import CShaderInterpret_imple from "../render_imple/CShaderInterpret.js";

@@ -1,0 +1,14 @@
+{
+    "dependencies": {
+		"artgine":1
+    },
+    "version":1,
+    "text":"Media",
+    "include":true,
+    "client":["ControlMediaClient.js"],
+    "server":["ControlMediaServer.js"],
+    "tooltip":{
+        "Author":"Artgine",
+        "Comment":"Control 프로젝트 More 메뉴에 Media 탭(+다운로드 기능)을 자동 등록하는 클라이언트 스크립트와, 그 다운로드 서버 라우트(yt-dlp/ffmpeg)를 등록하는 서버 스크립트를 함께 제공. 이 플러그인을 프로젝트 헤더에 등록하면 More 메뉴에 Media 탭이 자동으로 붙는다."
+    }
+}

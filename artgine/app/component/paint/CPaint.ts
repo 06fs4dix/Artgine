@@ -548,13 +548,13 @@ export class CPaint extends CComponent implements IMat
 			
 				//let camOff=_cam.Offset();
 				//강제로 모든 오브젝트는 컬링을 처리하게 함
-				// if(CUtilMath.PlaneSphereInside(plane,this.mBW.mPos,this.mBW.mRadian,null) || this.mRenderPass[i].mCullFrustum==false)
-				// 	ren.mShow=0;
-				// else
-				// {
-				// 	ren.mShow=1;
-				// 	ren.mDistance=0x7FFFFE00;
-				// }
+				if(CUtilMath.PlaneSphereInside(plane,this.mBW.mPos,this.mBW.mRadian,null) || this.mRenderPass[i].mCullFrustum==false)
+					ren.mShow=0;
+				else
+				{
+					ren.mShow=1;
+					ren.mDistance=0x7FFFFE00;
+				}
 					
 			}
 		}

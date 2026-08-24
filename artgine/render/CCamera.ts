@@ -52,7 +52,7 @@ export class CCamera extends CObject
 	public mCross : CVec3;
 	public mViewMat : CMat;
 	public mProjMat : CMat;
-	//public m_VPMat : CMat;
+	public mVPMat : CMat;
 	public mProjFar : number;
 	public mProjNear : number;
 	public mOrthographic : boolean;
@@ -62,6 +62,7 @@ export class CCamera extends CObject
 	public mScreenWidthBase : boolean;//width기준으로 할건지 묻는거 w기반이면 화면 width 축소시 그대로 유지
 	public mFov : number;
 	public mPlane : CPlane;
+    public mFrustum : CVec3[];
 
 	public mViewPort : CVec4=null;
 	public mUpdateMat : number=CUpdate.eType.Updated;
@@ -100,6 +101,7 @@ export class CCamera extends CObject
 		this.mCross=new CVec3();
 		this.mViewMat=new CMat();
 		this.mProjMat=new CMat();
+        this.mVPMat=new CMat();
 		
 		this.mProjFar=0;
 		this.mProjNear=0;
@@ -111,7 +113,9 @@ export class CCamera extends CObject
 		
 		this.mPlane=new CPlane();
 		this.mPlane.NewWASM();
-	
+    
+        this.mFrustum = [];
+        for(let i=0;i<8;++i) this.mFrustum.push(new CVec3());
 	}
 	override IsShould(_member: string, _type: CObject.eShould): boolean 
 	{
@@ -120,7 +124,7 @@ export class CCamera extends CObject
 			"mViewMat", "mProjMat", "mPF",
 			"mPlane", "mUpdateMat", "mViewMatComp", "mReset","mBillboardMat",
 			"mShakeMagnitude", "mShakeDuration", "mShakeDamping", "mShakeDistance",
-			"mRCS","mShadow"
+			"mRCS","mShadow","mFrustum"
 		];
 		if(should.indexOf(_member) != -1) 
 			return false;
@@ -189,10 +193,12 @@ export class CCamera extends CObject
 	SetProjMat(_mat : any)
 	{
 		this.mProjMat.Import(_mat);
+        CMath.MatMul(this.mViewMat, this.mProjMat, this.mVPMat);
 	}
 	SetViewMat(_mat : any)
 	{
 		this.mViewMat.Import(_mat);
+        CMath.MatMul(this.mViewMat, this.mProjMat, this.mVPMat);
 	}
 	Init(pa_eye : CVec3,pa_look : CVec3,_up=new CVec3(0,1,0)) : boolean
 	{
@@ -274,6 +280,7 @@ export class CCamera extends CObject
 		}
 		
 		this.mOrthographic=false;
+        CMath.MatMul(this.mViewMat, this.mProjMat, this.mVPMat);
 		this.ViewAndCrossVector3Set();
 		this.BillboardSet();
 		this.PlaneSet();
@@ -354,8 +361,9 @@ export class CCamera extends CObject
 			CUtilMath.CameraLookAtLH(eye,look,this.mUp,this.mViewMat);
             CUtilMath.CameraOrthoLH_ReverseZ(width,height, this.mProjNear, this.mProjFar,this.mProjMat);
 		}
-		//this.m_VPMat=CMath.MatMul(this.m_viewMat,this.m_projMat);
+        
 		this.mOrthographic=true;
+        CMath.MatMul(this.mViewMat, this.mProjMat, this.mVPMat);
 		this.ViewAndCrossVector3Set();
 		this.BillboardSet();
 		this.PlaneSet();
@@ -617,15 +625,13 @@ export class CCamera extends CObject
 	}
 	PlaneSet()
 	{
-		// let start = performance.now();
-		// for(let index = 0; index < 10000; index++) {
 		let width=this.mWidth;
 		let height=this.mHeight;
 		if(width==0)	width=this.mPF.mWidth;
 		if(height==0)	height=this.mPF.mHeight;
 		width*=this.mZoom;
 		height*=this.mZoom;
-		
+
 		let aspect : number = width / height;
 		let halfVSide = 0;
 		let halfHSide = 0;
@@ -641,80 +647,86 @@ export class CCamera extends CObject
 			halfHSide = this.mProjFar * Math.tan(this.mFov * 0.5);
 			halfVSide = halfHSide / aspect;
 		}
-		let farMulView = CPoolGeo.ProductV3();
-		CMath.V3MulFloat(this.mView, this.mProjFar, farMulView);
-		//let plane=CMMgr.CVec4();
-		let vertex=CPoolGeo.ProductV3();
-		let normal=CPoolGeo.ProductV3();
+		// 원거리 기준 반폭/반높이. perspective는 근거리에서 near/far 비율만큼 축소(직교는 동일)
+		const halfHNear = this.mOrthographic ? halfHSide : halfHSide * this.mProjNear / this.mProjFar;
+		const halfVNear = this.mOrthographic ? halfVSide : halfVSide * this.mProjNear / this.mProjFar;
+
 		let up = CPoolGeo.ProductV3();
 		CMath.V3Cross(this.mView, this.mCross, up);
 
+		let nearCenter = CPoolGeo.ProductV3();
+		CMath.V3MulFloat(this.mView, this.mProjNear, nearCenter);
+		CMath.V3AddV3(this.mEye, nearCenter, nearCenter);
+		let farCenter = CPoolGeo.ProductV3();
+		CMath.V3MulFloat(this.mView, this.mProjFar, farCenter);
+		CMath.V3AddV3(this.mEye, farCenter, farCenter);
+
+		// 프러스텀 8꼭지점부터 구한다: 0-3 near(lb,rb,rt,lt), 4-7 far(lb,rb,rt,lt).
+		// 6개 평면은 전부 이 꼭지점들로 표현되는 위치라 별도 vertex 계산 없이 그대로 재사용한다.
+		const slices = [
+			{center:nearCenter, hw:halfHNear, hh:halfVNear, out:0},
+			{center:farCenter, hw:halfHSide, hh:halfVSide, out:4},
+		];
+		for(const slice of slices)
+		{
+			let idx = slice.out;
+			for(const [sx,sy] of [[-1,-1],[1,-1],[1,1],[-1,1]])
+			{
+				const v = this.mFrustum[idx++];
+				v.x = slice.center.x + this.mCross.x*slice.hw*sx + up.x*slice.hh*sy;
+				v.y = slice.center.y + this.mCross.y*slice.hw*sx + up.y*slice.hh*sy;
+				v.z = slice.center.z + this.mCross.z*slice.hw*sx + up.z*slice.hh*sy;
+			}
+		}
+		const [nearLB, nearRB, nearRT, nearLT, farLB, farRB, farRT, farLT] = this.mFrustum;
+
+		let normal = CPoolGeo.ProductV3();
+
+		// 근/원 평면: 법선은 view 그대로, 평면 위 점은 이미 계산된 코너를 그대로 씀
+		CMath.NormalAndVertexFromPlane(this.mView, nearLB, this.mPlane, CPlane.eDir.Near);
+		CMath.V3MulFloat(this.mView, -1, normal);
+		CMath.NormalAndVertexFromPlane(normal, farLB, this.mPlane, CPlane.eDir.Far);
+
 		if(this.mOrthographic) {
-			CMath.V3MulFloat(this.mView, this.mProjNear, vertex)
-			CMath.V3AddV3(this.mEye, vertex, vertex);
-			CMath.NormalAndVertexFromPlane(this.mView, vertex,this.mPlane,CPlane.eDir.Near);
-
-			CMath.V3AddV3(this.mEye, farMulView, vertex);
-			CMath.V3MulFloat(this.mView, -1, normal);
-			CMath.NormalAndVertexFromPlane(normal, vertex,this.mPlane,CPlane.eDir.Far);
-
+			// 옆면이 view축과 나란함 → 법선은 cross/up 그대로, 점만 코너에서 재사용(별도 vertex 계산 불필요)
 			CMath.V3MulFloat(this.mCross, -1, normal);
-			CMath.V3MulFloat(this.mCross, halfHSide, vertex);
-			CMath.V3AddV3(this.mEye, vertex, vertex);
-			CMath.NormalAndVertexFromPlane(normal, vertex,this.mPlane,CPlane.eDir.Left);
-
-			CMath.V3MulFloat(this.mCross, halfHSide, vertex);
-			CMath.V3SubV3(this.mEye, vertex, vertex);
-			CMath.NormalAndVertexFromPlane(this.mCross, vertex,this.mPlane,CPlane.eDir.Right);
-
-			CMath.V3MulFloat(up, halfVSide, vertex);
-			CMath.V3SubV3(this.mEye, vertex, vertex);
-			CMath.NormalAndVertexFromPlane(up, vertex,this.mPlane,CPlane.eDir.Bottom);
-
+			CMath.NormalAndVertexFromPlane(normal, nearRB, this.mPlane, CPlane.eDir.Left);
+			CMath.NormalAndVertexFromPlane(this.mCross, nearLB, this.mPlane, CPlane.eDir.Right);
+			CMath.NormalAndVertexFromPlane(up, nearLB, this.mPlane, CPlane.eDir.Bottom);
 			CMath.V3MulFloat(up, -1, normal);
-			CMath.V3MulFloat(up, halfVSide, vertex);
-			CMath.V3AddV3(this.mEye, vertex, vertex);
-			CMath.NormalAndVertexFromPlane(normal, vertex,this.mPlane,CPlane.eDir.Top);
+			CMath.NormalAndVertexFromPlane(normal, nearLT, this.mPlane, CPlane.eDir.Top);
 		}
 		else {
-			CMath.V3MulFloat(this.mView, this.mProjNear, vertex);
-			CMath.V3AddV3(this.mEye, vertex, vertex);
-			CMath.NormalAndVertexFromPlane(this.mView, vertex,this.mPlane,CPlane.eDir.Near);
-			
-			CMath.V3AddV3(this.mEye, farMulView, vertex);
-			CMath.V3MulFloat(this.mView, -1, normal);
-			CMath.NormalAndVertexFromPlane(normal, vertex,this.mPlane,CPlane.eDir.Far);
+			// 옆면은 전부 eye를 지나는 평면 → far 코너 하나 - eye 를 up/cross와 외적하면 법선(근거리쪽 성분은 외적 과정에서 상쇄됨)
+			let edge = CPoolGeo.ProductV3();
 
-			CMath.V3MulFloat(this.mCross, halfHSide, vertex);
-			CMath.V3SubV3(farMulView, vertex, vertex);
-			CMath.V3Cross(up, vertex, normal);
+			CMath.V3SubV3(farLB, this.mEye, edge);
+			CMath.V3Cross(up, edge, normal);
 			CMath.V3Nor(normal, normal);
-			CMath.NormalAndVertexFromPlane(normal, this.mEye,this.mPlane,CPlane.eDir.Right);
+			CMath.NormalAndVertexFromPlane(normal, this.mEye, this.mPlane, CPlane.eDir.Right);
 
-			CMath.V3MulFloat(this.mCross, halfHSide, vertex);
-			CMath.V3AddV3(farMulView, vertex, vertex);
-			CMath.V3Cross(vertex, up, normal);
+			CMath.V3SubV3(farRB, this.mEye, edge);
+			CMath.V3Cross(edge, up, normal);
 			CMath.V3Nor(normal, normal);
-			CMath.NormalAndVertexFromPlane(normal, this.mEye,this.mPlane,CPlane.eDir.Left);
+			CMath.NormalAndVertexFromPlane(normal, this.mEye, this.mPlane, CPlane.eDir.Left);
 
-			CMath.V3MulFloat(up, halfVSide, vertex);
-			CMath.V3AddV3(farMulView, vertex, vertex);
-			CMath.V3Cross(this.mCross, vertex, normal);
+			CMath.V3SubV3(farRT, this.mEye, edge);
+			CMath.V3Cross(this.mCross, edge, normal);
 			CMath.V3Nor(normal, normal);
-			CMath.NormalAndVertexFromPlane(normal, this.mEye,this.mPlane,CPlane.eDir.Top);
+			CMath.NormalAndVertexFromPlane(normal, this.mEye, this.mPlane, CPlane.eDir.Top);
 
-			CMath.V3MulFloat(up, halfVSide, vertex);
-			CMath.V3SubV3(farMulView, vertex, vertex);
-			CMath.V3Cross(vertex, this.mCross, normal);
+			CMath.V3SubV3(farLB, this.mEye, edge);
+			CMath.V3Cross(edge, this.mCross, normal);
 			CMath.V3Nor(normal, normal);
-			CMath.NormalAndVertexFromPlane(normal, this.mEye,this.mPlane,CPlane.eDir.Bottom);
+			CMath.NormalAndVertexFromPlane(normal, this.mEye, this.mPlane, CPlane.eDir.Bottom);
+
+			CPoolGeo.RecycleV3(edge);
 		}
-		
-		CPoolGeo.RecycleV3(farMulView);
-		CPoolGeo.RecycleV3(vertex);
+
 		CPoolGeo.RecycleV3(normal);
+		CPoolGeo.RecycleV3(nearCenter);
+		CPoolGeo.RecycleV3(farCenter);
 		CPoolGeo.RecycleV3(up);
-	
 	}
 	GetPlane()
 	{

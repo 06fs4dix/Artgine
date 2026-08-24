@@ -1,1 +1,33 @@
-var e=this&&this.__decorate||function(e,t,o,n){var s,r=arguments.length,i=r<3?t:null===n?n=Object.getOwnPropertyDescriptor(t,o):n;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)i=Reflect.decorate(e,t,o,n);else for(var c=e.length-1;c>=0;c--)(s=e[c])&&(i=(r<3?s(i):r>3?s(t,o,i):s(t,o))||i);return r>3&&i&&Object.defineProperty(t,o,i),i};import{URLPatterns as t}from"../network/CServerMain.js";import{CAuthServer as o}from"./CAuthServer.js";let n=class extends o{constructor(){super(),this.On("/RemoteDesktop/exec",this.onExec.bind(this)),this.On("/RemoteDesktop/screenshot",this.onScreenshot.bind(this)),this.On("/RemoteDesktop/input",this.onInput.bind(this)),this.On("/RemoteCMD/Exec",this.onCmd.bind(this)),this.On("/RemoteDesktop/remotes",this.onRemotes.bind(this)),this.On("/RemoteDesktop/remotes-set",this.onRemotesSet.bind(this))}Connect(){super.Connect(),this._connectImpl()}_connectImpl(){}async onExec(e,t,o){return null}async onScreenshot(e,t,o){return null}async onInput(e,t,o){return null}async onCmd(e,t,o){return null}async onRemotes(e,t,o){return null}async onRemotesSet(e,t,o){return null}};n=e([t(["/RemoteDesktop/exec","/RemoteDesktop/screenshot","/RemoteDesktop/input","/RemoteCMD/Exec","/RemoteDesktop/remotes","/RemoteDesktop/remotes-set"])],n);export{n as CRemoteDesktopRouter};import s from"../server_imple/CRemoteDesktopRouter.js";s();
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { URLPatterns } from '../network/CServerMain.js';
+import { CAuthServer } from './CAuthServer.js';
+let CRemoteDesktopRouter = class CRemoteDesktopRouter extends CAuthServer {
+    constructor() {
+        super();
+        this.On("/RemoteDesktop/exec", this.onExec.bind(this));
+        this.On("/RemoteDesktop/screenshot", this.onScreenshot.bind(this));
+        this.On("/RemoteDesktop/input", this.onInput.bind(this));
+        this.On("/RemoteCMD/Exec", this.onCmd.bind(this));
+        this.On("/RemoteDesktop/remotes", this.onRemotes.bind(this));
+        this.On("/RemoteDesktop/remotes-set", this.onRemotesSet.bind(this));
+    }
+    Connect() { super.Connect(); this._connectImpl(); }
+    _connectImpl() { }
+    async onExec(_json, _req, _res) { return null; }
+    async onScreenshot(_json, _req, _res) { return null; }
+    async onInput(_json, _req, _res) { return null; }
+    async onCmd(_json, _req, _res) { return null; }
+    async onRemotes(_json, _req, _res) { return null; }
+    async onRemotesSet(_json, _req, _res) { return null; }
+};
+CRemoteDesktopRouter = __decorate([
+    URLPatterns(["/RemoteDesktop/exec", "/RemoteDesktop/screenshot", "/RemoteDesktop/input", "/RemoteCMD/Exec", "/RemoteDesktop/remotes", "/RemoteDesktop/remotes-set"])
+], CRemoteDesktopRouter);
+export { CRemoteDesktopRouter };
+import CRemoteDesktopRouter_imple from '../server_imple/CRemoteDesktopRouter.js';
+CRemoteDesktopRouter_imple();

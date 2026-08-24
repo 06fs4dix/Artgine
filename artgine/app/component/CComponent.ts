@@ -215,6 +215,9 @@ export namespace CComponent
 {
 	export enum eSysn{
 		First=0,
+		//위치를 직접 쓰는 컴포넌트는 Collider보다 앞이어야 한다.
+		//Collider가 위치 쓰기 마감선이고, 그 뒤 단계는 보정된 위치를 본다.
+		Move=50,
 		Collider=100,
 		Light=201,
 		

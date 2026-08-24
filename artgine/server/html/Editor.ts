@@ -39,6 +39,16 @@ function sendDirty(_dirty: boolean): void {
     if (window.parent !== window) CIframeMsg.Send(window.parent, 'editor-dirty', { dirty: _dirty });
 }
 
+// fetch().text()는 항상 UTF-8로 디코딩한다(Content-Type charset 무시). VS 기본값인 EUC-KR/CP949로 저장된
+// C/C++ 소스는 이 경로로 읽으면 한글이 깨지므로, UTF-8 디코딩에 실패하면 EUC-KR로 재시도한다.
+function decodeTextBuffer(buf: ArrayBuffer): string {
+    try {
+        return new TextDecoder("utf-8", { fatal: true }).decode(buf);
+    } catch {
+        return new TextDecoder("euc-kr").decode(buf);
+    }
+}
+
 let gLastSaveTime: number | null = null;
 let gSaveTimerId: number | null = null;
 
@@ -253,7 +263,7 @@ async function refreshFile(): Promise<void> {
         if (gMode === "text" && gEditor) {
             const res = await fetch(gUrl, { cache: "no-store" });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const source = await res.text();
+            const source = decodeTextBuffer(await res.arrayBuffer());
             gSuppressDirty = true;
             gEditor.setValue(source);
             gSuppressDirty = false;
@@ -295,7 +305,7 @@ async function main() {
     try {
         const res = await fetch(gUrl, { cache: "no-store" });
         if (!res.ok) { container.textContent = `Failed to load file: HTTP ${res.status}`; return; }
-        source = await res.text();
+        source = decodeTextBuffer(await res.arrayBuffer());
     } catch (e: any) {
         container.textContent = `Failed to load file: ${e.message}`;
         return;
@@ -308,9 +318,25 @@ async function main() {
         editor?.updateOptions({ readOnly: !writable });
         bindToolbarOnce();
         showToolbar();
-        if (!writable) return;
 
         const monacoNs = (window as any)["monaco"];
+
+        // Ctrl+클릭/F12로 다른 파일의 심볼(정의)로 이동할 때, 그 파일이 아직 모델로 열려있지 않으면
+        // Monaco 기본 동작은 대상 URL을 그냥 브라우저로 열어버려(windowOpenNoOpener) 다운로드로 처리된다.
+        // 이 iframe은 파일 1개(gPath/gUrl)에 고정된 뷰어라 안에서 모델을 바꿔치기하면 저장 대상이
+        // 엉뚱한 파일로 바뀌는 위험이 있으므로, 대신 부모(Control)에 새 에디터 탭을 열어달라고 요청한다.
+        monacoNs.editor.registerEditorOpener({
+            openCodeEditor: (_source: any, resource: any) => {
+                const currentModel = editor.getModel();
+                if (currentModel && currentModel.uri.toString() === resource.toString()) return false;
+                if (window.parent === window) return false;
+                CIframeMsg.Send(window.parent, 'editor-open-ref', { url: resource.toString() });
+                return true;
+            }
+        });
+
+        if (!writable) return;
+
         editor.addCommand(monacoNs.KeyMod.CtrlCmd | monacoNs.KeyCode.KeyS, () => saveFile(editor));
         editor.onDidChangeModelContent(() => {
             if (!gSuppressDirty) sendDirty(true);

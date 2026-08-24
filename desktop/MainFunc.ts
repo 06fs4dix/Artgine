@@ -1,5 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { CAI } from "../artgine/util/CAI.js";
 import { fileURLToPath } from 'url';
 import { CConsol } from "../artgine/basic/CConsol.js";
@@ -94,7 +96,15 @@ export function GetLoadedSettingsFileName(): string
 // 백슬래시를 '/'로 바꾼 뒤 연속된 구분자를 하나로 접는다. 이스케이프가 이미 누적돼 백슬래시가
 // 2개로 저장된 기존 값('D:\\git\\Artgine')은 단순 치환만 하면 'D://git//Artgine'이 되므로,
 // 중복 접기까지 해야 'D:/git/Artgine'으로 복구된다(CFileServer의 fix()와 동일한 패턴).
-const NormRootPath = (s: any) => String(s).trim().replace(/\\/g, "/").replace(/\/+/g, "/");
+// 드라이브 문자('D:')처럼 1글자 스킴은 접기 대상으로 남기고, http(s)/svn/git 같은 실제 스킴(2글자 이상)은
+// 뒤에 붙은 슬래시 개수(0개~여러 개, 사용자가 "http:/host"처럼 잘못 입력한 경우 포함)에 상관없이
+// "://" 형태로 보정한 뒤 나머지만 접는다.
+const NormRootPath = (s: any) => {
+    const str = String(s).trim().replace(/\\/g, "/");
+    const m = str.match(/^([a-zA-Z][a-zA-Z0-9+.-]{1,}:)\/*(.*)$/);
+    if (m) return m[1] + "//" + m[2].replace(/\/+/g, "/");
+    return str.replace(/\/+/g, "/");
+};
 
 // 워킹 폴더(rootPath)는 이제 settings.json이 아니라 Env.json(CStorage)에 저장된다.
 // Env.json에 값이 없고 legacy settings.json의 rootPath가 있으면 최초 1회 Env.json으로 이관한다.
@@ -123,6 +133,89 @@ export function SetRootPaths(paths: string[]): void
 {
     const list = Array.isArray(paths) ? paths.map(NormRootPath).filter(Boolean) : [];
     CStorage.Set("rootPath", JSON.stringify(list.length ? list : ["./"]));
+}
+
+const _execMainFunc = promisify(exec);
+
+type _VcsKind = "git" | "svn";
+
+// 워킹 폴더 항목이 git/svn 원격 주소인지, 어느 쪽인지 판별한다(로컬 경로 "./", "D:/Work" 등은 null).
+// svn:// · svn+ssh:// 스킴이거나 경로에 "/svn/"이 들어간 https 주소는 svn, 그 외 http(s)/git@ 주소는 git으로 본다.
+function _DetectVcsUrl(s: string): _VcsKind | null {
+    if (/^git@\S+:\S+/.test(s)) return "git";
+    if (/^svn(\+ssh)?:\/\/\S+/.test(s)) return "svn";
+    if (/^https?:\/\/\S+\/svn\/\S+/i.test(s)) return "svn";
+    if (/^https?:\/\/\S+\/\S+/.test(s)) return "git";
+    return null;
+}
+
+// 원격 주소에서 저장소 이름만 뽑는다. "https://github.com/06fs4dix/Artgine-Agent" -> "Artgine-Agent"
+function RepoNameFromVcsUrl(url: string): string {
+    const cleaned = url.trim().replace(/\/+$/, "").replace(/\.git$/i, "");
+    const parts = cleaned.split(/[\/:]/);
+    return parts[parts.length - 1] || "repo";
+}
+
+async function _isVcsInstalled(kind: _VcsKind): Promise<boolean> {
+    try { await _execMainFunc(kind === "git" ? "git --version" : "svn --version"); return true; } catch { return false; }
+}
+
+// 주소 끝의 "?id=...&pw=..." 쿼리를 인증 정보로 분리하고, 순수 저장소 주소만 돌려준다.
+// (repo 이름 추출/checkout 대상 URL에는 쿼리가 섞이면 안 되므로 여기서 미리 떼어낸다.)
+function _ExtractVcsAuth(rawEntry: string): { url: string; id?: string; pw?: string } {
+    const q = rawEntry.indexOf("?");
+    if (q === -1) return { url: rawEntry };
+    const params = new URLSearchParams(rawEntry.slice(q + 1));
+    return { url: rawEntry.slice(0, q), id: params.get("id") ?? undefined, pw: params.get("pw") ?? undefined };
+}
+
+// 워킹 폴더(rootPath) 목록에서 git/svn 주소 항목을 로컬 경로("git/<repo명>" 또는 "svn/<repo명>",
+// 현재 워킹 폴더 기준)로 바꾼다. 이미 받아져 있으면 clone/checkout을 건너뛴다. 해당 VCS가 설치되어
+// 있지 않거나 실패하면 그 항목은 이번 구동의 서빙 목록에서만 제외하고, Env.json에는 원래 주소를
+// 그대로 남겨 다음 재시작 때 재시도할 수 있게 한다. 성공한 항목은 로컬 경로로 Env.json에 다시 저장해
+// 재다운로드를 막는다.
+export async function ResolveVcsRootPaths(cfg?): Promise<string[]> {
+    const raw = GetRootPaths(cfg);
+    const persistList: string[] = [];
+    const serveList: string[] = [];
+    let changed = false;
+    const installOk: Partial<Record<_VcsKind, boolean>> = {};
+
+    for (const entry of raw) {
+        const kind = _DetectVcsUrl(entry);
+        if (!kind) { persistList.push(entry); serveList.push(entry); continue; }
+
+        if (installOk[kind] === undefined) installOk[kind] = await _isVcsInstalled(kind);
+        if (!installOk[kind]) {
+            CConsol.Log(`[MainFunc] ${kind}이(가) 설치되어 있지 않아 워킹 폴더 다운로드를 건너뜁니다: ${entry}`, CConsol.eColor.yellow);
+            persistList.push(entry);
+            continue;
+        }
+
+        const { url: cleanUrl, id, pw } = _ExtractVcsAuth(entry);
+        const repoName = RepoNameFromVcsUrl(cleanUrl);
+        const localRel = `${kind}/${repoName}`;
+        const localAbs = path.join(CPath.WorkingPath(), localRel);
+        try {
+            if (!fs.existsSync(localAbs)) {
+                const cmd = kind === "git"
+                    ? `git clone "${id && pw ? cleanUrl.replace(/^(https?:\/\/)/i, `$1${encodeURIComponent(id)}:${encodeURIComponent(pw)}@`) : cleanUrl}" "${localAbs}"`
+                    : `svn checkout "${cleanUrl}"${id && pw ? ` --username "${id}" --password "${pw}" --non-interactive --trust-server-cert` : ""} "${localAbs}"`;
+                CConsol.Log(`[MainFunc] ${kind} ${kind === "git" ? "clone" : "checkout"} ${cleanUrl} -> ${localRel}`, CConsol.eColor.cyan);
+                await _execMainFunc(cmd, { maxBuffer: 64 * 1024 * 1024 });
+            }
+            const norm = NormRootPath(localRel);
+            persistList.push(norm);
+            serveList.push(norm);
+            changed = true;
+        } catch (e: any) {
+            CConsol.Log(`[MainFunc] ${kind} 다운로드 실패, 워킹 폴더에서 제외합니다: ${entry} (${e?.message ?? e})`, CConsol.eColor.red);
+            persistList.push(entry);
+        }
+    }
+
+    if (changed) SetRootPaths(persistList);
+    return serveList.length ? serveList : ["./"];
 }
 export function GetProjName(projectPath)
 {
@@ -204,7 +297,80 @@ function GetAllTSFiles(dir: string, fileList: string[] = []): string[] {
 // }
 
 //==============================================================
-// export class 뿐 아니라 export function / export const|let|var / export { ... } 도 추출
+// 문자열/주석을 건너뛰고 괄호 깊이 0에서 문자 위치를 찾는다.
+// find='=' 이면 => / == / === / != / <= / >= 는 건너뛴다.
+function FindTopLevelChar(src: string, from: number, find: string): number {
+    let depth = 0;
+    let inStr: string | null = null;
+    let inLineComment = false;
+    let inBlockComment = false;
+    let escape = false;
+    for (let i = from; i < src.length; i++) {
+        const c = src[i];
+        const n = src[i + 1];
+        if (inLineComment) {
+            if (c === "\n") inLineComment = false;
+            continue;
+        }
+        if (inBlockComment) {
+            if (c === "*" && n === "/") { inBlockComment = false; i++; }
+            continue;
+        }
+        if (inStr) {
+            if (escape) { escape = false; continue; }
+            if (c === "\\") { escape = true; continue; }
+            if (c === inStr) inStr = null;
+            continue;
+        }
+        if (c === "/" && n === "/") { inLineComment = true; i++; continue; }
+        if (c === "/" && n === "*") { inBlockComment = true; i++; continue; }
+        if (c === "\"" || c === "'" || c === "`") { inStr = c; continue; }
+        if (c === "(" || c === "{" || c === "[") { depth++; continue; }
+        if (c === ")" || c === "}" || c === "]") { depth = Math.max(0, depth - 1); continue; }
+        if (depth !== 0 || c !== find) continue;
+        if (find === "=") {
+            const prev = i > 0 ? src[i - 1] : "";
+            if (n === ">" || n === "=") continue;
+            if (prev === "=" || prev === "!" || prev === "<" || prev === ">") continue;
+        }
+        return i;
+    }
+    return -1;
+}
+
+// 문자열/숫자/배열/객체 리터럴 const는 CClass에 넣지 않는다.
+// `new Foo()`, 클래스/함수 값, 식별자 재export만 통과. (예: export var gCharacterMgr = new CCharacterMgr())
+function IsClassLikeConstRhs(rhs: string): boolean {
+    const t = rhs.trim();
+    if (!t) return false;
+    if (/^(?:['"`]|true\b|false\b|null\b|undefined\b|-?\d)/.test(t)) return false;
+    if (t.startsWith("[") || t.startsWith("{")) return false;
+    return true;
+}
+
+function ExtractClassLikeConstNames(fileContent: string): string[] {
+    const names: string[] = [];
+    const head = /export\s+(?!declare\b)(?:const|let|var)\s+/g;
+    let hm: RegExpExecArray | null;
+    while ((hm = head.exec(fileContent))) {
+        const start = hm.index + hm[0].length;
+        const semi = FindTopLevelChar(fileContent, start, ";");
+        if (semi < 0) break;
+        const decl = fileContent.slice(start, semi);
+        head.lastIndex = semi + 1;
+
+        const eq = FindTopLevelChar(decl, 0, "=");
+        const lhs = (eq >= 0 ? decl.slice(0, eq) : decl).trim();
+        const rhs = eq >= 0 ? decl.slice(eq + 1) : "";
+        if (!lhs || lhs.startsWith("{") || lhs.startsWith("[")) continue;
+        if (!IsClassLikeConstRhs(rhs)) continue;
+        const nm = lhs.match(/^([A-Za-z_$][\w$]*)/);
+        if (nm) names.push(nm[1]);
+    }
+    return names;
+}
+
+// export class 뿐 아니라 export function / 클래스처럼 쓰이는 export const|let|var / export { ... } 도 추출
 function ExtractExportedClassNames(fileContent: string): { defaultExport?: string; namedExports: string[] } {
     let defaultExport: string | undefined;
     const namedSet = new Set<string>();
@@ -239,15 +405,9 @@ function ExtractExportedClassNames(fileContent: string): { defaultExport?: strin
         add(m[1]);
     }
 
-    // 5) export const/let/var ...
-    //    (declare는 제외, 여러 변수 선언/디스트럭처링도 대충 커버)
-    for (const m of fileContent.matchAll(/export\s+(?!declare\b)(?:const|let|var)\s+([^;]+);/g)) {
-        const decl = m[1];
-
-        // decl 안에서 식별자 후보들을 뽑음 (타입 어노테이션(:), 할당(=), 구분자(,), 닫힘(} ]) 등을 기준)
-        for (const id of decl.matchAll(/([A-Za-z_$][\w$]*)\s*(?=\s*[:=,}\]]|$)/g)) {
-            add(id[1]);
-        }
+    // 5) export const/let/var — 바인딩 이름만, 문자열 리터럴 const는 제외
+    for (const name of ExtractClassLikeConstNames(fileContent)) {
+        add(name);
     }
 
     // 6) export { a, b as c } (type export는 제외)

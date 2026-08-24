@@ -26,6 +26,7 @@ var	gSlPostKey;
 var	gSlCubeKey;
 var	gSlVoxelKey;
 var	gSlTerrainKey;
+var	gSlComputeKey;
 var gNoneTex;
 
 
@@ -42,6 +43,8 @@ export class CPalette
 	public mSLCube : CShaderList=null;
 	public mSLVoxel : CShaderList=null;
 	public mSLTerrain : CShaderList=null;
+	/** 컴퓨트 커널. GL 백엔드에서는 빌드를 건너뛰므로 목록이 비어 있다 */
+	public mSLCompute : CShaderList=null;
 
 	constructor()
 	{
@@ -71,6 +74,7 @@ export class CPalette
 		let SlCubeKey=upFolder+"artgine/z_file/Cube.ts";
 		let SlVoxelKey=upFolder+"artgine/z_file/Voxel.ts";
 		let SlTerrainKey=upFolder+"artgine/z_file/Terrain.ts";
+		let SlComputeKey=upFolder+"artgine/z_file/Compute.ts";
 
 		gSl2DKey="Artgine/2D.sl";
 		gSl3DKey="Artgine/3D.sl";
@@ -78,6 +82,7 @@ export class CPalette
 		gSlCubeKey="Artgine/Cube.sl";
 		gSlVoxelKey="Artgine/Voxel.sl";
 		gSlTerrainKey="Artgine/Terrain.sl";
+		gSlComputeKey="Artgine/Compute.sl";
 
 
 		gLUT[0]=upFolder+"artgine/z_file/LUT/apollo.png";
@@ -128,6 +133,8 @@ export class CPalette
 		await _fw.Load().Exe(SlCubeKey);
 		await _fw.Load().Exe(SlVoxelKey);
 		await _fw.Load().Exe(SlTerrainKey);
+		//컴퓨트 커널. GL 백엔드에서는 인터프리터가 빌드를 건너뛰어 셰이더가 안 생긴다
+		await _fw.Load().Exe(SlComputeKey);
 
 		//console.timeEnd("A");
 		
@@ -139,6 +146,7 @@ export class CPalette
 		this.mSLCube=_fw.Res().Find(SlCubeKey);
 		this.mSLVoxel=_fw.Res().Find(SlVoxelKey);
 		this.mSLTerrain=_fw.Res().Find(SlTerrainKey);
+		this.mSLCompute=_fw.Res().Find(SlComputeKey);
 
 		
 		_fw.Res().Remove(Sl2DKey);
@@ -165,6 +173,10 @@ export class CPalette
 		_fw.Res().Remove(SlTerrainKey);
 		this.mSLTerrain.mKey=gSlTerrainKey;
 		_fw.Res().Push(gSlTerrainKey,this.mSLTerrain);
+
+		_fw.Res().Remove(SlComputeKey);
+		this.mSLCompute.mKey=gSlComputeKey;
+		_fw.Res().Push(gSlComputeKey,this.mSLCompute);
 
 		
 	}
@@ -212,10 +224,10 @@ export class CPalette
 		//this.mMCI2D= CUtilRender.GetPlane(new CVec4(0, 0, 1, half));
 		
 		//if(_fw.Dev().BenchmarkScore())
-		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,1)],new CVec2(512, 512),this.GetShadowWriteTex());
+		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,1)],new CVec2(1024, 1024),this.GetShadowWriteTex());
 		//_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,6)],new CVec2(2048, 2048),this.GetShadowWriteTex());
 		let stex=_fw.Res().Find(this.GetShadowWriteTex()) as CTexture;
-
+		stex.SetFilter(CTexture.eFilter.Linear);
 
 		let fa=new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize)*4);
 		for(let j=0;j<6;++j)
@@ -309,6 +321,7 @@ export class CPalette
 	SlCube() : CShaderList	{		return this.mSLCube;	}
 	SlVoxel() : CShaderList	{		return this.mSLVoxel;	}
 	SlTerrain() : CShaderList	{		return this.mSLTerrain;	}
+	SlCompute() : CShaderList	{		return this.mSLCompute;	}
 	
 
 
@@ -318,6 +331,7 @@ export class CPalette
 	SlCubeKey() 	{		return gSlCubeKey;	}
 	SlVoxelKey() 	{		return gSlVoxelKey;	}
 	SlTerrainKey() 	{		return gSlTerrainKey;	}
+	SlComputeKey() 	{		return gSlComputeKey;	}
 	
 
 	

@@ -88,6 +88,12 @@ export class CClass
             console.log(_class+"Null");
         return null;
     }
+    // 클래스 레퍼런스 자체(생성자 함수)를 이름으로 조회. New()처럼 인스턴스를 만드는 게
+    // 아니라 클래스 참조 그대로가 필요한 곳(예: RemoveComps(CPaintVoxel) 같은 instanceof
+    // 비교용 인자)에서 쓴다 — ASMVoxelMap.ts(CVoxelMap ASM 이식)의 jsClassRef가 이걸 탄다.
+    static Find(_class: string): any {
+        return gClassMap.get(_class);
+    }
     static Push(_key, _val=null) {
         if (_val && typeof _val != "object" && typeof _val != "function")
             return;
@@ -207,6 +213,14 @@ export class CClass
         return Array.from(memberSet).sort();
     }
     
+    static Get(_obj: any, _member: string) {
+        if (!_obj) return null;
+        return _obj[_member];
+    }
+    static Set(_obj: any, _member: string, _val: any) {
+        if (!_obj) return;
+        _obj[_member] = _val;
+    }
     static ClassName(): string[] {
         return Array.from(gClassMap.values())
             .map(cls => cls.name)

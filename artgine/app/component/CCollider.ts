@@ -138,6 +138,16 @@ export class CCollider extends CGeometryComp
 		super.EditChange(_pointer,_child);
 		if(_pointer.IsRef(this.mBound))
 		{
+			if(_pointer.member=="mType" && this.mBound.mType==CBound.eType.Polytope && this.mPaintLoad!=null)
+			{
+				let bound=this.mPaintLoad.GetBound().Export() as CBound;
+				this.mBound.mPos.Clear();
+				this.mBound.mPos.PushArray(bound.mPos);
+			}
+			else
+			{
+				this.mPaintLoad=null;
+			}
 			this.InitBound(this.mBound);
 			this.mBW.mBound.mType=this.mBound.mType;
 			this.mUpdateMat=CUpdate.eType.Updated;
@@ -224,22 +234,27 @@ export class CCollider extends CGeometryComp
 			}
 		}
 			
-		if(this.mEvent==CCollider.eEvent.Static && (this.GetOwner().mUpdateMat!=CUpdate.eType.Not || this.mUpdateMat!=CUpdate.eType.Not))	
+		//Init은 mBound(로컬 회전 AABB)만 다시 만들고 mMat, mWBound는 손대지 않는다.
+		//정작 충돌이 쓰는 건 그 둘이라 UpdateMat을 짝으로 불러야 한다.
+		//안 부르면 움직이거나 회전시켜도 충돌이 예전 자리에 남는다.
+		if(this.mEvent==CCollider.eEvent.Static && (this.GetOwner().mUpdateMat!=CUpdate.eType.Not || this.mUpdateMat!=CUpdate.eType.Not))
 		{
 			if(this.mGI.mOctree.mStaticBuild==false)
 			{
 				this.mGI.mOctree.mStaticUpdate=true;
 				this.mBW.Init(this.mBound,this.mOwner.GetMat());
+				this.mBW.UpdateMat(this.mOwner.GetMat());
 			}
-			
+
 		}
-			
-		
+
+
 		if(this.GetOwner().mUpdateRS!=CUpdate.eType.Not || this.mBW.mRadian==0)
 		{
-			
+
 
 			this.mBW.Init(this.mBound,this.mOwner.GetMat());
+			this.mBW.UpdateMat(this.mOwner.GetMat());
 		}
 	}
 	override BuildGI()
@@ -263,11 +278,9 @@ export class CCollider extends CGeometryComp
 	{
 		if(this.mPaintLoad!=null)
 		{
-			if (this.m2D ? this.mPaintLoad.GetSize() != null : this.mPaintLoad.GetBound().GetType() != CBound.eType.Null) 
+			if (this.m2D ? this.mPaintLoad.GetSize() != null : this.mPaintLoad.GetBound().GetType() != CBound.eType.Null)
 			{
 				this.InitBound(this.mPaintLoad);
-				this.mPaintLoad=null;
-				
 				this.UpdateMat();
 			}
 		}
@@ -280,10 +293,10 @@ export class CCollider extends CGeometryComp
 	override StartChk()
 	{
 		let start=super.StartChk();
-		if(this.mPaintLoad!=null)
+		if(this.mPaintLoad!=null && this.mBound.GetType()==CBound.eType.Null)
 		{
 			this.InitBound(this.mPaintLoad);
-			if(this.mPaintLoad!=null)
+			if(this.mBound.GetType()==CBound.eType.Null)
 			{
 				this.mStartChk=true;
 				return false;
@@ -298,7 +311,7 @@ export class CCollider extends CGeometryComp
 	}
 	override SetOwner(_obj: any): void {
 		super.SetOwner(_obj);
-		if(this.mPaintLoad==null)
+		if(this.mPaintLoad==null || this.mBound.GetType()!=CBound.eType.Null)
 			this.InitBound(this.mBound);
 		this.UpdateMat();
 	}
@@ -323,14 +336,15 @@ export class CCollider extends CGeometryComp
 				this.mPaintLoad=_paint;
 				return;
 			}
-			this.mPaintLoad=null;
-			let bound=_paint.GetBound().Export() as CBound;
-			this.mBound.Reset();
-			this.mBound.mMin.Import(bound.mMin);
-			this.mBound.mMax.Import(bound.mMax);
-			this.mBound.SetType(bound.GetType());
-			
-			
+			this.mPaintLoad=_paint;
+			if(this.mBound.GetType()==CBound.eType.Null)
+			{
+				let bound=_paint.GetBound().Export() as CBound;
+				this.mBound.Reset();
+				this.mBound.Import(bound);
+			}
+
+
 		}
 	
 		
@@ -558,15 +572,36 @@ export class CCollider extends CGeometryComp
 		return null;
 		
 	}
-	//밀어내는 정도 0~1은 밀어내는 비율 0.5면 절반만 밀기
-	//1이상은 100%밀어내고 추가로 밀어낼 거리값
-	protected mRestitution = 0;
-	
+	//겹친 거리를 얼마나 밀어내 풀지. 위치를 다루는 값이라 속도와는 무관하다.
+	//0이면 밀어내지 않음 / 0.5면 겹친 거리의 절반만 / 1.5면 겹친 거리에 0.5유닛을 더 밀어냄.
+	//예전 이름은 mRestitution이었으나 반발계수가 아니라서 바꿨다. 팅기기는 mBounce가 맡는다.
+	protected mPushRate = 0;
+
+	//이 면을 밟고 미끄러질 때의 감속량(초당). 표면의 성질이라 콜라이더가 가진다.
+	//0이면 감속 없음. 얼음은 낮게, 거친 바닥은 높게 준다.
+	mFriction = CPhysics.SurfaceFriction;
+
+	//반발계수. 다가온 속도의 몇 배로 튕겨 나갈지다. 표면의 성질이라 콜라이더가 가진다.
+	//0이면 튕기지 않고 법선 속도만 없앤다(멈춤). 1이면 온 속도 그대로 되돌아간다.
+	//두 물체가 부딪히면 둘 중 큰 값을 쓴다. 한쪽만 고무여도 튀게 하려는 것이다.
+	//"얼마나 튀는가"만 정한다. "둘 중 누가 더 튀는가"는 질량이 정한다.
+	mBounce = CPhysics.SurfaceBounce;
+
 	mRB : CRigidBody=null;
 	mOneWayMap=new Map<any,number>();
 	
-	SetRestitution(_restitution:number=0.5) {this.mRestitution = _restitution;}
-	GetRestitution(){return this.mRestitution;}
+	SetPushRate(_rate:number=0.5) {this.mPushRate = _rate;}
+	GetPushRate(){return this.mPushRate;}
+	//리지드바디 지연 탐색. 없는 콜라이더는 계속 null이라 매번 재탐색되니 호출 위치에 주의.
+	//파괴된 참조는 놓아준다. FindComp가 파괴된 컴포넌트를 건너뛰므로 이후에도 null로 유지된다.
+	GetRB() : CRigidBody
+	{
+		if(this.mRB!=null && this.mRB.IsDestroy())
+			this.mRB=null;
+		if(this.mRB==null && this.GetOwner()!=null)
+			this.mRB=this.GetOwner().FindComp(CRigidBody);
+		return this.mRB;
+	}
 	PushExe(_org : CCollider,_size : number,_tar : Array<CCollider>,_push : Array<CVec3>)
 	{
 		

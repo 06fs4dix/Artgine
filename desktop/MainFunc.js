@@ -1,5 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { CAI } from "../artgine/util/CAI.js";
 import { fileURLToPath } from 'url';
 import { CConsol } from "../artgine/basic/CConsol.js";
@@ -61,7 +63,13 @@ export async function GetAppJSON(_settingsFileName) {
 export function GetLoadedSettingsFileName() {
     return gLoadedSettingsFileName ?? "settings.json";
 }
-const NormRootPath = (s) => String(s).trim().replace(/\\/g, "/").replace(/\/+/g, "/");
+const NormRootPath = (s) => {
+    const str = String(s).trim().replace(/\\/g, "/");
+    const m = str.match(/^([a-zA-Z][a-zA-Z0-9+.-]{1,}:)\/*(.*)$/);
+    if (m)
+        return m[1] + "//" + m[2].replace(/\/+/g, "/");
+    return str.replace(/\/+/g, "/");
+};
 export function GetRootPaths(cfg) {
     let raw = CStorage.Get("rootPath");
     if (raw == null && cfg != null) {
@@ -88,6 +96,85 @@ export function GetRootPaths(cfg) {
 export function SetRootPaths(paths) {
     const list = Array.isArray(paths) ? paths.map(NormRootPath).filter(Boolean) : [];
     CStorage.Set("rootPath", JSON.stringify(list.length ? list : ["./"]));
+}
+const _execMainFunc = promisify(exec);
+function _DetectVcsUrl(s) {
+    if (/^git@\S+:\S+/.test(s))
+        return "git";
+    if (/^svn(\+ssh)?:\/\/\S+/.test(s))
+        return "svn";
+    if (/^https?:\/\/\S+\/svn\/\S+/i.test(s))
+        return "svn";
+    if (/^https?:\/\/\S+\/\S+/.test(s))
+        return "git";
+    return null;
+}
+function RepoNameFromVcsUrl(url) {
+    const cleaned = url.trim().replace(/\/+$/, "").replace(/\.git$/i, "");
+    const parts = cleaned.split(/[\/:]/);
+    return parts[parts.length - 1] || "repo";
+}
+async function _isVcsInstalled(kind) {
+    try {
+        await _execMainFunc(kind === "git" ? "git --version" : "svn --version");
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function _ExtractVcsAuth(rawEntry) {
+    const q = rawEntry.indexOf("?");
+    if (q === -1)
+        return { url: rawEntry };
+    const params = new URLSearchParams(rawEntry.slice(q + 1));
+    return { url: rawEntry.slice(0, q), id: params.get("id") ?? undefined, pw: params.get("pw") ?? undefined };
+}
+export async function ResolveVcsRootPaths(cfg) {
+    const raw = GetRootPaths(cfg);
+    const persistList = [];
+    const serveList = [];
+    let changed = false;
+    const installOk = {};
+    for (const entry of raw) {
+        const kind = _DetectVcsUrl(entry);
+        if (!kind) {
+            persistList.push(entry);
+            serveList.push(entry);
+            continue;
+        }
+        if (installOk[kind] === undefined)
+            installOk[kind] = await _isVcsInstalled(kind);
+        if (!installOk[kind]) {
+            CConsol.Log(`[MainFunc] ${kind}이(가) 설치되어 있지 않아 워킹 폴더 다운로드를 건너뜁니다: ${entry}`, CConsol.eColor.yellow);
+            persistList.push(entry);
+            continue;
+        }
+        const { url: cleanUrl, id, pw } = _ExtractVcsAuth(entry);
+        const repoName = RepoNameFromVcsUrl(cleanUrl);
+        const localRel = `${kind}/${repoName}`;
+        const localAbs = path.join(CPath.WorkingPath(), localRel);
+        try {
+            if (!fs.existsSync(localAbs)) {
+                const cmd = kind === "git"
+                    ? `git clone "${id && pw ? cleanUrl.replace(/^(https?:\/\/)/i, `$1${encodeURIComponent(id)}:${encodeURIComponent(pw)}@`) : cleanUrl}" "${localAbs}"`
+                    : `svn checkout "${cleanUrl}"${id && pw ? ` --username "${id}" --password "${pw}" --non-interactive --trust-server-cert` : ""} "${localAbs}"`;
+                CConsol.Log(`[MainFunc] ${kind} ${kind === "git" ? "clone" : "checkout"} ${cleanUrl} -> ${localRel}`, CConsol.eColor.cyan);
+                await _execMainFunc(cmd, { maxBuffer: 64 * 1024 * 1024 });
+            }
+            const norm = NormRootPath(localRel);
+            persistList.push(norm);
+            serveList.push(norm);
+            changed = true;
+        }
+        catch (e) {
+            CConsol.Log(`[MainFunc] ${kind} 다운로드 실패, 워킹 폴더에서 제외합니다: ${entry} (${e?.message ?? e})`, CConsol.eColor.red);
+            persistList.push(entry);
+        }
+    }
+    if (changed)
+        SetRootPaths(persistList);
+    return serveList.length ? serveList : ["./"];
 }
 export function GetProjName(projectPath) {
     const parts = projectPath.split(/[\\/]/);
@@ -137,6 +224,109 @@ function GetAllTSFiles(dir, fileList = []) {
     }
     return fileList;
 }
+function FindTopLevelChar(src, from, find) {
+    let depth = 0;
+    let inStr = null;
+    let inLineComment = false;
+    let inBlockComment = false;
+    let escape = false;
+    for (let i = from; i < src.length; i++) {
+        const c = src[i];
+        const n = src[i + 1];
+        if (inLineComment) {
+            if (c === "\n")
+                inLineComment = false;
+            continue;
+        }
+        if (inBlockComment) {
+            if (c === "*" && n === "/") {
+                inBlockComment = false;
+                i++;
+            }
+            continue;
+        }
+        if (inStr) {
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            if (c === "\\") {
+                escape = true;
+                continue;
+            }
+            if (c === inStr)
+                inStr = null;
+            continue;
+        }
+        if (c === "/" && n === "/") {
+            inLineComment = true;
+            i++;
+            continue;
+        }
+        if (c === "/" && n === "*") {
+            inBlockComment = true;
+            i++;
+            continue;
+        }
+        if (c === "\"" || c === "'" || c === "`") {
+            inStr = c;
+            continue;
+        }
+        if (c === "(" || c === "{" || c === "[") {
+            depth++;
+            continue;
+        }
+        if (c === ")" || c === "}" || c === "]") {
+            depth = Math.max(0, depth - 1);
+            continue;
+        }
+        if (depth !== 0 || c !== find)
+            continue;
+        if (find === "=") {
+            const prev = i > 0 ? src[i - 1] : "";
+            if (n === ">" || n === "=")
+                continue;
+            if (prev === "=" || prev === "!" || prev === "<" || prev === ">")
+                continue;
+        }
+        return i;
+    }
+    return -1;
+}
+function IsClassLikeConstRhs(rhs) {
+    const t = rhs.trim();
+    if (!t)
+        return false;
+    if (/^(?:['"`]|true\b|false\b|null\b|undefined\b|-?\d)/.test(t))
+        return false;
+    if (t.startsWith("[") || t.startsWith("{"))
+        return false;
+    return true;
+}
+function ExtractClassLikeConstNames(fileContent) {
+    const names = [];
+    const head = /export\s+(?!declare\b)(?:const|let|var)\s+/g;
+    let hm;
+    while ((hm = head.exec(fileContent))) {
+        const start = hm.index + hm[0].length;
+        const semi = FindTopLevelChar(fileContent, start, ";");
+        if (semi < 0)
+            break;
+        const decl = fileContent.slice(start, semi);
+        head.lastIndex = semi + 1;
+        const eq = FindTopLevelChar(decl, 0, "=");
+        const lhs = (eq >= 0 ? decl.slice(0, eq) : decl).trim();
+        const rhs = eq >= 0 ? decl.slice(eq + 1) : "";
+        if (!lhs || lhs.startsWith("{") || lhs.startsWith("["))
+            continue;
+        if (!IsClassLikeConstRhs(rhs))
+            continue;
+        const nm = lhs.match(/^([A-Za-z_$][\w$]*)/);
+        if (nm)
+            names.push(nm[1]);
+    }
+    return names;
+}
 function ExtractExportedClassNames(fileContent) {
     let defaultExport;
     const namedSet = new Set();
@@ -165,11 +355,8 @@ function ExtractExportedClassNames(fileContent) {
     for (const m of fileContent.matchAll(/export\s+(?!declare\b)(?:async\s+)?function(?:\s*\*)?\s+([A-Za-z_$][\w$]*)/g)) {
         add(m[1]);
     }
-    for (const m of fileContent.matchAll(/export\s+(?!declare\b)(?:const|let|var)\s+([^;]+);/g)) {
-        const decl = m[1];
-        for (const id of decl.matchAll(/([A-Za-z_$][\w$]*)\s*(?=\s*[:=,}\]]|$)/g)) {
-            add(id[1]);
-        }
+    for (const name of ExtractClassLikeConstNames(fileContent)) {
+        add(name);
     }
     for (const m of fileContent.matchAll(/export\s+(type\s+)?{\s*([^}]+)\s*}(?:\s*from\s*["'][^"']+["'])?/g)) {
         if (m[1])

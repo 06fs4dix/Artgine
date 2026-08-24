@@ -7,7 +7,7 @@ import { CPath } from "../../basic/CPath.js";
 import { CStorage } from "../../system/CStorage.js";
 import { CUtilWeb } from "../../util/CUtilWeb.js";
 import { getAuthToken, setAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
-import { CFileViewer, CMDViewer, CSheetViewer, CModalMusic, CORMViewer } from "../../util/CModalUtil.js";
+import { CFileViewer, CMDViewer, CSheetViewer, CModalMusic, CORMViewer, CModalPDF } from "../../util/CModalUtil.js";
 import { CAuthInfo } from "../../network/CAuthInfo.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 
@@ -21,11 +21,12 @@ function warnIfDefaultAuthPassword(pw: string) {
 // ==================================================================================================================
 // 부모(Home.ts)와의 메시지 브리지
 // ==================================================================================================================
-// F1~F4/F7 등 전역 단축키는 부모의 공용 리스너(runHomeHotkey)로 위임한다 (Memo.ts와 동일한 패턴).
+// F1~F3/F7 등 전역 단축키는 부모의 공용 리스너(runHomeHotkey)로 위임한다 (Memo.ts와 동일한 패턴).
+// F1/F2는 Shift 여부에 따라 동작이 갈리므로(사이드바 보이기/강제 숨기기) shift도 함께 실어 보낸다.
 document.addEventListener('keydown', (ev: KeyboardEvent) => {
-    if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F4' || ev.key === 'F7') {
+    if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F7') {
         ev.preventDefault();
-        if (window.top) CIframeMsg.Send(window.top, 'home-hotkey', { key: ev.key });
+        if (window.top) CIframeMsg.Send(window.top, 'home-hotkey', { key: ev.key, shift: ev.shiftKey });
     }
 });
 
@@ -142,7 +143,7 @@ var fileList = {"<>":"ul","class":"list-group","html":[] as any[]};
 // ---- 파일 항목 종류 분류 + 종류별 (아이콘 / 클릭 동작) 테이블 ----
 // code 계열은 CUtilWeb.sMonacoExtToLang / IsMonacoSourceExt로 판별한다.
 // 특수 동작(이미지/시트/HTML 선택 다이얼로그/MD 뷰어/ORM)만 EXT_KIND에 둔다.
-type FileKind = 'folder'|'image'|'audio'|'video'|'soundlist'|'html'|'code'|'md'|'sheet'|'orm'|'file';
+type FileKind = 'folder'|'image'|'audio'|'video'|'soundlist'|'html'|'code'|'md'|'sheet'|'orm'|'pdf'|'file';
 const EXT_KIND: Record<string, FileKind> = {
     png:'image', jpg:'image', jpeg:'image', bmp:'image',
     mp3:'audio', ogg:'audio',
@@ -154,12 +155,13 @@ const EXT_KIND: Record<string, FileKind> = {
     md:'md', markdown:'md', mdown:'md', mkdn:'md', mkd:'md', mdwn:'md', mdtxt:'md', mdtext:'md',
     csv:'sheet', xlsx:'sheet', xls:'sheet',
     sqlite:'orm', db:'orm',
+    pdf:'pdf',
 };
 const FILE_ICON: Record<FileKind, string> = {
     folder:'bi-folder-fill', image:'bi-folder-image', audio:'bi-folder-music',
     video:'bi-folder-play', soundlist:'bi-flower1', html:'bi-file-earmark-code',
     code:'bi-file-code', md:'bi-file-earmark-text', sheet:'bi-file-earmark-spreadsheet',
-    orm:'bi-file-earmark-binary', file:'bi-file',
+    orm:'bi-file-earmark-binary', pdf:'bi-file-earmark-pdf', file:'bi-file',
 };
 // ".nedb"로 끝나는 폴더는 일반 폴더 탐색 대신 ORM 뷰어(ne 타입)로 연다.
 // "db" 폴더 안의 .json 파일들은 CNe가 폴더 단위(mDatabase)로 컬렉션(파일)들을 묶어 다루므로,
@@ -201,7 +203,7 @@ function addFolderTracks(fl: DirEntry) {
         for (const fl2 of data.list as Array<DirEntry>) {
             if (fl.name == fl2.name) continue;
             if (fl2.ext == "mp3" || fl2.ext == "ogg")
-                g_musicJBox.AddTrack(fl2.name, gDown + encodeUrlPath(gPath + fl.name + "/" + fl2.name));
+                g_musicJBox.Add(gDown + encodeUrlPath(gPath + fl.name + "/" + fl2.name));
         }
         g_musicJBox.Play(0);
     });
@@ -214,42 +216,66 @@ function openFolder(fl: DirEntry) {
         FolderCD(gPath + fl.name + "/");
     }
 }
+function viewportSize() {
+    return {
+        w: Math.max(window.innerWidth || 0, document.documentElement?.clientWidth || 0, 320),
+        h: Math.max(window.innerHeight || 0, document.documentElement?.clientHeight || 0, 480),
+    };
+}
+function clearContentSource() {
+    const src = CDOM.ID("SourceSrc");
+    if (src) src.innerHTML = "";
+}
+// CModal은 SetSize가 없으면 콘텐츠(다운로드 링크 한 줄)만큼만 줄어든다.
+// 모바일/숨은 iframe에서 측정되면 우표 크기가 되므로, 보여줄 때마다 뷰포트 기준으로 맞춘다.
+function fitContentModal(prefW: number, prefH: number) {
+    const { w, h } = viewportSize();
+    const pad = 16;
+    g_contentJBox.SetSize(Math.min(prefW, Math.max(w - pad, 200)), Math.min(prefH, Math.max(h - pad, 160)));
+    g_contentJBox.SetPosition(CModal.ePos.Center);
+}
+
 function openImage(fl: DirEntry) {
+    clearContentSource();
     CDOM.ID("ImageModalSrc").hidden = false;
     (CDOM.ID("ImageModalSrc") as HTMLImageElement).src = downUrl(fl);
     CDOM.ID("VideoModalSrc").hidden = true;
     CDOM.ID("FileModalSrc").hidden = true;
     fl.open = true;
     RefreshOpen();
+    const { w, h } = viewportSize();
+    fitContentModal(Math.min(900, w - 16), Math.min(h * 0.8, h - 16));
     g_contentJBox.Show();
 }
 function openAudio(fl: DirEntry) {
     if (CDOM.IDValue("soundAddType") == "1") {
-        g_musicJBox.AddTrack(fl.name, downUrl(fl));
+        g_musicJBox.Add(downUrl(fl));
         CAlert.Info(fl.name + " 추가");
     } else {
-        const names: string[] = [fl.name];
         const paths: string[] = [downUrl(fl)];
         for (const fl2 of gDirList) {
             if (fl.name == fl2.name) continue;
             if (fl2.ext == "mp3" || fl2.ext == "ogg") {
                 const fp = gDown + encodeUrlPath(gPath + fl2.name);
-                if (!paths.includes(fp)) { names.push(fl2.name); paths.push(fp); }
+                if (!paths.includes(fp)) paths.push(fp);
             }
         }
-        g_musicJBox.SetList(names, paths);
+        g_musicJBox.SetList(paths);
         g_musicJBox.Play(0);
     }
     fl.open = true;
     RefreshOpen();
 }
 function openVideo(fl: DirEntry) {
+    clearContentSource();
     CDOM.ID("ImageModalSrc").hidden = true;
     (CDOM.ID("VideoModalSrc") as HTMLVideoElement).src = downUrl(fl);
     CDOM.ID("VideoModalSrc").hidden = false;
     CDOM.ID("FileModalSrc").hidden = true;
     fl.open = true;
     RefreshOpen();
+    const { w, h } = viewportSize();
+    fitContentModal(Math.min(900, w - 16), Math.min(h * 0.8, h - 16));
     g_contentJBox.Show();
 }
 function openSoundList(fl: DirEntry) {
@@ -257,7 +283,7 @@ function openSoundList(fl: DirEntry) {
     oReq.onload = () => {
         if (oReq.status != 200) { CAlert.E("XMLHttpRequest error code" + oReq.status); return; }
         const d = oReq.response;
-        g_musicJBox.SetList(d.name || [], d.fullPath || []);
+        g_musicJBox.SetList(d.fullPath || []);
         CAlert.Info("ListUp!");
     };
     oReq.open("GET", downUrl(fl));
@@ -304,26 +330,34 @@ function openOrm(fl: DirEntry) {
     const serverUrl = remote ? g_fileWebRootUrl : '';
     const token = remote ? GetFileToken() : '';
     if (fl.file) {
-        if (fl.ext === 'json') new CORMViewer(new CAuthInfo(), "ne", gRoot + gPath, serverUrl, token).Open();
-        else new CORMViewer(new CAuthInfo(), "sqlite", gRoot + gPath + fl.name, serverUrl, token).Open();
+        if (fl.ext === 'json') { new CORMViewer(new CAuthInfo(), "ne", gRoot + gPath, serverUrl, token).Open(); return; }
+        const path = gRoot + gPath + fl.name;
+        if (tryNotifyEditorHost(path, downUrl(fl))) return;
+        new CORMViewer(new CAuthInfo(), "sqlite", path, serverUrl, token).Open();
     } else {
         new CORMViewer(new CAuthInfo(), "ne", gRoot + gPath + fl.name + "/", serverUrl, token).Open();
     }
 }
+function openPdf(fl: DirEntry) {
+    new CModalPDF(downUrl(fl)).Open();
+}
 function openGenericFile(fl: DirEntry) {
+    clearContentSource();
     CDOM.ID("ImageModalSrc").hidden = true;
     (CDOM.ID("FileModalSrc") as HTMLLinkElement).href = downUrl(fl);
     CDOM.ID("VideoModalSrc").hidden = true;
     CDOM.ID("FileModalSrc").hidden = false;
+    const { w } = viewportSize();
+    fitContentModal(Math.min(360, w - 16), 180);
     g_contentJBox.Show();
 }
 const FILE_OPEN: Record<FileKind, (fl: DirEntry) => void> = {
     folder: openFolder, image: openImage, audio: openAudio, video: openVideo,
     soundlist: openSoundList, html: openHtml, code: openCode, md: openMd,
-    sheet: openSheet, orm: openOrm, file: openGenericFile,
+    sheet: openSheet, orm: openOrm, pdf: openPdf, file: openGenericFile,
 };
 
-// 꾹 누르면(롱프레스) 클릭 동작 대신: 파일은 다운로드 모달(openGenericFile), 폴더는 사운드 Add Each(addFolderTracks).
+// Long-press: file → renameFile, folder → Music addFolderTracks. Download via openGenericFile stays for unknown-ext click.
 const LONG_PRESS_MS = 500;
 function makeLongPressHandlers(fl: DirEntry, kind: FileKind) {
     let pressTimer: number | null = null;
@@ -332,7 +366,7 @@ function makeLongPressHandlers(fl: DirEntry, kind: FileKind) {
         longPressed = false;
         pressTimer = window.setTimeout(() => {
             longPressed = true;
-            if (fl.file) openGenericFile(fl);
+            if (fl.file) renameFile(fl);
             else addFolderTracks(fl);
         }, LONG_PRESS_MS);
     };
@@ -672,13 +706,26 @@ window["ConnectFileHomeUrl"] = ConnectFileHomeUrl;
     }
 }
 
+// AI 버튼에서 넘어온 검색어 배열을 파일 서버(ai/tool/music.js exe)로 보내고,
+// 응답으로 온 절대경로들을 현재 RootPath 기준 다운로드 URL로 변환해 받는다.
+// reason: AI가 이 조건으로 골랐는지 설명하는 한국어 문장(뮤직 모달에 표시됨).
+async function AiSearchMusic(queries: string[]): Promise<{ urls: string[], reason: string }> {
+    const res: any = await CFecth.Exe(FileApiUrl("File/MusicAI"), FileParam({ RootPath, queries }), "json");
+    if (!res.ok) throw new Error(res.msg || "AI music search failed");
+    return { urls: res.urls as string[], reason: (res.reason as string) || '' };
+}
+
+// 현재 재생 곡 URL을 서버에 넘겨, DB/웹에서 가사를 찾고 영어 번역본을 받는다.
+async function LyricsEnMusic(url: string): Promise<{ lyrics: string }> {
+    const res: any = await CFecth.Exe(FileApiUrl("File/MusicLyricsEn"), FileParam({ url }), "json");
+    if (!res.ok) throw new Error(res.msg || "English lyrics lookup failed");
+    return { lyrics: (res.lyrics as string) || '' };
+}
+
 {
     const _sd = CStorage.Get("SoundList");
-    const _d = _sd ? JSON.parse(_sd) : {name:[] as string[], fullPath:[] as string[]};
-    g_musicJBox = new CModalMusic(
-        _d.name, _d.fullPath,
-        (names, paths) => CStorage.Set("SoundList", JSON.stringify({name:names,fullPath:paths}))
-    );
+    const _d = _sd ? JSON.parse(_sd) : {fullPath:[] as string[]};
+    g_musicJBox = new CModalMusic(_d.fullPath ?? [], undefined, undefined, true, AiSearchMusic, LyricsEnMusic);
 }
 
 function FolderCD(_path, _onDone?: () => void)
@@ -781,6 +828,33 @@ async function FileBtn() {
 window["FileBtn"] = FileBtn;
 window["PermissionBtn"] = FileBtn;
 
+function bindFileAdminAccordion(accId: string) {
+    const acc = document.getElementById(accId);
+    if (!acc) return;
+    const buttons = acc.querySelectorAll<HTMLButtonElement>('.accordion-button');
+    buttons.forEach((btn) => {
+        btn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const targetSel = btn.getAttribute('data-bs-target');
+            if (!targetSel) return;
+            const target = acc.querySelector(targetSel);
+            if (!target) return;
+            const opening = !target.classList.contains('show');
+            acc.querySelectorAll('.accordion-collapse').forEach((el) => el.classList.remove('show'));
+            acc.querySelectorAll('.accordion-button').forEach((el) => {
+                el.classList.add('collapsed');
+                el.setAttribute('aria-expanded', 'false');
+            });
+            if (opening) {
+                target.classList.add('show');
+                btn.classList.remove('collapsed');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        });
+    });
+}
+
 function showFileAdminModal() {
     const uid = Date.now();
 
@@ -788,8 +862,12 @@ function showFileAdminModal() {
     modal.SetHeader("File Manager");
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetCloseToHide(false);
+    {
+        const { w, h } = viewportSize();
+        modal.SetSize(Math.min(320, w - 16), Math.min(520, h - 16));
+    }
     modal.SetBody(`
-        <div class="d-flex flex-column gap-2 p-2" style="width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+        <div class="d-flex flex-column gap-2 p-2" style="width:100%;box-sizing:border-box;">
             <div class="d-flex gap-1 align-items-center">
                 <span class="small text-secondary flex-shrink-0" title="Find from current path"><i class="bi bi-folder2-open"></i> PathTo</span>
                 <button id="fadm_chat_${uid}" class="btn btn-outline-primary btn-sm flex-fill">Chat</button>
@@ -800,13 +878,13 @@ function showFileAdminModal() {
             <div class="accordion" id="fadm_acc_${uid}">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button py-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fadm_file_actions_body_${uid}" aria-expanded="false" aria-controls="fadm_file_actions_body_${uid}">
+                        <button class="accordion-button py-2 collapsed" type="button" data-bs-target="#fadm_file_actions_body_${uid}" aria-expanded="false" aria-controls="fadm_file_actions_body_${uid}">
                             File Actions
                         </button>
                     </h2>
-                    <div id="fadm_file_actions_body_${uid}" class="accordion-collapse collapse" data-bs-parent="#fadm_acc_${uid}">
+                    <div id="fadm_file_actions_body_${uid}" class="accordion-collapse collapse">
                         <div class="accordion-body d-flex flex-column gap-2 p-2">
-<button id="fadm_folder_${uid}" class="btn btn-warning btn-sm">New Folder</button>
+                            <button id="fadm_folder_${uid}" class="btn btn-warning btn-sm">New Folder</button>
                             <button id="fadm_delete_${uid}" class="btn btn-danger btn-sm">Delete</button>
                             <button id="fadm_upload_${uid}" class="btn btn-primary btn-sm">Upload</button>
                             <button id="fadm_orm_${uid}" class="btn btn-outline-success btn-sm">ORM Viewer</button>
@@ -815,11 +893,11 @@ function showFileAdminModal() {
                 </div>
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button py-2" type="button" data-bs-toggle="collapse" data-bs-target="#fadm_vcs_body_${uid}" aria-expanded="true" aria-controls="fadm_vcs_body_${uid}">
+                        <button class="accordion-button py-2" type="button" data-bs-target="#fadm_vcs_body_${uid}" aria-expanded="true" aria-controls="fadm_vcs_body_${uid}">
                             Version Control
                         </button>
                     </h2>
-                    <div id="fadm_vcs_body_${uid}" class="accordion-collapse collapse show" data-bs-parent="#fadm_acc_${uid}">
+                    <div id="fadm_vcs_body_${uid}" class="accordion-collapse collapse show">
                         <div class="accordion-body d-flex flex-column gap-2 p-2">
                             <button id="fadm_vcs_diff_${uid}" class="btn btn-outline-secondary btn-sm w-100">Diff</button>
                             <button id="fadm_vcs_update_${uid}" class="btn btn-outline-primary btn-sm w-100">Update</button>
@@ -835,7 +913,8 @@ function showFileAdminModal() {
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
-document.getElementById(`fadm_folder_${uid}`)?.addEventListener('click', () => {
+        bindFileAdminAccordion(`fadm_acc_${uid}`);
+        document.getElementById(`fadm_folder_${uid}`)?.addEventListener('click', () => {
             modal.Hide(); CreateFolder();
         });
         document.getElementById(`fadm_delete_${uid}`)?.addEventListener('click', () => {
@@ -1107,6 +1186,56 @@ function CreateFolder()
     confirm.Open();
 }
 window["CreateFolder"]=CreateFolder;
+
+/** 롱프레스 시 파일 이름 변경. 인증 필요(Delete/Mkdir과 동일). */
+function renameFile(fl: DirEntry) {
+    if (!fl?.file || !fl.name) return;
+    const confirm = new CConfirm();
+    confirm.SetBody('Rename:<br><input type="text" id="RenameFile" class="form-control form-control-sm">');
+    const doRename = async () => {
+        const newName = (CDOM.IDValue("RenameFile") || "").trim();
+        if (!newName || newName === fl.name) return;
+        if (newName.includes("/") || newName.includes("\\") || newName === "." || newName === "..") {
+            CAlert.E("Invalid name");
+            return;
+        }
+        const param: any = { data: gPath + fl.name, name: newName };
+        if (RootPath) param.RootPath = RootPath;
+        try {
+            const j = await CFecth.Exe(FileApiUrl("File/Rename"), FileParam(param), "json") as any;
+            if (j?.ok) FolderCD(gPath);
+            else {
+                const msg = j?.msg || "Rename failed";
+                if (msg === "Unauthorized") {
+                    CAlert.E("Admin login required");
+                    promptFileAuth(() => renameFile(fl));
+                } else CAlert.E(msg);
+            }
+        } catch {
+            // 403 등 non-2xx: CFecth가 body를 파싱하지 않음 → 미인증으로 보고 로그인 유도
+            CAlert.E("Admin login required");
+            promptFileAuth(() => renameFile(fl));
+        }
+    };
+    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [doRename, () => {}], ["Yes", "No"]);
+    confirm.Open();
+    setTimeout(() => {
+        const input = document.getElementById("RenameFile") as HTMLInputElement | null;
+        if (!input) return;
+        input.value = fl.name;
+        input.focus();
+        const dot = fl.name.lastIndexOf(".");
+        if (dot > 0) input.setSelectionRange(0, dot);
+        else input.select();
+        input.addEventListener("keydown", (e: KeyboardEvent) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            doRename();
+            confirm.Close();
+        });
+    }, MODAL_DOM_DELAY);
+}
+window["renameFile"] = renameFile;
 function Delete(_file)
 {
     g_fun="Delete";
@@ -1282,7 +1411,7 @@ function SoundPlayListSave()
     confirm.SetConfirm(CConfirm.eConfirm.YesNo,[
     ()=> {
         g_fun="SoundPlayListSave";
-        g_data=JSON.stringify({name:g_musicJBox.Names,fullPath:g_musicJBox.Paths});
+        g_data=JSON.stringify({fullPath:g_musicJBox.GetList()});
         g_option=CDOM.IDValue("soundListSave");
         Redirection(false);
     },

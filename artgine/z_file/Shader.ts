@@ -93,6 +93,7 @@ export class Array16{};
 
 export class CMat{
     constructor(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15);
+    constructor(_x:CVec4,_y:CVec4,_z:CVec4,_w:CVec4);
     constructor(_x,);
     constructor(_x){}
     public b;
@@ -179,6 +180,18 @@ export var sam2D=0;
 export var gl_Position : CVec4;
 export var discard=0;
 export var screenPos : CVec4;
+/**
+ * 컴퓨트 진입점의 전역 스레드 번호(WGSL 의 global_invocation_id.x).
+ * 렌더 셰이더에는 없다 - ps 없는 Build(=컴퓨트) 안에서만 값이 있다.
+ */
+export var invocationID : number;
+/**
+ * 이번 디스패치의 스레드 수. ComputeDispatch 에 넘긴 값이 그대로 들어온다.
+ *
+ * 워크그룹 단위로 도느라 넘치는 스레드는 진입점이 알아서 버리므로(자동 경계 검사)
+ * 보통은 쓸 일이 없다. 커널이 개수를 직접 알아야 할 때만 참조한다.
+ */
+export var invocationCount : number;
 
 //glsl func
 export function Build(_key,_tag : Array<{name : string, tag : string, assign : string}|string>,
@@ -235,7 +248,7 @@ export function MatMul(_a : CMat,_b : CMat) : CMat{    return new CMat(0);}
 export function Mat34ToMat(_mat : CMat43) : CMat { return new CMat(0); }
 export function MatTypeToMat(_type :number,_short : CVec4,_mat44 : CMat) : CMat { return new CMat(0); }
 export function MatMix(_a : CMat, _b : CMat, _c : number) : CMat { return new CMat(0);}
-
+export function TransposeMat4(_a : CMat): CMat { return new CMat(0); }
 
 //mat3
 export function TransposeMat3(_a : CMat3) : CMat3{    return new CMat3(0);}
@@ -384,6 +397,7 @@ export function Reflect(_normal : CVec3, _direct : CVec3) : CVec3 {return new CV
 //export function TNormalToWNormal(_a : CVec3) : CVec3{    return new CVec3(0,0,0);}
 //export function WNormalToTNormal(_a : CVec3) : CVec3{    return new CVec3(0,0,0);}
 export function Hammersley(_idx : number, _N : number) : CVec2 {return new CVec2(0,0);}
+export function GridSamplingDisk(_idx: number) : CVec3 {return new CVec3(0,0,0);}
 
 //color convert
 export function RGBAToHSVA(_a : CVec4) : CVec4 { return new CVec4(0,0,0,0);}

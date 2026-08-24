@@ -1346,7 +1346,7 @@ export class CPaint2DMerge extends CPaint
             scaBL.z = scaTR.z;
 
 			if(this.mYSort) {
-				const ySortOrigin = -0.5 * scaBR.y + 1;
+				const ySortOrigin = -0.5 * scaTR.y + 1;
 				const yVal = pMat.mF32A[13] + ySortOrigin;
 				const yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
 				pMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
@@ -1443,6 +1443,8 @@ export class CPaint2DMerge extends CPaint
 
 		this.mBound.mMin.z -= 0.5;
 		this.mBound.mMax.z += 0.5;
+
+		this.mMeshDataNode.ci.bound.Import(this.mBound);
 
 		this.mHash = CHash.HashCode(this.mHash) + "";
 	}

@@ -138,7 +138,6 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	//autoRP는 삭제하면 에러난다. 맵이 늘어나는 체크만 하지 줄어들거나 변경은 인식 못하게 만듬
 	private mAutoRPMap=new Map<string,CRPAuto>();
 	public mAutoRPUpdate=CUpdate.eType.Not;
-	public mShadowRead=new Map<number,CVec4>();
 
 	public mCameraMap=new Map<string,CCamera>();
 	public mPause=false;
@@ -156,8 +155,10 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 		if(this.mShadowView.length==0)
 		{
 			var size=CDevice.GetProperty(CDevice.eProperty.Sam2DSize);
-			for(var i=0;i<8;++i)
+			for(var i=0;i<6;++i)
 				this.mShadowView.push(new Float32Array(4*size));
+            for(var i=0;i<4;++i)
+                this.mShadowView.push(new Float32Array(size));
 		}
 			
 		return	this.mShadowView;
@@ -288,7 +289,6 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 			this.mLightCount=0;
 			this.mShadowCount=0;
             this.mShadowTexOff=0;
-			this.mShadowRead.clear();
 
 			this.mWindCount=0;
 			this.mDoubleChk.clear();

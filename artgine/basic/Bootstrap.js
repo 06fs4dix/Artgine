@@ -1,1 +1,16 @@
-export class Bootstrap{}!function(r){let a;!function(r){r.primary="primary",r.secondary="secondary",r.success="success",r.danger="danger",r.warning="warning",r.info="info",r.light="light",r.dark="dark",r.transparent="transparent"}(a=r.eColor||(r.eColor={}))}(Bootstrap||(Bootstrap={}));
+export class Bootstrap {
+}
+(function (Bootstrap) {
+    let eColor;
+    (function (eColor) {
+        eColor["primary"] = "primary";
+        eColor["secondary"] = "secondary";
+        eColor["success"] = "success";
+        eColor["danger"] = "danger";
+        eColor["warning"] = "warning";
+        eColor["info"] = "info";
+        eColor["light"] = "light";
+        eColor["dark"] = "dark";
+        eColor["transparent"] = "transparent";
+    })(eColor = Bootstrap.eColor || (Bootstrap.eColor = {}));
+})(Bootstrap || (Bootstrap = {}));

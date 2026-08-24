@@ -462,9 +462,9 @@ function Aurora(_viewDir : CVec3) : CVec4
         baseHSV.y = clamp(baseHSV.y * (1.0 + wave * 0.4), 0.0, 1.0);
         baseHSV.z = clamp(baseHSV.z * (1.2 + wave), 0.0, 1.5);
 
-        var final : CVec3 = HSVToRGB(baseHSV);
+        var auroraCol : CVec3 = HSVToRGB(baseHSV);
 
-        result = V3AddV3(result, V3MulFloat(final, (1.0 - stepTr) * Tr));
+        result = V3AddV3(result, V3MulFloat(auroraCol, (1.0 - stepTr) * Tr));
         Tr *= stepTr;
 
         if(Tr < 0.01) break;

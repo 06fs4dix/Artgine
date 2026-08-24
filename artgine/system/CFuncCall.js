@@ -1,1 +1,33 @@
-import{CObject as t}from"../basic/CObject.js";export class CFuncCall extends t{constructor(t,r){if(super(),this.mName=t,r instanceof Array)for(let t=0;t<r.length;t++)r[t]instanceof Array&&(r[t]=JSON.stringify(r[t]));this.mParameter=r}mName="";mParameter=null;CmdToString(){let t="(";for(let r of this.mParameter)"string"==typeof r&&0==r.startsWith("[")?t+=`"${r}",`:t+=r+",";return this.mParameter.length>0&&(t=t.substring(0,t.length-1)),t+=")",t}}
+import { CObject } from "../basic/CObject.js";
+export class CFuncCall extends CObject {
+    constructor(_name, _para) {
+        super();
+        this.mName = _name;
+        if (_para instanceof Array) {
+            for (let i = 0; i < _para.length; i++) {
+                if (_para[i] instanceof Array) {
+                    _para[i] = JSON.stringify(_para[i]);
+                }
+            }
+        }
+        this.mParameter = _para;
+    }
+    mName = "";
+    mParameter = null;
+    CmdToString() {
+        let str = "(";
+        for (let para of this.mParameter) {
+            if (typeof (para) == "string" && para.startsWith("[") == false) {
+                str += `"${para}",`;
+            }
+            else {
+                str += para + ",";
+            }
+        }
+        if (this.mParameter.length > 0) {
+            str = str.substring(0, str.length - 1);
+        }
+        str += ")";
+        return str;
+    }
+}

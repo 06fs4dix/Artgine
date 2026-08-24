@@ -53,7 +53,7 @@ export class CPaint3D extends CPaint
 	public mBrushCompArr=[];
 	public mTexLoad=false;
 	
-	mFMatLink=false;
+	//mFMatLink=false;
 
 	constructor();
 	constructor(_mesh : string);
@@ -335,15 +335,15 @@ export class CPaint3D extends CPaint
 		this.mUpdateFMat=true;
 		this.mBW.mRadian=0;
 
-		if(node.Size()==1)
-		{
-			let ne=node.Find(0);
-			if(ne.sum.IsUnit())
-			{
-				ne.sumSA.mData=this.GetFMat();
-				this.mFMatLink=true;
-			}
-		}
+		// if(node.Size()==1)
+		// {
+		// 	let ne=node.Find(0);
+		// 	if(ne.sum.IsUnit())
+		// 	{
+		// 		ne.sumSA.mData=this.GetFMat();
+		// 		this.mFMatLink=true;
+		// 	}
+		// }
 		// this.mBound.mMin=CMath.V3MulMatCoordi(this.mBound.mMin,this.mLMat);
 		// this.mBound.mMax=CMath.V3MulMatCoordi(this.mBound.mMax,this.mLMat);
 		this.mBound.MatCoordi(this.mLMat);
@@ -363,7 +363,7 @@ export class CPaint3D extends CPaint
 		// 	this.mFMat.mF32A[7]=this.mFMat.mF32A[13];
 		// 	this.mFMat.mF32A[11]=this.mFMat.mF32A[14];
 		// }
-		if(this.mFMatLink)	return;
+		//if(this.mFMatLink)	return;
 		
 		//const skin=this.mWeightMat.length!=0;
 
@@ -388,6 +388,11 @@ export class CPaint3D extends CPaint
 					nodemp.sum.Import(this.GetFMat());
 					
 					//CMath.MatMul(this.mLMat,this.mOwner.GetMat(),nodemp.sum);
+				}
+				else if(this.mSkinType==SDF.eSkin.Bake)
+				{
+					//베이크는 행렬이 이미 텍스처에 구워져 있어서 FMat 갱신이 필요 없다.
+					//빈 분기로 아래 체인을 막는다. updateMat 소진은 뒤에서 그대로 돈다
 				}
 				else if(mpiData.FMatAtt==false && mpiData.pst.IsUnit())
 				{
@@ -672,10 +677,13 @@ export class CPaint3DMerge extends CPaint
 	// 마지막으로 실제 정점을 굽는 데 쓰인 인스턴스 매트릭스 스냅샷(복제, 인덱스 대응).
 	// RepositionOnly에서 "이동만 바뀌었는지" 판별하는 기준선으로 쓰인다.
 	mMatListPrev : CMat[] = null;
+	// 이번 갱신이 position 만 고쳤는가(RepositionOnly 경로). true 면 Render 가 메시를 통째로
+	// 다시 올리지 않고 position 의 바뀐 구간만 올린다
+	mPosOnly = false;
 	override IsShould(_member: string, _type: CObject.eShould): boolean {
 		if(_member=="mMeshDataNode" || _member=="mReset" || _member=="mSkinMatCache" ||
 			_member=="mLocalPosCache" || _member=="mMeshListPrev" || _member=="mMeshVertexStart" ||
-			_member=="mMatListPrev")	return false;
+			_member=="mMatListPrev" || _member=="mPosOnly")	return false;
 		return super.IsShould(_member,_type);
 	}
 	// 두 메시 목록이 원소별로 완전히 같은지(개수+순서+키 전부) 비교한다.
@@ -783,6 +791,11 @@ export class CPaint3DMerge extends CPaint
 		this.mHash=""+this.mMeshDataNode.ci.vertexCount;
 		this.mMeshListPrev=this.mMeshList.slice();
 		this.SnapshotMatList();
+		// mBound가 새로 계산됐으므로 컬링용 mBW(스피어)도 다음 FMatUpdate에서 강제 재계산되게 한다.
+		// mBW.mRadian=0만으로는 부족 — FMatUpdate() 자체가 mUpdateLMat(또는 owner mat 변경)일 때만
+		// 호출되므로(CPaint.Update), UpdateLMat()으로 다음 프레임 FMatUpdate 실행을 강제한다.
+		this.mBW.mRadian=0;
+		this.UpdateLMat();
 	}
 	// this.mMatList의 현재 값을 mMatListPrev에 스냅샷으로 저장한다. 매번 new CMat()으로 새로
 	// 만들지 않고 CPoolGeo(Mat)로 재사용한다 — 기존 mMatListPrev 항목은 풀에 반납하고,
@@ -870,6 +883,44 @@ export class CPaint3DMerge extends CPaint
 		// 다음 비교를 위해 이번에 실제로 구운 매트릭스를 스냅샷으로 저장.
 		this.SnapshotMatList();
 	}
+	/**
+	 * position 만 바뀌었을 때(RepositionOnly) 그 채널의 바뀐 구간만 GPU 에 올린다.
+	 *
+	 * GetDrawMesh(modify) 는 셰이더의 mVF 전체를 다시 올린다 - position 만 고쳤는데
+	 * uv/normal/texOff/weight 까지 따라 올라간다. CPaintVoxel 이 쓰는 방식대로
+	 * (CPaintVoxel.ts:121) 바뀐 채널의 바뀐 구간만 올린다.
+	 *
+	 * @returns 올렸으면 true. false 면 호출자가 GetDrawMesh(modify) 로 통째로 올려야 한다
+	 */
+	PosUpload(_dm : CMeshDrawNode,_vf : CShader): boolean
+	{
+		let ci=this.mMeshDataNode.ci;
+		//버퍼가 아직 없거나 정점 수가 어긋나면 부분 갱신이 성립하지 않는다
+		if(_dm.vGBufEx==null || _dm.vNum!=ci.vertexCount)	return false;
+
+		//Position 이 mVF 의 몇 번째 버퍼인지(RebuildMeshDrawNode 의 _gBufOff)
+		let slot=-1;
+		for(let j=0;j<_vf.mVF.length;++j)
+		{
+			let vf=_vf.mVF[j];
+			if(vf.identifier==CVertexFormat.eIdentifier.Position && vf.identifierCount==0)
+			{	slot=j;	break;	}
+		}
+		if(slot<0)	return false;
+
+		let pb=ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+		if(pb==null || pb.bufF==null)	return false;
+		let arr=pb.bufF.mF32A as Float32Array;
+		if(arr==null)					return false;
+
+		//Position 은 정점당 3 플로트. CFloat32Mgr 는 용량을 2배씩 잡아두고 줄이지 않으므로
+		//실제 쓰는 만큼으로 잘라서 넘긴다. subarray 는 뷰라 복사가 아니다
+		let n=Math.min(ci.vertexCount*3,arr.length);
+		if(n<=0)	return true;
+
+		this.mOwner.GetFrame().Ren().RebuildMeshDrawNode(_dm,slot,0,arr.subarray(0,n));
+		return true;
+	}
 	// 메시 목록을 통째로 교체한다.
 	// - 토폴로지(메시 목록/순서)가 이전과 완전히 같으면(=매트릭스만 바뀜, 예: shake) → RepositionOnly로
 	//   position만 재계산(uv/normal/texOff/weight/weightIndex/index/SkinCalc/텍스처 매칭 전부 스킵).
@@ -887,6 +938,8 @@ export class CPaint3DMerge extends CPaint
 		this.mMatList=_matList;
 		this.mMeshListPrev=this.mMeshList.slice();
 
+		//position 만 고쳤는지 표시한다. Render 가 이걸 보고 부분 갱신으로 간다
+		this.mPosOnly=sameTopology;
 		if(sameTopology)
 		{
 			this.RepositionOnly();
@@ -931,6 +984,11 @@ export class CPaint3DMerge extends CPaint
 			this.SnapshotMatList();
 		}
 		this.mReset=true;
+		// mBound가 새로 계산됐으므로 컬링용 mBW(스피어)도 다음 FMatUpdate에서 강제 재계산되게 한다.
+		// mBW.mRadian=0만으로는 부족 — FMatUpdate() 자체가 mUpdateLMat(또는 owner mat 변경)일 때만
+		// 호출되므로(CPaint.Update), UpdateLMat()으로 다음 프레임 FMatUpdate 실행을 강제한다.
+		this.mBW.mRadian=0;
+		this.UpdateLMat();
 		// 배치는 한 번 만들면 캐시되어(mBatchMap) 다음 프레임에 Render()가 재실행되지 않고
 		// 캐시된 배치를 그대로 재사용한다(BatchPool). 그러면 GetDrawMesh(modify)가 다시는 안 불려
 		// 정점 갱신이 GPU에 반영되지 않는다. 이걸 막기 위해 배치 캐시만 무효화한다.
@@ -976,7 +1034,14 @@ export class CPaint3DMerge extends CPaint
 		// 키에 인스턴스 고유값(Key)을 포함해 다른 인스턴스와 drawMesh를 공유하지 않게 한다.
 		// (shrink 시 in-place modify로 지오메트리를 변형하므로 콘텐츠 해시 공유는 충돌을 일으킨다.)
 		// mHash는 유지 → grow 시 해시가 바뀌어 새 키로 새로 빌드, shrink 시 해시 유지로 같은 키 modify.
-		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.Key()+this.mHash,_vf,this.mMeshDataNode.ci,this.mReset);
+		//position 만 바뀐 프레임은 GetDrawMesh 로 통째로 올리지 않는다(mVF 전 채널이 따라 올라간다).
+		//대신 아래에서 그 채널의 바뀐 구간만 올린다
+		let posOnly=this.mReset && this.mPosOnly;
+		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.Key()+this.mHash,_vf,this.mMeshDataNode.ci,
+			this.mReset && posOnly==false);
+		//부분 갱신이 성립하지 않으면(버퍼 미생성/정점 수 불일치) 통째로 되돌린다
+		if(posOnly && this.PosUpload(dm,_vf)==false)
+			this.mOwner.GetFrame().Ren().BuildMeshDrawNode(dm,this.mMeshDataNode.ci,_vf);
 		this.mReset=false;
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 
@@ -1024,7 +1089,7 @@ export class CPaint3DMerge extends CPaint
 		LMat.SetV3(3,_tNode.mData.pos);
 
         // 월드 매트릭스 PMat을 곱해 FMat처럼 사용
-		let LPMat=CMath.MatMul(LMat,_PMat);
+		let LPMat:CMat;
 
         // 메시가 존재함
 		if(_tNode.mData.ci!=null)
@@ -1152,12 +1217,13 @@ export class CPaint3DMerge extends CPaint
             if(this.mCenterPos)
             {
                 let center=_tNode.mData.ci.bound.GetCenter();
-                mat.mF32A[12]=center.x*mat.mF32A[0];
-                mat.mF32A[13]=center.y*mat.mF32A[5];
-                mat.mF32A[14]=center.z*mat.mF32A[10];
+                mat.mF32A[12]=-center.x*mat.mF32A[0];
+                mat.mF32A[13]=-center.y*mat.mF32A[5];
+                mat.mF32A[14]=-center.z*mat.mF32A[10];
             }
             mat.UnitCheck();
-            LPMat=CMath.MatMul(mat,LPMat);
+            LPMat=CMath.MatMul(LMat,mat);
+            LPMat=CMath.MatMul(LPMat,_PMat);
 
             // skin mat 적용
             if(tweb.length > 0) {
@@ -1208,6 +1274,9 @@ export class CPaint3DMerge extends CPaint
 			_oCI.indexCount+=_tNode.mData.ci.indexCount;
 
 		}
+        else {
+            LPMat=CMath.MatMul(LMat,_PMat);
+        }
 		if(_tNode.mColleague!=null)
 			this.Merge(_PMat,_tMesh,_tNode.mColleague,_oCI,_bound,_skinMatList);
 		if(_tNode.mChild!=null)

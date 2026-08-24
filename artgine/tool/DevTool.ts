@@ -201,8 +201,20 @@ export async function InitDevToolScriptViewer(_github)
 
     if(json.script=="")
     {
-        let buf=await CFile.Load(CPath.WebRootArtgineUrl()+"desktop/Template/RuntimeScript.ts")
-        json.script=CUtil.ArrayToString(buf);
+        // desktop/ 경로는 서버가 보안상 HTTP로 항상 403 차단하기 때문에(CServerMain.ts),
+        // desktop/Template/RuntimeScript.ts를 직접 로드할 수 없다. 대신 항상 로드 가능한
+        // artgine/artgine.ts(엔진 전체 임포트 목록, 최신 상태 보장)를 재사용한다.
+        // artgine.ts의 import는 자기 폴더 기준 "./..." 이지만, RunTime 에디터는 프로젝트 폴더
+        // 기준 "../../../artgine/..." 좌표계를 쓰므로 접두사만 치환해서 맞춰준다.
+        // 주의: 아래 패턴/치환 문자열, 그리고 이 주석에도 "import 키워드 + 공백 + 따옴표" 조합을
+        // 그대로 적으면 안 된다 - artgine.ts는 DevTool.ts도 재귀적으로 import하는데, TSImport의
+        // 재귀 타입 로딩이 이 파일 자신의 소스도 스캔 대상으로 삼는다. import 탐지 정규식
+        // (ExtractImportPaths, CShaderInterpret.ts)은 텍스트 어디든 그 조합이 있으면 다 import
+        // 문으로 오인하므로, 자기참조로 오염되어 깨진 경로를 로드하려 든다.
+        // "./ 만으로도 충분히 구분되므로 그 키워드는 아예 패턴에 넣지 않는다.
+        let buf=await CFile.Load(CPath.WebRootArtgineUrl()+"artgine/artgine.ts")
+        let src=CUtil.ArrayToString(buf).replace(/"\.\//g,'"../../../artgine/');
+        json.script=src+"\nvar gAtl=CAtelier.Main();\nCAlert.Info(\"Excute!\");\n";
     }
     
     gScriptViewer=new CMonacoViewer(json.script,"Runtime.ts",_github);
@@ -746,7 +758,23 @@ function DevToolRender()
             if(cl.GetBound().GetType()==CBound.eType.Sphere)
                 render.MeshDrawNodeRender(shader,meshDrawSphere);
             else
+            {
+                //mWBound는 옥트리 broad-phase용 축정렬 루즈박스라 회전이 안 보인다.
+                //실제 Box-Box 충돌(OBB)이 쓰는 로컬 min/max + mBW.mMat(회전 포함)로 다시 행렬을 만들어서 그린다.
+                let lbound=cl.GetBound();
+                let lcenter=lbound.GetCenter();
+                let lsize=lbound.GetSize();
+                let localMat=new CMat();
+                localMat.xyz=lcenter;
+                localMat.mF32A[0]=lsize.x;
+                localMat.mF32A[5]=lsize.y;
+                localMat.mF32A[10]=lsize.z;
+                CMath.MatMul(localMat,cl.GetBW().mMat,wmat);
+
+                MatToMat12Fun(wmat);
+                render.SendGPU(shader,wMatSA);
                 render.MeshDrawNodeRender(shader,meshDrawBox);
+            }
         }
 
         let ltArr=_sub.FindComps(CLight);

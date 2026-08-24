@@ -1262,6 +1262,14 @@ export class CMath
 		pa_out.z = this.FloatInterpolate(_first.z, _second.z, pa_time);
 		return pa_out;
 	}
+	static V4Interpolate(_first : CVec4, _second : CVec4, pa_time : number, pa_out : CVec4 = new CVec4())
+	{
+		pa_out.x = this.FloatInterpolate(_first.x, _second.x, pa_time);
+		pa_out.y = this.FloatInterpolate(_first.y, _second.y, pa_time);
+		pa_out.z = this.FloatInterpolate(_first.z, _second.z, pa_time);
+		pa_out.w = this.FloatInterpolate(_first.w, _second.w, pa_time);
+		return pa_out;
+	}
 	
 	static QutInterpolate(pa_first:CVec4,pa_second:CVec4, pa_time:number,pa_out=new CVec4())
 	{
@@ -1359,7 +1367,37 @@ export class CMath
 		return CMath.V3Dot(new CVec3(pa_plane.x, pa_plane.y, pa_plane.z), pa_vec);
 	}
 	
-	
+	static LookAt(_eye: CVec3, _look: CVec3, _up: CVec3, _out: CMat = new CMat()): CMat
+    {
+        const x = CPoolGeo.ProductV3();
+        const y = CPoolGeo.ProductV3();
+        const z = CPoolGeo.ProductV3();
+        CMath.V3SubV3(_eye, _look, z);
+        if(CMath.V3Dot(z, z) == 0)
+            z.z = 1;
+        CMath.V3Nor(z, z);
+
+        CMath.V3Cross(_up, z, x);
+        if(CMath.V3Dot(x, x) == 0) {
+            if(CMath.Abs(_up.z) == 1)
+                z.x += 0.0001;
+            else
+                z.z += 0.0001;
+            CMath.V3Nor(z, z);
+            CMath.V3Cross(_up, z, x);
+        }
+        CMath.V3Nor(x, x);
+        CMath.V3Cross(z, x, y);
+
+        _out.mF32A[0] = x.x;  _out.mF32A[4] = y.x;  _out.mF32A[8] = z.x;
+        _out.mF32A[1] = x.y;  _out.mF32A[5] = y.y;  _out.mF32A[9] = z.y;
+        _out.mF32A[2] = x.z;  _out.mF32A[6] = y.z;  _out.mF32A[10] = z.z;
+
+        CPoolGeo.RecycleV3(x);
+        CPoolGeo.RecycleV3(y);
+        CPoolGeo.RecycleV3(z);
+        return _out;
+    }
 };
 
 

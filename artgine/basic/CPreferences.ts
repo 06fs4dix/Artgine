@@ -30,7 +30,6 @@ export class CPreferences extends CObject
     public mDebugMode=false;
 
     public mIAuto=true;
-    public mWASM=false;
     public mServer="local";
     public mGitHub=false;
     public mCanvas="";

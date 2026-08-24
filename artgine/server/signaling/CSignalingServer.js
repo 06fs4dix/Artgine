@@ -1,1 +1,133 @@
-var e=this&&this.__decorate||function(e,o,r,t){var s,m=arguments.length,n=m<3?o:null===t?t=Object.getOwnPropertyDescriptor(o,r):t;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)n=Reflect.decorate(e,o,r,t);else for(var i=e.length-1;i>=0;i--)(s=e[i])&&(n=(m<3?s(n):m>3?s(o,r,n):s(o,r))||n);return m>3&&n&&Object.defineProperty(o,r,n),n};import{CConsol as o}from"../../basic/CConsol.js";import{CEvent as r}from"../../basic/CEvent.js";import{CStream as t}from"../../basic/CStream.js";import{URLPatterns as s}from"../../network/CServerMain.js";import{CServerSocker as m}from"../../network/CServerSocket.js";a.IsWASM();export class CSGRoomUser{mUserKey="";mNick="";mWS=null;mRoomKey;Send(e){return null==this.mWS||this.mWS.readyState!==this.mWS.OPEN?(null!=this.mWS&&(this.mWS=null),!1):(this.mWS.send(e.Data()),!0)}}export class CSGRoomData{mKey;mHash;mRoomUser=new Array;mOpen=!0;RoomSend(e){let o=!0;for(let r of this.mRoomUser)0==r.Send(e)&&(o=!1);return o}}let n=class extends m{mUserMap=new Map;mRoom=new Map;mRoomCount=0;constructor(){super(),this.On(r.eType.Message,(e,r)=>{let s=new t(r.toString()),m=s.GetString();o.Log("[CSignalingServer] header : "+m),"RoomConnectAck"==m?this.RoomConnect(s,e):"RoomDisConnect"==m?this.RoomDisConnect(e):"SendUserData"==m?this.SendUserData(s):"Ping"==m?e.send(s.Data()):this.RoomBroadcasting(s,e)}),this.On(r.eType.Close,e=>{null!=e.ru&&this.RemoveRoomUser(e.ru)})}JoinRoom(e,o,r){return""}RoomHash(e,o){return e+"/"+o+"/"}RoomConnect(e,o){}RemoveRoomUser(e){}RoomDisConnect(e){let o=this.mUserMap.get(e.ru.mSuk);null!=o&&this.RemoveRoomUser(o)}RoomClose(e){}SendUserData(e){}RoomBroadcasting(e,o){}RemoveRoomDataChk(e){for(let o=e.mRoomUser.length-1;o>=0;--o)null==e.mRoomUser[o].mWS&&this.RemoveRoomUser(e.mRoomUser[o])}Destroy(){if(super.Destroy(),this.mWSS&&this.mWSS.clients)for(const e of this.mWSS.clients)try{e.close()}catch(e){console.error("Error closing client socket:",e)}this.mWSS&&this.mWSS.close(e=>{e?console.error("Error closing WebSocketServer:",e):o.Log("[CRoomServer] Destroy",o.eColor.red)}),this.mUserMap.clear(),this.mRoom.clear(),this.mRoomCount=0}};n=e([s(["/signaling"])],n);export{n as CSignalingServer};import i from"../../server_imple/signaling/CSignalingServer.js";import{CWASM as a}from"../../basic/CWASM.js";i();
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { CConsol } from "../../basic/CConsol.js";
+import { CEvent } from "../../basic/CEvent.js";
+import { CStream } from "../../basic/CStream.js";
+import { URLPatterns } from "../../network/CServerMain.js";
+import { CServerSocker } from "../../network/CServerSocket.js";
+CWASM.IsSIMD();
+export class CSGRoomUser {
+    mUserKey = "";
+    mNick = "";
+    mWS = null;
+    mRoomKey;
+    Send(_stream) {
+        if (this.mWS != null && this.mWS.readyState === this.mWS.OPEN) {
+            this.mWS.send(_stream.Data());
+        }
+        else {
+            if (this.mWS != null)
+                this.mWS = null;
+            return false;
+        }
+        return true;
+    }
+}
+export class CSGRoomData {
+    mKey;
+    mHash;
+    mRoomUser = new Array();
+    mOpen = true;
+    RoomSend(_stream) {
+        let send = true;
+        for (let su of this.mRoomUser) {
+            if (su.Send(_stream) == false) {
+                send = false;
+            }
+        }
+        return send;
+    }
+}
+let CSignalingServer = class CSignalingServer extends CServerSocker {
+    mUserMap = new Map();
+    mRoom = new Map();
+    mRoomCount = 0;
+    constructor() {
+        super();
+        this.On(CEvent.eType.Message, (ws, message) => {
+            let streamAsk = new CStream(message.toString());
+            let header = streamAsk.GetString();
+            CConsol.Log("[CSignalingServer] header : " + header);
+            if (header == "RoomConnectAck")
+                this.RoomConnect(streamAsk, ws);
+            else if (header == "RoomDisConnect")
+                this.RoomDisConnect(ws);
+            else if (header == "SendUserData")
+                this.SendUserData(streamAsk);
+            else if (header == "Ping") {
+                ws.send(streamAsk.Data());
+            }
+            else
+                this.RoomBroadcasting(streamAsk, ws);
+        });
+        this.On(CEvent.eType.Close, (ws) => {
+            if (ws.ru != null) {
+                this.RemoveRoomUser(ws.ru);
+            }
+        });
+    }
+    JoinRoom(_project, _enterCount, _roomUser) {
+        return "";
+    }
+    RoomHash(_project, _userCount) {
+        return _project + "/" + _userCount + "/";
+    }
+    RoomConnect(_streamAsk, _ws) {
+    }
+    RemoveRoomUser(_su) {
+    }
+    RoomDisConnect(_ws) {
+        let su = this.mUserMap.get(_ws.ru.mSuk);
+        if (su != null) {
+            this.RemoveRoomUser(su);
+        }
+    }
+    RoomClose(_streamAsk) {
+    }
+    SendUserData(_streamAsk) {
+    }
+    RoomBroadcasting(_streamAsk, ws) {
+    }
+    RemoveRoomDataChk(_room) {
+        for (let i = _room.mRoomUser.length - 1; i >= 0; --i) {
+            if (_room.mRoomUser[i].mWS == null) {
+                this.RemoveRoomUser(_room.mRoomUser[i]);
+            }
+        }
+    }
+    Destroy() {
+        super.Destroy();
+        if (this.mWSS && this.mWSS.clients) {
+            for (const ws of this.mWSS.clients) {
+                try {
+                    ws.close();
+                }
+                catch (e) {
+                    console.error("Error closing client socket:", e);
+                }
+            }
+        }
+        if (this.mWSS) {
+            this.mWSS.close((err) => {
+                if (err)
+                    console.error("Error closing WebSocketServer:", err);
+                else
+                    CConsol.Log("[CRoomServer] Destroy", CConsol.eColor.red);
+            });
+        }
+        this.mUserMap.clear();
+        this.mRoom.clear();
+        this.mRoomCount = 0;
+    }
+};
+CSignalingServer = __decorate([
+    URLPatterns(["/signaling"])
+], CSignalingServer);
+export { CSignalingServer };
+import CSignalingServer_imple from "../../server_imple/signaling/CSignalingServer.js";
+import { CWASM } from "../../basic/CWASM.js";
+CSignalingServer_imple();

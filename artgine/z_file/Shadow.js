@@ -1,1 +1,220 @@
-import{ligDir as a}from"./Light";import{SDF as r}from"./SDF";import{abs as e,clamp as o,CVec2 as t,CVec3 as w,fract as x,max as n,min as y,mix as i,Sam2DArrMat as h,Sam2DArrSize as d,Sam2DArrToColor as s,Sam2DArrToMat as z,Sam2DArrToV4 as v,Sam2DArrV4 as f,Sam2DToColor as C,ShadowPosToUv as S,sin as p,sqrt as P,TransposeMat3 as u,V2AddV2 as F,V2DivFloat as l,V2Dot as R,V2MulFloat as m,V2MulV2 as T,V3Abs as c,V3AddV3 as V,V3Dot as L,V3Len as U,V3MulFloat as M,V3MulMat3Normal as W,V3Nor as A,V3SubV3 as B,V3ToMat3 as g,V4MulMatCoordi as j}from"./Shader";export var shadowNearCasV0=new h(1,r.eUni.MatShadowNearCasV0);export var shadowFarCasP0=new h(1,r.eUni.MatShadowFarCasP0);export var shadowTopCasV1=new h(1,r.eUni.MatShadowTopCasV1);export var shadowBottomCasP1=new h(1,r.eUni.MatShadowBottomCasP1);export var shadowLeftCasV2=new h(1,r.eUni.MatShadowLeftCasV2);export var shadowRightCasP2=new h(1,r.eUni.MatShadowRightCasP2);export var shadowPointProj=new h(1,r.eUni.MatShadowPointProj);export var shadowOn=-1;export var shadowReadList=new f(1,r.eUni.V4ShadowReadList);export var texture16f=0;export var shadowCount=0;export var shadowWrite=new w(0,0,0);export var shadowRate=.3;export var bias=5;export var normalBias=1;export var PCF=2;export var jitter=0;function N(a,r){var e,o,w,n,y,i=(o=R(e=a,new t(127.1,311.7)),w=R(e,new t(269.5,183.3)),n=x(43758.5453*p(o)),y=x(43758.5453*p(w)),new t(n,y));return new t((i.x-.5)*r,(i.y-.5)*r)}function b(a,r,e,o,t,x,n){if(a<-.5)return new w(0,0,0);var y=z(r,o),i=y[0][3];y[0][3]=0,t.xyz=V(t.xyz,M(x,n*i));var h=j(t,y),d=j(h,z(e,o));return new w(S(d).xy,h.z)}function D(a,e,o){var x=c(a),y=1/n(x.x,n(x.y,x.z));return x=M(x,y),a=M(a,y),(a=x.x>=x.y&&x.x>=x.z?a.x>0?new w(a.z,a.y,r.eShadow.Near):new w(-a.z,a.y,r.eShadow.Far):x.y>=x.x&&x.y>=x.z?a.y>0?new w(a.x,a.z,r.eShadow.Top):new w(a.x,-a.z,r.eShadow.Bottom):a.z>0?new w(-a.x,a.y,r.eShadow.Left):new w(a.x,a.y,r.eShadow.Right)).xy=F(m(a.xy,.5),new t(.5,.5)),a.z+=o-r.eShadow.Near,a}export function CalcShadow(x,h,z){var f,C=v(shadowReadList,x),S=v(a,C.x),p=S.w>1.1?1:0,u=n(L(h,A(S.xyz)),.05),l=P(1-u*u)/u,m=normalBias*(1+o(l,0,4)),c=bias,M=bias*o(.5*l,0,2),W=new w(c,M,m);return f=p>.5?function(a,e,o,x,y){var i=a.z,h=a.w,z=B(o.xyz,y.xyz),v=U(z),f=1;if(v<=h&&v>=i){var C=(v-i)/(h-i),S=A(z),p=d(r.eTexSlot.ArrShadowWrite),P=(new t(1/p.x,1/p.y),n(PCF+1,1)),u=.01;f=0;for(var F=-.01;F<u;F+=u/(.5*P))for(var l=-.01;l<u;l+=u/(.5*P))for(var R=-.01;R<u;R+=u/(.5*P)){var m=D(V(S,new w(F,l,R)),0,a.y),T=s(r.eTexSlot.ArrShadowWrite,m);f+=0==T.w?1:C>=T.z?0:1}f/=(PCF+1)*(PCF+1)}return f}(C,0,z,0,S):function(a,x,n,h,z,v){return function(a,x,n,h,z,v,f){for(var C=r.FloatTex16>0?e(a.z)*(2/1024):0,S=z+1*v,p=z+4*v,u=z+16*v,l=d(r.eTexSlot.ArrShadowWrite),m=new t(1/l.x,1/l.y),c=h.y>-.5&&a.x>0&&a.y>0&&a.x<1&&a.y<1?1:0,V=h.z>-.5&&x.x>0&&x.y>0&&x.x<1&&x.y<1?1:0,L=h.w>-.5&&n.x>0&&n.y>0&&n.x<1&&n.y<1?1:0,U=new t(a.x-.5,a.y-.5),M=P(R(U,U)),W=c>.5?o((.5-M)/.4,0,1):0,A=new t(x.x-.5,x.y-.5),B=P(R(A,A)),g=V>.5?o((.5-B)/.2,0,1):0,j=0,b=0,D=0,O=-PCF;O<=PCF+.5;O+=1)for(var k=-PCF;k<=PCF+.5;k+=1){var q=new w(a.x+O*m.x,a.y+k*m.y,h.y),E=new w(x.x+O*m.x,x.y+k*m.y,h.z),G=new w(n.x+O*m.x,n.y+k*m.y,h.w);if(jitter>.01){var H=T(N(new t(O+f.x,k+f.y),jitter),m);q.xy=F(q.xy,H)}if(c>.5&&q.x>0&&q.y>0&&q.x<1&&q.y<1){var I=s(r.eTexSlot.ArrShadowWrite,q);j+=0==I.w||a.z+S+C>=I.z?0:1}if(V>.5&&E.x>0&&E.y>0&&E.x<1&&E.y<1){var J=s(r.eTexSlot.ArrShadowWrite,E);b+=0==J.w||x.z+p+C>=J.z?0:1}if(L>.5&&G.x>0&&G.y>0&&G.x<1&&G.y<1){var K=s(r.eTexSlot.ArrShadowWrite,G);D+=0==K.w||n.z+u+C>=K.z?0:1}}var Q=(2*PCF+1)*(2*PCF+1),X=1-j/Q,Y=1-b/Q,Z=1-D/Q;return c>.5&&V>.5?y(y(i(Y,X,W),Y),L>.5?Z:1):c>.5?X:V>.5&&L>.5?y(i(Z,Y,g),Z):V>.5?Y:L>.5?Z:1}(b(a.y,shadowNearCasV0,shadowFarCasP0,x,n,h,v.z),b(a.z,shadowTopCasV1,shadowBottomCasP1,x,n,h,v.z),b(a.w,shadowLeftCasV2,shadowRightCasP2,x,n,h,v.z),a,v.x,v.y,n)}(C,x,z,h,0,W),i(shadowRate,1,f)}export function CalcParallaxShadow(r,o,t,x,y,h,d,s){var z=v(shadowReadList,r),f=v(a,z.x);if((f.w>1.1?1:0)>.5){var S=z.w;if(f.xyz=B(f.xyz,o.xyz),U(f.xyz)>S)return shadowRate}f.xyz=A(f.xyz);var p=u(g(h,d,s));if(f.xyz=W(f.xyz,p),f.z<=0)return shadowRate;var P=i(16,4,e(L(new w(0,0,1),f.xyz)));f.z+=.2;for(var R=m(l(f.xy,f.z),y),T=l(R,P),c=t,V=1-C(x.y,c).a,M=V,j=V/P,N=0,b=0;M>0;)V<M&&(N=n(N,(M-V)*(1-b/P)*10)),b+=1,c=F(c,T),V=1-C(x.y,c).a,M-=j;return i(shadowRate,1,1-N)}
+import { ligDir } from "./Light";
+import { SDF } from "./SDF";
+import { abs, acos, clamp, CMat, CVec2, CVec3, CVec4, FloatToInt, fract, GridSamplingDisk, max, min, mix, mod, round, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, screenPos, ShadowPosToUv, sin, step, tan, TransposeMat3, TransposeMat4, V2AddV2, V2DivFloat, V2Dot, V2MulFloat, V2MulV2, V3Abs, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4Dot, V4MulMatCoordi } from "./Shader";
+export var shadowCas0VPMatWithZRow = new Sam2DArrMat(1, SDF.eUni.MatShadowCas0VPWithZRow);
+export var shadowCas1VPMatWithZRow = new Sam2DArrMat(1, SDF.eUni.MatShadowCas1VPWithZRow);
+export var shadowCas2VPMatWithZRow = new Sam2DArrMat(1, SDF.eUni.MatShadowCas2VPWithZRow);
+export var shadowCas3VPMatWithZRow = new Sam2DArrMat(1, SDF.eUni.MatShadowCas3VPWithZRow);
+export var shadowNear = new Sam2DArrMat(1, SDF.eUni.MatShadowNear);
+export var shadowFar = new Sam2DArrMat(1, SDF.eUni.MatShadowFar);
+export var shadowTop = new Sam2DArrMat(1, SDF.eUni.MatShadowTop);
+export var shadowBottom = new Sam2DArrMat(1, SDF.eUni.MatShadowBottom);
+export var shadowLeft = new Sam2DArrMat(1, SDF.eUni.MatShadowLeft);
+export var shadowRight = new Sam2DArrMat(1, SDF.eUni.MatShadowRight);
+export var shadowOn = -1.0;
+export var shadowReadList = new Sam2DArrV4(1, SDF.eUni.V4ShadowReadList);
+export var shadowInfoList = new Sam2DArrV4(1, SDF.eUni.V4ShadowInfoList);
+export var shadowCascadeDataList = new Sam2DArrV4(1, SDF.eUni.V4ShadowCascadeDataList);
+export var shadowDivideList = new Sam2DArrV4(1, SDF.eUni.V4ShadowDivideList);
+export var texture16f = 0;
+export var shadowCount = 0;
+export var shadowWrite = new CVec3(0, 0, 0);
+export var shadowRate = 0.3;
+export var bias = 4.0;
+export var normalBias = 0.6;
+export var PCF = 2.0;
+export var PCFStep = 1.0;
+export var jitter = 0.0;
+function Hash22(p) {
+    var n1 = V2Dot(p, new CVec2(127.1, 311.7));
+    var n2 = V2Dot(p, new CVec2(269.5, 183.3));
+    var h1 = fract(sin(n1) * 43758.5453);
+    var h2 = fract(sin(n2) * 43758.5453);
+    return new CVec2(h1, h2);
+}
+function randomJitter(fragCoord, _strength) {
+    var h = Hash22(fragCoord);
+    return new CVec2((h.x - 0.5) * _strength, (h.y - 0.5) * _strength);
+}
+function SampleShadowTexel(_uv, _layer, _depth) {
+    var sp0 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, new CVec3(_uv, _layer));
+    return (sp0.w == 0.0) ? 0.0 : step(_depth, sp0.z);
+}
+function ApplyPCF(_uvZ, _texZ, _texScale, _bias, _world) {
+    var f16Bias = texture16f > 0.5 ? abs(_uvZ.z) * (1.0 / 1024.0) : 0.0;
+    var depth = _uvZ.z + _bias + f16Bias;
+    if (PCF < 0.5)
+        return 1.0 - SampleShadowTexel(_uvZ.xy, _texZ, depth);
+    var sVal = 0.0;
+    var jitterVal = jitter > 0.01 ? randomJitter(new CVec2(_world.x, _world.y), jitter) : new CVec2(0.0, 0.0);
+    var step = max(1.0, round(PCFStep));
+    var offset = new CVec2(mod(screenPos.x, step), mod(screenPos.y, step));
+    var count = 0.0;
+    var x = -PCF * 0.5;
+    for (; x <= PCF * 0.5; x += step) {
+        var y = -PCF * 0.5;
+        for (; y <= PCF * 0.5; y += step) {
+            sVal += SampleShadowTexel(V2AddV2(_uvZ.xy, V2MulV2(new CVec2(x + jitterVal.x + offset.x, y + jitterVal.y + offset.y), _texScale)), _texZ, depth);
+            count += 1.0;
+        }
+    }
+    return 1.0 - sVal / count;
+}
+function ProcessCascadeLevel(_casMatOff, _shadowIndex, _world, _normal, _normalBiasTileScale) {
+    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, _normalBiasTileScale));
+    var shadowViewZRow = Sam2DArrToV4(_casMatOff, _shadowIndex * 4.0 + 3.0);
+    var shadowVPMat = TransposeMat4(new CMat(Sam2DArrToV4(_casMatOff, _shadowIndex * 4.0 + 0.0), Sam2DArrToV4(_casMatOff, _shadowIndex * 4.0 + 1.0), Sam2DArrToV4(_casMatOff, _shadowIndex * 4.0 + 2.0), new CVec4(0.0, 0.0, 0.0, 1.0)));
+    var shadowPos = V4MulMatCoordi(_world, shadowVPMat);
+    return new CVec3(ShadowPosToUv(shadowPos).xy, V4Dot(shadowViewZRow, _world));
+}
+function CalcShadowDirectional(_index, _world, _normal, _ligDir, _viewPos, _bias) {
+    var shadowInfo = Sam2DArrToV4(shadowInfoList, _index);
+    var shadowRead = Sam2DArrToV4(shadowReadList, _index);
+    var shadowCascadeData = Sam2DArrToV4(shadowCascadeDataList, _index);
+    var shadowDivide = Sam2DArrToV4(shadowDivideList, _index);
+    var linearDepth = -_viewPos.z / shadowInfo.z;
+    if (linearDepth > 1.0)
+        return 1.0;
+    var texSize = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
+    var texScale = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
+    var shadowCasMat = new CMat(0);
+    shadowCasMat[0].xyz = shadowCas0VPMatWithZRow;
+    shadowCasMat[1].xyz = shadowCas1VPMatWithZRow;
+    shadowCasMat[2].xyz = shadowCas2VPMatWithZRow;
+    shadowCasMat[3].xyz = shadowCas3VPMatWithZRow;
+    var lastCascadeIndex = shadowRead[3] > -0.5 ? 3.0 : (shadowRead[2] > -0.5 ? 2.0 : (shadowRead[1] > -0.5 ? 1.0 : 0.0));
+    var shadowSum = 0.0;
+    var weightSum = 0.0;
+    var nearDepth = 0.0;
+    for (let i = 0; i < 4; i++) {
+        if (shadowRead[i] < -0.5)
+            continue;
+        var farDepth = nearDepth + shadowDivide[i];
+        var centerDepth = (nearDepth + farDepth) * 0.5;
+        var closestEdge = linearDepth < centerDepth ? nearDepth : farDepth;
+        var margin = shadowInfo.w * closestEdge * closestEdge;
+        var csmx = nearDepth - margin * 0.5;
+        var csmy = farDepth + margin * 0.5;
+        if (csmx <= linearDepth && (linearDepth < csmy || i == FloatToInt(lastCascadeIndex))) {
+            var dist = min(linearDepth - csmx, csmy - linearDepth);
+            var ratio = clamp(dist / margin, 0.0, 1.0);
+            var shouldFadeLastCascade = (i == FloatToInt(lastCascadeIndex) && linearDepth > centerDepth) ? 1.0 : 0.0;
+            var shouldBlend = (i != FloatToInt(lastCascadeIndex) || (i == FloatToInt(lastCascadeIndex) && linearDepth < centerDepth)) ? 1.0 : 0.0;
+            var blendRatio = (shouldFadeLastCascade > 0.5 || shouldBlend > 0.5) ? ratio : 1.0;
+            var uvZ = ProcessCascadeLevel(shadowCasMat[i].xyz, _index, _world, _normal, shadowCascadeData[i]);
+            var curShadow = ApplyPCF(uvZ, shadowRead[i], texScale, _bias, _world);
+            shadowSum += curShadow * blendRatio;
+            weightSum += blendRatio;
+        }
+        nearDepth = farDepth;
+    }
+    return clamp(shadowSum + 1.0 - weightSum, 0.0, 1.0);
+}
+function CubeToUV(_cubeUVW, _texelSize, _nearTexOff) {
+    _cubeUVW = V3Nor(_cubeUVW);
+    var absDir = V3Abs(_cubeUVW);
+    var scaleToCube = 1.0 / max(absDir.x, max(absDir.y, absDir.z));
+    absDir = V3MulFloat(absDir, scaleToCube);
+    _cubeUVW = V3MulFloat(_cubeUVW, scaleToCube);
+    if (absDir.x >= absDir.y && absDir.x >= absDir.z) {
+        if (_cubeUVW.x > 0.0)
+            _cubeUVW = new CVec3(_cubeUVW.z, _cubeUVW.y, SDF.eShadow.Near);
+        else
+            _cubeUVW = new CVec3(-_cubeUVW.z, _cubeUVW.y, SDF.eShadow.Far);
+    }
+    else if (absDir.y >= absDir.x && absDir.y >= absDir.z) {
+        if (_cubeUVW.y > 0.0)
+            _cubeUVW = new CVec3(_cubeUVW.x, _cubeUVW.z, SDF.eShadow.Top);
+        else
+            _cubeUVW = new CVec3(_cubeUVW.x, -_cubeUVW.z, SDF.eShadow.Bottom);
+    }
+    else {
+        if (_cubeUVW.z > 0.0)
+            _cubeUVW = new CVec3(-_cubeUVW.x, _cubeUVW.y, SDF.eShadow.Left);
+        else
+            _cubeUVW = new CVec3(_cubeUVW.x, _cubeUVW.y, SDF.eShadow.Right);
+    }
+    _cubeUVW.xy = V2AddV2(V2MulFloat(_cubeUVW.xy, 0.5), new CVec2(0.5, 0.5));
+    _cubeUVW.z += _nearTexOff - SDF.eShadow.Near;
+    return _cubeUVW;
+}
+function CalcShadowPoint(_index, _world, _normal, _ligDir, _camPos, _info, _bias) {
+    var shadowCascadeData = Sam2DArrToV4(shadowCascadeDataList, _index);
+    var filterSize = shadowCascadeData.x * max(PCF + 1.0, 1.0);
+    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, filterSize));
+    var ligToPos = V3SubV3(_world.xyz, _ligDir.xyz);
+    var ligToPosLength = V3Len(ligToPos);
+    var sVal = 1.0;
+    if (ligToPosLength <= _info.w && ligToPosLength >= _info.z) {
+        var depth = (ligToPosLength - _info.z) / (_info.w - _info.z);
+        var texSize = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
+        var texScale = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
+        var depthBias = _bias / 1024.0;
+        var viewDistance = V3Len(V3SubV3(_world.xyz, _camPos));
+        var diskRadius = (1.0 + (viewDistance - _info.z) / (_info.w - _info.z)) / 25.0 * 20.0;
+        var samples = clamp((PCF + 1.0) * (PCF + 1.0), 1.0, 20.0);
+        sVal = 0.0;
+        var i = 0.0;
+        for (; i < samples; i++) {
+            var uvw = CubeToUV(V3AddV3(ligToPos, V3MulFloat(GridSamplingDisk(i), diskRadius)), texScale, _info.y);
+            var sp = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uvw);
+            sVal += (sp.w == 0.0) ? 1.0 : ((depth - depthBias) >= sp.z ? 0.0 : 1.0);
+        }
+        sVal /= samples;
+    }
+    return sVal;
+}
+export function CalcShadow(_index, _normal, _world, _camPos, _viewPos) {
+    var shadowInfo = Sam2DArrToV4(shadowInfoList, _index);
+    var lDir = Sam2DArrToV4(ligDir, shadowInfo.x);
+    var isPointLight = lDir.w > 1.1 ? 1.0 : 0.0;
+    var NdotL = clamp(V3Dot(_normal, V3Nor(lDir.xyz)), 0.001, 1.0);
+    var tanTheta = tan(acos(NdotL));
+    var normalScale = normalBias * min(tanTheta, 5.0);
+    _normal = V3MulFloat(_normal, normalScale);
+    var biasSlope = bias * min(tanTheta, 4.0);
+    var sVal;
+    if (isPointLight > 0.5)
+        sVal = CalcShadowPoint(_index, _world, _normal, lDir, _camPos, shadowInfo, biasSlope);
+    else
+        sVal = CalcShadowDirectional(_index, _world, _normal, lDir, _viewPos, biasSlope);
+    return mix(shadowRate, 1.0, sVal);
+}
+export function CalcParallaxShadow(_shadowIndex, _world, _uv, _texOff, _heightScale, _tan, _bi, _nor) {
+    var shadowInfo = Sam2DArrToV4(shadowInfoList, _shadowIndex);
+    var lDir = Sam2DArrToV4(ligDir, shadowInfo.x);
+    var isPointLight = lDir.w > 1.1 ? 1.0 : 0.0;
+    if (isPointLight > 0.5) {
+        var outRadius = shadowInfo.w;
+        lDir.xyz = V3SubV3(lDir.xyz, _world.xyz);
+        var dist = V3Len(lDir.xyz);
+        if (dist > outRadius)
+            return shadowRate;
+    }
+    lDir.xyz = V3Nor(lDir.xyz);
+    var TBN = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
+    lDir.xyz = V3MulMat3Normal(lDir.xyz, TBN);
+    if (lDir.z <= 0.0)
+        return shadowRate;
+    var minLayers = 4.0;
+    var maxLayers = 16.0;
+    var numLayers = mix(maxLayers, minLayers, abs(V3Dot(new CVec3(0.0, 0.0, 1.0), lDir.xyz)));
+    lDir.z += 0.2;
+    var P = V2MulFloat(V2DivFloat(lDir.xy, lDir.z), _heightScale);
+    var deltaTexCoords = V2DivFloat(P, numLayers);
+    var currentTexCoords = _uv;
+    var currentDepthMapValue = 1.0 - Sam2DToColor(_texOff.y, currentTexCoords).a;
+    var currentLayerDepth = currentDepthMapValue;
+    var layerDepth = currentDepthMapValue / numLayers;
+    var shadowMultiplier = 0.0;
+    var stepIndex = 0.0;
+    while (currentLayerDepth > 0.0) {
+        if (currentDepthMapValue < currentLayerDepth)
+            shadowMultiplier = max(shadowMultiplier, (currentLayerDepth - currentDepthMapValue) * (1.0 - stepIndex / numLayers) * 10.0);
+        stepIndex += 1.0;
+        currentTexCoords = V2AddV2(currentTexCoords, deltaTexCoords);
+        currentDepthMapValue = 1.0 - Sam2DToColor(_texOff.y, currentTexCoords).a;
+        currentLayerDepth -= layerDepth;
+    }
+    return mix(shadowRate, 1.0, 1.0 - shadowMultiplier);
+}

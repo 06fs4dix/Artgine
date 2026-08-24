@@ -220,13 +220,35 @@
   // 핸드오프 진행 중에는 이 세션의 모든 입력을 막는다(리드모드처럼). 하단 입력창뿐 아니라
   // xterm 화면 직접 입력(term.onData)·메뉴·방향키가 전부 sendRaw를 거치므로 여기서 한 번에 차단한다.
   var _handoffLock = false;
-  function sendRaw(text) { if (_handoffLock) return; if (ws && ws.readyState === 1) ws.send(text); }
+  // Control이 숨긴 터미널 iframe을 0x0 idle 풀로 옮기면 window.resize가 뛰고
+  // fit()이 2x1 등으로 줄어 PTY가 극소가 된다.
+  // antigravity: ToolConfirmation.View nil 패닉으로 프로세스 종료.
+  // grok: 프로세스는 살아 있어도 alt-screen/승인 메뉴가 깨져 턴이 멈춘 것처럼 보인다
+  //   (서버 headless도 같이 줄면 isGrokPermissionMenu가 메뉴를 못 읽어 자동승인도 멈춤).
+  var _frameVisible = true;
+  var MIN_TERM_COLS = 20;
+  var MIN_TERM_ROWS = 5;
+  function sendRaw(text) {
+    if (_handoffLock || !_frameVisible) return;
+    if (ws && ws.readyState === 1) ws.send(text);
+  }
   // grok은 ESC를 취소로 받지 않아 Ctrl+C를 대신 보낸다(다른 CLI의 ESC와 같은 결과).
   function sendEsc() { sendRaw(MODE === "grok" ? "\x03" : "\x1b"); }
   function sendResize() {
+    if (!_frameVisible) return;
+    // frame-visibility postMessage보다 resize가 먼저 올 수 있다. fit() 전에
+    // 실제 뷰포트가 극소면 로컬 xterm조차 줄이지 않는다(grok 화면이 깨져 보임).
+    if (window.innerWidth < 160 || window.innerHeight < 80) return;
     fit.fit();
+    if (term.cols < MIN_TERM_COLS || term.rows < MIN_TERM_ROWS) return;
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
   }
+  recvFromParent({
+    "frame-visibility": function (data) {
+      _frameVisible = !!(data && data.visible);
+      if (_frameVisible) sendResize();
+    }
+  });
 
   // codex/opencode scroll emulation (우리 term 사용)
   var _scrollDepth = 0;
@@ -309,7 +331,6 @@
     btn.style.cssText = "padding:5px 14px;background:#0d6efd;border:none;border-radius:4px;color:#fff;cursor:pointer;white-space:nowrap;";
     bar.appendChild(pw); bar.appendChild(msg); bar.appendChild(btn);
     document.body.appendChild(bar);
-    document.getElementById("xt").style.bottom = "46px"; fit.fit();
     function doAuth() {
       if (!pw.value) return;
       // 서버(handleAuth)는 SHA256('artgine_'+pw) 해시를 기대한다 — 날것 그대로 보내면 항상 "틀린 암호"가 된다
@@ -339,14 +360,17 @@
     var ddMenu = document.createElement("ul"); ddMenu.id = "mi-dd-menu";
 
     function showBar() {
-      bar.style.display = "flex"; document.getElementById("xt").style.bottom = "50px"; fit.fit();
+      bar.style.display = "flex";
       if (typeof _logSyncBottom === "function") _logSyncBottom();
     }
     function hideBar() {
-      bar.style.display = "none"; document.getElementById("xt").style.bottom = "0"; fit.fit();
+      bar.style.display = "none";
       if (typeof _logSyncBottom === "function") _logSyncBottom();
     }
-    function autoHeight() { inp.style.height = "0"; inp.style.height = Math.min(inp.scrollHeight, 200) + "px"; }
+    function autoHeight() {
+      inp.style.height = "0"; inp.style.height = Math.min(inp.scrollHeight, 200) + "px";
+      if (typeof _logSyncBottom === "function") _logSyncBottom();
+    }
 
     // super mode
     var _superOn = false;
@@ -406,8 +430,9 @@
       return s.slice(0, 4) + "-" + s.slice(4, 6) + "-" + s.slice(6, 8) + " " + s.slice(8, 10) + ":" + s.slice(10, 12);
     }
     function _logSyncBottom() {
-      // #xt 와 같은 bottom을 써서 입력바(멀티라인 포함) 위에 맞춤
-      logPanel.style.bottom = document.getElementById("xt").style.bottom || "50px";
+      // 터미널(#xt)은 더 이상 입력바 몫으로 공간을 미리 비워두지 않으므로(입력바가 위에 그냥 덮어씀),
+      // 로그 패널은 입력바 실제 높이(멀티라인 포함)를 직접 읽어 그 위에 맞춘다.
+      logPanel.style.bottom = (bar.style.display === "none" ? 0 : bar.offsetHeight) + "px";
     }
     // Control.ts: marked.parse(aiEscapeHtml(raw), { xhtml: false })
     function _logEnsureMarked() {
@@ -884,8 +909,11 @@
         });
     }
 
+    // Ctrl+Z 복원용: 마지막으로 실제 전송한 원본 입력(정규화 전) 텍스트.
+    var _lastSent = "";
     function sendInput() {
       if (disconnected) { disconnected = false; connect(); return; }
+      if (inp.value.trim()) _lastSent = inp.value;
       var text = normalize(inp.value);
       if (text.trim() === "/super") { _toggleSuper(); inp.value = ""; autoHeight(); inp.focus(); return; }
       var _ht = inp.value.trim().toLowerCase();
@@ -895,6 +923,9 @@
       }
       if (text) {
         if (text[0] === "/") _forceTerminalView();
+        // ESC 직후 IME 리셋 등으로 맨 앞 한 글자가 유실되는 경우를 대비해 항상 빈 엔터를 먼저 보낸다.
+        // 한 번 씹히더라도 이 빈 줄 하나만 사라질 뿐 실제 입력 내용은 보존된다.
+        sendRaw("\r");
         if (MODE === "gemini" || MODE === "antigravity") sendRaw("\x1b[200~" + text + "\x1b[201~");
         else sendRaw(text);
         if (text[0] !== "/") {
@@ -906,7 +937,7 @@
           // (gemini/antigravity는 bracketed paste로 경계를 명시하므로 즉시 \r로 충분하다.)
           var _defer = MODE === "codex" ||
             (MODE !== "gemini" && MODE !== "antigravity" && text.indexOf("\n") >= 0);
-          if (_defer) setTimeout(function () { sendRaw("\r"); }, 150);
+          if (_defer) setTimeout(function () { sendRaw("\r"); }, 300);
           else sendRaw("\r");
         }
       } else sendRaw("\r");
@@ -916,14 +947,31 @@
     var _imeResetting = false; // ESC 연타 시 포커스 이동 사이클이 겹치지 않게 하는 가드
     // ESC 후 한글 IME 입력 컨텍스트가 어긋나 다음 글자가 소실되는 증상 방지.
     // 같은 요소 blur→focus는 Chromium이 OS 입력 컨텍스트를 재생성하지 않아 효과가 없고,
-    // 실제로 다른 편집 요소(xterm의 숨겨진 textarea)로 포커스를 옮겼다 되돌려야 리셋된다
-    // (사용자가 pty를 클릭했다 입력창으로 돌아오면 복구되던 것과 동일한 원리).
+    // 실제로 다른 편집 요소로 포커스를 옮겼다 되돌려야 리셋된다(사용자가 pty를 클릭했다 입력창으로
+    // 돌아오면 복구되던 것과 동일한 원리). 이전엔 그 대상이 term(진짜 pty에 연결된 xterm)이었는데,
+    // 리셋 setTimeout이 끝나기 전(0ms 사이)에 사용자가 다음 글자를 치면 그 키가 inp가 아니라 term으로
+    // 들어가 term.onData가 그대로 pty에 raw 전송해버려 입력창에서 그 글자가 사라지는 문제가 있었다
+    // ("ESC 누르면 다음 명령이 씹힘"). 화면 밖 더미 input으로 옮기면 pty와 연결되어 있지 않아 그 사이
+    // 눌린 키가 새어나가지 않고, 리셋이 끝난 뒤 더미에 남은 값을 inp로 그대로 옮겨 유실도 막는다.
     // 키보드 ESC뿐 아니라 드롭다운 메뉴의 ESC 버튼(handleAction __ESC__)에서도 동일하게 필요하다.
+    var _imeDummy = document.createElement("input");
+    _imeDummy.type = "text";
+    _imeDummy.tabIndex = -1;
+    _imeDummy.setAttribute("aria-hidden", "true");
+    _imeDummy.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;";
+    document.body.appendChild(_imeDummy);
     function _escImeReset() {
       if (_imeResetting) return;
       _imeResetting = true;
-      term.focus();
-      setTimeout(function () { inp.focus(); _imeResetting = false; }, 0);
+      _imeDummy.value = "";
+      _imeDummy.focus();
+      setTimeout(function () {
+        var leaked = _imeDummy.value;
+        _imeDummy.value = "";
+        inp.focus();
+        if (leaked) _insertAtCursor(leaked);
+        _imeResetting = false;
+      }, 0);
     }
     inp.addEventListener("keydown", function (e) {
       var items = _acItems();
@@ -942,6 +990,11 @@
         return;
       }
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendInput(); }
+      if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === "z" || e.key === "Z") && !inp.value) {
+        e.preventDefault();
+        if (_lastSent) { inp.value = _lastSent; autoHeight(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+        return;
+      }
       if (!inp.value) { var a = { ArrowUp: "\x1b[A", ArrowDown: "\x1b[B", ArrowLeft: "\x1b[D", ArrowRight: "\x1b[C" }; if (a[e.key]) { e.preventDefault(); sendRaw(a[e.key]); } }
     });
     document.addEventListener("click", function (e) { if (!bar.contains(e.target)) _acHide(); });
@@ -949,6 +1002,14 @@
     window.addEventListener("keydown", function (e) {
       if (e.key === "F6") { e.preventDefault(); e.stopPropagation(); _toggleSuper(); showBar(); inp.focus(); }
       if (e.key === "F7") { e.preventDefault(); e.stopPropagation(); _autoSwitchedAway = false; _logToggle(); }
+      // F1~F3는 이 화면 자체 기능이 없으므로 상위(Control.ts)로 위임한다(File.ts/Memo.ts와 동일 패턴).
+      // 원격 터미널은 부모와 오리진이 달라 부모가 이 iframe에 직접 keydown 리스너를 붙일 수 없어서
+      // (cross-origin 접근 제한) postMessage로 알려주는 이 방식이 유일한 전달 수단이다. F1/F2는 Shift
+      // 여부로 동작이 갈리므로(사이드바 보이기/강제 숨기기) shift도 함께 보낸다.
+      if (e.key === "F1" || e.key === "F2" || e.key === "F3") {
+        e.preventDefault(); e.stopPropagation();
+        sendToParent("home-hotkey", { key: e.key, shift: e.shiftKey });
+      }
     }, true);
 
     _initSuper(); setInterval(function () { if (!document.hidden) _initSuper(); }, 60000);
@@ -969,14 +1030,28 @@
       e.preventDefault(); e.stopPropagation();
       sendRaw(e.deltaY < 0 ? "\x1b[5~" : "\x1b[6~");
     }, { passive: false, capture: true });
-    // codex/opencode/grok처럼 휠을 통째로 가로채지 않는 나머지 모드(claude 등)에서, 스피너/스트리밍
-    // 재출력 도중 트랙패드 미세 스크롤로 xterm의 자동 하단 추적이 멈추는 경우가 있다. 아래로 휠을
-    // 내리면(native 스크롤은 그대로 두고) 항상 강제로 맨 아래로 붙여 이 상태를 원상복구한다.
-    document.addEventListener("wheel", function (e) {
-      if (_logOpen) return;
-      if (MODE === "codex" || MODE === "opencode" || MODE === "grok") return;
-      if (e.deltaY > 0) term.scrollToBottom();
-    }, { passive: true });
+    // codex/opencode/grok처럼 휠을 통째로 가로채지 않는 나머지 모드(claude 등)에서, xterm 내장
+    // 자동 하단 추적(BufferService.isUserScrolling)이 풀리지 않고 멈추는 경우가 있다. 원인: 네이티브
+    // 스크롤(휠/터치/스크롤바 드래그 전부 공통)은 Viewport._handleScroll이 scrollTop을 행높이로 나눠
+    // Math.round()한 값으로 목표 줄을 계산하는데, WebGL 렌더러/서브픽셀 스크롤 오차로 스크롤바를 끝까지
+    // 내려도 그 반올림 결과가 ybase보다 1 작게 나오면 isUserScrolling이 false로 안 풀려 그대로 정지한다.
+    // (드롭다운 "Scroll to bottom"의 term.scrollToBottom()은 반올림 없이 ybase-ydisp를 직접 계산해서
+    // 항상 풀리므로 수동으로 그걸 누르면 해결되던 것과 동일한 현상.) 아래는 휠 이벤트 하나에만 반응하던
+    // 기존 방식(스크롤 위치와 무관하게 아래로 휠만 굴리면 무조건 맨 아래로 점프해 히스토리 탐색을 방해함)
+    // 대신, 휠/터치/스크롤바 드래그가 전부 거치는 .xterm-viewport 자체의 네이티브 scroll 이벤트를 보고
+    // "실제로 맨 아래 근처(셀 1개 높이 이내)까지 도달했을 때만" scrollToBottom()으로 오차 없이 스냅한다.
+    // scrollToBottom()은 이미 맨 아래면 조기 반환하므로 반복 호출에 의한 루프/튐은 없다.
+    var _xtViewportEl = term.element.querySelector(".xterm-viewport");
+    if (_xtViewportEl) {
+      _xtViewportEl.addEventListener("scroll", function () {
+        if (_logOpen) return;
+        if (MODE === "codex" || MODE === "opencode" || MODE === "grok") return;
+        var dims = term._core && term._core._renderService && term._core._renderService.dimensions;
+        var rowH = (dims && dims.css && dims.css.cell && dims.css.cell.height) || 16;
+        var maxScrollTop = _xtViewportEl.scrollHeight - _xtViewportEl.clientHeight;
+        if (maxScrollTop - _xtViewportEl.scrollTop <= rowH) term.scrollToBottom();
+      }, { passive: true });
+    }
 
     // 모바일 터치 드래그는 wheel 이벤트를 발생시키지 않아 위 wheel 가로채기가 무력화된다.
     // codex/opencode/grok은 스크롤백이 없는 alt-screen 앱이라 xterm 내장 터치 스크롤(handleTouchStart/Move,

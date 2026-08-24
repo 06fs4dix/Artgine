@@ -1,1 +1,357 @@
-import{CUpdate as t}from"../basic/Basic.js";import{CAlert as s}from"../basic/CAlert.js";import{CObject as m}from"../basic/CObject.js";import{CMath as i}from"../geometry/CMath.js";import{CPoolGeo as e}from"../geometry/CPoolGeo.js";import{CVec3 as o}from"../geometry/CVec3.js";import{CInput as h}from"../system/CInput.js";export class CCamCon extends m{constructor(t){super(),this.mInput=t,this.mCamera=null}mCamera;mInput;mlX=-1;mlY=-1;mBfpos=null;mBspos=null;mMovX=0;mMovY=0;mMovLock=0;mPosSensitivity=1;mRotSensitivity=1;mZoomSensitivity=1;mLock=!1;mRotKey=h.eKey.LButton;mRotXLock=!1;mRotYLock=!1;mPosKey=h.eKey.RButton;mKeyboard=!0;mPause=!1;mRotX=0;mRotY=0;mPosX=0;mPosY=0;mZoom=0;mUp=0;mRotXCur=0;mRotYCur=0;mReset=!1;IsShould(t,s){return-1==["mCamera","mInput","mlX","mlY","mBfpos","mBspos","mMovX","mMovY","mMoveLock","mRotX","mRotY","mPosX","mPosY","mZoom","mUp","mReset"].indexOf(t)&&super.IsShould(t,s)}SetRotKey(t){this.mRotKey=t}SetPosKey(t){this.mPosKey=t}SetRotXLock(t){this.mRotXLock=t}SetRotYLock(t){this.mRotYLock=t}SetKeyboard(t){this.mKeyboard=t}SetPosSensitivity(t){this.mPosSensitivity=t}SetRotSensitivity(t){this.mRotSensitivity=t}SetZoomSensitivity(t){this.mZoomSensitivity=t}SetPause(t){this.mPause=t}InitCamera(t){null==this.mCamera&&(this.mCamera=t)}SetInput(t){this.mInput=t}Update(t){if(null==this.mCamera||null==this.mInput)return;if(this.mPause)return;var m=this.mInput.Mouse();const e=Math.min(Math.max(t.DeltaTime(),1/240),.1),a=600*e;if(this.mRotX=0,this.mRotY=0,this.mPosX=0,this.mPosY=0,this.mUp=0,this.mZoom=0,this.mReset=!1,this.mMovX=0,this.mMovY=0,0==this.mLock&&null==this.mInput.GetUI()){if(this.mInput.KeyDown(this.mRotKey)||this.mInput.KeyDown(this.mPosKey)){if(-1!=this.mlX){var r=this.mlX-m.x,n=this.mlY-m.y;0==r&&0==n||(this.mMovLock+=1),this.mMovLock>4&&(this.mMovX=this.mlX-m.x,this.mMovY=this.mlY-m.y)}this.mlX=m.x,this.mlY=m.y}else this.mlX=-1,this.mlY=-1,this.mMovLock=0;let t=this.mInput.MouseVec();if(2==t.length){let s=new o(t[0].x,t[0].y),m=new o(t[1].x,t[1].y);if(null!=this.mBfpos){let t=i.V3Len(i.V3SubV3(s,m)),e=i.V3Len(i.V3SubV3(this.mBfpos,this.mBspos));this.mZoom=t-e,this.mReset=!0}this.mBfpos=s,this.mBspos=m,this.mlX=-1,this.mlY=-1}else if(null!=this.mBfpos&&(this.mBfpos=null,this.mBspos=null),this.mInput.KeyDown(this.mRotKey)?(0==this.mRotXLock&&(this.mRotX=this.mMovY),0==this.mRotYLock&&(this.mRotY=this.mMovX),this.mReset=!0):this.mInput.KeyDown(this.mPosKey)&&(this.mPosX=-this.mMovY,this.mPosY=this.mMovX,this.mReset=!0),this.mInput.KeyUp(h.eKey.Wheel)){var p=this.mInput.Wheel();p>50?p=50:p<-50&&(p=-50),this.mZoom=-p,this.mReset=!0}this.mKeyboard&&(this.mInput.KeyDown(h.eKey.W)&&(this.mPosX-=a,this.mReset=!0),this.mInput.KeyDown(h.eKey.S)&&(this.mPosX+=a,this.mReset=!0),this.mInput.KeyDown(h.eKey.A)&&(this.mPosY-=a,this.mReset=!0),this.mInput.KeyDown(h.eKey.D)&&(this.mPosY+=a,this.mReset=!0),this.mInput.KeyDown(h.eKey.Q)&&(this.mZoom=a,this.mReset=!0),this.mInput.KeyDown(h.eKey.E)&&(this.mZoom=-a,this.mReset=!0),this.mInput.KeyDown(h.eKey.Z)&&(this.mUp=-a,this.mReset=!0),this.mInput.KeyDown(h.eKey.X)&&(this.mUp=a,this.mReset=!0))}else this.mlX=-1,this.mlY=-1,null!=this.mBfpos&&(s.Info("this.mBfpos!=null"),this.mBfpos=null,this.mBspos=null);{const t=.05,s=Math.pow(.5,e/t);0!==this.mRotX?this.mRotXCur=this.mRotX:(this.mRotXCur*=s,this.mRotX=this.mRotXCur),0!==this.mRotY?this.mRotYCur=this.mRotY:(this.mRotYCur*=s,this.mRotY=this.mRotYCur),(Math.abs(this.mRotXCur)>.001||Math.abs(this.mRotYCur)>.001)&&(this.mReset=!0)}}}class a extends CCamCon{InitCamera(t){super.InitCamera(t)}}export class CCamCon3DFirstPerson extends a{Update(t){super.Update(t),0!=this.mReset&&(this.mCamera.FrontMove(this.mPosX*this.mPosSensitivity),this.mCamera.CrossMove(-this.mPosY*this.mPosSensitivity),this.mCamera.XAxisRotation(.005*this.mRotX*this.mRotSensitivity),this.mCamera.YAxisRotation(.005*this.mRotY*this.mRotSensitivity),this.mCamera.ZAxisZoom(this.mZoom*this.mZoomSensitivity),this.mCamera.UpMove(this.mUp*this.mPosSensitivity))}}export class CCamCon3DThirdPerson extends a{mPos;mSZoom=1e3;mReset3D=!0;SetPos(t){this.mPos?(0==t.Equals(this.mPos)&&(this.mReset3D=!0),this.mPos.Import(t)):(this.mPos=t.Export(),this.mSZoom=i.V3Len(i.V3SubV3(this.mPos,this.mCamera.GetEye())))}SetZoom(t){this.mSZoom=t}Update(t){if(super.Update(t),0==this.mReset&&0==this.mReset3D)return;this.mReset3D=!1,this.mPos||(this.mPos=this.mCamera.GetEye().Export());let s=.005*this.mRotY*this.mRotSensitivity,m=.005*this.mRotX*this.mRotSensitivity;0!=this.mZoom&&(this.mSZoom=this.mSZoom-this.mZoom*this.mZoomSensitivity),this.mCamera.CharacterByRotation(this.mPos,m,s,this.mSZoom)}}class r extends CCamCon{InitCamera(t){0==t.mOrthographic?s.E("not orthographic cam!"):super.InitCamera(t)}AddZoom(s){0!=s&&(this.mCamera.mZoom*=1+s/1e3,this.mCamera.mUpdateMat=t.eType.Updated)}}export class CCamCon2DFreeMove extends r{Update(t){if(super.Update(t),0==this.mReset)return;this.AddZoom(-this.mZoom*this.mZoomSensitivity);let s=this.mCamera.mWidth,m=this.mCamera.mHeight;0==s&&(s=this.mCamera.mPF.mWidth),0==m&&(m=this.mCamera.mPF.mHeight);let e=i.Max(s,m)/1e3*this.mPosSensitivity*this.mCamera.mZoom;this.mCamera.CrossMove(-this.mPosY*e),this.mCamera.UpMove(-this.mPosX*e),this.mCamera.ResetOrthographic()}}export class CCamCon2DFollow extends r{mPos;m_offset=new o;m_smoothSpeed=.125;m_tempVec3=new o;constructor(t){super(t)}SetPos(t){this.mPos=t}IsShould(t,s){return"m_tempVec3"!=t&&super.IsShould(t,s)}Update(t){super.Update(t),this.AddZoom(-this.mZoom*this.mZoomSensitivity),this.mPos||(this.mPos=this.mCamera.GetEye().Export());let s=this.m_tempVec3;i.V3AddV3(this.mPos,this.m_offset,s);let m=e.ProductV3();i.V3Interpolate(this.mCamera.GetEye(),s,this.m_smoothSpeed,m),m.z=this.mCamera.GetEye().z;let h=this.m_tempVec3;i.V3AddV3(m,o.Vec3(0,0,-1),h),this.mCamera.Init(m,h),e.RecycleV3(m),this.mCamera.ResetOrthographic()}}
+import { CUpdate } from "../basic/Basic.js";
+import { CAlert } from "../basic/CAlert.js";
+import { CObject } from "../basic/CObject.js";
+import { CMath } from "../geometry/CMath.js";
+import { CPoolGeo } from "../geometry/CPoolGeo.js";
+import { CVec3 } from "../geometry/CVec3.js";
+import { CInput } from "../system/CInput.js";
+export class CCamCon extends CObject {
+    constructor(_input) {
+        super();
+        this.mInput = _input;
+        this.mCamera = null;
+    }
+    mCamera;
+    mInput;
+    mlX = -1;
+    mlY = -1;
+    mBfpos = null;
+    mBspos = null;
+    mMovX = 0;
+    mMovY = 0;
+    mMovLock = 0;
+    mPosSensitivity = 1;
+    mRotSensitivity = 1;
+    mZoomSensitivity = 1;
+    mLock = false;
+    mRotKey = CInput.eKey.LButton;
+    mRotXLock = false;
+    mRotYLock = false;
+    mPosKey = CInput.eKey.RButton;
+    mKeyboard = true;
+    mPause = false;
+    mRotX = 0;
+    mRotY = 0;
+    mPosX = 0;
+    mPosY = 0;
+    mZoom = 0;
+    mUp = 0;
+    mRotXCur = 0;
+    mRotYCur = 0;
+    mReset = false;
+    IsShould(_member, _type) {
+        let hide = [
+            "mCamera", "mInput", "mlX", "mlY", "mBfpos", "mBspos", "mMovX", "mMovY",
+            "mMoveLock", "mRotX", "mRotY", "mPosX", "mPosY", "mZoom",
+            "mUp", "mReset"
+        ];
+        if (hide.indexOf(_member) != -1) {
+            return false;
+        }
+        return super.IsShould(_member, _type);
+    }
+    SetRotKey(_key) {
+        this.mRotKey = _key;
+    }
+    SetPosKey(_key) {
+        this.mPosKey = _key;
+    }
+    SetRotXLock(_enable) { this.mRotXLock = _enable; }
+    SetRotYLock(_enable) { this.mRotYLock = _enable; }
+    SetKeyboard(_enable) {
+        this.mKeyboard = _enable;
+    }
+    SetPosSensitivity(_sensitivity) {
+        this.mPosSensitivity = _sensitivity;
+    }
+    SetRotSensitivity(_sensitivity) {
+        this.mRotSensitivity = _sensitivity;
+    }
+    SetZoomSensitivity(_sensitivity) {
+        this.mZoomSensitivity = _sensitivity;
+    }
+    SetPause(_pause) {
+        this.mPause = _pause;
+    }
+    InitCamera(_cam) {
+        if (this.mCamera == null)
+            this.mCamera = _cam;
+    }
+    SetInput(_input) {
+        this.mInput = _input;
+    }
+    Update(_update) {
+        if (this.mCamera == null || this.mInput == null)
+            return;
+        if (this.mPause)
+            return;
+        var mosVec = this.mInput.Mouse();
+        const dt = Math.min(Math.max(_update.DeltaTime(), 1 / 240), 1 / 10);
+        const move = 600 * dt;
+        this.mRotX = 0;
+        this.mRotY = 0;
+        this.mPosX = 0;
+        this.mPosY = 0;
+        this.mUp = 0;
+        this.mZoom = 0;
+        this.mReset = false;
+        this.mMovX = 0;
+        this.mMovY = 0;
+        if (this.mLock == false && this.mInput.GetUI() == null) {
+            if (this.mInput.KeyDown(this.mRotKey) || this.mInput.KeyDown(this.mPosKey)) {
+                if (this.mlX != -1) {
+                    var dumX = this.mlX - mosVec.x;
+                    var dumY = this.mlY - mosVec.y;
+                    if (dumX != 0 || dumY != 0)
+                        this.mMovLock += 1;
+                    if (this.mMovLock > 4) {
+                        this.mMovX = this.mlX - mosVec.x;
+                        this.mMovY = this.mlY - mosVec.y;
+                    }
+                }
+                this.mlX = mosVec.x;
+                this.mlY = mosVec.y;
+            }
+            else {
+                this.mlX = -1;
+                this.mlY = -1;
+                this.mMovLock = 0;
+            }
+            let mVec = this.mInput.MouseVec();
+            if (mVec.length == 2) {
+                let fpos = new CVec3(mVec[0].x, mVec[0].y);
+                let spos = new CVec3(mVec[1].x, mVec[1].y);
+                if (this.mBfpos != null) {
+                    let len = CMath.V3Len(CMath.V3SubV3(fpos, spos));
+                    let bLen = CMath.V3Len(CMath.V3SubV3(this.mBfpos, this.mBspos));
+                    this.mZoom = len - bLen;
+                    this.mReset = true;
+                }
+                this.mBfpos = fpos;
+                this.mBspos = spos;
+                this.mlX = -1;
+                this.mlY = -1;
+            }
+            else {
+                if (this.mBfpos != null) {
+                    this.mBfpos = null;
+                    this.mBspos = null;
+                }
+                if (this.mInput.KeyDown(this.mRotKey)) {
+                    if (this.mRotXLock == false)
+                        this.mRotX = this.mMovY;
+                    if (this.mRotYLock == false)
+                        this.mRotY = this.mMovX;
+                    this.mReset = true;
+                }
+                else if (this.mInput.KeyDown(this.mPosKey)) {
+                    this.mPosX = -this.mMovY;
+                    this.mPosY = this.mMovX;
+                    this.mReset = true;
+                }
+                if (this.mInput.KeyUp(CInput.eKey.Wheel)) {
+                    var val = this.mInput.Wheel();
+                    if (val > 50)
+                        val = 50;
+                    else if (val < -50)
+                        val = -50;
+                    this.mZoom = -val;
+                    this.mReset = true;
+                }
+            }
+            if (this.mKeyboard) {
+                if (this.mInput.KeyDown(CInput.eKey.W)) {
+                    if (this instanceof CCamCon2D) {
+                        this.mPosX -= move;
+                    }
+                    else {
+                        this.mPosX -= move;
+                    }
+                    this.mReset = true;
+                }
+                if (this.mInput.KeyDown(CInput.eKey.S)) {
+                    if (this instanceof CCamCon2D) {
+                        this.mPosX += move;
+                    }
+                    else {
+                        this.mPosX += move;
+                    }
+                    this.mReset = true;
+                }
+                if (this.mInput.KeyDown(CInput.eKey.A)) {
+                    this.mPosY -= move;
+                    this.mReset = true;
+                }
+                if (this.mInput.KeyDown(CInput.eKey.D)) {
+                    this.mPosY += move;
+                    this.mReset = true;
+                }
+                if (this.mInput.KeyDown(CInput.eKey.Q)) {
+                    this.mZoom = move;
+                    this.mReset = true;
+                }
+                if (this.mInput.KeyDown(CInput.eKey.E)) {
+                    this.mZoom = -move;
+                    this.mReset = true;
+                }
+                if (this.mInput.KeyDown(CInput.eKey.Z)) {
+                    this.mUp = -move;
+                    this.mReset = true;
+                }
+                if (this.mInput.KeyDown(CInput.eKey.X)) {
+                    this.mUp = move;
+                    this.mReset = true;
+                }
+            }
+        }
+        else {
+            this.mlX = -1;
+            this.mlY = -1;
+            if (this.mBfpos != null) {
+                CAlert.Info("this.mBfpos!=null");
+                this.mBfpos = null;
+                this.mBspos = null;
+            }
+        }
+        {
+            const halfLife = 0.05;
+            const t = Math.pow(0.5, dt / halfLife);
+            if (this.mRotX !== 0) {
+                this.mRotXCur = this.mRotX;
+            }
+            else {
+                this.mRotXCur *= t;
+                this.mRotX = this.mRotXCur;
+            }
+            if (this.mRotY !== 0) {
+                this.mRotYCur = this.mRotY;
+            }
+            else {
+                this.mRotYCur *= t;
+                this.mRotY = this.mRotYCur;
+            }
+            if (Math.abs(this.mRotXCur) > 0.001 || Math.abs(this.mRotYCur) > 0.001) {
+                this.mReset = true;
+            }
+        }
+    }
+}
+class CCamCon3D extends CCamCon {
+    InitCamera(_cam) {
+        super.InitCamera(_cam);
+    }
+}
+export class CCamCon3DFirstPerson extends CCamCon3D {
+    Update(_update) {
+        super.Update(_update);
+        if (this.mReset == false)
+            return;
+        this.mCamera.FrontMove(this.mPosX * this.mPosSensitivity);
+        this.mCamera.CrossMove(-this.mPosY * this.mPosSensitivity);
+        this.mCamera.XAxisRotation(this.mRotX * 0.005 * this.mRotSensitivity);
+        this.mCamera.YAxisRotation(this.mRotY * 0.005 * this.mRotSensitivity);
+        this.mCamera.ZAxisZoom(this.mZoom * this.mZoomSensitivity);
+        this.mCamera.UpMove(this.mUp * this.mPosSensitivity);
+    }
+}
+export class CCamCon3DThirdPerson extends CCamCon3D {
+    mPos;
+    mSZoom = 1000;
+    mReset3D = true;
+    SetPos(_pos) {
+        if (!this.mPos) {
+            this.mPos = _pos.Export();
+            this.mSZoom = CMath.V3Len(CMath.V3SubV3(this.mPos, this.mCamera.GetEye()));
+        }
+        else {
+            if (_pos.Equals(this.mPos) == false)
+                this.mReset3D = true;
+            this.mPos.Import(_pos);
+        }
+    }
+    SetZoom(_zoom) {
+        this.mSZoom = _zoom;
+    }
+    Update(_update) {
+        super.Update(_update);
+        if (this.mReset == false && this.mReset3D == false)
+            return;
+        this.mReset3D = false;
+        if (!this.mPos)
+            this.mPos = this.mCamera.GetEye().Export();
+        const MOUSE_SCALE = 0.005;
+        let rotX = this.mRotY * MOUSE_SCALE * this.mRotSensitivity;
+        let rotY = this.mRotX * MOUSE_SCALE * this.mRotSensitivity;
+        if (this.mZoom != 0)
+            this.mSZoom = this.mSZoom - this.mZoom * this.mZoomSensitivity;
+        this.mCamera.CharacterByRotation(this.mPos, rotY, rotX, this.mSZoom);
+    }
+}
+class CCamCon2D extends CCamCon {
+    InitCamera(_cam) {
+        if (_cam.mOrthographic == false) {
+            CAlert.E("not orthographic cam!");
+        }
+        else
+            super.InitCamera(_cam);
+    }
+    AddZoom(_val) {
+        if (_val == 0)
+            return;
+        this.mCamera.mZoom *= 1 + _val / 1000;
+        this.mCamera.mUpdateMat = CUpdate.eType.Updated;
+    }
+}
+export class CCamCon2DFreeMove extends CCamCon2D {
+    Update(_update) {
+        super.Update(_update);
+        if (this.mReset == false)
+            return;
+        this.AddZoom(-this.mZoom * this.mZoomSensitivity);
+        let width = this.mCamera.mWidth;
+        let height = this.mCamera.mHeight;
+        if (width == 0) {
+            width = this.mCamera.mPF.mWidth;
+        }
+        if (height == 0) {
+            height = this.mCamera.mPF.mHeight;
+        }
+        let multiplier = CMath.Max(width, height) / 1000 * this.mPosSensitivity * this.mCamera.mZoom;
+        this.mCamera.CrossMove(-this.mPosY * multiplier);
+        this.mCamera.UpMove(-this.mPosX * multiplier);
+        this.mCamera.ResetOrthographic();
+    }
+}
+export class CCamCon2DFollow extends CCamCon2D {
+    mPos;
+    m_offset = new CVec3();
+    m_smoothSpeed = 0.125;
+    m_tempVec3 = new CVec3();
+    constructor(_input) {
+        super(_input);
+    }
+    SetPos(_pos) {
+        this.mPos = _pos;
+    }
+    IsShould(_member, _type) {
+        if (_member == "m_tempVec3")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    Update(_update) {
+        super.Update(_update);
+        this.AddZoom(-this.mZoom * this.mZoomSensitivity);
+        if (!this.mPos)
+            this.mPos = this.mCamera.GetEye().Export();
+        let destination = this.m_tempVec3;
+        CMath.V3AddV3(this.mPos, this.m_offset, destination);
+        let smoothedPos = CPoolGeo.ProductV3();
+        CMath.V3Interpolate(this.mCamera.GetEye(), destination, this.m_smoothSpeed, smoothedPos);
+        smoothedPos.z = this.mCamera.GetEye().z;
+        let look = this.m_tempVec3;
+        CMath.V3AddV3(smoothedPos, CVec3.Vec3(0, 0, -1), look);
+        this.mCamera.Init(smoothedPos, look);
+        CPoolGeo.RecycleV3(smoothedPos);
+        this.mCamera.ResetOrthographic();
+    }
+}

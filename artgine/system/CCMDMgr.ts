@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { promisify } from 'util';
+import { CPath } from '../basic/CPath.js';
 const execAsync = promisify(exec);
 export class CCMDMgr {
     // VSCode 설치 여부 확인 (code 명령어가 PATH에 있는지)
@@ -150,6 +151,36 @@ export class CCMDMgr {
     };
 
     /** npm 스펙(`name`, `name@version`, `@scope/name@ver`)에서 패키지명만 추출 */
+    /**
+     * 패키지가 이미 설치돼 있으면 그 버전을, 아니면 null을 돌려준다(버전 필드가 없으면 빈 문자열).
+     *
+     * npm install은 "없을 때의 폴백"이어야 한다. 이 검사가 없으면 NPMInstall이 호출될 때마다 실제로
+     * npm을 돌려서(이미 최신이어도) 호출당 수 초가 걸리고 stdout에 npm 출력이 쏟아진다 - CSQLite처럼
+     * 드라이버를 지연 로드하는 경로는 ai/tool/*.js가 실행될 때마다 그 비용을 물었고, 그 npm 출력이
+     * 도구의 JSON 출력 앞에 섞여 파싱을 깨뜨렸다.
+     *
+     * 기준은 오직 워킹 폴더(CPath.WorkingPath())다. node_modules와 db 폴더는 워킹 폴더에 생기는 것이
+     * 이 프로젝트의 불변식이므로, 설치 여부도 거기서만 판정하고 설치도 거기서만 한다(NPMInstall 참조).
+     *
+     * 아티젠 폴더(CPath.ArtgineRootPath())를 기준으로 삼으면 안 된다 - 워킹 폴더와 아티젠 폴더는
+     * 서로 다른 위치일 수 있어서(아티젠을 서브모듈로 따로 두는 구성), 아티젠 쪽 node_modules를 보고
+     * "설치됐다"고 판정하면 정작 워킹 폴더에는 없는 패키지를 설치하지 않고 넘어간다. 같은 이유로
+     * 이 파일의 모듈 위치(import.meta.url)도 기준이 될 수 없다 - 그건 곧 아티젠 폴더다.
+     *
+     * 못 찾으면 null(미설치)로 보고 설치를 진행한다 - 판정이 틀려도 최악의 경우 이 검사가 없던 때의
+     * 동작(매번 npm install)으로 되돌아갈 뿐이다.
+     */
+    private static GetInstalledNPMVersion(_name: string): string | null {
+        const pkg = path.join(CPath.WorkingPath(), 'node_modules', _name, 'package.json');
+        try {
+            if (fs.existsSync(pkg)) {
+                const v = JSON.parse(fs.readFileSync(pkg, 'utf8'))?.version;
+                return typeof v === 'string' ? v : '';
+            }
+        } catch { /* 손상된 package.json은 미설치로 취급해 재설치하게 둔다 */ }
+        return null;
+    }
+
     private static GetNPMPackageName(_spec: string): string {
         const s = _spec.trim();
         if (s.startsWith("@")) {
@@ -268,6 +299,7 @@ export class CCMDMgr {
         const expanded = CCMDMgr.ExpandNPMPackages(_packages);
         const installList: string[] = [];
         const skipped: string[] = [];
+        let alreadyCount = 0;   // 이미 설치돼 있어 건너뛴 개수(아래 "조용한 no-op" 판정용)
 
         for (const spec of expanded) {
             const name = CCMDMgr.GetNPMPackageName(spec);
@@ -278,6 +310,16 @@ export class CCMDMgr {
             }
 
             const pinned = CCMDMgr.sNPMPinnedVersion[name];
+            // 이미 있으면 npm을 부르지 않는다. 핀이 걸린 패키지는 그 버전과 정확히 같을 때만 통과시키고
+            // (어긋나 있으면 핀 버전으로 맞춰야 하므로 설치 목록에 넣는다), 핀이 없는 패키지는 설치돼
+            // 있기만 하면 버전을 따지지 않는다 - 매번 최신으로 올리려 들면 그게 곧 "호출마다 npm install"로
+            // 되돌아가는 길이다. 특정 패키지를 항상 최신으로 유지해야 하면 sNPMPinnedVersion에 등록한다.
+            const installed = CCMDMgr.GetInstalledNPMVersion(name);
+            if (installed !== null && (pinned == null || installed === pinned)) {
+                alreadyCount++;
+                continue;
+            }
+
             if (pinned != null) {
                 const pinnedSpec = `${name}@${pinned}`;
                 if (pinnedSpec !== spec) {
@@ -293,7 +335,11 @@ export class CCMDMgr {
             console.log(`[NPMInstall] skip (not for ${platform}): ${skipped.join(", ")}`);
         }
         if (installList.length === 0) {
-            console.log("[NPMInstall] nothing to install");
+            // 이미 다 깔려 있던 경우(alreadyCount>0)는 아무것도 찍지 않는다 - 이 함수의 출력은
+            // ai/tool/*.js의 stdout에도 그대로 섞여 나가서, 한 줄이라도 찍으면 그 도구의 JSON 출력 앞에
+            // 붙어 파싱을 깨뜨린다(그게 이 검사를 넣은 이유 그 자체다). 플랫폼 제외로 비었을 때는 위
+            // skip 줄이 이미 이유를 설명했으므로 역시 덧붙이지 않는다.
+            if (alreadyCount === 0 && skipped.length === 0) console.log("[NPMInstall] nothing to install");
             return;
         }
 
@@ -304,19 +350,23 @@ export class CCMDMgr {
         // 그 자식이 끝난 뒤 부모(Electron 메인)의 콘솔 출력이 통째로 죽는 문제가 있다
         // (write는 에러 없이 성공하는데 화면엔 아무것도 안 나옴). 파이프로 받아서 부모가
         // 직접 다시 찍으면 자식이 부모 콘솔을 만질 일이 없어 구조적으로 깨지지 않는다.
-        await CCMDMgr.RunCMDPiped(`npm install ${args}`);
+        // 설치 위치를 워킹 폴더로 명시한다. cwd를 안 넘기면 자식이 부모의 cwd를 상속하는데, 그러면
+        // 하위 폴더나 무관한 폴더에서 실행된 도구(ai/tool/*.js 등)가 거기에 node_modules를 새로 깔아버린다
+        // (실측: cwd를 C:/로 두고 실행하면 C:/node_modules가 생긴다). node_modules는 db 폴더와 마찬가지로
+        // 워킹 폴더에 있어야 하며, 아티젠 폴더는 워킹과 다른 위치일 수 있으므로 기준이 될 수 없다.
+        await CCMDMgr.RunCMDPiped(`npm install ${args}`, CPath.WorkingPath());
     }
 
     /**
      * 자식 출력을 파이프로 받아 부모가 콘솔에 다시 찍는다(자식에게 콘솔 핸들을 넘기지 않는다).
      * 대화형 입력이 필요 없는 명령 전용 — stdin이 연결되지 않는다.
      */
-    static async RunCMDPiped(_cmd: string): Promise<number | null> {
+    static async RunCMDPiped(_cmd: string, _cwd = ''): Promise<number | null> {
         const platform = os.platform();
         const env = { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' };
         const child = (platform === 'win32'
-            ? await CUtilSystem.Spawn('cmd', ['/c', `chcp 65001 >nul && ${_cmd}`], 'pipe', '', env)
-            : await CUtilSystem.Spawn('bash', ['-c', _cmd], 'pipe', '', env))!;
+            ? await CUtilSystem.Spawn('cmd', ['/c', `chcp 65001 >nul && ${_cmd}`], 'pipe', _cwd, env)
+            : await CUtilSystem.Spawn('bash', ['-c', _cmd], 'pipe', _cwd, env))!;
 
         // 줄 단위로 모아 찍는다 — 청크 경계에서 멀티바이트(한글)가 잘려 깨지는 걸 막는다.
         const pump = (_stream: any) => {

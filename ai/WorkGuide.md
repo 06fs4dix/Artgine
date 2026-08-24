@@ -15,7 +15,7 @@
 ```
 node ai/tool/work.js list-work [status] [limit]
 node ai/tool/work.js list-agent
-node ai/tool/work.js set-agent <key> <provider> <model> [score] [workingDir] [super] [retryCount] [retryText] [traits_json] [permissions_json]
+node ai/tool/work.js set-agent <key> <provider> <model> [score] [workingDir] [super] [retryCount] [retryText] [traits_json] [permissions_json] [hidden]
 node ai/tool/work.js del-agent <key>
 node ai/tool/work.js list-sched
 node ai/tool/work.js set-sched <name> <subAgentKey> <mode> <option_json> <command...>
@@ -25,6 +25,9 @@ node ai/tool/work.js check <팀키> [시작시각]
 node ai/tool/work.js push <from> <to> <content...>
 node ai/tool/work.js status <id> <status>
 node ai/tool/work.js result <id> <status> <result...>
+node ai/tool/work.js watchdog
+node ai/tool/work.js team-end <팀키>
+node ai/tool/work.js start-team <provider> <model|-> <subAgents|-> <autoAgents_json|-> <limitMin|-> <goal...>
 ```
 
 - `content` / `result` / `retryText` / `command` 안의 줄바꿈은 실제 Enter 대신 리터럴 `\n` 으로 넣는다.
@@ -48,15 +51,16 @@ node ai/tool/work.js result <id> <status> <result...>
 | retryText / retryCount | 마지막 작업 done 후 idle일 때 자동 재지시 (count=0 이면 미사용) |
 | traits | 문자열 배열 — 세션 지시문에 반영 |
 | permissions | `{allow:[],deny:[]}` — 세션 추가 권한 (deny 우선) |
+| hidden | `0`\|`1` — Control 좌측 사이드바 "서브 에이전트 숨기기" 토글이 켜졌을 때 이 사원의 세션을 숨길지. 팀장/팀이 자동 생성한 임시 사원은 이 카탈로그에 없으므로 hidden 대상이 될 수 없다(항상 표시됨). |
 
 ```
 node ai/tool/work.js list-agent
-→ [{key,provider,model,score,traits,workingDir,super,retryText,retryCount,permissions}, ...]
+→ [{key,provider,model,score,traits,workingDir,super,retryText,retryCount,permissions,hidden}, ...]
 
 node ai/tool/work.js set-agent coder anthropic claude-sonnet-4
 → ok
 
-node ai/tool/work.js set-agent coder anthropic claude-sonnet-4 0 ./proj 1 0 - "[\"backend\"]" -
+node ai/tool/work.js set-agent coder anthropic claude-sonnet-4 0 ./proj 1 0 - "[\"backend\"]" - 1
 → ok
 
 node ai/tool/work.js del-agent coder
@@ -66,6 +70,7 @@ node ai/tool/work.js del-agent coder
 - `set-agent` 최소 인자: `<key> <provider> <model>`
 - `traits_json`: JSON 배열 `["a","b"]` 또는 콤마 구분 `a,b`. 생략/`-` → `[]`
 - `permissions_json`: `{"allow":[],"deny":[]}`. 생략/`-` → 빈 규칙
+- `hidden`: `1`\|`true` → 숨김 대상. 생략 → `0`(항상 표시)
 
 ---
 
@@ -143,6 +148,73 @@ node ai/tool/work.js check main 20260725120000
 - 스케줄러가 만든 의뢰의 requester 는 `scheduler:<name>` 형태다.
 
 ---
+
+## 팀 (Team)
+
+팀 메인(감독)은 임시 사원을 자동 배정받아 일을 배분한다. 감독 세션은 기동 시 브리핑 지시문을 받지만,
+**그 지시문은 전송 중 일부가 유실될 수 있다**(PTY 대량 입력). 브리핑이 잘려 보이더라도 팀 운영 규칙은
+**이 문서가 정본**이다 — 아래 내용은 브리핑에 보이지 않아도 반드시 지킨다.
+
+### 시작 (start-team)
+
+```
+node ai/tool/work.js start-team <provider> <model|-> <subAgents|-> <autoAgents_json|-> <limitMin|-> <goal...>
+→ {ok:true, token, teamKey, startedAt, autoAgents:[...]}
+```
+
+- `provider`: `claude`|`codex`|`antigravity`|`opencode`|`grok`
+- `model`: 감독 세션 모델. 생략은 `-`
+- `subAgents`: 카탈로그(수동 등록) 에이전트 key를 콤마로. 없으면 `-`
+- `autoAgents_json`: `[{"provider":"claude","model":"claude-sonnet-5","count":1}]` 형태. 없으면 `-`. `subAgents`/`autoAgents_json` 중 최소 하나는 있어야 한다.
+- `limitMin`: 팀 제한시간(분). 생략은 `-`(0 = 무제한)
+- `goal`: 감독에게 줄 목표. 나머지 인자를 합쳐 `unescapeNewlines` 적용(줄바꿈은 `\n`)
+
+**⚠️ 반드시 이 명령을 쓴다. curl로 `/cmd/start-team`을 직접 호출하지 않는다.**
+curl.exe는 Windows에서 커맨드라인 인자를 ANSI 코드페이지(CP949 등)로 변환해서 받는 반면, Node는
+인자를 유니코드 그대로 받는다 — 그래서 curl로 한글 등 비ASCII `goal`을 넘기면 서버에 퍼센트 인코딩된
+깨진 바이트로 그대로 저장된다(디코딩이 아니라 애초에 잘못된 바이트가 인코딩된 것). `start-team`은 Node
+프로세스 안에서 `URLSearchParams`로 직접 인코딩해 호출하므로 이 경로를 우회한다.
+
+### 사원 key를 다룰 때 주의 — 전체 key를 그대로 쓸 것
+
+자동 생성 사원의 key는 `<팀키>-<provider><번호>` 형태다(예: `team:6b54e877-claude1`). `work.js push`의
+`<to>` 인자에는 **이 전체 문자열을 그대로** 써야 한다. 감독이 이 접두어를 빼고 `claude1`처럼 줄여서
+push하면 `_dispatchWorkOrders`가 그 key로 세션을 찾지 못해(`_findByKey`가 null) 워크오더가 `ready`
+상태에서 영원히 멈춘다 — `check`에는 잡히지만 `working`으로 전혀 넘어가지 않고, `watchdog`도 애초에
+`working` 상태가 아니므로 손대지 못한다. 팀이 멈춘 것 같으면 `list-work ready`로 `assignee` 값이
+실제 살아있는 사원 key(`cmd/sessions`)와 정확히 일치하는지부터 확인한다.
+
+### 종료 (team-end) — 필수
+
+```
+node ai/tool/work.js team-end team:xxxxxxxx
+→ {ok:true, teamKey, removed:[...]}
+```
+
+- 팀이 **어떤 이유로든** 멈추면 **가장 마지막 단계로** 실행한다. 종료 사유는 세 가지: 목표 달성 / 작업 하나라도 `failed` / 시간 초과(`check`의 `elapsedMin` > `timeLimitMin`).
+- 실행하지 않으면 사원 세션이 그대로 남고, 서버 틱의 `_ensureSubAgentSessions`가 **죽여도 계속 되살려** 머신을 점유한다.
+
+> ⚠️ **임시 사원은 DB가 아니라 서버 메모리(`gTeamTempAgents`)에 있다.**
+> 그래서 `list-agent`에 **보이지 않고**, `del-agent`로는 `fail: not found`만 나온다.
+> 목록에 없다고 "이미 정리됨"으로 판단하면 안 된다 — 정리 경로는 `team-end` **하나뿐**이다.
+> (`team-end`는 pty를 죽여야 하므로 DB 직접 조작이 아니라 로컬 서버 `cmd/team-end`를 호출한다.
+> 따라서 서버가 켜져 있어야 하고 `ai/tool/cookie.json`의 로컬 인증 토큰이 필요하다.)
+> 팀장/팀 자동생성 사원이 이 카탈로그(DB)에 없다는 점은 Control 좌측 사이드바의 "서브 에이전트 숨기기"
+> 판정과도 연결된다 — 그 기능은 카탈로그에 등록된 사원의 `hidden` 플래그만 보므로, 카탈로그에 없는
+> 팀장/자동생성 사원은 숨김 토글 상태와 무관하게 항상 표시된다.
+
+메인 세션이 `team-end` 없이 사라진 경우(사용자가 터미널 kill, CLI 자체 종료, pty 크래시)는
+`_tickTeamCleanup`이 대신 정리하지만, 정상 종료 시 이것에 의존하지 않는다.
+
+### 감시 (watchdog) — 주기 실행
+
+```
+node ai/tool/work.js watchdog
+```
+
+사원 프로세스가 크래시하거나 승인 대기로 멈추면 그 작업은 **`working`에 영원히 남고**
+`check`로는 절대 `done`/`failed`가 되지 않아 감독이 무한 대기한다. `watchdog`은 그런 좀비를 찾아
+세션을 죽이고 작업을 `ready`로 되돌려 재배분한다. `dispatch → check → watchdog → collect`를 반복한다.
 
 ## 흐름 요약
 

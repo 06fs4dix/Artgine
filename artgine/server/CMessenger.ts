@@ -3,6 +3,8 @@ import { CSQLite } from '../network/CSQLite.js';
 import { marked, Renderer } from '../external/esnext/md/marked.esm.js';
 import { CMail } from '../network/CMail.js';
 import { CMailAccount } from '../network/CMailAccount.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // 텔레그램 HTML parse_mode가 아는 태그(b/strong, i/em, u, s/del, a, code, pre, blockquote)만 남기고
 // 나머지(h1~h6, ul/ol/li, table, img 등 — 텔레그램이 모르는 태그가 하나라도 섞이면 sendMessage가
@@ -90,6 +92,9 @@ export class CMessenger {
     private static readonly sDiscordScanGuild = 5;
     private static readonly sDiscordScanChannel = 20;
     private static readonly sDiscordScanTerm = 60000;   // 후보 채널 목록 캐시 수명
+    // Recv 호출부가 mediaDir을 안 주면(터미널과 연결 안 된 세션 등) 여기에 미디어를 떨어뜨린다.
+    // 호출부(CTerminalRouter)는 보통 세션 workingDir/.uploads를 넘겨 드래그앤드롭 업로드와 같은 자리에 쌓는다.
+    private static readonly sDefaultMediaDir = './db/messenger_media';
     // 세션별 채널 탐색 캐시. DB에 남길 이유가 없는 순수 비용 절감용이라 메모리에 둔다.
     private static sScan = new Map<number, { at: number; chans: string[] }>();
     // 발신 중인 세션. Flush 중복 진입을 막는다(아래 Flush 주석 참조).
@@ -258,11 +263,15 @@ export class CMessenger {
     // 주의: 여기서 곧바로 read 처리하므로, 호출부가 결과를 세션에 주입하지 못할 상황(작업 중,
     // 권한 승인 화면 등)이면 Recv를 부르기 전에 걸러야 한다. Recv 안에서 세션 상태를 보지 않는 것은
     // 메신저가 터미널을 알지 않게 하기 위해서다.
-    public static async Recv(_sessionId: number): Promise<MessengerMessage[]> {
+    //
+    // _mediaDir: 이미지·음성 등 첨부가 오면 이 폴더에 저장하고, 본문 앞에 그 절대경로를 큰따옴표로
+    // 감싸 텍스트로 얹는다(드래그앤드롭 업로드가 입력창에 넣는 형식과 동일 — CLI가 스스로 Read하도록
+    // 유도). 안 주면 sDefaultMediaDir을 쓴다.
+    public static async Recv(_sessionId: number, _mediaDir?: string): Promise<MessengerMessage[]> {
         const ses = await CMessenger.GetSession(_sessionId);
         const db = await CMessenger.Init();
 
-        await CMessenger.Poll(ses);
+        await CMessenger.Poll(ses, true, _mediaDir);
         await CMessenger.Flush(ses);
 
         const rows = await db.Recv(
@@ -372,10 +381,10 @@ export class CMessenger {
     }
 
     // 수신 드레인. _store=false면 바인딩과 커서 전진만 하고 본문은 큐에 넣지 않는다(기준선 드레인).
-    private static async Poll(_ses: MessengerSessionRecord, _store = true): Promise<void> {
-        if (_ses.platform === CMessenger.ePlatform.Discord) return await CMessenger.PollDiscord(_ses, _store);
-        if (_ses.platform === CMessenger.ePlatform.Email) return await CMessenger.PollEmail(_ses, _store);
-        return await CMessenger.PollTelegram(_ses, _store);
+    private static async Poll(_ses: MessengerSessionRecord, _store = true, _mediaDir?: string): Promise<void> {
+        if (_ses.platform === CMessenger.ePlatform.Discord) return await CMessenger.PollDiscord(_ses, _store, _mediaDir);
+        if (_ses.platform === CMessenger.ePlatform.Email) return await CMessenger.PollEmail(_ses, _store, _mediaDir);
+        return await CMessenger.PollTelegram(_ses, _store, _mediaDir);
     }
 
     // 발신 대기 중인 것을 id 순으로 내보낸다. 한 건이라도 실패하면 순서를 지키려고 거기서 멈춘다
@@ -488,7 +497,7 @@ export class CMessenger {
     //
     // offset은 반드시 '읽은 것 중 최대 update_id + 1'로 전진시켜야 한다. 텔레그램은 offset을 넘긴
     // 순간 그 이전 업데이트를 서버에서 지우므로, 전진에 실패하면 같은 메시지를 영원히 다시 읽는다.
-    private static async PollTelegram(_ses: MessengerSessionRecord, _store: boolean): Promise<void> {
+    private static async PollTelegram(_ses: MessengerSessionRecord, _store: boolean, _mediaDir?: string): Promise<void> {
         const offset = Number(_ses.cursor) || 0;
         const res: any = await CMessenger.CallTelegram(_ses.token, 'getUpdates', { offset, timeout: 0 });
         const updates: any[] = Array.isArray(res?.result) ? res.result : [];
@@ -501,15 +510,30 @@ export class CMessenger {
 
             const msg = up?.message ?? up?.channel_post;
             const chatId = String(msg?.chat?.id ?? '');
-            const text: string = typeof msg?.text === 'string' ? msg.text : '';
-            if (chatId === '' || text === '') continue;   // 사진·스티커 등 텍스트 없는 건 버린다
+            if (chatId === '') continue;
+
+            // 사진/음성 등은 text가 아니라 caption(있으면)에 붙는다. 본문도 첨부도 없으면
+            // (edited_message 등 지원 안 하는 업데이트) 버린다.
+            let text: string = typeof msg?.text === 'string' ? msg.text : (typeof msg?.caption === 'string' ? msg.caption : '');
+            const media = CMessenger.ExtractTelegramMedia(msg);
+            if (text === '' && media == null) continue;
 
             if (_ses.chatKey === '') await CMessenger.Bind(_ses, chatId);
             else if (_ses.chatKey !== chatId) continue;   // 봇당 세션 하나 — 바인딩된 상대가 아니면 무시
 
             // 접속용 /start 는 대화 내용이 아니라 페어링 신호라 큐에 넣지 않는다.
             if (text === '/start' || text.startsWith('/start ')) continue;
-            if (!_store) continue;   // 기준선 드레인 — 바인딩만 하고 본문은 버린다
+            if (!_store) continue;   // 기준선 드레인 — 바인딩만 하고 본문/다운로드는 버린다
+
+            if (media != null) {
+                try {
+                    const savedPath = await CMessenger.DownloadTelegramMedia(_ses.token, media.fileId, media.fileName, _mediaDir);
+                    const tag = `"${savedPath}"`;
+                    text = text === '' ? tag : `${tag}\n${text}`;
+                } catch {
+                    text = text === '' ? `[${media.kind} 다운로드 실패]` : text;
+                }
+            }
 
             const who = String(msg?.from?.username ?? msg?.from?.first_name ?? chatId);
             const date = Number(msg?.date ?? Math.floor(Date.now() / 1000));
@@ -518,6 +542,34 @@ export class CMessenger {
 
         const next = maxId + 1;
         if (next > offset) await CMessenger.SetCursor(_ses, String(next));
+    }
+
+    // 텔레그램 메시지에서 다운로드 가능한 미디어 하나를 찾는다(사진은 여러 해상도 중 가장 큰 것).
+    // 텍스트/캡션만 있는 메시지면 null.
+    private static ExtractTelegramMedia(_msg: any): { fileId: string; kind: string; fileName: string } | null {
+        const photo: any[] = Array.isArray(_msg?.photo) ? _msg.photo : [];
+        if (photo.length > 0) {
+            const p = photo[photo.length - 1];
+            return { fileId: String(p.file_id), kind: '사진', fileName: `${p.file_unique_id}.jpg` };
+        }
+        if (_msg?.voice != null) return { fileId: String(_msg.voice.file_id), kind: '음성', fileName: `${_msg.voice.file_unique_id}.ogg` };
+        if (_msg?.audio != null) return { fileId: String(_msg.audio.file_id), kind: '오디오', fileName: String(_msg.audio.file_name ?? `${_msg.audio.file_unique_id}.mp3`) };
+        if (_msg?.video != null) return { fileId: String(_msg.video.file_id), kind: '동영상', fileName: `${_msg.video.file_unique_id}.mp4` };
+        if (_msg?.video_note != null) return { fileId: String(_msg.video_note.file_id), kind: '동영상', fileName: `${_msg.video_note.file_unique_id}.mp4` };
+        if (_msg?.document != null) return { fileId: String(_msg.document.file_id), kind: '파일', fileName: String(_msg.document.file_name ?? `${_msg.document.file_unique_id}`) };
+        if (_msg?.sticker != null) return { fileId: String(_msg.sticker.file_id), kind: '스티커', fileName: `${_msg.sticker.file_unique_id}.webp` };
+        return null;
+    }
+
+    private static async DownloadTelegramMedia(_token: string, _fileId: string, _fileName: string, _mediaDir?: string): Promise<string> {
+        const info: any = await CMessenger.CallTelegram(_token, 'getFile', { file_id: _fileId });
+        const filePath = info?.result?.file_path;
+        if (typeof filePath !== 'string' || filePath === '') throw new Error('CMessenger: getFile returned no file_path');
+        const url = `https://api.telegram.org/file/bot${_token}/${filePath}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+        if (!res.ok) throw new Error(`CMessenger: media download failed - HTTP ${res.status}`);
+        const buf = Buffer.from(await res.arrayBuffer());
+        return CMessenger.SaveMedia(buf, _fileName, _mediaDir);
     }
 
     private static async CallTelegram(_token: string, _method: string, _body: object | null): Promise<any> {
@@ -545,7 +597,7 @@ export class CMessenger {
     //   주입돼 무한루프다(텔레그램에는 없던 위험이다).
     // 주의 2: 그래도 커서는 봇 자기 메시지까지 포함한 최대 id로 전진시켜야 한다. 안 그러면 봇이 말을
     //   많이 한 구간에서 limit이 자기 메시지로만 차서 유저 메시지가 영영 안 보인다.
-    private static async PollDiscord(_ses: MessengerSessionRecord, _store: boolean): Promise<void> {
+    private static async PollDiscord(_ses: MessengerSessionRecord, _store: boolean, _mediaDir?: string): Promise<void> {
         if (_ses.chatKey === '') {
             await CMessenger.DiscoverDiscord(_ses);
             if (_ses.chatKey === '') return;
@@ -565,9 +617,20 @@ export class CMessenger {
             if (id !== '' && BigInt(id) > BigInt(maxId)) maxId = id;
 
             if (m?.author?.bot === true) continue;               // 봇 발언(자기 답변 포함)은 입력이 아니다
-            const text: string = typeof m?.content === 'string' ? m.content : '';
-            if (text === '') continue;                           // 첨부만 있는 메시지 등
+            let text: string = typeof m?.content === 'string' ? m.content : '';
+            const attachments: any[] = Array.isArray(m?.attachments) ? m.attachments : [];
+            if (text === '' && attachments.length === 0) continue;
             if (!_store) continue;
+
+            for (const att of attachments) {
+                try {
+                    const savedPath = await CMessenger.DownloadDiscordAttachment(att, _mediaDir);
+                    const tag = `"${savedPath}"`;
+                    text = text === '' ? tag : `${text}\n${tag}`;
+                } catch {
+                    text = text === '' ? `[첨부 다운로드 실패: ${String(att?.filename ?? '')}]` : text;
+                }
+            }
 
             const who = String(m?.author?.username ?? m?.author?.id ?? '');
             const date = m?.timestamp ? Math.floor(new Date(m.timestamp).getTime() / 1000) : Math.floor(Date.now() / 1000);
@@ -575,6 +638,15 @@ export class CMessenger {
         }
 
         if (BigInt(maxId) > BigInt(_ses.cursor)) await CMessenger.SetCursor(_ses, maxId);
+    }
+
+    private static async DownloadDiscordAttachment(_att: any, _mediaDir?: string): Promise<string> {
+        const url = String(_att?.url ?? '');
+        if (url === '') throw new Error('CMessenger: attachment has no url');
+        const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+        if (!res.ok) throw new Error(`CMessenger: attachment download failed - HTTP ${res.status}`);
+        const buf = Buffer.from(await res.arrayBuffer());
+        return CMessenger.SaveMedia(buf, String(_att?.filename ?? 'file'), _mediaDir);
     }
 
     // 봇이 들어가 있는 서버의 텍스트 채널을 훑어, 등록 이후 사람이 말을 건 첫 채널에 붙는다.
@@ -648,7 +720,7 @@ export class CMessenger {
     // (세션마다 자기 상대 주소만 필터링), 전체 메일함을 훑되 이 세션의 상대(chatKey) 주소가 보낸
     // 것만 골라 큐에 넣는다. 필터링 여부와 무관하게 커서는 항상 스캔한 만큼 전진시킨다 — 안 그러면
     // 다른 사람이 보낸 메일 때문에 커서가 멈춰서 매번 같은 메일함 구간을 다시 훑게 된다.
-    private static async PollEmail(_ses: MessengerSessionRecord, _store: boolean): Promise<void> {
+    private static async PollEmail(_ses: MessengerSessionRecord, _store: boolean, _mediaDir?: string): Promise<void> {
         const account = CMailAccount.Load();
         const sinceUid = Number(_ses.cursor) || 0;
         const result = await CMail.Receive(CMailAccount.ToAuthInfo(account.imap), sinceUid);
@@ -657,12 +729,35 @@ export class CMessenger {
         const peer = _ses.chatKey.toLowerCase();
         for (const msg of result.messages) {
             if (_store && msg.from.toLowerCase() === peer) {
-                const text = msg.subject ? `[${msg.subject}]\n${msg.text}` : msg.text;
+                let text = msg.subject ? `[${msg.subject}]\n${msg.text}` : msg.text;
+                for (const att of msg.attachments ?? []) {
+                    if (att.content == null) continue;
+                    try {
+                        const savedPath = CMessenger.SaveMedia(att.content, att.filename || 'attachment', _mediaDir);
+                        text = `"${savedPath}"\n${text}`;
+                    } catch { /* 첨부 하나 실패해도 본문은 살린다 */ }
+                }
                 await CMessenger.Store(_ses, msg.from, msg.date, String(msg.uid), text);
             }
         }
 
         if (result.nextUid > sinceUid) await CMessenger.SetCursor(_ses, String(result.nextUid));
+    }
+
+    // 미디어 바이트를 폴더에 저장하고 절대경로(슬래시)를 돌려준다. onUploadFile(CTerminalRouter_imple)의
+    // 저장 방식과 동일하게 맞춘다 — 이름 충돌 시 타임스탬프를 붙이고, 백슬래시는 슬래시로 통일한다.
+    private static SaveMedia(_buf: Buffer, _fileName: string, _mediaDir?: string): string {
+        const dir = _mediaDir && _mediaDir !== '' ? _mediaDir : CMessenger.sDefaultMediaDir;
+        fs.mkdirSync(dir, { recursive: true });
+        const safeName = (_fileName || 'file').replace(/[\\/]/g, '_').replace(/[^\w.\-가-힣]+/g, '_');
+        let target = path.join(dir, safeName);
+        if (fs.existsSync(target)) {
+            const ext = path.extname(safeName);
+            const base = path.basename(safeName, ext);
+            target = path.join(dir, `${base}_${Date.now()}${ext}`);
+        }
+        fs.writeFileSync(target, _buf);
+        return target.replace(/\\/g, '/');
     }
 
     // ---------------- 내부: 유틸 ----------------

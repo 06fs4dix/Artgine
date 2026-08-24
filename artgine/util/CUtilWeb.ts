@@ -232,6 +232,52 @@ export class CUtilWeb {
 
 
 	// }
+	// 프로젝트에서 실제로 import하는 Node 내장 모듈만 화이트리스트로 등록(전체 @types/node는 2.5MB라 무겁다).
+	// 값은 node_modules/@types/node/ 기준 상대 경로. 파일 자체가 declare module "모듈명" 형태의 ambient
+	// 선언이라 어떤 가상 경로로 등록하든 import 해석에 문제없다(참조 체인도 없음).
+	private static sNodeBuiltinTypeFiles: Record<string, string> = {
+		fs: "fs.d.ts",
+		"fs/promises": "fs/promises.d.ts",
+		path: "path.d.ts",
+		os: "os.d.ts",
+		http: "http.d.ts",
+		https: "https.d.ts",
+		net: "net.d.ts",
+		tls: "tls.d.ts",
+		child_process: "child_process.d.ts",
+		crypto: "crypto.d.ts",
+		stream: "stream.d.ts",
+		util: "util.d.ts",
+		url: "url.d.ts",
+		worker_threads: "worker_threads.d.ts",
+		events: "events.d.ts",
+		buffer: "buffer.d.ts",
+	};
+	// Node 모듈을 하나라도 쓰면 같이 필요한 전역 선언(NodeJS 네임스페이스, process, Buffer 등).
+	private static sNodeBaseTypeFiles: string[] = ["globals.d.ts", "globals.typedarray.d.ts", "buffer.buffer.d.ts", "process.d.ts"];
+	// 페이지 생애주기 동안 한 번만 로드하도록 하는 캐시(에디터를 여러 번 열어도 중복 addExtraLib 안 함).
+	private static mNodeTypesLoaded: Set<string> = new Set();
+
+	private static async LoadNodeTypeFile(_relPath: string) {
+		if (CUtilWeb.mNodeTypesLoaded.has(_relPath)) return;
+		CUtilWeb.mNodeTypesLoaded.add(_relPath);
+		const uri = "node_modules/@types/node/" + _relPath;
+		const buf = await CFile.Load(CPath.WebRootUrl().replace(/\/$/, "") + "/" + uri);
+		if (buf == null) return;
+		window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(CUtil.ArrayToString(buf), "file:///" + uri);
+	}
+
+	/** _module: "fs", "node:fs" 등. 화이트리스트에 없으면 아무것도 하지 않는다. */
+	static async LoadNodeBuiltinTypes(_module: string) {
+		const name = _module.replace(/^node:/, "");
+		const relPath = CUtilWeb.sNodeBuiltinTypeFiles[name];
+		if (relPath == null) return;
+		if (CUtilWeb.mNodeTypesLoaded.size == 0) {
+			for (const f of CUtilWeb.sNodeBaseTypeFiles) await CUtilWeb.LoadNodeTypeFile(f);
+		}
+		await CUtilWeb.LoadNodeTypeFile(relPath);
+	}
+
 	// _rewriteSource=false면 소스 텍스트(상대경로 import문)는 그대로 두고 extra lib만 등록한다.
 	// MonacoEditer가 실제 파일 URI로 모델을 만들 때 쓰는 모드 - TS가 상대경로를 스스로 해석하므로
 	// 화면/저장 시 원본 소스가 그대로 보존된다.
@@ -250,6 +296,14 @@ export class CUtilWeb {
 		for (let i = 0; i < importPathArr.length; ++i) {
 			const originalPath = importPathArr[i];
 			if (processedPaths.has(originalPath)) continue;
+
+			// Node 내장 모듈(fs, path 등)은 프로젝트 경로가 아니므로 URL로 치환하지 않고
+			// @types/node에서 타입만 등록한다. 화이트리스트에 없는 모듈은 그대로 기존 로직으로 흘려보낸다.
+			if (_monaco && window["require"] != null && CUtilWeb.sNodeBuiltinTypeFiles[originalPath.replace(/^node:/, "")] != null) {
+				processedPaths.set(originalPath, originalPath);
+				await CUtilWeb.LoadNodeBuiltinTypes(originalPath);
+				continue;
+			}
 
 			// 이미 HTTP URL이면 스킵
 			if (/^https?:\/\//.test(originalPath) || /^file:\/\/\//.test(originalPath)) {

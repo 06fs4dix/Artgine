@@ -1,1 +1,102 @@
-const t="artgine.tokens",e="artgine.token";function o(){try{return JSON.parse(localStorage.getItem(t)||"{}")}catch{return{}}}function n(e){localStorage.setItem(t,JSON.stringify(e))}!function(){const t=o();let a=!1;const r=localStorage.getItem(e);if(r){const o=location.origin;t[o]||(t[o]={token:r,savedAt:Date.now()},a=!0),localStorage.removeItem(e)}for(let e=localStorage.length-1;e>=0;e--){const o=localStorage.key(e);if(!o||!o.startsWith("artgine.token:"))continue;const n=o.slice(14),r=localStorage.getItem(o);r&&!t[n]&&(t[n]={token:r,savedAt:Date.now()},a=!0),localStorage.removeItem(o)}a&&n(t)}();export function getAuthToken(t){return o()[t]?.token??""}export function setAuthToken(t,e){const a=o();a[t]={token:e,savedAt:Date.now()},n(a)}export function removeAuthToken(t){const e=o();e[t]&&(delete e[t],n(e))}async function a(t,e){return(await fetch(t,{method:"POST",headers:{"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify(e)})).json()}export async function authLogin(t,e,o){const n=t.replace(/\/+$/,"")+"/",r=await a(n+"auth/login",{password:e});if(!r.ok||!r.pending2FA||!r.token)return r;o?.();const c=r.pollMs??1e3,i=Date.now()+(r.waitMs??3e5);for(;Date.now()<i;){let t;await new Promise(t=>setTimeout(t,c));try{t=await a(n+"auth/check",{token:r.token})}catch{continue}if(t.authed)return{ok:!0,token:r.token};if(!1===t.ok)return{ok:!1,msg:t.msg??"2FA approval timed out"}}return{ok:!1,msg:"2FA approval timed out"}}export async function checkAuthed(t){const e=t.replace(/\/+$/,"")+"/",o=getAuthToken(t);try{const n=await a(e+"auth/check",o?{token:o}:{});return!n?.authed&&o&&removeAuthToken(t),!!n?.authed}catch{return!1}}
+const STORE_KEY = 'artgine.tokens';
+const LEGACY_FLAT_KEY = 'artgine.token';
+const LEGACY_PREFIX = 'artgine.token:';
+function readStore() {
+    try {
+        return JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    }
+    catch {
+        return {};
+    }
+}
+function writeStore(store) {
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+}
+function migrateLegacy() {
+    const store = readStore();
+    let changed = false;
+    const legacyFlat = localStorage.getItem(LEGACY_FLAT_KEY);
+    if (legacyFlat) {
+        const origin = location.origin;
+        if (!store[origin]) {
+            store[origin] = { token: legacyFlat, savedAt: Date.now() };
+            changed = true;
+        }
+        localStorage.removeItem(LEGACY_FLAT_KEY);
+    }
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith(LEGACY_PREFIX))
+            continue;
+        const origin = key.slice(LEGACY_PREFIX.length);
+        const token = localStorage.getItem(key);
+        if (token && !store[origin]) {
+            store[origin] = { token, savedAt: Date.now() };
+            changed = true;
+        }
+        localStorage.removeItem(key);
+    }
+    if (changed)
+        writeStore(store);
+}
+migrateLegacy();
+export function getAuthToken(origin) {
+    return readStore()[origin]?.token ?? '';
+}
+export function setAuthToken(origin, token) {
+    const store = readStore();
+    store[origin] = { token, savedAt: Date.now() };
+    writeStore(store);
+}
+export function removeAuthToken(origin) {
+    const store = readStore();
+    if (!store[origin])
+        return;
+    delete store[origin];
+    writeStore(store);
+}
+async function postJson(url, body) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify(body),
+    });
+    return res.json();
+}
+export async function authLogin(webRootUrl, passwordHash, onPending) {
+    const base = webRootUrl.replace(/\/+$/, '') + '/';
+    const j = await postJson(base + 'auth/login', { password: passwordHash });
+    if (!j.ok || !j.pending2FA || !j.token)
+        return j;
+    onPending?.();
+    const pollMs = j.pollMs ?? 1000;
+    const deadline = Date.now() + (j.waitMs ?? 5 * 60 * 1000);
+    while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, pollMs));
+        let w;
+        try {
+            w = await postJson(base + 'auth/check', { token: j.token });
+        }
+        catch {
+            continue;
+        }
+        if (w.authed)
+            return { ok: true, token: j.token };
+        if (w.ok === false)
+            return { ok: false, msg: w.msg ?? '2FA approval timed out' };
+    }
+    return { ok: false, msg: '2FA approval timed out' };
+}
+export async function checkAuthed(webRootUrl) {
+    const base = webRootUrl.replace(/\/+$/, '') + '/';
+    const token = getAuthToken(webRootUrl);
+    try {
+        const j = await postJson(base + 'auth/check', token ? { token } : {});
+        if (!j?.authed && token)
+            removeAuthToken(webRootUrl);
+        return !!j?.authed;
+    }
+    catch {
+        return false;
+    }
+}

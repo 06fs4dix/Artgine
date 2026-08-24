@@ -5,7 +5,7 @@ import { CUniqueID } from "../../basic/CUniqueID.js";
 import { URLPatterns } from "../../network/CServerMain.js";
 import { CServerSocker } from "../../network/CServerSocket.js";
 import { PacketSN } from "./PacketSN.js";
-CWASM.IsWASM();
+CWASM.IsSIMD();
 export class CSGRoomUser
 {
     

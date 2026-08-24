@@ -1,1 +1,729 @@
-import{CVec4 as t}from"../../geometry/CVec4.js";import{CVec3 as e}from"../../geometry/CVec3.js";import{CComponent as s}from"../component/CComponent.js";import{CMath as h}from"../../geometry/CMath.js";import{CBrushComp as i}from"./CBrushComp.js";import{CRenderPass as m}from"../../render/CRenderPass.js";import{CShaderAttr as a}from"../../render/CShaderAttr.js";import{CDevice as r}from"../../render/CDevice.js";import{CTexture as o,CTextureInfo as l}from"../../render/CTexture.js";import{CVec2 as n}from"../../geometry/CVec2.js";import{CDOM as d}from"../../basic/CDOM.js";import{CUpdate as u}from"../../basic/Basic.js";import{CUtilObj as C}from"../../basic/CUtilObj.js";import{CClass as c}from"../../basic/CClass.js";import{CRPAuto as p}from"../canvas/CRPMgr.js";import{CCondition as y}from"../../util/CCondition.js";import{CMat as w}from"../../geometry/CMat.js";import{SDF as g}from"../../z_file/SDF.js";import{CPaint as S}from"./paint/CPaint.js";export class CLight extends i{mCascadeCycle=[0,-1,-1];mShadowDistance=1;mDigit=null;mShadowOff=!1;mDirPos;mColor;mCullMask;mUpdate=u.eType.Updated;constructor(){super(null),this.mDirPos=new t,this.mColor=new t,this.mCullMask=new t,this.mDirPos.w=-1,this.mColor.x=1,this.mColor.y=1,this.mColor.z=1,this.mColor.w=1,this.mCullMask.x=S.eCullMask.Default,this.mSysc=s.eSysn.Light}Icon(){return"bi bi-lightbulb"}IsShould(t,e){return"mWrite"!=t&&super.IsShould(t,e)}EditChange(t,e){if(super.EditChange(t,e),"mCullMask"==t.member&&(this.mUpdate=u.eType.Updated),0!=e)for(let e of t.refArr)if(e==this.mDirPos||e==this.mColor){this.mUpdate=u.eType.Updated;break}}EditForm(t,s,h){if(super.EditForm(t,s,h),"mShadowKey"==t.member)C.NullEdit(t,s,h,"test");else if("mColor"==t.member){var i={tag:"div",html:[]};i.html.push({"<>":"br"});let t=this.ObjHash(),h=this.IsPointLight(),m=null!=this.mTexKey&&-1==this.mCascadeCycle[0]&&-1==this.mCascadeCycle[1]&&-1==this.mCascadeCycle[2]?h?"2dpoint":"2ddirect":h?"point":"direct",a=()=>{let s=Number(d.IDValue("ligDirCX_num"+t)),h=Number(d.IDValue("ligDirCY_num"+t)),i=Number(d.IDValue("ligDirCZ_num"+t));this.SetColor(new e(s,h,i))},r=()=>{let s=Number(d.IDValue("ligPtCX_num"+t)),h=Number(d.IDValue("ligPtCY_num"+t)),i=Number(d.IDValue("ligPtCZ_num"+t));this.SetColor(new e(s,h,i))},o=()=>{let e=Number(d.IDValue("ligPtOuter_num"+t)),s=Number(d.IDValue("ligPtInner_num"+t));e>0||(e=1),s>0||(s=1),this.SetPoint(e,s)},l=()=>{if(null==this.mTexKey)return;let e=Number(d.IDValue("ligCas0_num"+t)),s=Number(d.IDValue("ligCas1_num"+t)),h=Number(d.IDValue("ligCas2_num"+t));this.mCascadeCycle[0]=e,this.mCascadeCycle[1]=s,this.mCascadeCycle[2]=h,this.mUpdate=u.eType.Updated};i.html.push({"<>":"span",text:"Light Type:"}),i.html.push({"<>":"select",class:"form-select",id:"ligType_sel"+t,html:[{"<>":"option",value:"direct",text:"Directional",selected:"direct"==m},{"<>":"option",value:"point",text:"Point",selected:"point"==m},{"<>":"option",value:"2ddirect",text:"2D Directional",selected:"2ddirect"==m},{"<>":"option",value:"2dpoint",text:"2D Point",selected:"2dpoint"==m}],onchange:e=>{let s=e.target.value;"point"==s||"2dpoint"==s?(d.ID("ligDir_div"+t).hidden=!0,d.ID("ligPt_div"+t).hidden=!1,o()):(d.ID("ligDir_div"+t).hidden=!1,d.ID("ligPt_div"+t).hidden=!0,this.SetDirect())}}),i.html.push({"<>":"div",id:"ligDir_div"+t,hidden:h,html:[{"<>":"span",text:"Color:"},{"<>":"input",type:"number",id:"ligDirCX_num"+t,class:"form-control",placeholder:"x",value:this.mColor.x,onchange:()=>a()},{"<>":"input",type:"number",id:"ligDirCY_num"+t,class:"form-control",placeholder:"y",value:this.mColor.y,onchange:()=>a()},{"<>":"input",type:"number",id:"ligDirCZ_num"+t,class:"form-control",placeholder:"z",value:this.mColor.z,onchange:()=>a()}]}),"direct"==m&&null!=this.mTexKey&&i.html.push({"<>":"div",id:"ligCas_div"+t,html:[{"<>":"span",text:"Shadow Cascade:"},{"<>":"input",type:"number",id:"ligCas0_num"+t,class:"form-control",placeholder:"cas0",value:this.mCascadeCycle[0],onchange:()=>l()},{"<>":"input",type:"number",id:"ligCas1_num"+t,class:"form-control",placeholder:"cas1",value:this.mCascadeCycle[1],onchange:()=>l()},{"<>":"input",type:"number",id:"ligCas2_num"+t,class:"form-control",placeholder:"cas2",value:this.mCascadeCycle[2],onchange:()=>l()}]}),i.html.push({"<>":"div",id:"ligPt_div"+t,hidden:!h,html:[{"<>":"span",text:"Outer:"},{"<>":"input",type:"number",id:"ligPtOuter_num"+t,class:"form-control",placeholder:"outer",value:h?this.mDirPos.w:1,onchange:()=>o()},{"<>":"span",text:"Inner:"},{"<>":"input",type:"number",id:"ligPtInner_num"+t,class:"form-control",placeholder:"inner",value:this.mColor.w,onchange:()=>o()},{"<>":"span",text:"Color:"},{"<>":"input",type:"number",id:"ligPtCX_num"+t,class:"form-control",placeholder:"x",value:this.mColor.x,onchange:()=>r()},{"<>":"input",type:"number",id:"ligPtCY_num"+t,class:"form-control",placeholder:"y",value:this.mColor.y,onchange:()=>r()},{"<>":"input",type:"number",id:"ligPtCZ_num"+t,class:"form-control",placeholder:"z",value:this.mColor.z,onchange:()=>r()}]}),i.html.push({"<>":"hr"}),i.html.push({"<>":"span",text:"Shadow: "}),i.html.push({"<>":"button",type:"button",class:"btn btn-primary btn-sm",text:"그림자 적용",onclick:()=>{let e=d.ID("ligType_sel"+t).value;"2ddirect"==e||"2dpoint"==e?this.SetShadow2D(this.ObjHash()):this.SetShadow3D(this.ObjHash(),0,-1,-1),this.EditRefresh()}}),i.html.push({"<>":"button",type:"button",class:"btn btn-danger btn-sm",text:"그림자 제거",onclick:()=>{this.RemoveShadow();let e=d.ID("ligCas_div"+t);null!=e&&(e.hidden=!0),this.EditRefresh()}}),s.append(d.DataToDom(i))}else if("mCullMask"==t.member){let e=this.ObjHash(),h=c.EnumName(S.eCullMask),i=this.mCullMask.x,m=document.createElement("div");m.className="border p-1 mt-1";let a=document.createElement("span");a.className="text-primary",a.innerText="CullMask",m.append(a);let r=document.createElement("span");r.className="text-secondary ms-2",r.id="cm_val_"+e,r.innerText="0b"+i.toString(2),m.append(r),m.append(document.createElement("br"));let o=document.createElement("div");o.className="row";for(let s of h){let m=document.createElement("div");m.className="col-6";let a=document.createElement("input");a.type="checkbox",a.id="cm_"+e+"_"+s,a.className="form-check-input",a.checked=0!==(i&S.eCullMask[s]),a.onchange=()=>{let s=0;for(let t of h){let h=document.getElementById("cm_"+e+"_"+t);h&&h.checked&&(s|=S.eCullMask[t])}this.SetMask(s),document.getElementById("cm_val_"+e).innerText="0b"+s.toString(2),this.EditChange(t,!1)};let r=document.createElement("label");r.className="form-check-label ms-1",r.setAttribute("for","cm_"+e+"_"+s),r.innerText=s,m.append(a),m.append(r),o.append(m)}m.append(o),s.append(m)}}DirPosV4(){return this.mDirPos}GetTex(){return this.GetOwner().GetFrame().Pal().GetShadowWriteTex()}Update(t){if(this.mUpdate==u.eType.Already?(this.mUpdate=u.eType.Not,this.mBrush.mUpdateLight=u.eType.Updated):this.mUpdate==u.eType.Updated&&(this.mUpdate=u.eType.Already,this.mBrush.mUpdateLight=u.eType.Updated),0!=this.GetOwner().mUpdateMat||this.mUpdate==u.eType.Updated){this.mBrush.mUpdateLight=u.eType.Updated;var e=this.GetOwner().GetMat().xyz;this.IsPointLight()||(h.V3Nor(e,e),e.IsZero()&&(e.y=1)),this.SetDirectPos(e)}super.Update(t),null!=this.mBrush&&this.UpdateBaush(t)}UpdateBaush(s){if(this.mCullMask.w=-1,0==this.mWriteRP.length){let t=new p(this.mBrush.mFrame.Pal().Sl3D().mKey);t.mCopy=!1,t.mAlpha=!1,t.mTag.add("shadowWrite"),t.PushOr(new y("class","==","CPaint3D")),t.PushOr(new y("class","==","CPaint3DMerge")),t.PushAnd(new y("mTag[shadow]")),t.PushAnd(new y("mTag[shadowReadOnly]",y.eOperator["!="])),t.mPriority=m.ePriority.BackGround-1,this.PushRPAuto(t),t=new p(this.mBrush.mFrame.Pal().SlVoxel().mKey),t.mCopy=!1,t.mAlpha=!1,t.mTag.add("shadowWrite"),t.PushAnd(new y("class","==","CPaintVoxel")),t.PushAnd(new y("mTag[shadow]")),t.PushAnd(new y("mTag[shadowReadOnly]",y.eOperator["!="])),t.mPriority=m.ePriority.BackGround-1,this.PushRPAuto(t),t=new p(this.mBrush.mFrame.Pal().SlTerrain().mKey),t.mCopy=!1,t.mAlpha=!1,t.mTag.add("shadowWrite"),t.PushAnd(new y("class","==","CPaintTerrain")),t.PushAnd(new y("mTag[shadow]")),t.PushAnd(new y("mTag[shadowReadOnly]",y.eOperator["!="])),t.mPriority=m.ePriority.BackGround-1,this.PushRPAuto(t),t=new p(this.mBrush.mFrame.Pal().Sl2D().mKey),t.mCopy=!1,t.mTag.add("shadowPlane"),t.PushOr(new y("class","==","CPaint2D")),t.PushOr(new y("class","==","CPaint2DMerge")),t.PushAnd(new y("mTag[shadow]")),t.PushAnd(new y("mTag[shadowReadOnly]",y.eOperator["!="])),t.mTag.add("shadowPlaneV"),t.mTag.add("shadowPlaneF"),t.mPriority=m.ePriority.AlphaAuto,t.mCullFace=m.eCull.None,t.mPaintSort=m.ePaintSort.Revers,t.mAlpha=!0,this.PushRPAuto(t)}let i=!1;if(null!=this.mTexKey){this.mColor.IsZero()?this.mShadowOff=!0:this.mShadowOff=!1;const m=this.mBrush.mFrame.Res().Find(this.GetTex()),r=this.mBrush.GetShadowView();let c=this.mBrush.mShadowRead.get(this.mBrush.mShadowCount);if(null==c&&(c=new t(this.mBrush.mLightCount,-1,-1,-1),this.mBrush.mShadowRead.set(this.mBrush.mShadowCount,c)),0==this.mShadowOff)if(this.IsPointLight()){let t,a,o=this.mDirPos.xyz,l=new w;const n=[new e(1,0,0),new e(-1,0,0),new e(0,1,0),new e(0,-1,0),new e(0,0,1),new e(0,0,-1)],d=[new e(0,1,0),new e(0,1,0),new e(0,0,1),new e(0,0,-1),new e(0,1,0),new e(0,1,0)];if(-1!=this.mCascadeCycle[0])for(let e=0;e<6;e++){let C=this.mBrush.GetCamera(this.mTexKey+e);C.mShadow=!0,C.SetNear(1),C.SetFov(h.DegreeToRadian(90)),t=h.V3AddV3(o,n[e]),a=d[e],(C.Init(o,t,a)||C.mProjFar!=this.GetOutRadius())&&(C.SetFar(this.GetOutRadius()),C.mWidth=m.GetWidth(),C.mHeight=m.GetHeight(),C.ResetPerspective(),i=!0,this.mBrush.mUpdateShadow=u.eType.Updated),r[e].set(h.MatMul(C.GetViewMat(),C.GetProjMat(),l).F32A(),16*this.mBrush.mShadowCount),C.Update(s)}}else{const t=this.mBrush.GetCam3D().GetEye(),a=this.mBrush.GetCam3D().GetView(),o=h.V3Nor(this.mDirPos.xyz);let l,n,d=new e(0,1,0);const C=(t,s)=>{let i=o,m=Math.abs(h.V3Dot(d,i))>.99?new e(0,0,1):d,a=h.V3Nor(h.V3Cross(m,i)),r=h.V3Cross(i,a);const l=t.x*a.x+t.y*a.y+t.z*a.z,n=t.x*r.x+t.y*r.y+t.z*r.z,u=Math.floor(l/s)*s-l,C=Math.floor(n/s)*s-n,c=a.x*u+r.x*C,p=a.y*u+r.y*C,y=a.z*u+r.z*C;t.x+=c,t.y+=p,t.z+=y};let c=2e3*this.mShadowDistance;for(let e=0;e<this.mCascadeCycle.length;++e){if(-1==this.mCascadeCycle[e])continue;const p=this.mBrush.GetCamera(this.mTexKey+e);p.mShadow=!0,p.SetNear(100),p.SetFar(2*c),l=h.V3AddV3(t,h.V3MulFloat(a,.5*c)),null==this.mDigit?C(l,c/m.GetWidth()):(l.x=Math.round(l.x/this.mDigit)*this.mDigit,l.y=Math.round(l.y/this.mDigit)*this.mDigit,l.z=Math.round(l.z/this.mDigit)*this.mDigit),n=h.V3AddV3(l,h.V3MulFloat(o,1.5*c)),p.Init(n,l,d)&&(p.mWidth=c,p.mHeight=c,p.ResetOrthographic(),i=!0,this.mBrush.mUpdateShadow=u.eType.Updated),r[2*e+0].set(p.GetViewMat().F32A(),16*this.mBrush.mShadowCount),r[2*e+1].set(p.GetProjMat().F32A(),16*this.mBrush.mShadowCount);const y=.5*(2*c-100),w=.5*c,g=Math.sqrt(y*y+w*w+w*w);r[2*e+0][16*this.mBrush.mShadowCount+3]=2*g/m.GetWidth()*1.4142136,p.Update(s),c*=4}}if(this.IsPointLight()){if(-1!=this.mCascadeCycle[0])for(let t=0;t<6;++t)for(const s of this.mWriteRP){if(!s.mTag.has("shadowWrite"))continue;const h=this.mTexKey+s.mShader+t;let i=this.mBrush.GetAutoRP(h);null==i&&(i=s.Export(),i.mPriority-=t+this.mBrush.mShadowTexOff,i.mShaderAttr.push(new a("shadowWrite",new e(g.eShadow.Near+t,this.mBrush.mShadowCount,1))),i.mTag.add("PointLightShadowV"),i.mTag.add("PointLightShadowF"),i.PushAnd(new y("mCullMask.x","&",this.mCullMask.x)),this.mBrush.SetAutoRP(h,i)),i.mRenderTarget=this.GetTex(),i.mRenderTargetUse=new Set([this.mBrush.mShadowTexOff+t]),i.mCamera=this.mTexKey+t,i.mShaderAttr[0].mData.y!=this.mBrush.mShadowCount&&(i.mShaderAttr[0].mData.x=t,i.mShaderAttr[0].mData.y=this.mBrush.mShadowCount,i.mShaderAttr[0].mData.z=1,i.Reset(),this.mBrush.mAutoRPUpdate=u.eType.Updated),i.mAnd[i.mAnd.length-1].mValue=this.mCullMask.x,this.mShadowOff?i.mCycle=1e8:i.mCycle=this.mCascadeCycle[0]}c.mF32A[1]=this.mBrush.mShadowTexOff,c.mF32A[2]=1,c.mF32A[3]=this.GetOutRadius(),this.mBrush.mShadowTexOff+=6}else{for(let t=0;t<this.mCascadeCycle.length;++t)if(-1!=this.mCascadeCycle[t]){for(const s of this.mWriteRP){if(!s.mTag.has("shadowWrite"))continue;const h=this.mTexKey+s.mShader+t;let i=this.mBrush.GetAutoRP(h);null==i&&(i=s.Export(),i.mPriority-=t+this.mBrush.mShadowTexOff,i.mShaderAttr.push(new a("shadowWrite",new e(t,this.mBrush.mShadowCount,0))),i.PushAnd(new y("mCullMask.x","&",this.mCullMask.x)),this.mBrush.SetAutoRP(h,i)),i.mRenderTarget=this.GetTex(),i.mRenderTargetUse=new Set([this.mBrush.mShadowTexOff+t]),i.mCamera=this.mTexKey+t,i.mShaderAttr[0].mData.y!=this.mBrush.mShadowCount&&(i.mShaderAttr[0].mData.x=t,i.mShaderAttr[0].mData.y=this.mBrush.mShadowCount,i.mShaderAttr[0].mData.z=0,i.Reset(),this.mBrush.mAutoRPUpdate=u.eType.Updated),i.mAnd[i.mAnd.length-1].mValue=this.mCullMask.x,this.mShadowOff?i.mCycle=1e8:i.mCycle=this.mCascadeCycle[t]}c.mF32A[t+1]=this.mBrush.mShadowTexOff+t}c.mF32A[1]>=0&&(this.mBrush.mShadowTexOff+=1),c.mF32A[2]>=0&&(this.mBrush.mShadowTexOff+=1),c.mF32A[3]>=0&&(this.mBrush.mShadowTexOff+=1)}if(r[7][4*this.mBrush.mShadowCount+0]=c.x,r[7][4*this.mBrush.mShadowCount+1]=c.y,r[7][4*this.mBrush.mShadowCount+2]=c.z,r[7][4*this.mBrush.mShadowCount+3]=c.w,-1==this.mCascadeCycle[0]&&-1==this.mCascadeCycle[1]&&-1==this.mCascadeCycle[2])for(let t of this.mWriteRP)if(t.mTag.has("shadowPlane")){var d=this.mTexKey+t.mShader,C=this.mBrush.GetAutoRP(d);null==C&&(C=t.Export(),this.mBrush.SetAutoRP(d,C),C.mShaderAttr.push(new a("shadowWrite",new e(this.mBrush.mLightCount,this.mBrush.mShadowCount,2))),C.PushAnd(new y("mCullMask.x","&",this.mCullMask.x))),C.mShaderAttr[0].mData.x==this.mBrush.mLightCount&&C.mShaderAttr[0].mData.y==this.mBrush.mShadowCount||(C.mShaderAttr[0].mData.x=this.mBrush.mLightCount,C.mShaderAttr[0].mData.y=this.mBrush.mShadowCount,C.mShaderAttr[0].mData.z=2,C.Reset(),this.mBrush.mAutoRPUpdate=u.eType.Updated),C.mAnd[C.mAnd.length-1].mValue=this.mCullMask.x,this.mShadowOff?C.mCycle=1e8:C.mCycle=0}m.GetInfo()[0].mCount<this.mBrush.mShadowTexOff&&this.GetOwner().GetFrame().Ren().BuildRenderTarget([new l(o.eTarget.Array,o.eFormat.RGBA32F,this.mBrush.mShadowTexOff)],new n(m.GetWidth(),m.GetHeight()),this.GetOwner().GetFrame().Pal().GetShadowWriteTex()),this.mShadowOff||(this.mCullMask.w=this.mBrush.mShadowCount,this.mBrush.mShadowCount++)}this.mBrush.mLightCount>r.GetProperty(r.eProperty.Sam2DSize)/4||(this.mBrush.mLightDir[4*this.mBrush.mLightCount+0]=this.mDirPos.x,this.mBrush.mLightDir[4*this.mBrush.mLightCount+1]=this.mDirPos.y,this.mBrush.mLightDir[4*this.mBrush.mLightCount+2]=this.mDirPos.z,this.mBrush.mLightDir[4*this.mBrush.mLightCount+3]=this.mDirPos.w,this.mBrush.mLightColor[4*this.mBrush.mLightCount+0]=this.mColor.x,this.mBrush.mLightColor[4*this.mBrush.mLightCount+1]=this.mColor.y,this.mBrush.mLightColor[4*this.mBrush.mLightCount+2]=this.mColor.z,this.mBrush.mLightColor[4*this.mBrush.mLightCount+3]=this.mColor.w,this.mBrush.mLightMask[4*this.mBrush.mLightCount+0]=this.mCullMask.x,this.mBrush.mLightMask[4*this.mBrush.mLightCount+1]=this.mCullMask.y,this.mBrush.mLightMask[4*this.mBrush.mLightCount+2]=this.mCullMask.z,this.mBrush.mLightMask[4*this.mBrush.mLightCount+3]=this.mCullMask.w,this.mBrush.mLightCount++)}SetDirectPos(t){this.mDirPos.mF32A[0]=t.mF32A[0],this.mDirPos.mF32A[1]=t.mF32A[1],this.mDirPos.mF32A[2]=t.mF32A[2],this.mUpdate=u.eType.Updated}SetDirect(t=-1){this.mDirPos.w=t,this.mUpdate=u.eType.Updated}SetPoint(t,e=1){e>t&&(e=t),this.mColor.w=e,this.mDirPos.w=t,this.mUpdate=u.eType.Updated}SetColor(t){this.mColor.x=t.x,this.mColor.y=t.y,this.mColor.z=t.z,this.mUpdate=u.eType.Updated}SetShadow3D(t,e=0,s=-1,h=-1){this.mTexKey=t,this.mCascadeCycle[0]=e,this.mCascadeCycle[1]=s,this.mCascadeCycle[2]=h,this.mUpdate=u.eType.Updated}SetShadow2D(t){this.mTexKey=t,this.mCascadeCycle[0]=-1,this.mCascadeCycle[1]=-1,this.mCascadeCycle[2]=-1,this.mUpdate=u.eType.Updated}Refresh(){if(null!=this.mBrush&&null!=this.mTexKey){if(this.mBrush.mUpdateLight=u.eType.Updated,this.mBrush.mUpdateShadow=u.eType.Updated,-1==this.mCascadeCycle[0]&&-1==this.mCascadeCycle[1]&&-1==this.mCascadeCycle[2])for(let t of this.mWriteRP)0!=t.mTag.has("shadowPlane")&&this.mBrush.RemoveAutoRP(this.mTexKey+t.mShader);if(this.IsPointLight())for(let t=0;t<6;t++){this.mBrush.mCameraMap.delete(this.mTexKey+t);for(let e of this.mWriteRP)0!=e.mTag.has("shadowWrite")&&this.mBrush.RemoveAutoRP(this.mTexKey+e.mShader+t)}else for(let t=0;t<this.mCascadeCycle.length;++t)if(-1!=this.mCascadeCycle[t]){this.mBrush.mCameraMap.delete(this.mTexKey+t);for(let e of this.mWriteRP)0!=e.mTag.has("shadowWrite")&&this.mBrush.RemoveAutoRP(this.mTexKey+e.mShader+t)}this.mBrush.ClearRen()}}RemoveShadow(){this.Refresh(),this.mCascadeCycle=[0,-1,-1],this.mTexKey=null,this.mUpdate=u.eType.Updated}SetShadowDistance(t){this.mShadowDistance=t}SetInRadius(t){return this.mColor.w=t}SetOutRadius(t){return this.mDirPos.w=t}SetDigit(t){this.mDigit=t}SetMask(t){this.mCullMask.x=t}GetDirectPos(){return this.mDirPos.xyz}GetColor(){return this.mColor.xyz}GetMask(){return this.mCullMask.x}IsColorZero(){return 0==this.mColor.mF32A[0]&&0==this.mColor.mF32A[1]&&0==this.mColor.mF32A[2]}GetInRadius(){return this.mColor.w}GetOutRadius(){return this.mDirPos.w}IsPointLight(){return this.mDirPos.w>.5}ImportCJSON(t){return super.ImportCJSON(t)}SetEnable(t){super.SetEnable(t),this.Refresh()}Destroy(){super.Destroy(),this.Refresh()}}
+import { CVec4 } from "../../geometry/CVec4.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CBound } from "../../geometry/CBound.js";
+import { CComponent } from "../component/CComponent.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CBrushComp } from "./CBrushComp.js";
+import { CRenderPass } from "../../render/CRenderPass.js";
+import { CShaderAttr } from "../../render/CShaderAttr.js";
+import { CDevice } from "../../render/CDevice.js";
+import { CTexture, CTextureInfo } from "../../render/CTexture.js";
+import { CVec2 } from "../../geometry/CVec2.js";
+import { CDOM } from "../../basic/CDOM.js";
+import { CUpdate } from "../../basic/Basic.js";
+import { CUtilObj } from "../../basic/CUtilObj.js";
+import { CClass } from "../../basic/CClass.js";
+import { CRPAuto } from "../canvas/CRPMgr.js";
+import { CCondition } from "../../util/CCondition.js";
+import { SDF } from "../../z_file/SDF.js";
+import { CPaint } from "./paint/CPaint.js";
+import { CPoolGeo } from "../../geometry/CPoolGeo.js";
+export class CLight extends CBrushComp {
+    mCascadeCycle = [0, -1, -1, -1];
+    mDigit = null;
+    mShadowOff = false;
+    mShadowDistance = 10000;
+    mShadowFade = 0.25;
+    mShadowDivide = [1, 1, 1, 1];
+    mDirPos;
+    mColor;
+    mCullMask;
+    mUpdate = CUpdate.eType.Updated;
+    constructor() {
+        super(null);
+        this.mDirPos = new CVec4();
+        this.mColor = new CVec4();
+        this.mCullMask = new CVec4();
+        this.mDirPos.w = -1;
+        this.mColor.x = 1;
+        this.mColor.y = 1;
+        this.mColor.z = 1;
+        this.mColor.w = 1;
+        this.mCullMask.x = CPaint.eCullMask.Default;
+        this.mSysc = CComponent.eSysn.Light;
+    }
+    Icon() { return "bi bi-lightbulb"; }
+    IsShould(_member, _type) {
+        if (_member == "mWrite") {
+            return false;
+        }
+        return super.IsShould(_member, _type);
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_pointer.member == "mCullMask") {
+            this.mUpdate = CUpdate.eType.Updated;
+        }
+        if (_child == false)
+            return;
+        for (let ref of _pointer.refArr) {
+            if (ref == this.mDirPos || ref == this.mColor) {
+                this.mUpdate = CUpdate.eType.Updated;
+                break;
+            }
+        }
+    }
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
+        if (_pointer.member == "mShadowKey")
+            CUtilObj.NullEdit(_pointer, _body, _input, "test");
+        else if (_pointer.member == "mColor") {
+            var div = { "tag": "div", "html": [] };
+            div.html.push({ "<>": "br" });
+            let wtKey = this.ObjHash();
+            let isPoint = this.IsPointLight();
+            let is2D = (this.mTexKey != null && this.mCascadeCycle[0] == -1 && this.mCascadeCycle[1] == -1 && this.mCascadeCycle[2] == -1 && this.mCascadeCycle[3] == -1);
+            let curType = is2D ? (isPoint ? "2dpoint" : "2ddirect") : (isPoint ? "point" : "direct");
+            let applyDirColor = () => {
+                let cx = Number(CDOM.IDValue("ligDirCX_num" + wtKey));
+                let cy = Number(CDOM.IDValue("ligDirCY_num" + wtKey));
+                let cz = Number(CDOM.IDValue("ligDirCZ_num" + wtKey));
+                this.SetColor(new CVec3(cx, cy, cz));
+            };
+            let applyPtColor = () => {
+                let cx = Number(CDOM.IDValue("ligPtCX_num" + wtKey));
+                let cy = Number(CDOM.IDValue("ligPtCY_num" + wtKey));
+                let cz = Number(CDOM.IDValue("ligPtCZ_num" + wtKey));
+                this.SetColor(new CVec3(cx, cy, cz));
+            };
+            let applyPtRadius = () => {
+                let outer = Number(CDOM.IDValue("ligPtOuter_num" + wtKey));
+                let inner = Number(CDOM.IDValue("ligPtInner_num" + wtKey));
+                if (!(outer > 0))
+                    outer = 1;
+                if (!(inner > 0))
+                    inner = 1;
+                this.SetPoint(outer, inner);
+            };
+            let applyCascade = () => {
+                if (this.mTexKey == null)
+                    return;
+                let c0 = Number(CDOM.IDValue("ligCas0_num" + wtKey));
+                let c1 = Number(CDOM.IDValue("ligCas1_num" + wtKey));
+                let c2 = Number(CDOM.IDValue("ligCas2_num" + wtKey));
+                let c3 = Number(CDOM.IDValue("ligCas3_num" + wtKey));
+                this.mCascadeCycle[0] = c0;
+                this.mCascadeCycle[1] = c1;
+                this.mCascadeCycle[2] = c2;
+                this.mCascadeCycle[3] = c3;
+                this.mUpdate = CUpdate.eType.Updated;
+            };
+            div.html.push({ "<>": "span", "text": "Light Type:" });
+            div.html.push({ "<>": "select", "class": "form-select", "id": "ligType_sel" + wtKey, "html": [
+                    { "<>": "option", "value": "direct", "text": "Directional", "selected": curType == "direct" },
+                    { "<>": "option", "value": "point", "text": "Point", "selected": curType == "point" },
+                    { "<>": "option", "value": "2ddirect", "text": "2D Directional", "selected": curType == "2ddirect" },
+                    { "<>": "option", "value": "2dpoint", "text": "2D Point", "selected": curType == "2dpoint" },
+                ], "onchange": (e) => {
+                    let v = e.target.value;
+                    if (v == "point" || v == "2dpoint") {
+                        CDOM.ID("ligDir_div" + wtKey).hidden = true;
+                        CDOM.ID("ligPt_div" + wtKey).hidden = false;
+                        applyPtRadius();
+                    }
+                    else {
+                        CDOM.ID("ligDir_div" + wtKey).hidden = false;
+                        CDOM.ID("ligPt_div" + wtKey).hidden = true;
+                        this.SetDirect();
+                    }
+                } });
+            div.html.push({ "<>": "div", "id": "ligDir_div" + wtKey, "hidden": isPoint, "html": [
+                    { "<>": "span", "text": "Color:" },
+                    { "<>": "input", "type": "number", "id": "ligDirCX_num" + wtKey, "class": "form-control", "placeholder": "x", "value": this.mColor.x, "onchange": () => applyDirColor() },
+                    { "<>": "input", "type": "number", "id": "ligDirCY_num" + wtKey, "class": "form-control", "placeholder": "y", "value": this.mColor.y, "onchange": () => applyDirColor() },
+                    { "<>": "input", "type": "number", "id": "ligDirCZ_num" + wtKey, "class": "form-control", "placeholder": "z", "value": this.mColor.z, "onchange": () => applyDirColor() },
+                ] });
+            if (curType == "direct" && this.mTexKey != null) {
+                div.html.push({ "<>": "div", "id": "ligCas_div" + wtKey, "html": [
+                        { "<>": "span", "text": "Shadow Cascade:" },
+                        { "<>": "input", "type": "number", "id": "ligCas0_num" + wtKey, "class": "form-control", "placeholder": "cas0", "value": this.mCascadeCycle[0], "onchange": () => applyCascade() },
+                        { "<>": "input", "type": "number", "id": "ligCas1_num" + wtKey, "class": "form-control", "placeholder": "cas1", "value": this.mCascadeCycle[1], "onchange": () => applyCascade() },
+                        { "<>": "input", "type": "number", "id": "ligCas2_num" + wtKey, "class": "form-control", "placeholder": "cas2", "value": this.mCascadeCycle[2], "onchange": () => applyCascade() },
+                        { "<>": "input", "type": "number", "id": "ligCas3_num" + wtKey, "class": "form-control", "placeholder": "cas3", "value": this.mCascadeCycle[3], "onchange": () => applyCascade() },
+                    ] });
+            }
+            div.html.push({ "<>": "div", "id": "ligPt_div" + wtKey, "hidden": !isPoint, "html": [
+                    { "<>": "span", "text": "Outer:" },
+                    { "<>": "input", "type": "number", "id": "ligPtOuter_num" + wtKey, "class": "form-control", "placeholder": "outer", "value": (isPoint ? this.mDirPos.w : 1), "onchange": () => applyPtRadius() },
+                    { "<>": "span", "text": "Inner:" },
+                    { "<>": "input", "type": "number", "id": "ligPtInner_num" + wtKey, "class": "form-control", "placeholder": "inner", "value": this.mColor.w, "onchange": () => applyPtRadius() },
+                    { "<>": "span", "text": "Color:" },
+                    { "<>": "input", "type": "number", "id": "ligPtCX_num" + wtKey, "class": "form-control", "placeholder": "x", "value": this.mColor.x, "onchange": () => applyPtColor() },
+                    { "<>": "input", "type": "number", "id": "ligPtCY_num" + wtKey, "class": "form-control", "placeholder": "y", "value": this.mColor.y, "onchange": () => applyPtColor() },
+                    { "<>": "input", "type": "number", "id": "ligPtCZ_num" + wtKey, "class": "form-control", "placeholder": "z", "value": this.mColor.z, "onchange": () => applyPtColor() },
+                ] });
+            div.html.push({ "<>": "hr" });
+            div.html.push({ "<>": "span", "text": "Shadow: " });
+            div.html.push({ "<>": "button", "type": "button", "class": "btn btn-primary btn-sm", "text": "그림자 적용", "onclick": () => {
+                    let v = CDOM.ID("ligType_sel" + wtKey).value;
+                    if (v == "2ddirect" || v == "2dpoint")
+                        this.SetShadow2D(this.ObjHash());
+                    else
+                        this.SetShadow3D(this.ObjHash(), 0, -1, -1);
+                    this.EditRefresh();
+                } });
+            div.html.push({ "<>": "button", "type": "button", "class": "btn btn-danger btn-sm", "text": "그림자 제거", "onclick": () => {
+                    this.RemoveShadow();
+                    let casDiv = CDOM.ID("ligCas_div" + wtKey);
+                    if (casDiv != null)
+                        casDiv.hidden = true;
+                    this.EditRefresh();
+                } });
+            _body.append(CDOM.DataToDom(div));
+        }
+        else if (_pointer.member == "mCullMask") {
+            let ukey = this.ObjHash();
+            let maskKeys = CClass.EnumName(CPaint.eCullMask);
+            let curMask = this.mCullMask.x;
+            let wrap = document.createElement("div");
+            wrap.className = "border p-1 mt-1";
+            let title = document.createElement("span");
+            title.className = "text-primary";
+            title.innerText = "CullMask";
+            wrap.append(title);
+            let valSpan = document.createElement("span");
+            valSpan.className = "text-secondary ms-2";
+            valSpan.id = "cm_val_" + ukey;
+            valSpan.innerText = "0b" + curMask.toString(2);
+            wrap.append(valSpan);
+            wrap.append(document.createElement("br"));
+            let grid = document.createElement("div");
+            grid.className = "row";
+            for (let key of maskKeys) {
+                let cell = document.createElement("div");
+                cell.className = "col-6";
+                let chk = document.createElement("input");
+                chk.type = "checkbox";
+                chk.id = "cm_" + ukey + "_" + key;
+                chk.className = "form-check-input";
+                chk.checked = (curMask & CPaint.eCullMask[key]) !== 0;
+                chk.onchange = () => {
+                    let newMask = 0;
+                    for (let k of maskKeys) {
+                        let c = document.getElementById("cm_" + ukey + "_" + k);
+                        if (c && c.checked)
+                            newMask |= CPaint.eCullMask[k];
+                    }
+                    this.SetMask(newMask);
+                    document.getElementById("cm_val_" + ukey).innerText = "0b" + newMask.toString(2);
+                    this.EditChange(_pointer, false);
+                };
+                let lbl = document.createElement("label");
+                lbl.className = "form-check-label ms-1";
+                lbl.setAttribute("for", "cm_" + ukey + "_" + key);
+                lbl.innerText = key;
+                cell.append(chk);
+                cell.append(lbl);
+                grid.append(cell);
+            }
+            wrap.append(grid);
+            _body.append(wrap);
+        }
+    }
+    DirPosV4() { return this.mDirPos; }
+    GetTex() { return this.GetOwner().GetFrame().Pal().GetShadowWriteTex(); }
+    Update(_update) {
+        if (this.mUpdate == CUpdate.eType.Already) {
+            this.mUpdate = CUpdate.eType.Not;
+            this.mBrush.mUpdateLight = CUpdate.eType.Updated;
+        }
+        else if (this.mUpdate == CUpdate.eType.Updated) {
+            this.mUpdate = CUpdate.eType.Already;
+            this.mBrush.mUpdateLight = CUpdate.eType.Updated;
+        }
+        if (this.GetOwner().mUpdateMat != 0 || this.mUpdate == CUpdate.eType.Updated) {
+            this.mBrush.mUpdateLight = CUpdate.eType.Updated;
+            var pos = this.GetOwner().GetMat().xyz;
+            if (!this.IsPointLight()) {
+                CMath.V3Nor(pos, pos);
+                if (pos.IsZero()) {
+                    pos.y = 1;
+                }
+            }
+            this.SetDirectPos(pos);
+        }
+        super.Update(_update);
+        if (this.mBrush != null)
+            this.UpdateBaush(_update);
+    }
+    UpdateBaush(_update) {
+        this.mCullMask.w = -1;
+        if (this.mWriteRP.length == 0) {
+            let srp = new CRPAuto(this.mBrush.mFrame.Pal().Sl3D().mKey);
+            srp.mCopy = false;
+            srp.mAlpha = false;
+            srp.mTag.add("shadowWrite");
+            srp.PushOr(new CCondition("class", "==", "CPaint3D"));
+            srp.PushOr(new CCondition("class", "==", "CPaint3DMerge"));
+            srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.PushAnd(new CCondition("mTag[shadowReadOnly]", CCondition.eOperator["!="]));
+            srp.mPriority = CRenderPass.ePriority.BackGround - 1;
+            this.PushRPAuto(srp);
+            srp = new CRPAuto(this.mBrush.mFrame.Pal().SlVoxel().mKey);
+            srp.mCopy = false;
+            srp.mAlpha = false;
+            srp.mTag.add("shadowWrite");
+            srp.PushAnd(new CCondition("class", "==", "CPaintVoxel"));
+            srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.PushAnd(new CCondition("mTag[shadowReadOnly]", CCondition.eOperator["!="]));
+            srp.mPriority = CRenderPass.ePriority.BackGround - 1;
+            this.PushRPAuto(srp);
+            srp = new CRPAuto(this.mBrush.mFrame.Pal().SlTerrain().mKey);
+            srp.mCopy = false;
+            srp.mAlpha = false;
+            srp.mTag.add("shadowWrite");
+            srp.PushAnd(new CCondition("class", "==", "CPaintTerrain"));
+            srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.PushAnd(new CCondition("mTag[shadowReadOnly]", CCondition.eOperator["!="]));
+            srp.mPriority = CRenderPass.ePriority.BackGround - 1;
+            this.PushRPAuto(srp);
+            srp = new CRPAuto(this.mBrush.mFrame.Pal().Sl2D().mKey);
+            srp.mCopy = false;
+            srp.mTag.add("shadowPlane");
+            srp.PushOr(new CCondition("class", "==", "CPaint2D"));
+            srp.PushOr(new CCondition("class", "==", "CPaint2DMerge"));
+            srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.PushAnd(new CCondition("mTag[shadowReadOnly]", CCondition.eOperator["!="]));
+            srp.mTag.add("shadowPlaneV");
+            srp.mTag.add("shadowPlaneF");
+            srp.mPriority = CRenderPass.ePriority.AlphaAuto;
+            srp.mCullFace = CRenderPass.eCull.None;
+            srp.mPaintSort = CRenderPass.ePaintSort.Revers;
+            srp.mAlpha = true;
+            this.PushRPAuto(srp);
+        }
+        let ShadowUpdate = false;
+        if (this.mTexKey != null) {
+            if (this.mColor.IsZero())
+                this.mShadowOff = true;
+            else
+                this.mShadowOff = false;
+            const shadowTex = this.mBrush.mFrame.Res().Find(this.GetTex());
+            const ShadowView = this.mBrush.GetShadowView();
+            const ShadowRead = ShadowView[6];
+            const ShadowInfo = ShadowView[7];
+            const ShadowCascadeData = ShadowView[8];
+            const ShadowDivide = ShadowView[9];
+            ShadowInfo[this.mBrush.mShadowCount * 4 + 0] = this.mBrush.mLightCount;
+            if (this.mShadowOff == false) {
+                if (!this.IsPointLight()) {
+                    const ligDir = CMath.V3Nor(this.mDirPos.xyz);
+                    const near = this.mBrush.GetCam3D().mProjNear;
+                    const far = Math.min(this.mBrush.GetCam3D().mProjFar, this.mShadowDistance);
+                    const span = far - near;
+                    const frustumDivide = far / this.mBrush.GetCam3D().mProjFar;
+                    const camFrustum = this.mBrush.GetCam3D().mFrustum;
+                    let slook;
+                    let seye;
+                    let sup = new CVec3(0, 1, 0);
+                    let PVMat = CPoolGeo.ProductMat();
+                    const lightOrientationMat = CMath.LookAt(new CVec3(), ligDir, sup);
+                    const lightOrientationMatInverse = CMath.MatInvert(lightOrientationMat);
+                    const ComputeCascadeBounds = (_nearDepth, _farDepth, _shadowFade) => {
+                        const sliceVerts = [];
+                        for (let j = 0; j < 4; ++j)
+                            sliceVerts.push(CMath.V3Interpolate(camFrustum[j], camFrustum[j + 4], _nearDepth * frustumDivide));
+                        for (let j = 0; j < 4; ++j)
+                            sliceVerts.push(CMath.V3Interpolate(camFrustum[j], camFrustum[j + 4], _farDepth * frustumDivide));
+                        const point1 = sliceVerts[6];
+                        const point2 = CMath.V3Distance(point1, sliceVerts[4]) > CMath.V3Distance(point1, sliceVerts[0])
+                            ? sliceVerts[4]
+                            : sliceVerts[0];
+                        const bbWidth = CMath.V3Distance(point1, point2);
+                        const margin = _shadowFade * Math.pow(_farDepth, 2.0) * span;
+                        const bound = new CBound();
+                        for (const v of sliceVerts) {
+                            bound.InitBound(CMath.V3MulMatNormal(v, lightOrientationMatInverse));
+                        }
+                        return { bbWidth: bbWidth + margin, bound: bound };
+                    };
+                    const ComputeDivideDenum = () => {
+                        let denom = 0;
+                        for (let i = 0; i < this.mCascadeCycle.length; ++i) {
+                            if (this.mCascadeCycle[i] == -1)
+                                continue;
+                            denom += this.mShadowDivide[i];
+                        }
+                        return denom;
+                    };
+                    const denom = ComputeDivideDenum();
+                    const ComputeDivides = (_denom) => {
+                        const result = [];
+                        for (let i = 0; i < this.mCascadeCycle.length; ++i) {
+                            if (this.mCascadeCycle[i] == -1)
+                                continue;
+                            result.push(this.mShadowDivide[i]);
+                        }
+                        for (let i = 0; i < result.length; ++i) {
+                            result[i] = result[i] / _denom;
+                        }
+                        return result;
+                    };
+                    const divides = ComputeDivides(denom);
+                    ShadowInfo[this.mBrush.mShadowCount * 4 + 2] = far - near;
+                    ShadowInfo[this.mBrush.mShadowCount * 4 + 3] = this.mShadowFade;
+                    for (let i = 0; i < divides.length; i++) {
+                        ShadowDivide[this.mBrush.mShadowCount * 4 + i] = divides[i];
+                    }
+                    let cascadeNear = 0;
+                    for (let i = 0; i < this.mCascadeCycle.length; ++i) {
+                        if (this.mCascadeCycle[i] == -1)
+                            continue;
+                        const scam = this.mBrush.GetCamera(this.mTexKey + i);
+                        scam.mShadow = true;
+                        const cascadeFar = cascadeNear + divides[i];
+                        const { bbWidth, bound } = ComputeCascadeBounds(cascadeNear, cascadeFar, this.mShadowFade);
+                        const center = bound.GetCenter();
+                        center.z = bound.mMin.z - 20000;
+                        if (this.mDigit == null) {
+                            const texelWidth = bbWidth / shadowTex.GetWidth();
+                            const texelHeight = bbWidth / shadowTex.GetHeight();
+                            center.x = Math.floor(center.x / texelWidth) * texelWidth;
+                            center.y = Math.floor(center.y / texelHeight) * texelHeight;
+                        }
+                        else {
+                            center.x = Math.floor(center.x / this.mDigit) * this.mDigit;
+                            center.y = Math.floor(center.y / this.mDigit) * this.mDigit;
+                        }
+                        seye = CMath.V3MulMatNormal(center, lightOrientationMat);
+                        slook = CMath.V3SubV3(seye, ligDir);
+                        if (scam.Init(seye, slook, sup)) {
+                            scam.mWidth = bbWidth;
+                            scam.mHeight = bbWidth;
+                            scam.ResetOrthographic();
+                            ShadowUpdate = true;
+                            this.mBrush.mUpdateShadow = CUpdate.eType.Updated;
+                        }
+                        ShadowView[i].set(CMath.MatTranspose(scam.mVPMat, PVMat).F32A().subarray(0, 12), this.mBrush.mShadowCount * 16);
+                        const vMat = scam.GetViewMat().F32A();
+                        ShadowView[i][this.mBrush.mShadowCount * 16 + 12] = vMat[2];
+                        ShadowView[i][this.mBrush.mShadowCount * 16 + 13] = vMat[6];
+                        ShadowView[i][this.mBrush.mShadowCount * 16 + 14] = vMat[10];
+                        ShadowView[i][this.mBrush.mShadowCount * 16 + 15] = vMat[14];
+                        ShadowCascadeData[this.mBrush.mShadowCount * 4 + i] = Math.min(bbWidth / shadowTex.GetWidth() * 1.4142136, 10.0);
+                        scam.Update(_update);
+                        cascadeNear = cascadeFar;
+                    }
+                    CPoolGeo.RecycleMat(PVMat);
+                }
+                else {
+                    let seye = this.mDirPos.xyz;
+                    let slook;
+                    let sup;
+                    let PVMat = CPoolGeo.ProductMat();
+                    const cubeDir = [
+                        new CVec3(1, 0, 0), new CVec3(-1, 0, 0), new CVec3(0, 1, 0),
+                        new CVec3(0, -1, 0), new CVec3(0, 0, 1), new CVec3(0, 0, -1)
+                    ];
+                    const cubeUp = [
+                        new CVec3(0, 1, 0), new CVec3(0, 1, 0), new CVec3(0, 0, 1),
+                        new CVec3(0, 0, -1), new CVec3(0, 1, 0), new CVec3(0, 1, 0)
+                    ];
+                    if (this.mCascadeCycle[0] != -1) {
+                        for (let i = 0; i < 6; i++) {
+                            let scam = this.mBrush.GetCamera(this.mTexKey + i);
+                            scam.mShadow = true;
+                            scam.SetNear(1);
+                            scam.SetFov(CMath.DegreeToRadian(90));
+                            slook = CMath.V3AddV3(seye, cubeDir[i]);
+                            sup = cubeUp[i];
+                            if (scam.Init(seye, slook, sup) || scam.mProjFar != this.GetOutRadius()) {
+                                scam.SetFar(this.GetOutRadius());
+                                scam.mWidth = shadowTex.GetWidth();
+                                scam.mHeight = shadowTex.GetHeight();
+                                scam.ResetPerspective();
+                                ShadowUpdate = true;
+                                this.mBrush.mUpdateShadow = CUpdate.eType.Updated;
+                            }
+                            ShadowView[i].set(CMath.MatMul(scam.GetViewMat(), scam.GetProjMat(), PVMat).F32A(), this.mBrush.mShadowCount * 16);
+                            scam.Update(_update);
+                        }
+                        ShadowCascadeData[this.mBrush.mShadowCount * 4 + 0] = 2 / shadowTex.GetWidth() * 1.4142136;
+                    }
+                    CPoolGeo.RecycleMat(PVMat);
+                }
+            }
+            if (!this.IsPointLight()) {
+                for (let i = 0; i < this.mCascadeCycle.length; ++i) {
+                    if (this.mCascadeCycle[i] == -1) {
+                        ShadowRead[this.mBrush.mShadowCount * 4 + i] = -1;
+                        continue;
+                    }
+                    for (const rp of this.mWriteRP) {
+                        if (!rp.mTag.has("shadowWrite"))
+                            continue;
+                        const srpKey = this.mTexKey + rp.mShader + i;
+                        let srp = this.mBrush.GetAutoRP(srpKey);
+                        if (srp == null) {
+                            srp = rp.Export();
+                            srp.mPriority -= i + this.mBrush.mShadowTexOff;
+                            srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(i, this.mBrush.mShadowCount, 0)));
+                            srp.PushAnd(new CCondition("mCullMask.x", "&", this.mCullMask.x));
+                            this.mBrush.SetAutoRP(srpKey, srp);
+                        }
+                        srp.mRenderTarget = this.GetTex();
+                        srp.mRenderTargetUse = new Set([this.mBrush.mShadowTexOff + i]);
+                        srp.mCamera = this.mTexKey + i;
+                        const shadowWriteAttr = srp.mShaderAttr[0];
+                        if (shadowWriteAttr.mData.y != this.mBrush.mShadowCount) {
+                            shadowWriteAttr.mData.x = i;
+                            shadowWriteAttr.mData.y = this.mBrush.mShadowCount;
+                            shadowWriteAttr.mData.z = 0;
+                            srp.Reset();
+                            this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
+                        }
+                        srp.mAnd[srp.mAnd.length - 1].mValue = this.mCullMask.x;
+                        if (this.mShadowOff)
+                            srp.mCycle = 100000000;
+                        else
+                            srp.mCycle = this.mCascadeCycle[i];
+                    }
+                    ShadowRead[this.mBrush.mShadowCount * 4 + i] = this.mBrush.mShadowTexOff + i;
+                }
+                if (ShadowRead[this.mBrush.mShadowCount * 4 + 0] >= 0)
+                    this.mBrush.mShadowTexOff += 1;
+                if (ShadowRead[this.mBrush.mShadowCount * 4 + 1] >= 0)
+                    this.mBrush.mShadowTexOff += 1;
+                if (ShadowRead[this.mBrush.mShadowCount * 4 + 2] >= 0)
+                    this.mBrush.mShadowTexOff += 1;
+                if (ShadowRead[this.mBrush.mShadowCount * 4 + 3] >= 0)
+                    this.mBrush.mShadowTexOff += 1;
+            }
+            else {
+                if (this.mCascadeCycle[0] != -1) {
+                    for (let i = 0; i < 6; ++i) {
+                        for (const rp of this.mWriteRP) {
+                            if (!rp.mTag.has("shadowWrite"))
+                                continue;
+                            const srpKey = this.mTexKey + rp.mShader + i;
+                            let srp = this.mBrush.GetAutoRP(srpKey);
+                            if (srp == null) {
+                                srp = rp.Export();
+                                srp.mPriority -= i + this.mBrush.mShadowTexOff;
+                                srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(SDF.eShadow.Near + i, this.mBrush.mShadowCount, 1)));
+                                srp.mTag.add("PointLightShadowV");
+                                srp.mTag.add("PointLightShadowF");
+                                srp.PushAnd(new CCondition("mCullMask.x", "&", this.mCullMask.x));
+                                this.mBrush.SetAutoRP(srpKey, srp);
+                            }
+                            srp.mRenderTarget = this.GetTex();
+                            srp.mRenderTargetUse = new Set([this.mBrush.mShadowTexOff + i]);
+                            srp.mCamera = this.mTexKey + i;
+                            const shadowWriteAttr = srp.mShaderAttr[0];
+                            if (shadowWriteAttr.mData.y != this.mBrush.mShadowCount) {
+                                shadowWriteAttr.mData.x = i;
+                                shadowWriteAttr.mData.y = this.mBrush.mShadowCount;
+                                shadowWriteAttr.mData.z = 1;
+                                srp.Reset();
+                                this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
+                            }
+                            srp.mAnd[srp.mAnd.length - 1].mValue = this.mCullMask.x;
+                            if (this.mShadowOff)
+                                srp.mCycle = 100000000;
+                            else
+                                srp.mCycle = this.mCascadeCycle[0];
+                        }
+                    }
+                    ShadowRead[this.mBrush.mShadowCount * 4 + 0] = this.mBrush.mShadowTexOff;
+                    ShadowRead[this.mBrush.mShadowCount * 4 + 1] = this.mBrush.mShadowTexOff;
+                    ShadowRead[this.mBrush.mShadowCount * 4 + 2] = this.mBrush.mShadowTexOff;
+                }
+                ShadowInfo[this.mBrush.mShadowCount * 4 + 1] = this.mBrush.mShadowTexOff;
+                ShadowInfo[this.mBrush.mShadowCount * 4 + 2] = 1;
+                ShadowInfo[this.mBrush.mShadowCount * 4 + 3] = this.GetOutRadius();
+                this.mBrush.mShadowTexOff += 6;
+            }
+            if (this.mCascadeCycle[0] == -1 && this.mCascadeCycle[1] == -1 && this.mCascadeCycle[2] == -1 && this.mCascadeCycle[3] == -1) {
+                for (let rp of this.mWriteRP) {
+                    if (rp.mTag.has("shadowPlane")) {
+                        var srpKey = this.mTexKey + rp.mShader;
+                        var srp = this.mBrush.GetAutoRP(srpKey);
+                        if (srp == null) {
+                            srp = rp.Export();
+                            this.mBrush.SetAutoRP(srpKey, srp);
+                            srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(this.mBrush.mLightCount, this.mBrush.mShadowCount, 2)));
+                            srp.PushAnd(new CCondition("mCullMask.x", "&", this.mCullMask.x));
+                        }
+                        if (srp.mShaderAttr[0].mData.x != this.mBrush.mLightCount || srp.mShaderAttr[0].mData.y != this.mBrush.mShadowCount) {
+                            srp.mShaderAttr[0].mData.x = this.mBrush.mLightCount;
+                            srp.mShaderAttr[0].mData.y = this.mBrush.mShadowCount;
+                            srp.mShaderAttr[0].mData.z = 2;
+                            srp.Reset();
+                            this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
+                        }
+                        srp.mAnd[srp.mAnd.length - 1].mValue = this.mCullMask.x;
+                        if (this.mShadowOff)
+                            srp.mCycle = 100000000;
+                        else
+                            srp.mCycle = 0;
+                    }
+                }
+            }
+            if (shadowTex.GetInfo()[0].mCount < this.mBrush.mShadowTexOff) {
+                this.GetOwner().GetFrame().Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, this.mBrush.mShadowTexOff)], new CVec2(shadowTex.GetWidth(), shadowTex.GetHeight()), this.GetOwner().GetFrame().Pal().GetShadowWriteTex());
+            }
+            if (!this.mShadowOff) {
+                this.mCullMask.w = this.mBrush.mShadowCount;
+                this.mBrush.mShadowCount++;
+            }
+        }
+        if (this.mBrush.mLightCount > CDevice.GetProperty(CDevice.eProperty.Sam2DSize) / 4)
+            return;
+        this.mBrush.mLightDir[this.mBrush.mLightCount * 4 + 0] = this.mDirPos.x;
+        this.mBrush.mLightDir[this.mBrush.mLightCount * 4 + 1] = this.mDirPos.y;
+        this.mBrush.mLightDir[this.mBrush.mLightCount * 4 + 2] = this.mDirPos.z;
+        this.mBrush.mLightDir[this.mBrush.mLightCount * 4 + 3] = this.mDirPos.w;
+        this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 0] = this.mColor.x;
+        this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 1] = this.mColor.y;
+        this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 2] = this.mColor.z;
+        this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 3] = this.mColor.w;
+        this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 0] = this.mCullMask.x;
+        this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 1] = this.mCullMask.y;
+        this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 2] = this.mCullMask.z;
+        this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 3] = this.mCullMask.w;
+        this.mBrush.mLightCount++;
+    }
+    SetDirectPos(_dir) {
+        this.mDirPos.mF32A[0] = _dir.mF32A[0];
+        this.mDirPos.mF32A[1] = _dir.mF32A[1];
+        this.mDirPos.mF32A[2] = _dir.mF32A[2];
+        this.mUpdate = CUpdate.eType.Updated;
+    }
+    SetDirect(_sun = -1) {
+        this.mDirPos.w = _sun;
+        this.mUpdate = CUpdate.eType.Updated;
+    }
+    SetPoint(_outer, _inner = 1) {
+        if (_inner > _outer)
+            _inner = _outer;
+        this.mColor.w = _inner;
+        this.mDirPos.w = _outer;
+        this.mUpdate = CUpdate.eType.Updated;
+    }
+    SetColor(_col) {
+        this.mColor.x = _col.x;
+        this.mColor.y = _col.y;
+        this.mColor.z = _col.z;
+        this.mUpdate = CUpdate.eType.Updated;
+    }
+    SetShadow3D(_shadowKey, _CycleTime0 = 0, _CycleTime1 = -1, _CycleTime2 = -1, _CycleTime3 = -1) {
+        this.mTexKey = _shadowKey;
+        this.mCascadeCycle[0] = _CycleTime0;
+        this.mCascadeCycle[1] = _CycleTime1;
+        this.mCascadeCycle[2] = _CycleTime2;
+        this.mCascadeCycle[3] = _CycleTime3;
+        this.mUpdate = CUpdate.eType.Updated;
+    }
+    SetShadow2D(_shadowKey) {
+        this.mTexKey = _shadowKey;
+        this.mCascadeCycle[0] = -1;
+        this.mCascadeCycle[1] = -1;
+        this.mCascadeCycle[2] = -1;
+        this.mCascadeCycle[3] = -1;
+        this.mUpdate = CUpdate.eType.Updated;
+    }
+    Refresh() {
+        if (this.mBrush != null && this.mTexKey != null) {
+            this.mBrush.mUpdateLight = CUpdate.eType.Updated;
+            this.mBrush.mUpdateShadow = CUpdate.eType.Updated;
+            if (this.mCascadeCycle[0] == -1 && this.mCascadeCycle[1] == -1 && this.mCascadeCycle[2] == -1 && this.mCascadeCycle[3] == -1) {
+                for (let rp of this.mWriteRP) {
+                    if (rp.mTag.has("shadowPlane") == false)
+                        continue;
+                    this.mBrush.RemoveAutoRP(this.mTexKey + rp.mShader);
+                }
+            }
+            if (this.IsPointLight()) {
+                for (let i = 0; i < 6; i++) {
+                    this.mBrush.mCameraMap.delete(this.mTexKey + i);
+                    for (let rp of this.mWriteRP) {
+                        if (rp.mTag.has("shadowWrite") == false)
+                            continue;
+                        this.mBrush.RemoveAutoRP(this.mTexKey + rp.mShader + i);
+                    }
+                }
+            }
+            else {
+                for (let i = 0; i < this.mCascadeCycle.length; ++i) {
+                    if (this.mCascadeCycle[i] == -1)
+                        continue;
+                    this.mBrush.mCameraMap.delete(this.mTexKey + i);
+                    for (let rp of this.mWriteRP) {
+                        if (rp.mTag.has("shadowWrite") == false)
+                            continue;
+                        this.mBrush.RemoveAutoRP(this.mTexKey + rp.mShader + i);
+                    }
+                }
+            }
+            this.mBrush.ClearRen();
+        }
+    }
+    RemoveShadow() {
+        this.Refresh();
+        this.mCascadeCycle = [0, -1, -1, -1];
+        this.mTexKey = null;
+        this.mUpdate = CUpdate.eType.Updated;
+    }
+    SetShadowDistance(_dist) {
+        this.mShadowDistance = _dist;
+    }
+    SetInRadius(_rad) {
+        return this.mColor.w = _rad;
+    }
+    SetOutRadius(_rad) {
+        return this.mDirPos.w = _rad;
+    }
+    SetDigit(_digit) {
+        this.mDigit = _digit;
+    }
+    SetMask(_mask) {
+        this.mCullMask.x = _mask;
+    }
+    GetDirectPos() {
+        return this.mDirPos.xyz;
+    }
+    GetColor() {
+        return this.mColor.xyz;
+    }
+    GetMask() {
+        return this.mCullMask.x;
+    }
+    IsColorZero() {
+        return this.mColor.mF32A[0] == 0 && this.mColor.mF32A[1] == 0 && this.mColor.mF32A[2] == 0;
+    }
+    GetInRadius() {
+        return this.mColor.w;
+    }
+    GetOutRadius() {
+        return this.mDirPos.w;
+    }
+    IsPointLight() {
+        return this.mDirPos.w > 0.5;
+    }
+    SetUniformDivide() {
+        this.mShadowDivide = [1, 1, 1, 1];
+    }
+    SetLogarithmicDivide() {
+        this.mShadowDivide = [1, 13, 154, 1832];
+    }
+    SetPracticalDivide() {
+        this.mShadowDivide = [250.6, 256.5, 326.9, 1166];
+    }
+    SetGeometric() {
+        this.mShadowDivide = [1, 2, 4, 8];
+    }
+    SetGeometricSq() {
+        this.mShadowDivide = [1, 4, 16, 64];
+    }
+    ImportCJSON(_json) {
+        return super.ImportCJSON(_json);
+    }
+    SetEnable(_val) {
+        super.SetEnable(_val);
+        this.Refresh();
+    }
+    Destroy() {
+        super.Destroy();
+        this.Refresh();
+    }
+}

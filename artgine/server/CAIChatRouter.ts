@@ -6,15 +6,26 @@ import { CAI } from '../util/CAI.js';
 
 /*
 AI Chat Router
-- /AIChat                            GET    AI.html serve
 - /AIChat/sessions                   GET    session list
   (provider 목록은 /AIInfo/setting으로 이전됨 — CAIInfoRouter 참고)
-- /AIChat/sessions/:id               GET    history.json
-- /AIChat/sessions/:id               DELETE remove session + workspace
-- /AIChat/session/config?id=         GET    세션 config 조회
-- /AIChat/session/config?id=         POST   세션 config 저장 (workingDir, mcp, write)
-- /AIChat/sessions/:id/upload?name=  POST   raw body -> uploads/<safe>
+- /AIChat/session?id=                GET    history.json
+- /AIChat/session?id=                DELETE remove session + workspace
+- /AIChat/session/upload?id=&name=   POST   raw body -> uploads/<safe>
+- /AIChat/workspace?id=&path=        GET    session workspace file
+- /AIChat/chat                       POST   1:1 동기 대화
 - /AIChat/ws                         WS     streaming chat
+
+POST /AIChat/chat body (JSON):
+  provider    string   claude|codex|grok|…|cmd
+  model       string   (cmd면 무시)
+  content     string   유저 메시지(대화)
+  session     string?  세션 id — 없으면 신규 생성, 있으면 이어서 대화
+  workingDir  string?  실행 경로(cwd) — CLI/도구가 돌아가는 디렉터리 (별칭: cwd, path)
+  mdcopy      boolean? 실행 경로에 ROLE.md 복사 (workingDir 있을 때만, 기본 false)
+  write       boolean? CLI write 권한 (기본 true)
+  mcp         boolean? MCP 사용 (기본 false)
+
+응답: { ok, session, messages: IMessage[] }  또는 { ok:false, msg, session?, messages? }
 
 주의: CServerMain.ts의 정적 파일 차단 미들웨어가 '/ai/*' 경로를 전부 403으로 막기 때문에
 (ai/ 디렉토리의 가이드·툴 소스 보호 목적), 이 라우터의 실제 경로는 반드시 '/ai/chat'이
@@ -48,17 +59,15 @@ interface ISessionMeta {
 }
 interface IHistory { meta: ISessionMeta; messages: IMessage[]; }
 
-@URLPatterns(["/AIChat/sessions", "/AIChat/session", "/AIChat/session/config", "/AIChat/session/upload", "/AIChat/share", "/AIChat/share/file", "/AIChat/workspace"])
+@URLPatterns(["/AIChat/sessions", "/AIChat/session", "/AIChat/session/upload", "/AIChat/workspace", "/AIChat/chat"])
 export class CAIChatRouter extends CAuthServer {
     constructor() {
         super();
         this.On("/AIChat/sessions",        this.onGetSessions.bind(this));
         this.On("/AIChat/session",         this.onSession.bind(this));
-        this.On("/AIChat/session/config",  this.onSessionConfig.bind(this));
         this.On("/AIChat/session/upload",  this.onSessionUpload.bind(this));
-        this.On("/AIChat/share",           this.onShare.bind(this));
-        this.On("/AIChat/share/file",      this.onShareFile.bind(this));
         this.On("/AIChat/workspace",       this.onWorkspace.bind(this));
+        this.On("/AIChat/chat",            this.onChat.bind(this));
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }
@@ -66,11 +75,9 @@ export class CAIChatRouter extends CAuthServer {
 
     async onGetSessions(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSession(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
-    async onSessionConfig(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSessionUpload(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
-    async onShare(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
-    async onShareFile(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onWorkspace(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
+    async onChat(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
 }
 
 export type { IMessage, ISessionMeta, IHistory, IAttachment, Provider, Role };

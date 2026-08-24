@@ -10,12 +10,11 @@
     "mXR": false,
     "mDeveloper": true,
     "mIAuto": true,
-    "mWASM": false,
     "mCanvas": ""
   },
   "pluging": [],
   "dependencies": {
-    "ControlDownload": 1
+    "ControlMedia": 1
   },
   "includes": {
     "pakozlib": true,

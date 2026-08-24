@@ -1,518 +1,320 @@
-import { CBrush, CRenPriority } from "../app/canvas/CBrush.js";
-import { CCanvas } from "../app/canvas/CCanvas.js";
+import { CBrush } from "../app/canvas/CBrush.js";
 import { CRenPaint } from "../app/component/paint/CPaint.js";
-import { CPaint2D, CPaintHTML } from "../app/component/paint/CPaint2D.js";
-import { CSubject } from "../app/subject/CSubject.js";
-import { CUpdate } from "../basic/Basic.js";
-import { CDOM } from "../basic/CDOM.js";
-import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
-import { CPreferences } from "../basic/CPreferences.js";
-import { CUtil } from "../basic/CUtil.js";
-import { CVec2 } from "../geometry/CVec2.js";
-import { CVec3 } from "../geometry/CVec3.js";
-import { CVec4 } from "../geometry/CVec4.js";
-import { CRenderPass } from "../render/CRenderPass.js";
-import { CCamCon2DFreeMove } from "../util/CCamCon.js";
-import { CChecker } from "../util/CChecker.js";
-import { CFrame } from "../util/CFrame.js";
+import { CEvent } from "../basic/CEvent.js";
+import { CModalFlex } from "../util/CModalUtil.js";
 
-let g_roBrush: CBrush;
-let g_roPriority: CRenPriority;
-let g_colorMap: Map<string, CVec4> = new Map();
-
-let g_remains: Map<string, CRenPaint[]> = new Map();
-let gModal: CModal;
-export function RenderQueTool(_brush: CBrush) {
-    g_roBrush = _brush;
-
-    gModal = new CModal("RenderOrderModal");
-    gModal.mResize = true;
-    gModal.SetSize(1400, 600);
-    gModal.SetTitle(CModal.eTitle.TextMinFullClose);
-    gModal.SetHeader("RenderOrderModal");
-    gModal.SetBody(
-        `<div style='height:100%;' id='RenderOrderTool_div'>
-            <canvas id='renderOrderCanvas'/>
-        </div>`
-    );
-    gModal.SetZIndex(CModal.eSort.Manual,CModal.eSort.ZIndexTool);
-    gModal.On(CEvent.eType.Open,() => { Open(); });
-    gModal.On(CEvent.eType.Close,() => { Close(); });
-    gModal.Open();
+interface RQUserEntry {
+    mOwnerKey: string;
+    mType: string;
+    mShow: number;
+    mPriority: number;
+    mListType: string;
 }
-var g_fw: CFrame = null;
-var g_brush: CBrush = null;
-var g_can: CCanvas = null;
 
+let gModal: CModalFlex = null;
+let gBrush: CBrush = null;
+let gSelectedKey: string = null;
+let gFilter: string = "";
+let gUsersCache: Map<string, RQUserEntry[]> = new Map();
+let gSnapshotTime: string = "";
 
+export function RenderQueTool(_brush: CBrush) {
+    gBrush = _brush;
+    gSelectedKey = null;
+    gFilter = "";
+    gUsersCache = new Map();
 
-async function Open() {
-    let pf = new CPreferences();
-    pf.mParallelShader=false;
-    
-    // pf.m_width = 1350;
-    // pf.m_height = 550;
+    gModal = new CModalFlex([0.3, 0.7], "RenderOrderModal");
+    gModal.mResize = true;
+    gModal.SetSize(1400, 800);
+    gModal.SetTitle(CModal.eTitle.TextMinFullClose);
+    gModal.SetHeader("Render Queue");
+    gModal.SetZIndex(CModal.eSort.Manual, CModal.eSort.ZIndexTool);
+    gModal.On(CEvent.eType.Close, () => { Close(); });
+    gModal.Open();
 
-    //CWebUtil.ID("RenderOrder_div").innerHTML = "<canvas id='renderOrderCanvas' />";
-    g_fw = new CFrame(pf, "renderOrderCanvas");
-    g_fw.PushEvent(CEvent.eType.Load,new CEvent(Load));
-    g_fw.PushEvent(CEvent.eType.Init,new CEvent(Init));
-    g_fw.PushEvent(CEvent.eType.Update,new CEvent(Update));
-    g_fw.PushEvent(CEvent.eType.Render,new CEvent(Render));
+    const leftPanel = gModal.FindFlex(0) as HTMLElement;
+    const rightPanel = gModal.FindFlex(1) as HTMLElement;
+    leftPanel.style.display = "flex";
+    leftPanel.style.flexDirection = "column";
+    leftPanel.style.overflow = "hidden";
+    rightPanel.style.display = "flex";
+    rightPanel.style.flexDirection = "column";
+    rightPanel.style.overflow = "hidden";
 
-    //CWebUtil.ID("RenPriority_Btn").onclick = (e) => {UpdateRenPriorityGraph()};
-    //CWebUtil.ID("RenInfo_Btn").onclick = (e) => {UpdateRenInfoGraph()};
+    leftPanel.innerHTML =
+        `<div style="padding:6px; border-bottom:1px solid #ddd; display:flex; flex-direction:column; gap:4px;">` +
+        `<button id="rq_refresh" class="btn btn-sm btn-primary">새로고침 (현재 프레임 스냅샷)</button>` +
+        `<div id="rq_time" class="text-muted" style="font-size:11px;"></div>` +
+        `<input type="search" id="rq_search" class="form-control form-control-sm" placeholder="Search render pass / tag...">` +
+        `</div>` +
+        `<div id="rq_list" style="flex:1 1 auto; overflow-y:auto;"></div>`;
 
-    await g_fw.Process();
+    rightPanel.innerHTML =
+        `<div id="rq_detail" style="flex:0 0 42%; overflow-y:auto; border-bottom:3px solid #999; padding:8px;"></div>` +
+        `<div id="rq_frame" style="flex:1 1 auto; overflow-y:auto; padding:8px;"></div>`;
+
+    const search = leftPanel.querySelector<HTMLInputElement>("#rq_search");
+    search.oninput = () => {
+        gFilter = search.value.toLowerCase();
+        RefreshList();
+    };
+
+    const refreshBtn = leftPanel.querySelector<HTMLButtonElement>("#rq_refresh");
+    refreshBtn.onclick = () => { TakeSnapshot(); };
+
+    TakeSnapshot();
 }
 
 function Close() {
-    if (g_fw) {
-        g_fw.Win().Handle().remove();
-        g_fw.Destroy();
-        g_fw = null;
-    }
-    g_roBrush = null;
-    g_colorMap.clear();
+    gBrush = null;
+    gModal = null;
+    gSelectedKey = null;
+    gUsersCache = new Map();
 }
 
-async function Load() {
-    //await g_fw.Pal().Load(g_fw);
+function Esc(_s: any): string {
+    return String(_s).replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" } as any
+    )[c]);
 }
 
-function Init() {
-    //g_fw.Pal().Init(g_fw);
-    g_brush = new CBrush(g_fw);
-    g_brush.InitCamera();
-    g_can = new CCanvas(g_fw, g_brush,null);
-    g_brush.GetCam2D().SetCamCon(new CCamCon2DFreeMove(g_fw.Input()));
+function CollectUsers(): Map<string, RQUserEntry[]> {
+    const map = new Map<string, RQUserEntry[]>();
+    if (gBrush == null) return map;
+    for (let [priority, renPri] of gBrush.mRenPriMap) {
+        CollectList(map, renPri.mAlphaList, priority, "Alpha");
+        CollectList(map, renPri.mDistanceList, priority, "Distance");
+        CollectList(map, renPri.mRAlphaList, priority, "RAlpha");
+    }
+    return map;
+}
 
-    var sub = g_can.PushSub(new CSubject());
-    sub.PushComp(new CPaint2D(g_fw.Pal().GetNoneTex(), new CVec2(128, 128)));
-
-
-    let posX = 0;
-    let posY = 0;
-    let ptArr=new Array<CPaintHTML>();
-    let renderPassDivs: Array<{div: CPaintHTML, key: string}> = [];
-    
-    for (let [key, info] of g_roBrush.mRenInfoMap) 
-    {
-        if (!info.mRP || info.mShader==null) continue; // ✅ null이면 무시
-
-        const rp = info.mRP;
-        const fields = [];
-
-        // === CRenInfo 고유 정보 ===
-        fields.push(`show: ${info.mShow}`);
-        const tagStr = info.mTag && info.mTag.size > 0
-            ? Array.from(info.mTag).join(", ")
-            : "-";
-        fields.push(`tag: ${tagStr}`);
-
-        // === m_rp 정보 ===
-        if (rp.mDepthTest != null) fields.push(`depthTest: ${rp.mDepthTest}`);
-        if (rp.mDepthWrite != null) fields.push(`depthWrite: ${rp.mDepthWrite}`);
-        if (rp.mAlpha != null) fields.push(`alpha: ${rp.mAlpha}`);
-        if (rp.mCullFace != null) fields.push(`cullFace: ${rp.mCullFace}`);
-        if (rp.mCamera) fields.push(`camera: ${rp.mCamera}`);
-        if (rp.mPriority != null) fields.push(`priority: ${rp.mPriority}`);
-        if (rp.mRenderTarget) fields.push(`renderTarget: ${rp.mRenderTarget}`);
-        if (rp.mRenderTargetUse != null) {
-            const useList = Array.from(rp.mRenderTargetUse).join(", ");
-            fields.push(`renderTargetUse: ${useList}`);
+function CollectList(_map: Map<string, RQUserEntry[]>, _list: any, _priority: number, _listType: string) {
+    const size = _list.Size();
+    for (let i = 0; i < size; ++i) {
+        const cur: CRenPaint = _list.Find(i);
+        if (cur == null || cur.mRenInfoKey == null) continue;
+        let arr = _map.get(cur.mRenInfoKey);
+        if (arr == null) {
+            arr = [];
+            _map.set(cur.mRenInfoKey, arr);
         }
-        if (rp.mShaderAttr && rp.mShaderAttr.length > 0)
-        {
-            for(let sa of rp.mShaderAttr)
-            {
-                fields.push(`shaderAttr: ${sa.ToLog()}`);
-            }
-            
-        }
-         if (info.mShader.mDefault.length > 0)
-        {
-            for(let sa of info.mShader.mDefault)
-            {
-                fields.push(`default: ${sa.ToLog()}`);
-            }
-            
-        }
-        
-        fields.push(`shader: ${info.mShader.mKey}`);
-        if (rp.mShader) fields.push(`shaderKey: ${rp.mShader}`);
-        if (rp.mClearDepth != null) fields.push(`clearDepth: ${rp.mClearDepth}`);
-        if (rp.mClearColor != null) fields.push(`clearColor: ${rp.mClearColor}`);
-        if (rp.mCycle != null) fields.push(`cycle: ${rp.mCycle}`);
-        // if (rp.mSort != null) {
-        //     let sortStr = "";
-        //     if (rp.mSort === CRenderPass.eSort.Distance) sortStr = "Distance";
-        //     else if (rp.mSort === CRenderPass.eSort.AlphaGroup) sortStr = "AlphaGroup";
-        //     else if (rp.mSort === CRenderPass.eSort.ReversAlphaGroup) sortStr = "ReversAlphaGroup";
-        //     else if (rp.mSort === CRenderPass.eSort.None) sortStr = "None";
+        arr.push({
+            mOwnerKey: cur.mPaint?.GetOwner()?.Key() ?? "-",
+            mType: cur.mPaint?.constructor?.name ?? "-",
+            mShow: cur.mShow,
+            mPriority: _priority,
+            mListType: _listType,
+        });
+    }
+}
 
-        //     fields.push(`sort: ${sortStr}`);
-        // }
+function TakeSnapshot() {
+    if (gBrush == null || gModal == null) return;
+    gUsersCache = CollectUsers();
 
-        const html = `
-        <div class="border rounded bg-light p-2" style="width: 256px; font-size: 12px;">
-            <h6 class="text-center text-danger mb-2">RenderPass: ${key}</h6>
-            <ul class="list-group">
-                ${fields.map(f => `<li class="list-group-item p-1">${f}</li>`).join("")}
-            </ul>
-        </div>
-        `;
+    const now = new Date();
+    gSnapshotTime = now.toLocaleTimeString();
+    const timeDiv = document.getElementById("rq_time");
+    if (timeDiv != null) timeDiv.textContent = `스냅샷: ${gSnapshotTime}`;
 
-        const sub = g_can.PushSub(new CSubject());
-        sub.SetKey(key);
-        let pt=sub.PushComp(
-            new CPaintHTML(
-                CDOM.DataToDom(html),
-                new CVec2(256, 0),
-                CDOM.ID("RenderOrderTool_div")
-            )
-        );
-        pt.SetPivot(new CVec3(0, 1, 0)); // 상단 기준 (위쪽으로 배치)
-        sub.SetPos(new CVec3(posX, 0));
-        ptArr.push(pt);
-        renderPassDivs.push({div: pt, key: key});
-        posX += 280;
+    RefreshList();
+    RefreshDetail();
+    RefreshFrame();
+}
+
+function RefreshList() {
+    const listDiv = document.getElementById("rq_list");
+    if (listDiv == null || gBrush == null) return;
+    const scrollTop = listDiv.scrollTop;
+
+    let entries = Array.from(gBrush.mRenInfoMap.entries())
+        .filter(([, info]) => info.mRP != null && info.mShader != null);
+
+    if (gFilter) {
+        entries = entries.filter(([key, info]) => {
+            if (key.toLowerCase().includes(gFilter)) return true;
+            for (let t of info.mTag) if (t.toLowerCase().includes(gFilter)) return true;
+            return false;
+        });
     }
 
-   
-    
-    
+    entries.sort((a, b) => {
+        const pa = a[1].mRP?.mPriority ?? 0;
+        const pb = b[1].mRP?.mPriority ?? 0;
+        if (pa !== pb) return pa - pb;
+        return a[0].localeCompare(b[0]);
+    });
 
-    const sortedRenPriEntries = Array.from(g_roBrush.mRenPriMap.entries())
-    .sort((a, b) => a[0] - b[0]); // priority 기준 정렬
-
-    posX=0;
-    for (let [priority, renPri] of sortedRenPriEntries) {
-        let alphaHTML = "";
-        const alphaList = renPri.mAlphaList;
-        
-        let prev = null;
-        let count = 1;
-        let countKey="";
-
-        for (let i = 0; i <= alphaList.Size(); i++) {
-            const current = alphaList.Find(i);
-            
-            const key = current?.mRenInfoKey ?? "-";
-            const show = current?.mShow;
-            const type = current?.mPaint?.constructor?.name ?? "-";
-
-            const sameAsPrev = prev &&
-                prev.mRenInfoKey === key &&
-                prev.mShow === show &&
-                (prev.mPaint?.constructor?.name ?? "-") === type;
-
-            if(current!=null && current.mPaint!=null)
-                countKey+=current.mPaint.GetOwner().Key()+",";
-            if (i > 0 && sameAsPrev) {
-                count++;
-                
-                continue;
-            }
-
-            if (prev) {
-                const grayClass = prev.mShow !== 0 ? "text-warning" : "";
-                alphaHTML += `
-                    <li class="list-group-item p-1 ${grayClass}">
-                        <div>key: <span style="cursor: pointer; color: blue; text-decoration: underline; pointer-events:auto;" 
-                            onclick="focusOnRenderPass('${prev.mRenInfoKey}')">${prev.mRenInfoKey ?? "-"}</span></div>
-                        <div>show: ${prev.mShow}</div>
-                        <div>type: ${prev.mPaint?.constructor?.name ?? "-"}</div>
-                        ${count > 1 ? `<div>+${count - 1} more <br><textarea style="pointer-events:auto;">${countKey}</textarea></div>` : `<div>${prev.mPaint.GetOwner().Key()}</div>`}
-                    </li>
-                `;
-                countKey="";
-            }
-            
-            prev = current;
-            count = 1;
-            
-        }
-        countKey="";
-        let distanceHTML = "";
-        const distanceList = renPri.mDistanceList;
-        for (let i = 0; i <= distanceList.Size(); i++) {
-            const current = distanceList.Find(i);
-            
-            const key = current?.mRenInfoKey ?? "-";
-            const show = current?.mShow;
-            const type = current?.mPaint?.constructor?.name ?? "-";
-
-            const sameAsPrev = prev &&
-                prev.mRenInfoKey === key &&
-                prev.mShow === show &&
-                (prev.mPaint?.constructor?.name ?? "-") === type;
-            if(current!=null && current.mPaint!=null)
-                countKey+=current.mPaint.GetOwner().Key()+",";
-            if (i > 0 && sameAsPrev) {
-                count++;
-                
-                continue;
-            }
-
-            if (prev) {
-                const grayClass = prev.mShow !== 0 ? "text-warning" : "";
-                alphaHTML += `
-                    <li class="list-group-item p-1  ${grayClass}">
-                        <div>key: <span style="cursor: pointer; color: blue; text-decoration: underline; pointer-events:auto;" onclick="focusOnRenderPass('${prev.mRenInfoKey}')">${prev.mRenInfoKey ?? "-"}</span></div>
-                        <div>show: ${prev.mShow}</div>
-                        <div>type: ${prev.mPaint?.constructor?.name ?? "-"}</div>
-                        ${count > 1 ? `<div>+${count - 1} more <br><textarea style="pointer-events:auto;">${countKey}</textarea></div>` : `<div>${prev.mPaint.GetOwner().Key()}</div>`}
-                    </li>
-                `;
-                countKey="";
-            }
-
-            prev = current;
-            count = 1;
-            
-        }
-
-        const html = `
-        <div class="border rounded bg-light p-2" style="width: 256px; font-size: 12px;">
-            <h6 class="text-center text-primary mb-2">Priority: ${priority}</h6>
-
-            <div>
-                <strong>Alpha List</strong>
-                <ul class="list-group mb-2">${alphaHTML}</ul>
+    let html = "";
+    for (let [key, info] of entries) {
+        const users = gUsersCache.get(key) ?? [];
+        const active = key === gSelectedKey ? "list-group-item-primary" : "";
+        const dot = info.mShow ? "#28a745" : "#adb5bd";
+        html += `
+        <div class="list-group-item list-group-item-action py-1 px-2 ${active}" style="cursor:pointer; font-size:12px;" data-key="${Esc(key)}">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:${dot}; flex:none;"></span>
+                <span style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${Esc(key)}">${Esc(key)}</span>
+                <span class="badge bg-secondary">P${info.mRP.mPriority ?? "-"}</span>
+                <span class="badge bg-info text-dark" title="사용 중인 오브젝트 수">${users.length}</span>
             </div>
+        </div>`;
+    }
+    listDiv.innerHTML = html || `<div class="text-muted p-2" style="font-size:12px;">렌더패스 없음</div>`;
+    listDiv.scrollTop = scrollTop;
 
-            <div>
-                <strong>Distance List</strong>
-                <ul class="list-group">${distanceHTML}</ul>
-            </div>
-        </div>
-        `;
+    listDiv.querySelectorAll<HTMLElement>("[data-key]").forEach((el) => {
+        el.onclick = () => {
+            gSelectedKey = el.dataset.key;
+            RefreshList();
+            RefreshDetail();
+        };
+    });
+}
 
-        const sub = g_can.PushSub(new CSubject());
-        let pt=sub.PushComp(
-            new CPaintHTML(
-                CDOM.DataToDom(html),
-                new CVec2(256, 0),
-                CDOM.ID("RenderOrderTool_div")
-            )
-        );
-        pt.SetPivot(new CVec3(0, -1, 0)); // 하단 기준 (아래쪽으로 배치)
-        sub.SetPos(new CVec3(posX, -50));
-        ptArr.push(pt);
-        posX += 280;
+function RefreshDetail() {
+    const div = document.getElementById("rq_detail");
+    if (div == null || gBrush == null) return;
+
+    if (gSelectedKey == null || !gBrush.mRenInfoMap.has(gSelectedKey)) {
+        div.innerHTML = `<div class="text-muted">좌측에서 렌더패스를 선택하세요.</div>`;
+        return;
+    }
+    const scrollTop = div.scrollTop;
+    const info = gBrush.mRenInfoMap.get(gSelectedKey);
+    const rp = info.mRP;
+    const fields: string[] = [];
+
+    fields.push(`show: ${info.mShow}`);
+    fields.push(`tag: ${info.mTag && info.mTag.size > 0 ? Array.from(info.mTag).join(", ") : "-"}`);
+    if (rp.mDepthTest != null) fields.push(`depthTest: ${rp.mDepthTest}`);
+    if (rp.mDepthWrite != null) fields.push(`depthWrite: ${rp.mDepthWrite}`);
+    if (rp.mAlpha != null) fields.push(`alpha: ${rp.mAlpha}`);
+    if (rp.mCullFace != null) fields.push(`cullFace: ${rp.mCullFace}`);
+    if (rp.mCamera) fields.push(`camera: ${rp.mCamera}`);
+    if (rp.mPriority != null) fields.push(`priority: ${rp.mPriority}`);
+    if (rp.mRenderTarget) fields.push(`renderTarget: ${rp.mRenderTarget}`);
+    if (rp.mRenderTargetUse != null) fields.push(`renderTargetUse: ${Array.from(rp.mRenderTargetUse).join(", ")}`);
+    if (rp.mShaderAttr && rp.mShaderAttr.length > 0)
+        for (let sa of rp.mShaderAttr) fields.push(`shaderAttr: ${sa.ToLog()}`);
+    if (info.mShader.mDefault.length > 0)
+        for (let sa of info.mShader.mDefault) fields.push(`default: ${sa.ToLog()}`);
+    fields.push(`shader: ${info.mShader.mKey}`);
+    if (rp.mShader) fields.push(`shaderKey: ${rp.mShader}`);
+    if (rp.mClearDepth != null) fields.push(`clearDepth: ${rp.mClearDepth}`);
+    if (rp.mClearColor != null) fields.push(`clearColor: ${rp.mClearColor}`);
+    if (rp.mCycle != null) fields.push(`cycle: ${rp.mCycle}`);
+
+    const users = gUsersCache.get(gSelectedKey) ?? [];
+    const grouped = new Map<string, { mType: string; mCount: number }>();
+    for (let u of users) {
+        const k = u.mOwnerKey + "" + u.mType;
+        const g = grouped.get(k);
+        if (g) g.mCount++;
+        else grouped.set(k, { mType: u.mType, mCount: 1 });
     }
 
-
-    setTimeout(async () => {
-    for(let pt of ptArr)
-    { 
-        await CChecker.Exe(
-            async () => (pt.mAttach ? false : true),1
-        );
-        let size = new CVec2();
-        let html = pt.GetElement();
-        size.x = html.clientWidth || 150;
-        size.y = html.clientHeight || 100;
-        pt.SetSize(size);
-    }});
-
-    // 렌더패스 div들의 높이를 계산하기 위해 먼저 모든 렌더패스 div를 생성
-    // setTimeout(async () => {
-    //     for(let pt of ptArr)
-    //     {
-    //          await CChecker.Exe(
-    //             async () => (pt.mAttach ? false : true),1
-    //         );
-    //     }
-        
-    //     // 렌더패스 div들의 최대 높이 계산
-    //     let maxRenderPassHeight = 0;
-    //     for(let renderPassDiv of renderPassDivs) {
-    //         if(renderPassDiv.div.mOrgSize && renderPassDiv.div.mOrgSize.y > maxRenderPassHeight) {
-    //             maxRenderPassHeight = renderPassDiv.div.mOrgSize.y;
-    //         }
-    //     }
-        
-    //     // 프리오리티 div들을 렌더패스 div 아래에 배치
-    //     let priorityPosX = 0;
-    //     let priorityPosY = posY - maxRenderPassHeight - 20; // 렌더패스 div 아래에 20px 여유
-        
-    //     for (let [priority, renPri] of sortedRenPriEntries) {
-    //         let alphaHTML = "";
-    //         const alphaList = renPri.mAlphaList;
-            
-    //         let prev = null;
-    //         let count = 1;
-    //         let countKey="";
-
-    //         for (let i = 0; i <= alphaList.Size(); i++) {
-    //             const current = alphaList.Find(i);
-                
-    //             const key = current?.mRenInfoKey ?? "-";
-    //             const show = current?.mShow;
-    //             const type = current?.mPaint?.constructor?.name ?? "-";
-
-    //             const sameAsPrev = prev &&
-    //                 prev.mRenInfoKey === key &&
-    //                 prev.mShow === show &&
-    //                 (prev.mPaint?.constructor?.name ?? "-") === type;
-
-    //             if (i > 0 && sameAsPrev) {
-    //                 count++;
-    //                 countKey+=prev.mPaint.GetOwner().Key()+",";
-    //                 continue;
-    //             }
-
-    //             if (prev) {
-    //                 const grayClass = prev.mShow !== 0 ? "text-warning" : "";
-    //                 alphaHTML += `
-    //                     <li class="list-group-item p-1 ${grayClass}">
-    //                         <div>key: ${prev.mRenInfoKey ?? "-"}</div>
-    //                         <div>show: ${prev.mShow}</div>
-    //                         <div>type: ${prev.mPaint?.constructor?.name ?? "-"}</div>
-    //                         ${count > 1 ? `<div>+${count - 1} more <br><textarea style="pointer-events:auto;">${countKey}</textarea></div>` : ""}
-    //                     </li>
-    //                 `;
-    //             }
-
-    //             prev = current;
-    //             count = 1;
-    //             countKey="";
-    //         }
-
-    //         let distanceHTML = "";
-    //         const distanceList = renPri.mDistanceList;
-    //         for (let i = 0; i <= distanceList.Size(); i++) {
-    //             const current = distanceList.Find(i);
-                
-    //             const key = current?.mRenInfoKey ?? "-";
-    //             const show = current?.mShow;
-    //             const type = current?.mPaint?.constructor?.name ?? "-";
-
-    //             const sameAsPrev = prev &&
-    //                 prev.mRenInfoKey === key &&
-    //                 prev.mShow === show &&
-    //                 (prev.mPaint?.constructor?.name ?? "-") === type;
-
-    //             if (i > 0 && sameAsPrev) {
-    //                 count++;
-    //                 countKey+=prev.mPaint.GetOwner().Key()+",";
-    //                 continue;
-    //             }
-
-    //             if (prev) {
-    //                 const grayClass = prev.mShow !== 0 ? "text-warning" : "";
-    //                 alphaHTML += `
-    //                     <li class="list-group-item p-1  ${grayClass}">
-    //                         <div>key: ${prev.mRenInfoKey ?? "-"}</div>
-    //                         <div>show: ${prev.mShow}</div>
-    //                         <div>type: ${prev.mPaint?.constructor?.name ?? "-"}</div>
-    //                         ${count > 1 ? `<div>+${count - 1} more <br><textarea style="pointer-events:auto;">${countKey}</textarea></div>` : ""}
-    //                     </li>
-    //                 `;
-    //             }
-
-    //             prev = current;
-    //             count = 1;
-    //             countKey="";
-    //         }
-
-    //         const html = `
-    //         <div class="border rounded bg-light p-2" style="width: 256px; font-size: 12px;">
-    //             <h6 class="text-center text-primary mb-2">Priority: ${priority}</h6>
-
-    //             <div>
-    //                 <strong>Alpha List</strong>
-    //                 <ul class="list-group mb-2">${alphaHTML}</ul>
-    //             </div>
-
-    //             <div>
-    //                 <strong>Distance List</strong>
-    //                 <ul class="list-group">${distanceHTML}</ul>
-    //             </div>
-    //         </div>
-    //         `;
-
-    //         const sub = g_can.Push(new CSubject());
-    //         let pt=sub.PushComp(
-    //             new CPaintHTML(
-    //                 CDomFactory.DataToDom(html),
-    //                 new CVec2(256, 0),
-    //                 CDOM.ID("RenderOrderTool_div")
-    //             )
-    //         );
-    //         pt.SetPivot(new CVec3(0, -1, 0)); // 하단 기준 (아래쪽으로 배치)
-    //         sub.SetPos(new CVec3(priorityPosX, 0));
-    //         priorityPosX += 280;
-    //     }
-    // }, 0);
-
-    // 렌더패스 키를 클릭했을 때 해당 div로 카메라 포커스 이동
-    (window as any).focusOnRenderPass = function(renderPassKey: string) {
-        let sub=g_can.Find(renderPassKey);
-        const camera = g_brush.GetCam2D();
-        camera.EyeMoveAndViewCac(sub.GetPos());
-
-        if(gBeforeSelect!=null)
-        {
-            // 이전 선택된 div의 보더 클래스 제거
-            gBeforeSelect.classList.remove('border-danger', 'border-3');
-            // border 클래스는 유지 (기본 보더)
+    let usersHtml: string;
+    if (grouped.size === 0) {
+        usersHtml = `<div class="text-muted" style="font-size:12px;">현재 프레임에 이 렌더패스를 사용하는 오브젝트가 없습니다.</div>`;
+    } else {
+        usersHtml = `<ul class="list-group">`;
+        for (let [k, g] of grouped) {
+            const ownerKey = k.substring(0, k.length - g.mType.length - 1);
+            usersHtml += `
+            <li class="list-group-item p-1" style="font-size:12px;">
+                ${Esc(ownerKey)} <span class="text-muted">(${Esc(g.mType)})</span>
+                ${g.mCount > 1 ? `<span class="badge bg-secondary">x${g.mCount}</span>` : ""}
+            </li>`;
         }
-        let pt=sub.FindComp(CPaintHTML);
-        gBeforeSelect=pt.GetElement();
-        // 현재 선택된 div에 강조 보더 클래스 추가 (border 클래스는 유지)
-        gBeforeSelect.classList.add('border-danger', 'border-3');
+        usersHtml += `</ul>`;
+    }
 
+    div.innerHTML = `
+        <h6 class="text-danger mb-2">RenderPass: ${Esc(gSelectedKey)}</h6>
+        <ul class="list-group mb-3">
+            ${fields.map((f) => `<li class="list-group-item p-1" style="font-size:12px;">${Esc(f)}</li>`).join("")}
+        </ul>
+        <h6 class="text-primary mb-1">Used By (${users.length})</h6>
+        ${usersHtml}
+    `;
+    div.scrollTop = scrollTop;
+}
 
-        // 해당 렌더패스 div 찾기
-        // for (let renderPassDiv of renderPassDivs) {
-        //     if (renderPassDiv.key === renderPassKey) {
-        //         const div = renderPassDiv.div;
-        //         if (div && div.mElement) {
-        //             // div의 위치 계산
-        //             const rect = div.mElement.getBoundingClientRect();
-        //             const parentRect = div.mElement.parentElement.getBoundingClientRect();
-                    
-        //             // 상대 위치 계산
-        //             const relativeX = rect.left - parentRect.left + rect.width / 2;
-        //             const relativeY = rect.top - parentRect.top + rect.height / 2;
-                    
-        //             // 2D 카메라 위치 설정 (화면 중앙을 기준으로)
-        //             const camera = g_brush.GetCam2D();
-        //             if (camera) {
-        //                 // 화면 좌표를 월드 좌표로 변환
-        //                 const worldX = (relativeX - parentRect.width / 2) / camera.mZoom;
-        //                 const worldY = -(relativeY - parentRect.height / 2) / camera.mZoom;
-                        
-        //                 camera.EyeMoveAndViewCac(new CVec3(worldX, worldY, 0));
-                        
-        //             }
-        //         }
-        //         break;
-        //     }
-        // }
+function RenderCompressedList(_label: string, _list: any): string {
+    const size = _list.Size();
+    if (size === 0) return `<div class="text-muted" style="font-size:11px;">${_label}: -</div>`;
+
+    let rows = "";
+    let prev: CRenPaint = null;
+    let count = 0;
+
+    const flush = () => {
+        if (prev == null) return;
+        const ownerKey = prev.mPaint?.GetOwner()?.Key() ?? "-";
+        const type = prev.mPaint?.constructor?.name ?? "-";
+        const warn = prev.mShow !== 0 ? "text-warning" : "";
+        rows += `
+        <li class="list-group-item p-1 ${warn}" style="font-size:11px;">
+            <span style="cursor:pointer; color:#0d6efd; text-decoration:underline;" data-jump="${Esc(prev.mRenInfoKey)}">${Esc(prev.mRenInfoKey ?? "-")}</span>
+            &rarr; ${Esc(ownerKey)} <span class="text-muted">(${Esc(type)})</span>
+            ${count > 1 ? `<span class="badge bg-secondary">x${count}</span>` : ""}
+        </li>`;
     };
 
+    for (let i = 0; i < size; ++i) {
+        const cur: CRenPaint = _list.Find(i);
+        const sameAsPrev = prev != null &&
+            prev.mRenInfoKey === cur.mRenInfoKey &&
+            prev.mShow === cur.mShow &&
+            (prev.mPaint?.constructor?.name ?? "-") === (cur.mPaint?.constructor?.name ?? "-");
 
+        if (sameAsPrev) {
+            count++;
+            continue;
+        }
+        flush();
+        prev = cur;
+        count = 1;
+    }
+    flush();
 
-    
-
-
+    return `<div class="fw-bold" style="font-size:11px;">${_label} (${size})</div><ul class="list-group mb-1">${rows}</ul>`;
 }
-var gBeforeSelect : HTMLElement=null;
-function Update(_update : CUpdate) {
-    g_brush.Update(_update);
-    g_can.Update(_update);
-    // g_graph.Update(_delay);
-    // g_graphHelper.Update(_delay);
-}
 
-function Render() {
-    g_fw.Dev().SetClearColor(true, new CVec4(1, 1, 1, 1));
-    g_fw.Ren().Begin();
-    CCanvas.RenderCanvas(g_brush, [g_can]);
-    g_fw.Ren().End();
+function RefreshFrame() {
+    const div = document.getElementById("rq_frame");
+    if (div == null || gBrush == null) return;
+    const scrollTop = div.scrollTop;
+
+    const sorted = Array.from(gBrush.mRenPriMap.entries()).sort((a, b) => a[0] - b[0]);
+
+    let html = `<h6 class="text-primary">현재 프레임 렌더 큐 (Priority 순)</h6>`;
+    if (sorted.length === 0) {
+        html += `<div class="text-muted">비어 있음</div>`;
+    } else {
+        for (let [priority, renPri] of sorted) {
+            html += `
+            <div class="border rounded p-2 mb-2">
+                <div class="fw-bold mb-1">Priority ${priority}</div>
+                ${RenderCompressedList("Alpha", renPri.mAlphaList)}
+                ${RenderCompressedList("Distance", renPri.mDistanceList)}
+                ${RenderCompressedList("Reverse Alpha", renPri.mRAlphaList)}
+            </div>`;
+        }
+    }
+
+    div.innerHTML = html;
+    div.scrollTop = scrollTop;
+
+    div.querySelectorAll<HTMLElement>("[data-jump]").forEach((el) => {
+        el.onclick = () => {
+            gSelectedKey = el.dataset.jump;
+            RefreshList();
+            RefreshDetail();
+        };
+    });
 }

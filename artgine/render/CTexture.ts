@@ -341,16 +341,35 @@ export class CTexture extends CObject
 	}
 	GetGBuf()	{	return this.mGBuffer;	}
 	SetGBuf(_gbuf)	{	this.mGBuffer=_gbuf;	}
+	private DecodeStoredBuf(_encoded: string, _i: number)
+	{
+		const rgba8=this.mInfo[_i]?.mFormat==CTexture.eFormat.RGBA8;
+		const count=this.mInfo[_i]?.mCount ?? 1;
+		const elems=this.mWidth*this.mHeight*4*count;
+		const byteLen=rgba8 ? elems : elems*4;
+		try {
+			const raw=byteLen>0 ? CUtil.LZ4Base64ToArray(_encoded, byteLen) : CUtil.LZ4Base64ToArray(_encoded);
+			return rgba8 ? new Uint8Array(raw) : new Float32Array(raw);
+		} catch {
+			const raw=CUtil.LZBase64ToArray(_encoded);
+			return rgba8 ? new Uint8Array(raw) : new Float32Array(raw);
+		}
+	}
+	private static PackStoredBuf(_buf: any): string
+	{
+		if(typeof _buf==="string") return _buf;
+		if(_buf instanceof Uint8Array || _buf instanceof Float32Array)
+			return CUtil.ArrayToLZ4Base64(_buf.buffer.slice(_buf.byteOffset, _buf.byteOffset+_buf.byteLength));
+		if(_buf instanceof ArrayBuffer)
+			return CUtil.ArrayToLZ4Base64(_buf);
+		return null;
+	}
+
 	GetBuf() {
 		for(let i=0;i<this.mBuffer.length;++i)
 		{
 			if(typeof this.mBuffer[i]==="string")
-			{
-				if(this.mInfo[i].mFormat==CTexture.eFormat.RGBA8)
-					this.mBuffer[i]=new Uint8Array(CUtil.LZBase64ToArray(this.mBuffer[i]));
-				else
-					this.mBuffer[i]=new Float32Array(CUtil.LZBase64ToArray(this.mBuffer[i]));
-			}
+				this.mBuffer[i]=this.DecodeStoredBuf(this.mBuffer[i], i);
 		}
 		return this.mBuffer;
 	}
@@ -392,12 +411,19 @@ export class CTexture extends CObject
 		this.mAutoResize = _resize;
 	}
 	override ExportCJSON(): CJSON {
-		let cjson=super.ExportCJSON();
-
-		let arr=[];
-		for(let buf of this.GetBuf())
+		const arr=[];
+		for(let buf of this.mBuffer)
 		{
-			arr.push(CUtil.ArrayToLZBase64(buf.buffer));
+			const packed=CTexture.PackStoredBuf(buf);
+			if(packed!=null) arr.push(packed);
+		}
+		const keep=this.mBuffer;
+		this.mBuffer=[];
+		let cjson: CJSON;
+		try {
+			cjson=super.ExportCJSON();
+		} finally {
+			this.mBuffer=keep;
 		}
 		cjson.Set("mBuffer",JSON.stringify(arr));
 		return cjson;

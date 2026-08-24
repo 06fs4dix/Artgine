@@ -50,6 +50,12 @@ export class CAI {
 
 export namespace CAI {
     export enum eProvider { claude='claude', codex='codex', gpt='gpt', antigravity='antigravity', opencode='opencode', grok='grok' }
+
+    // CAI.Chat이 헤드리스로 spawn한 CLI 세션의 id(cwd 안 대화형 pty와 무관한 1회성 호출임을 표시).
+    // CConversationReader가 같은 (provider,cwd)의 대화형 pty가 하나뿐일 때 새 트랜스크립트를 그 pty의
+    // 것으로 오판(_soleLiveKey 폴백)하는 걸 막기 위해, 여기 등록된 sessionId는 추적 대상에서 제외한다.
+    // value는 등록 시각(ms) — 오래된 항목은 등록 시점에 함께 청소해 무한정 자라지 않게 한다.
+    export const gHeadlessSessionIds = new Map<string, number>();
 }
 
 import CAI_imple from "../util_imple/CAI.js";

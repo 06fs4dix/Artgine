@@ -199,6 +199,8 @@ export class CPaintVoxel extends CPaint
 		
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("size", this.mSize));
+        if (_vf.mUniform.get("material") != null)
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
 		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(this.mMD);
 		let batch=this.mOwner.GetFrame().BMgr().BatchOff();

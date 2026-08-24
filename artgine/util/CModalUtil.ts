@@ -7,6 +7,7 @@ import {CDOM} from "../basic/CDOM.js";
 import {CEvent} from "../basic/CEvent.js";
 import {CJSON} from "../basic/CJSON.js";
 import {CModal, CConfirm} from "../basic/CModal.js";
+import { CAlert } from "../basic/CAlert.js";
 import { CStorage } from "../system/CStorage.js";
 import { CObject } from "../basic/CObject.js";
 import { CPath } from "../basic/CPath.js";
@@ -367,13 +368,20 @@ export class CModalEvent extends CModalBackGround
 
 export class CModalFrameView extends CModalBackGround
 {
-    private mFrameTime : number = 0;
-    private mFrame : number = 0;
+    private mDeltaFrameTime : number = 0;
+    private mDeltaFrame : number = 0;
 
-    private mFrameSpan : HTMLSpanElement;
-    private mGraphDiv : HTMLDivElement;
+    private mFixedFrameTime : number = 0;
+    private mFixedFrame : number = 0;
 
-    private mFrameLog : Array<number> = [];
+    private mDeltaFrameSpan : HTMLSpanElement;
+    private mDeltaGraphDiv : HTMLDivElement;
+
+    private mFixedFrameSpan : HTMLSpanElement;
+    private mFixedGraphDiv : HTMLDivElement;
+
+    private mDeltaFrameLog : Array<number> = [];
+    private mFixedFrameLog : Array<number> = [];
 
     private readonly mMaxLog : number = 60;
 
@@ -382,16 +390,23 @@ export class CModalFrameView extends CModalBackGround
         super("CModalFrameView");
 
         this.SetBody(`
-            <div class="row" style="width:80px;height:80px;margin:0px;text-align:center;cursor:move;overflow:hidden;background:rgba(0.07,0.09,0.21,0.8);box-sizing:border-box;position:fixed;left:0;top:0;opacity:0.9;z-index:10000;border:1px solid #aaa;">
-                <span id="frameSpan" style="color:white; font-size:12px;"></span>
-                <div id="frameGraph" style="width:80px;height:35px;margin-top:5px;background-color:#000000;"></div>        
+            <div class="row" style="width:115px;height:115px;margin:0px;text-align:center;cursor:move;overflow:hidden;background:rgba(0.07,0.09,0.21,0.8);box-sizing:border-box;position:fixed;left:0;top:0;opacity:0.9;z-index:10000;border:1px solid #aaa;">
+                <span id="DeltaFrameSpan" style="color:green; font-size:12px;"></span>
+                <span id="FixedFrameSpan" style="color:red; font-size:12px;"></span>
+                <div id="DeltaFrameGraph" style="width:80px;height:35px;margin-top:5px;background-color:#000000;"></div>
+                <div id="FixedFrameGraph" style="width:80px;height:35px;margin-top:5px;background-color:#000000;"></div>
+            </div>
         `);
         //this.Hide(0);
         this.SetPause(false);
-        this.mFrameSpan = CDOM.ID("frameSpan") as HTMLSpanElement;
-        this.mGraphDiv = CDOM.ID("frameGraph") as HTMLDivElement;
-        this.mFrameSpan.innerText = "FPS";
-        this.mGraphDiv.innerHTML = "";
+        this.mDeltaFrameSpan = CDOM.ID("DeltaFrameSpan") as HTMLSpanElement;
+        this.mFixedFrameSpan = CDOM.ID("FixedFrameSpan") as HTMLSpanElement;
+        this.mDeltaGraphDiv = CDOM.ID("DeltaFrameGraph") as HTMLDivElement;
+        this.mFixedGraphDiv = CDOM.ID("FixedFrameGraph") as HTMLDivElement;
+        this.mDeltaFrameSpan.innerText = "Delta_FPS";
+        this.mFixedFrameSpan.innerText = "Fixed_FPS";
+        this.mDeltaGraphDiv.innerHTML = "";
+        this.mFixedGraphDiv.innerHTML = "";
         for(let i = 0; i < this.mMaxLog; i++) {
             let bar = document.createElement("div");
             bar.style.width = "1px";
@@ -400,39 +415,77 @@ export class CModalFrameView extends CModalBackGround
             bar.style.bottom = "0px";
             bar.style.height = "0px";
             bar.style.position = "absolute";
-            this.mGraphDiv.appendChild(bar);
+            bar.style.opacity = "50%";
+            this.mDeltaGraphDiv.appendChild(bar);
+
+            let bar2 = document.createElement("div");
+            bar2.style.width = "1px";
+            bar2.style.right = (this.mMaxLog - i) + "px";
+            bar2.style.backgroundColor = "#ff0000";
+            bar2.style.bottom = "0px";
+            bar2.style.height = "0px";
+            bar2.style.position = "absolute";
+            bar2.style.opacity = "50%";
+            this.mFixedGraphDiv.appendChild(bar2);
         }
-        
+
     }
 
     public override Update(_update : CUpdate) : void
     {
-        this.mFrameTime += _update.DeltaTime();
-        this.mFrame++;
-        if(this.mFrameTime > 1) {
-            this.AddLog(this.mFrame);
-            this.UpdateFrameDiv();
+        this.mDeltaFrameTime += _update.DeltaTime();
+        this.mDeltaFrame++;
+        if(this.mDeltaFrameTime > 1) {
+            this.AddDeltaLog(this.mDeltaFrame);
+            this.UpdateDeltaFrameDiv();
 
-            this.mFrameTime -= 1;
-            this.mFrame = 0;
+            this.mDeltaFrameTime -= 1;
+            this.mDeltaFrame = 0;
+        }
+        this.mFixedFrameTime += _update.FixedTime();
+        this.mFixedFrame++;
+        if(this.mFixedFrameTime > 1) {
+            this.AddFixedLog(this.mFixedFrame);
+            this.UpdateFixedFrameDiv();
+
+            this.mFixedFrameTime -= 1;
+            this.mFixedFrame = 0;
         }
     }
 
-    private AddLog(_frame : number) {
-        this.mFrameLog.push(_frame);
-        if(this.mFrameLog.length > this.mMaxLog) {
-            this.mFrameLog.splice(0, 1);
+    private AddDeltaLog(_frame : number) {
+        this.mDeltaFrameLog.push(_frame);
+        if(this.mDeltaFrameLog.length > this.mMaxLog) {
+            this.mDeltaFrameLog.splice(0, 1);
         }
     }
 
-    private UpdateFrameDiv() {
-        let min = Math.min(...this.mFrameLog);
-        let max = Math.max(...this.mFrameLog);
+    private AddFixedLog(_frame : number) {
+        this.mFixedFrameLog.push(_frame);
+        if(this.mFixedFrameLog.length > this.mMaxLog) {
+            this.mFixedFrameLog.splice(0, 1);
+        }
+    }
 
-        this.mFrameSpan.innerText = "FPS : " + this.mFrame + "\n(" + min + "-" + max + ")";
-        for(let i = 0; i < this.mFrameLog.length; i++) {
-            let bar = this.mGraphDiv.children.item(this.mMaxLog - this.mFrameLog.length + i) as HTMLDivElement;
-            bar.style.height = (max == 0? 0 : Math.floor(35 * (this.mFrameLog[i] / max))) + "px";
+    private UpdateDeltaFrameDiv() {
+        let min = Math.min(...this.mDeltaFrameLog);
+        let max = Math.max(...this.mDeltaFrameLog);
+
+        this.mDeltaFrameSpan.innerText = "Delta FPS : " + this.mDeltaFrame + "\n(" + min + "-" + max + ")";
+        for(let i = 0; i < this.mDeltaFrameLog.length; i++) {
+            let bar = this.mDeltaGraphDiv.children.item(this.mMaxLog - this.mDeltaFrameLog.length + i) as HTMLDivElement;
+            bar.style.height = (max == 0? 0 : Math.floor(35 * (this.mDeltaFrameLog[i] / max))) + "px";
+        }
+    }
+
+    private UpdateFixedFrameDiv() {
+        let min = Math.min(...this.mFixedFrameLog);
+        let max = Math.max(...this.mFixedFrameLog);
+
+        this.mFixedFrameSpan.innerText = "Fixed FPS : " + this.mFixedFrame + "\n(" + min + "-" + max + ")";
+        for(let i = 0; i < this.mFixedFrameLog.length; i++) {
+            let bar = this.mFixedGraphDiv.children.item(this.mMaxLog - this.mFixedFrameLog.length + i) as HTMLDivElement;
+            bar.style.height = (max == 0? 0 : Math.floor(35 * (this.mFixedFrameLog[i] / max))) + "px";
         }
     }
 }
@@ -999,6 +1052,7 @@ export class CMonacoViewer extends CModal {
 
     mEditor: any = null;
     mGithub=false;
+    mFilePath: string = null;
 
     constructor(_source: string, _fileName : string,_github=false)
     {
@@ -1045,9 +1099,18 @@ export class CMonacoViewer extends CModal {
         }
 
         // Monaco Editor 초기화
+        // 실제 파일이 없는 RunTime 스니펫이라도, 현재 페이지 위치를 기준으로 가상의 실제 경로를 만들어 넘기면
+        // TS가 상대경로 import(../../../artgine/...)를 스스로 해석해 타입 정보/자동완성이 정상 동작한다.
+        // 파일명에 인스턴스 고유 Key를 섞는 이유: InitDevToolScriptViewer()는 한 세션에서 여러 번(튜토리얼
+        // 진행 중 1회, 종료 후 1회, RunTime 버튼 클릭마다 추가) 호출되어 CMonacoViewer가 여러 개 생성되는데,
+        // CMonacoViewer는 Close() 시 Monaco 모델을 dispose하지 않는다. 경로가 매번 같으면 이전에 생성된
+        // 모델의 URI와 충돌해 getModel/createModel 재사용 분기를 타게 되고, 그 과정에서 새 에디터가
+        // 정상적으로 생성되지 못해 화면이 빈 채로 남는 문제가 있었다. 디렉토리(=import 해석 기준)는 같게
+        // 유지하되 파일명만 인스턴스별로 유일하게 만들어 매번 새 모델을 생성하도록 한다.
+        this.mFilePath = CString.PathSub(CPath.FullPath()) + "/" + this.Key() + "_" + _fileName;
         CUtilWeb.MonacoEditer(CDOM.ID(id), _source, languageType, "vs-dark",async (monacoEditer)=>{
             this.mEditor=monacoEditer;
-        },this.mGithub);
+        },this.mGithub, this.mFilePath);
     }
     GetSource()
     {
@@ -1056,7 +1119,7 @@ export class CMonacoViewer extends CModal {
     async SetSource(_source,)
     {
         //if(_language=="typescript")
-		_source=await CUtilWeb.TSImport(_source,true,this.mGithub);
+		_source=await CUtilWeb.TSImport(_source,true,this.mGithub,this.mFilePath,false);
         return this.mEditor.getModel().setValue(_source);
     }
     
@@ -1108,6 +1171,213 @@ export class CMDViewer extends CModal
 
     }
 
+}
+
+/**
+ * PDF 파일을 pdf.js로 렌더링하는 모달.
+ * 브라우저 내장 뷰어가 없는 모바일/WebView에서도 canvas로 페이지를 그린다.
+ *
+ * 사용 예)
+ *   new CModalPDF('docs/guide.pdf').Open();
+ *
+ * 라이브러리: artgine/external/legacy/pdfjs/ (pdfjs-dist 5.4.149 legacy)
+ * HTML Include(개발자 모드 → pdfjs) 또는 File.html 등에서 window.pdfjsLib 를 먼저 로드해야 한다.
+ */
+export class CModalPDF extends CModal
+{
+    static sLib: any = null;
+    static sLoad: Promise<any> = null;
+
+    mFile: string;
+    mPdf: any = null;
+    mPage = 1;
+    mPageCount = 0;
+    mScale = 0;
+    mFit = true;
+    mRenderTask: any = null;
+    mClosed = false;
+
+    constructor(_file: string)
+    {
+        super();
+        this.mFile = _file;
+        this.SetTitle(CModal.eTitle.TextFullClose);
+        this.SetResize(true);
+        this.SetSize("90%", "85%");
+
+        const name = (_file.split('?')[0].split('/').pop() ?? _file);
+        this.SetHeader(name);
+
+        const id = this.Key();
+        this.SetBody(`
+            <div class="d-flex flex-column h-100" style="min-height:0;">
+                <div class="d-flex align-items-center gap-1 p-1 border-bottom flex-shrink-0">
+                    <button id="${id}_prev" type="button" class="btn btn-sm btn-outline-secondary" title="Prev"><i class="bi bi-chevron-left"></i></button>
+                    <span id="${id}_page" class="small text-nowrap">-</span>
+                    <button id="${id}_next" type="button" class="btn btn-sm btn-outline-secondary" title="Next"><i class="bi bi-chevron-right"></i></button>
+                    <button id="${id}_zoomout" type="button" class="btn btn-sm btn-outline-secondary">-</button>
+                    <button id="${id}_zoomin" type="button" class="btn btn-sm btn-outline-secondary">+</button>
+                    <button id="${id}_fit" type="button" class="btn btn-sm btn-outline-secondary">Fit</button>
+                    <a id="${id}_dl" class="btn btn-sm btn-primary ms-auto" href="${_file}" download>Download</a>
+                </div>
+                <div id="${id}_view" class="flex-grow-1 overflow-auto text-center p-2" style="min-height:0;background:#525659;">
+                    <div id="${id}_status" class="text-white-50 small py-4">Loading PDF...</div>
+                    <canvas id="${id}_cv" style="display:none;max-width:100%;height:auto;"></canvas>
+                </div>
+            </div>`);
+    }
+
+    static PdfBaseUrl(): string
+    {
+        return CPath.WebRootArtgineUrl() + "artgine/external/legacy/pdfjs/";
+    }
+
+    static EnsureLib(): Promise<any>
+    {
+        if (CModalPDF.sLib) return Promise.resolve(CModalPDF.sLib);
+        if (CModalPDF.sLoad) return CModalPDF.sLoad;
+
+        const take = () => {
+            const pdfjs = (window as any).pdfjsLib;
+            if (!pdfjs?.getDocument) return null;
+            const base = CModalPDF.PdfBaseUrl();
+            if (pdfjs.GlobalWorkerOptions && !pdfjs.GlobalWorkerOptions.workerSrc)
+                pdfjs.GlobalWorkerOptions.workerSrc = base + "pdf.worker.min.mjs";
+            CModalPDF.sLib = pdfjs;
+            return pdfjs;
+        };
+
+        const now = take();
+        if (now) return Promise.resolve(now);
+
+        const start = Date.now();
+        CModalPDF.sLoad = CChecker.Exe(async () => {
+            if (take()) return false;
+            return Date.now() - start < 3000;
+        }, 100).then(() => {
+            CModalPDF.sLoad = null;
+            if (CModalPDF.sLib) return CModalPDF.sLib;
+            CAlert.W("pdfjs not import!");
+            throw new Error("pdfjs not import");
+        });
+        return CModalPDF.sLoad;
+    }
+
+    override Open(_startPos: CModal.ePos = CModal.ePos.Center): void
+    {
+        super.Open(_startPos);
+        const id = this.Key();
+        CDOM.ID(id + "_prev")?.addEventListener("click", () => this.GoPage(this.mPage - 1));
+        CDOM.ID(id + "_next")?.addEventListener("click", () => this.GoPage(this.mPage + 1));
+        CDOM.ID(id + "_zoomout")?.addEventListener("click", () => this.Zoom(-0.2));
+        CDOM.ID(id + "_zoomin")?.addEventListener("click", () => this.Zoom(0.2));
+        CDOM.ID(id + "_fit")?.addEventListener("click", () => { this.mFit = true; this.RenderPage(); });
+        this.LoadPdf();
+    }
+
+    override Close(_delayTime = 0)
+    {
+        this.mClosed = true;
+        try { this.mRenderTask?.cancel(); } catch {}
+        this.mRenderTask = null;
+        try { this.mPdf?.destroy(); } catch {}
+        this.mPdf = null;
+        super.Close(_delayTime);
+    }
+
+    private SetStatus(_text: string)
+    {
+        const el = CDOM.ID(this.Key() + "_status");
+        if (el) el.textContent = _text;
+    }
+
+    private async LoadPdf()
+    {
+        const id = this.Key();
+        try {
+            const pdfjs = await CModalPDF.EnsureLib();
+            if (this.mClosed) return;
+            const buf = await CFile.Load(this.mFile, false, true);
+            if (this.mClosed) return;
+            if (!buf) {
+                this.SetStatus("Failed to load PDF.");
+                return;
+            }
+            const base = CModalPDF.PdfBaseUrl();
+            const task = pdfjs.getDocument({
+                data: new Uint8Array(buf as ArrayBuffer),
+                cMapUrl: base + "cmaps/",
+                cMapPacked: true,
+                standardFontDataUrl: base + "standard_fonts/",
+                wasmUrl: base + "wasm/",
+            });
+            this.mPdf = await task.promise;
+            if (this.mClosed) { try { this.mPdf.destroy(); } catch {} this.mPdf = null; return; }
+            this.mPageCount = this.mPdf.numPages || 1;
+            this.mPage = 1;
+            this.mFit = true;
+            const status = CDOM.ID(id + "_status");
+            if (status) status.style.display = "none";
+            const cv = CDOM.ID(id + "_cv") as HTMLCanvasElement;
+            if (cv) cv.style.display = "";
+            await this.RenderPage();
+        } catch (e) {
+            this.SetStatus("PDF.js error: " + (e instanceof Error ? e.message : String(e)));
+        }
+    }
+
+    private GoPage(_page: number)
+    {
+        if (!this.mPdf) return;
+        const next = Math.max(1, Math.min(this.mPageCount, _page));
+        if (next === this.mPage && this.mScale !== 0) return;
+        this.mPage = next;
+        this.RenderPage();
+    }
+
+    private Zoom(_delta: number)
+    {
+        this.mFit = false;
+        this.mScale = Math.max(0.4, Math.min(3, (this.mScale || 1) + _delta));
+        this.RenderPage();
+    }
+
+    private async RenderPage()
+    {
+        if (!this.mPdf || this.mClosed) return;
+        const id = this.Key();
+        const canvas = CDOM.ID(id + "_cv") as HTMLCanvasElement;
+        const view = CDOM.ID(id + "_view");
+        const pageEl = CDOM.ID(id + "_page");
+        if (!canvas || !view) return;
+
+        try { this.mRenderTask?.cancel(); } catch {}
+        this.mRenderTask = null;
+
+        const page = await this.mPdf.getPage(this.mPage);
+        if (this.mClosed) return;
+
+        const baseVp = page.getViewport({ scale: 1 });
+        if (this.mFit) {
+            const avail = Math.max(80, view.clientWidth - 16);
+            this.mScale = avail / baseVp.width;
+        }
+        const viewport = page.getViewport({ scale: this.mScale || 1 });
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        const task = page.render({ canvas, canvasContext: ctx, viewport });
+        this.mRenderTask = task;
+        try {
+            await task.promise;
+        } catch (e: any) {
+            if (e?.name === "RenderingCancelledException") return;
+            throw e;
+        }
+        if (pageEl) pageEl.textContent = `${this.mPage} / ${this.mPageCount}`;
+    }
 }
 
 /**
@@ -1469,40 +1739,72 @@ export class CModalTerminal extends CModal
 
 export class CModalMusic extends CModal
 {
-    private mNames: string[];
+    static readonly sDefaultMediaImage = '512x512.png';
+
     private mPaths: string[];
-    private mSaveFn: (names: string[], paths: string[]) => void;
+    private mSaveFn: (paths: string[]) => void;
+    private mMediaImage: string;
+    private mAiEnabled: boolean;
+    private mAiSearchFn: (queries: string[]) => Promise<{ urls: string[], reason: string }>;
+    private mLyricsEnFn: (url: string) => Promise<{ lyrics: string }>;
     private mLastPlay = 0;
     private mRandomPool: string[] = [];
     private mAudio: HTMLAudioElement;
     private mNowPlayingEl: HTMLElement;
     private mListEl: HTMLElement;
     private mRandomChk: HTMLInputElement;
+    private mAiPanel: HTMLElement;
+    private mAiInput: HTMLInputElement;
+    private mAiGoBtn: HTMLButtonElement;
+    private mAiReasonEl: HTMLElement;
+    private mLyricsBtn: HTMLButtonElement;
+    private mLyricsEl: HTMLElement;
+    private mLyricsUrl = '';
 
-    constructor(names: string[], paths: string[], saveFn?: (names: string[], paths: string[]) => void)
+    constructor(paths: string[] = [], saveFn?: (paths: string[]) => void, mediaImage?: string,
+                aiEnabled = false, aiSearchFn?: (queries: string[]) => Promise<{ urls: string[], reason: string }>,
+                lyricsEnFn?: (url: string) => Promise<{ lyrics: string }>)
     {
         super(null);
-        this.mNames = [...names];
         this.mPaths = [...paths];
-        this.mSaveFn = saveFn;
+        this.mSaveFn = saveFn ?? ((p: string[]) => CStorage.Set("SoundList", JSON.stringify({ fullPath: p })));
+        this.mMediaImage = mediaImage ?? CModalMusic.sDefaultMediaImage;
+        this.mAiEnabled = aiEnabled;
+        this.mAiSearchFn = aiSearchFn;
+        this.mLyricsEnFn = lyricsEnFn;
 
         this.SetTitle(CModal.eTitle.TextClose);
         this.SetHeader('Music');
         this.SetCloseToHide(true);
         this.SetSize(400, 600);
-        this.SetBody(`<div style="padding:4px;">
-            <button type="button" class="btn btn-danger btn-sm" style="margin:4px;">Delete All</button>
-            ${saveFn ? `<button type="button" class="btn btn-warning btn-sm mm-save-list" style="margin:4px;">Save List</button>` : ''}
-            <div class="mm-now" style="padding:6px;font-weight:bold;color:#0d6efd;"></div>
-            <audio controls playsinline preload="auto" style="width:100%;"></audio>
-            <div class="form-check" style="padding-left:2rem;">
-                <label class="form-check-label">
-                    <input class="form-check-input" type="checkbox" checked> Random Play
-                </label>
+        this.SetBody(`<div class="mm-wrap" style="display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;padding:4px;box-sizing:border-box;">
+            <div class="mm-top" style="flex:0 0 auto;">
+                <button type="button" class="btn btn-danger btn-sm" style="margin:4px;">Delete All</button>
+                <button type="button" class="btn btn-warning btn-sm mm-save-list" style="margin:4px;">Save List</button>
+                ${aiEnabled ? `<button type="button" class="btn btn-info btn-sm mm-ai-toggle" style="margin:4px;">AI</button>` : ''}
+                ${lyricsEnFn ? `<button type="button" class="btn btn-success btn-sm mm-lyrics-en" style="margin:4px;">Lyrics</button>` : ''}
+                <div class="mm-ai" style="display:none;padding:6px;border:1px solid #6c757d;border-radius:4px;margin:4px;">
+                    <div class="d-flex gap-1">
+                        <input type="text" class="form-control form-control-sm mm-ai-input" placeholder="찾을 음악 설명 입력 후 Enter">
+                        <button type="button" class="btn btn-primary btn-sm mm-ai-go">검색</button>
+                    </div>
+                </div>
+                <div class="mm-now" style="padding:6px;font-weight:bold;color:#0d6efd;"></div>
+                <audio controls playsinline preload="auto" style="width:100%;"></audio>
+                <div class="form-check" style="padding-left:2rem;">
+                    <label class="form-check-label">
+                        <input class="form-check-input" type="checkbox" checked> Random Play
+                    </label>
+                </div>
+                <div class="mm-ai-reason small text-muted fst-italic" style="display:none;padding:2px 6px;"></div>
             </div>
-            <hr><div class="mm-list"></div>
+            <div class="mm-lyrics" style="display:none;flex:0 0 140px;height:140px;max-height:140px;min-height:0;overflow-y:auto;overflow-x:hidden;white-space:pre-wrap;word-break:break-word;padding:6px;border:1px solid #6c757d;border-radius:4px;margin:4px 0;font-size:12px;line-height:1.4;"></div>
+            <hr style="flex:0 0 auto;margin:4px 0;">
+            <div class="mm-list" style="flex:1 1 auto;min-height:0;overflow-y:auto;"></div>
         </div>`);
         this.Open(CModal.ePos.Center);
+        this.mBody.style.overflow = 'hidden';
+        this.mBody.style.minHeight = '0';
         this.Hide();
 
         this.mAudio        = this.mBody.querySelector('audio') as HTMLAudioElement;
@@ -1510,8 +1812,31 @@ export class CModalMusic extends CModal
         this.mListEl       = this.mBody.querySelector('.mm-list');
         this.mRandomChk    = this.mBody.querySelector('input[type="checkbox"]') as HTMLInputElement;
 
-        this.mBody.querySelector('.btn-danger').addEventListener('click', () => this._DeleteAll());
-        if (saveFn) this.mBody.querySelector('.mm-save-list')?.addEventListener('click', () => saveFn(this.mNames, this.mPaths));
+        this.mBody.querySelector('.btn-danger').addEventListener('click', () => this._ClearAll());
+        this.mBody.querySelector('.mm-save-list')?.addEventListener('click', () => this.mSaveFn(this.mPaths));
+
+        if (aiEnabled) {
+            this.mAiPanel    = this.mBody.querySelector('.mm-ai');
+            this.mAiInput    = this.mBody.querySelector('.mm-ai-input') as HTMLInputElement;
+            this.mAiGoBtn    = this.mBody.querySelector('.mm-ai-go') as HTMLButtonElement;
+            this.mAiReasonEl = this.mBody.querySelector('.mm-ai-reason');
+
+            this.mBody.querySelector('.mm-ai-toggle').addEventListener('click', () => {
+                this.mAiPanel.style.display = this.mAiPanel.style.display === 'none' ? '' : 'none';
+            });
+            this.mAiInput.addEventListener('keydown', (e: KeyboardEvent) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                this._AiSearch();
+            });
+            this.mAiGoBtn.addEventListener('click', () => this._AiSearch());
+        }
+
+        if (lyricsEnFn) {
+            this.mLyricsEl  = this.mBody.querySelector('.mm-lyrics');
+            this.mLyricsBtn = this.mBody.querySelector('.mm-lyrics-en') as HTMLButtonElement;
+            this.mLyricsBtn.addEventListener('click', () => this._LyricsEn());
+        }
 
         this.mAudio.addEventListener('ended', () => this._Next());
         this.mAudio.addEventListener('pause', () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; });
@@ -1521,20 +1846,57 @@ export class CModalMusic extends CModal
             navigator.mediaSession.setActionHandler('play',          () => this.mAudio.play());
             navigator.mediaSession.setActionHandler('pause',         () => this.mAudio.pause());
             navigator.mediaSession.setActionHandler('nexttrack',     () => this._Next());
-            navigator.mediaSession.setActionHandler('previoustrack', () => this.Play(this.mLastPlay > 0 ? this.mLastPlay - 1 : this.mNames.length - 1));
+            navigator.mediaSession.setActionHandler('previoustrack', () => this.Play(this.mLastPlay > 0 ? this.mLastPlay - 1 : this.mPaths.length - 1));
         }
 
         this._RefreshList();
     }
 
-    AddTrack(name: string, path: string): boolean
+    /** 재생목록에 URL(단일 또는 배열)을 추가한다. 이미 있는 경로는 무시한다. */
+    Add(url: string | string[]): void
     {
-        for (const p of this.mPaths) if (p === path) return false;
-        this.mNames.push(name);
-        this.mPaths.push(path);
-        this._Persist();
-        return true;
+        const list = Array.isArray(url) ? url : [url];
+        let changed = false;
+        for (const u of list) {
+            if (this.mPaths.includes(u)) continue;
+            this.mPaths.push(u);
+            changed = true;
+        }
+        if (changed) this._Persist();
     }
+
+    /** 재생목록 전체를 새 URL 배열로 교체한다. */
+    SetList(paths: string[]): void
+    {
+        this.mRandomPool = [];
+        this.mPaths = [...paths];
+        this.mLastPlay = 0;
+        this.mAudio.pause();
+        this.mNowPlayingEl.textContent = '';
+        this._Persist();
+    }
+
+    /** 인덱스, URL, 또는 그 배열을 받아 재생목록에서 제거한다. */
+    Delete(target: number | string | Array<number | string>): void
+    {
+        const list = Array.isArray(target) ? target : [target];
+        const indices = new Set<number>();
+        for (const t of list) {
+            const i = typeof t === 'number' ? t : this.mPaths.indexOf(t);
+            if (i >= 0 && i < this.mPaths.length) indices.add(i);
+        }
+        if (indices.size === 0) return;
+
+        for (const i of [...indices].sort((a, b) => b - a)) {
+            this.mPaths.splice(i, 1);
+            if (i < this.mLastPlay) this.mLastPlay--;
+            else if (i === this.mLastPlay) { this.mAudio.pause(); this.mLastPlay = 0; this.mNowPlayingEl.textContent = ''; }
+        }
+        this._Persist();
+    }
+
+    /** 재생목록의 full URL 경로 배열을 반환한다. */
+    GetList(): string[] { return [...this.mPaths]; }
 
     Play(index: number): void
     {
@@ -1545,14 +1907,18 @@ export class CModalMusic extends CModal
         items[index]?.classList.add('list-group-item-dark');
 
         if ('audioSession' in navigator) (navigator as any).audioSession.type = 'playback';
-        this.mAudio.src = this.mPaths[index];
+        const path = this.mPaths[index];
+        const name = CModalMusic._FileName(path);
+        this.mAudio.src = path;
+        if (this.mLyricsEl && this.mLyricsEl.style.display !== 'none' && this.mLyricsUrl !== path)
+            this._LoadLyrics(path);
         this.mAudio.play()
             .then(() => {
-                this.mNowPlayingEl.textContent = '♫ ' + this.mNames[index];
+                this.mNowPlayingEl.textContent = '♫ ' + name;
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
-                        title: this.mNames[index],
-                        artwork: [{ src: '512x512.png', sizes: '512x512', type: 'image/png' }]
+                        title: name,
+                        artwork: [{ src: this.mMediaImage, sizes: '512x512', type: 'image/png' }]
                     });
                     navigator.mediaSession.playbackState = 'playing';
                     if ('setPositionState' in navigator.mediaSession) {
@@ -1563,19 +1929,22 @@ export class CModalMusic extends CModal
             .catch(e => console.warn('CModalMusic.Play:', e));
     }
 
-    SetList(names: string[], paths: string[]): void
+    /** 경로 끝의 파일명만 추출 (mediaSession 표시용). */
+    private static _FileName(path: string): string
     {
-        this.mRandomPool = [];
-        this.mNames = [...names];
-        this.mPaths = [...paths];
-        this.mLastPlay = 0;
-        this.mAudio.pause();
-        this.mNowPlayingEl.textContent = '';
-        this._Persist();
+        const clean = path.split('?')[0].split('#')[0];
+        const base = clean.split('/').pop() || clean;
+        try { return decodeURIComponent(base); } catch { return base; }
     }
 
-    get Names(): string[] { return [...this.mNames]; }
-    get Paths(): string[] { return [...this.mPaths]; }
+    /** URL 인코딩된 경로를 디코딩한 뒤, 앞부분을 생략(...)해 뒤쪽 경로만 보이게 한다 (리스트 표시용). */
+    private static _Truncate(path: string, max = 40): string
+    {
+        let decoded = path;
+        try { decoded = decodeURIComponent(path); } catch {}
+        if (decoded.length <= max) return decoded;
+        return '...' + decoded.slice(-(max - 3));
+    }
 
     private _Next(): void
     {
@@ -1592,20 +1961,9 @@ export class CModalMusic extends CModal
         }
     }
 
-    private _DeleteTrack(index: number): void
-    {
-        this.mNames.splice(index, 1);
-        this.mPaths.splice(index, 1);
-        this.mAudio.pause();
-        if (index < this.mLastPlay)       this.mLastPlay--;
-        else if (index === this.mLastPlay) { this.mLastPlay = 0; this.mNowPlayingEl.textContent = ''; }
-        this._Persist();
-    }
-
-    private _DeleteAll(): void
+    private _ClearAll(): void
     {
         this.mRandomPool = [];
-        this.mNames = [];
         this.mPaths = [];
         this.mAudio.pause();
         this.mNowPlayingEl.textContent = '';
@@ -1615,7 +1973,7 @@ export class CModalMusic extends CModal
 
     private _Persist(): void
     {
-        this.mSaveFn?.(this.mNames, this.mPaths);
+        this.mSaveFn(this.mPaths);
         this._RefreshList();
     }
 
@@ -1626,7 +1984,7 @@ export class CModalMusic extends CModal
         for (let i = 0; i < this.mPaths.length; i++) {
             html += `<ul class="list-group">` +
                     `<li class="list-group-item list-group-item-action" data-idx="${i}">` +
-                    `<i class="bi bi-file-music"></i> <font color="red">${this.mNames[i]}</font>` +
+                    `<i class="bi bi-file-music"></i> <font color="red">${CModalMusic._Truncate(this.mPaths[i])}</font>` +
                     `<i class="bi bi-file-earmark-x float-right" data-del="${i}"></i>` +
                     `</li></ul>`;
         }
@@ -1634,11 +1992,87 @@ export class CModalMusic extends CModal
         this.mListEl.querySelectorAll('li').forEach((li, i) => {
             li.addEventListener('click', (e) => {
                 const del = (e.target as HTMLElement).closest('[data-del]');
-                if (del) this._DeleteTrack(parseInt((del as HTMLElement).dataset.del));
+                if (del) this.Delete(parseInt((del as HTMLElement).dataset.del));
                 else     this.Play(i);
             });
         });
         this.mListEl.querySelectorAll('li')[this.mLastPlay]?.classList.add('list-group-item-dark');
+    }
+
+    private async _AiSearch(): Promise<void>
+    {
+        const text = this.mAiInput.value.trim();
+        if (!text || !this.mAiSearchFn) return;
+
+        this.mAiGoBtn.disabled = true;
+        this.mAiGoBtn.textContent = '검색 중...';
+        try {
+            const { urls, reason } = await this.mAiSearchFn([text]);
+            if (reason) {
+                this.mAiReasonEl.textContent = '💡 ' + reason;
+                this.mAiReasonEl.style.display = '';
+            }
+            if (urls.length === 0) {
+                CAlert.Info('검색 결과가 없습니다.');
+            } else {
+                this.Add(urls);
+                this.mAiInput.value = '';
+                this.mAiPanel.style.display = 'none';
+            }
+        } catch (e) {
+            console.warn('CModalMusic._AiSearch:', e);
+            CAlert.E('AI 검색 실패: ' + (e instanceof Error ? e.message : String(e)));
+        } finally {
+            this.mAiGoBtn.disabled = false;
+            this.mAiGoBtn.textContent = '검색';
+        }
+    }
+
+    private _CurrentUrl(): string
+    {
+        if (this.mPaths.length === 0) return '';
+        const idx = (this.mLastPlay >= 0 && this.mLastPlay < this.mPaths.length) ? this.mLastPlay : 0;
+        return this.mPaths[idx];
+    }
+
+    private async _LyricsEn(): Promise<void>
+    {
+        if (!this.mLyricsEnFn) return;
+        const url = this._CurrentUrl();
+        if (!url) {
+            CAlert.Info('재생 목록이 비어 있습니다.');
+            return;
+        }
+        if (this.mLyricsEl.style.display !== 'none' && this.mLyricsUrl === url) {
+            this.mLyricsEl.style.display = 'none';
+            return;
+        }
+        await this._LoadLyrics(url);
+    }
+
+    private async _LoadLyrics(url: string): Promise<void>
+    {
+        if (!this.mLyricsEnFn || !url) return;
+        this.mLyricsEl.style.display = 'block';
+        this.mLyricsEl.textContent = '가져오는 중...';
+        if (this.mLyricsBtn) {
+            this.mLyricsBtn.disabled = true;
+            this.mLyricsBtn.textContent = 'Loading...';
+        }
+        try {
+            const { lyrics } = await this.mLyricsEnFn(url);
+            this.mLyricsUrl = url;
+            this.mLyricsEl.textContent = lyrics || '영어 가사를 찾지 못했습니다.';
+        } catch (e) {
+            console.warn('CModalMusic._LoadLyrics:', e);
+            this.mLyricsUrl = url;
+            this.mLyricsEl.textContent = '가사 조회 실패: ' + (e instanceof Error ? e.message : String(e));
+        } finally {
+            if (this.mLyricsBtn) {
+                this.mLyricsBtn.disabled = false;
+                this.mLyricsBtn.textContent = 'Lyrics';
+            }
+        }
     }
 }
 
@@ -1745,10 +2179,25 @@ export class CORMViewer extends CModal {
             this.mAuth.mAddres = (CDOM.ID(`${id}_conn_addres`) as HTMLInputElement).value;
             this.mAuth.mPort = (CDOM.ID(`${id}_conn_port`) as HTMLInputElement).value;
 
-            this.SetHeader(`ORM Viewer - ${this.mDatabase}`);
+            // SetHeader는 열린 모달의 헤더 전체(innerHTML)를 덮어써서 X/전체화면 버튼이 사라진다.
+            // 제목 텍스트 영역만 갱신한다.
+            this.UpdateHeaderTitle(`ORM Viewer - ${this.mDatabase}`);
             this.SetBody(this.RenderViewerLayout());
             this.WireViewer();
         });
+    }
+
+    /** 모달이 이미 열린 뒤 제목만 바꿀 때 사용. 닫기 버튼 등 헤더 구조는 유지. */
+    private UpdateHeaderTitle(_title: string): void {
+        const header = this.GetHeader();
+        if (header != null) {
+            const titleWrap = header.firstElementChild as HTMLElement;
+            if (titleWrap) {
+                titleWrap.textContent = _title;
+                return;
+            }
+        }
+        this.SetHeader(_title);
     }
 
     private RenderViewerLayout(): string {
@@ -1863,26 +2312,29 @@ export class CORMViewer extends CModal {
 
     private BuildTableORM(rows: object[], cols: string[]): string {
         if (!cols || cols.length === 0) return `<div class="p-3 text-muted">No data.</div>`;
-        // table-layout:fixed로 컬럼 폭을 고정하고, 액션 컬럼만 별도 폭을 줘서 버튼이 두 줄로
-        // 안 깨지게 한다. 나머지 데이터 컬럼은 넘치는 내용을 옆으로 늘리지 않고 줄바꿈되게 처리.
-        const ACTION_COL_WIDTH = 64;
-        const colgroupHtml = `<colgroup>${cols.map(() => '<col>').join('')}<col style="width:${ACTION_COL_WIDTH}px"></colgroup>`;
-        const wrapStyle = 'overflow-wrap:break-word;word-break:break-all;white-space:normal;';
+        // 컬럼 최소 폭을 두고 테이블 전체 폭이 넘치면 부모(overflow-auto)에서 좌우 스크롤.
+        // 예전처럼 width:100% + table-layout:fixed로 n등분하면 컬럼이 너무 좁아져 글자가 세로로 길게 내려간다.
+        const MIN_COL_WIDTH = 120;
+        const ACTION_COL_WIDTH = 80;
+        const tableWidth = cols.length * MIN_COL_WIDTH + ACTION_COL_WIDTH;
+        const colgroupHtml = `<colgroup>${cols.map(() => `<col style="width:${MIN_COL_WIDTH}px;min-width:${MIN_COL_WIDTH}px">`).join('')}` +
+            `<col style="width:${ACTION_COL_WIDTH}px;min-width:${ACTION_COL_WIDTH}px"></colgroup>`;
+        const wrapStyle = `overflow-wrap:break-word;word-break:break-word;white-space:normal;min-width:${MIN_COL_WIDTH}px;`;
         const headerHtml = cols.map(c => {
             const arrow = c === this.mSortCol ? (this.mSortAsc ? ' ↑' : ' ↓') : '';
             return `<th class="px-2" data-col="${this.EscapeHtmlORM(c)}" style="${wrapStyle}cursor:pointer;user-select:none;">${this.EscapeHtmlORM(c)}${arrow}</th>`;
         }).join('');
-        let html = `<table class="table table-sm table-bordered table-hover table-striped mb-0" style="font-size:0.85em;table-layout:fixed;width:100%;">
+        let html = `<table class="table table-sm table-bordered table-hover table-striped mb-0" style="font-size:0.85em;table-layout:fixed;width:${tableWidth}px;min-width:100%;">
             ${colgroupHtml}
-            <thead class="table-dark sticky-top"><tr>${headerHtml}<th class="px-2"></th></tr></thead>
+            <thead class="table-dark sticky-top"><tr>${headerHtml}<th class="px-2 text-nowrap" style="min-width:${ACTION_COL_WIDTH}px;"></th></tr></thead>
             <tbody>`;
         rows.forEach((row, i) => {
             html += `<tr>${cols.map(c => `<td class="px-2 orm-cell" data-idx="${i}" data-col="${this.EscapeHtmlORM(c)}" style="${wrapStyle}cursor:pointer;">${this.EscapeHtmlORM(String((row as any)[c] ?? ''))}</td>`).join('')}` +
-                `<td class="px-2 text-nowrap"><button class="btn btn-sm btn-outline-danger orm-del-btn" data-idx="${i}">Delete</button></td></tr>`;
+                `<td class="px-2 text-nowrap" style="min-width:${ACTION_COL_WIDTH}px;"><button class="btn btn-sm btn-outline-danger orm-del-btn" data-idx="${i}">Delete</button></td></tr>`;
         });
         // 마지막 행: 빈 입력칸 + "추가" 버튼으로 새 레코드를 바로 입력할 수 있게 한다.
-        html += `<tr class="orm-add-row">${cols.map(c => `<td class="px-2"><input type="text" class="form-control form-control-sm" data-newfield="${this.EscapeHtmlORM(c)}"></td>`).join('')}` +
-            `<td class="px-2 text-nowrap"><button class="btn btn-sm btn-outline-success orm-add-btn">Add</button></td></tr>`;
+        html += `<tr class="orm-add-row">${cols.map(c => `<td class="px-2" style="min-width:${MIN_COL_WIDTH}px;"><input type="text" class="form-control form-control-sm" data-newfield="${this.EscapeHtmlORM(c)}"></td>`).join('')}` +
+            `<td class="px-2 text-nowrap" style="min-width:${ACTION_COL_WIDTH}px;"><button class="btn btn-sm btn-outline-success orm-add-btn">Add</button></td></tr>`;
         html += `</tbody></table>`;
         return html;
     }

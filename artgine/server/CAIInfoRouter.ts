@@ -23,6 +23,238 @@ const _PROVIDER_STATE_LIST = Object.values(CAI.eProvider).filter(p => p !== CAI.
 // Connect 시 modelsUpdate 갱신은 프로세스당 1회만 (true일 때만 실행 후 false로 저장).
 let _modelsUpdateOnceDone = false;
 
+// ── models.dev 가격 매핑 (ai/tool/token_cost.js 의 로직을 그대로 옮겨온 것) ──────────────
+// modelsUpdate 로 settings.json 의 models 를 (재)생성할 때, 같은 매핑 규칙으로
+// input/output 단가와 그룹 내 비율(%)을 함께 기록한다.
+const _COST_MODELS_DEV_API = 'https://models.dev/api.json';
+const _COST_GROUP_TO_PROVIDER: Record<string, string> = { claude: 'anthropic', codex: 'openai', grok: 'xai' };
+
+function _costAntigravityProviderFor(value: string): string | null {
+    if (value.startsWith('claude-')) return 'anthropic';
+    if (value.startsWith('gemini-')) return 'google';
+    if (value.startsWith('gpt-oss-')) return 'openai';
+    return null;
+}
+
+function _costModelIdCandidates(value: string): string[] {
+    const out: string[] = [];
+    let m = value.replace(/^(opencode\/|opencode-go\/)/, '');
+
+    const noFree = m.replace(/-free$/, '');
+    if (noFree !== m) out.push(noFree);
+
+    const noThinking = m.replace(/-thinking$/, '');
+    if (noThinking !== m && !out.includes(noThinking)) out.push(noThinking);
+
+    const noEffort = m.replace(/-(high|medium|low|max|xhigh)$/, '');
+    if (noEffort !== m && !out.includes(noEffort)) out.push(noEffort);
+
+    if (m.startsWith('gemini-') && noEffort !== m) {
+        const withPreview = noEffort + '-preview';
+        if (!out.includes(withPreview)) out.push(withPreview);
+    }
+
+    const noDate = m.replace(/-\d{8}$/, '');
+    if (noDate !== m && !out.includes(noDate)) out.push(noDate);
+
+    if (!out.includes(m)) out.push(m);
+    return out;
+}
+
+function _costFindModel(providerBlock: any, candidates: string[]): { id: string; model: any } | null {
+    if (!providerBlock || !providerBlock.models) return null;
+    for (const id of candidates) {
+        const m = providerBlock.models[id];
+        if (m) return { id, model: m };
+    }
+    const lowered = candidates.map(c => c.toLowerCase());
+    for (const [key, m] of Object.entries<any>(providerBlock.models)) {
+        if (lowered.includes(key.toLowerCase())) return { id: key, model: m };
+    }
+    return null;
+}
+
+function _costFindModelGlobal(api: any, candidates: string[]): { providerId: string; id: string; model: any; hasPrice: boolean } | null {
+    const hits: { providerId: string; id: string; model: any; hasPrice: boolean }[] = [];
+    for (const [pk, pv] of Object.entries<any>(api)) {
+        if (!pv || !pv.models) continue;
+        for (const id of candidates) {
+            const m = pv.models[id];
+            if (m) {
+                const c = m.cost || {};
+                const hasPrice = typeof c.input === 'number' && c.input > 0;
+                hits.push({ providerId: pk, id, model: m, hasPrice });
+                break;
+            }
+        }
+    }
+    if (!hits.length) return null;
+    hits.sort((a, b) => (b.hasPrice ? 1 : 0) - (a.hasPrice ? 1 : 0));
+    return hits[0];
+}
+
+function _costExtractPrice(modelEntry: any): { input: number | null; output: number | null; cachedRead: number | null; cachedWrite: number | null } {
+    if (!modelEntry || !modelEntry.cost) return { input: null, output: null, cachedRead: null, cachedWrite: null };
+    const c = modelEntry.cost;
+    const input = (typeof c.input === 'number') ? c.input : null;
+    const output = (typeof c.output === 'number') ? c.output : null;
+    const cachedRead = (typeof c.cache_read === 'number') ? c.cache_read : null;
+    const cachedWrite = (typeof c.cache_write === 'number') ? c.cache_write : null;
+    return { input, output, cachedRead, cachedWrite };
+}
+
+type OpencodeGoPrice = { input: number; output: number; cachedRead: number | null; cachedWrite: number | null };
+
+// opencode Go 플랜 공식 단가표(https://opencode.ai/docs/go/)를 매 modelsUpdate 실행마다 크롤링한다.
+// models.dev에는 opencode 그룹 캐시 단가가 아예 없고 일부 일반 단가도 틀려있어(gpt-5.6-luna 등 실측 확인),
+// opencode-go/* 모델만 이 표를 models.dev보다 우선 사용한다. 페이지에 다른 표가 섞여 있을 수 있어
+// "Cached Read" 헤더를 포함한 표만 골라 파싱한다. 실패 시 null을 반환해 호출부가 models.dev로 폴백하게 한다.
+async function _fetchOpencodeGoOfficialPrices(): Promise<Record<string, OpencodeGoPrice> | null> {
+    try {
+        const res = await fetch('https://opencode.ai/docs/go/', { headers: { 'User-Agent': 'artgine-token-cost/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        const html = await res.text();
+
+        const tableMatches = html.match(/<table[\s\S]*?<\/table>/gi) ?? [];
+        const table = tableMatches.find(t => /Cached\s*Read/i.test(t));
+        if (!table) throw new Error('pricing table not found (no "Cached Read" header)');
+
+        const stripTags = (s: string) => s.replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').trim();
+        const parseUsd = (s: string): number | null => {
+            const m = s.replace(/,/g, '').match(/[\d.]+/);
+            return m ? parseFloat(m[0]) : null;
+        };
+
+        const rowsHtml = table.match(/<tr[\s\S]*?<\/tr>/gi) ?? [];
+        const out: Record<string, OpencodeGoPrice> = {};
+        for (const rowHtml of rowsHtml) {
+            const cells = (rowHtml.match(/<t[dh][\s\S]*?<\/t[dh]>/gi) ?? []).map(stripTags);
+            if (cells.length < 5) continue;
+            const [rawName, rawInput, rawOutput, rawCachedRead, rawCachedWrite] = cells;
+            const input = parseUsd(rawInput);
+            const output = parseUsd(rawOutput);
+            if (input == null || output == null) continue; // 헤더 행 등 가격이 없는 행은 건너뜀
+
+            // "GPT 5.6 Luna (≤ 272K tokens)" 같은 컨텍스트 티어 표기는 괄호째 제거하고, 같은 모델의
+            // 두 번째(더 비싼 상위 티어) 행은 무시한다 - settings.json 기존 값들이 전부 낮은 티어 기준이라 정책을 맞춤.
+            const slug = rawName.replace(/\([^)]*\)/g, '').trim().toLowerCase().replace(/\s+/g, '-');
+            if (!slug || slug in out) continue;
+
+            out[slug] = { input, output, cachedRead: parseUsd(rawCachedRead), cachedWrite: parseUsd(rawCachedWrite) };
+        }
+        if (!Object.keys(out).length) throw new Error('pricing table parsed but empty');
+        return out;
+    } catch (e: any) {
+        CConsol.Log(`[CAIInfoRouter] opencode.ai Go 단가표 크롤링 실패, models.dev로 폴백: ${e?.message ?? e}`, CConsol.eColor.yellow);
+        return null;
+    }
+}
+
+// settings.models 의 모든 그룹/항목에 costInputPer1M/costOutputPer1M/costRatioInput/costRatioOutput
+// 을 채운다. models.dev fetch 실패 시 조용히 건너뛴다(기존 models 갱신 자체는 그대로 진행되게).
+async function _annotateModelCosts(settings: any): Promise<void> {
+    const groups = settings.models;
+    if (!groups || typeof groups !== 'object') return;
+
+    let api: any;
+    try {
+        const res = await fetch(_COST_MODELS_DEV_API, { headers: { 'User-Agent': 'artgine-token-cost/1.0' } });
+        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        api = await res.json();
+    } catch (e: any) {
+        CConsol.Log(`[CAIInfoRouter] modelsUpdate: models.dev fetch 실패, 비용 정보는 건너뜀: ${e?.message ?? e}`, CConsol.eColor.yellow);
+        return;
+    }
+
+    const opencodeGoPrices = await _fetchOpencodeGoOfficialPrices();
+
+    type Row = { group: string; item: any; input: number | null; output: number | null };
+    const rows: Row[] = [];
+
+    for (const [group, list] of Object.entries<any>(groups)) {
+        if (!Array.isArray(list)) continue;
+        for (const item of list) {
+            const value = String(item.value ?? '');
+
+            let providerId: string | null = null;
+            let isLocal = false;
+            if (group in _COST_GROUP_TO_PROVIDER) {
+                providerId = _COST_GROUP_TO_PROVIDER[group];
+            } else if (group === 'opencode') {
+                if (value.startsWith('opencode-go/')) providerId = 'opencode-go';
+                else if (value.startsWith('opencode/')) providerId = 'opencode';
+                else if (/^ollama-[^/]+\//.test(value)) isLocal = true;
+            } else if (group === 'antigravity') {
+                providerId = _costAntigravityProviderFor(value);
+            } else if (group === 'grok') {
+                providerId = 'xai';
+            }
+
+            // opencode-go/* 모델은 크롤링한 opencode.ai 공식 단가표가 있으면 models.dev보다 우선 사용한다.
+            const officialSlug = (group === 'opencode' && value.startsWith('opencode-go/')) ? value.slice('opencode-go/'.length) : null;
+            const official = (officialSlug && opencodeGoPrices) ? opencodeGoPrices[officialSlug] : null;
+
+            let input: number | null = null, output: number | null = null;
+            let cachedRead: number | null = null, cachedWrite: number | null = null;
+            if (isLocal) {
+                input = 0; output = 0; cachedRead = 0; cachedWrite = 0;
+            } else if (official) {
+                input = official.input; output = official.output;
+                cachedRead = official.cachedRead; cachedWrite = official.cachedWrite;
+            } else if (providerId) {
+                const candidates = _costModelIdCandidates(value);
+                const hit = _costFindModel(api[providerId], candidates);
+                if (hit) {
+                    const p = _costExtractPrice(hit.model);
+                    input = p.input; output = p.output; cachedRead = p.cachedRead; cachedWrite = p.cachedWrite;
+                } else {
+                    const g = _costFindModelGlobal(api, candidates);
+                    if (g) {
+                        const p = _costExtractPrice(g.model);
+                        input = p.input; output = p.output; cachedRead = p.cachedRead; cachedWrite = p.cachedWrite;
+                    }
+                }
+            }
+
+            item.costInputPer1M = input;
+            item.costOutputPer1M = output;
+            item.costCachedReadPer1M = cachedRead;
+            item.costCachedWritePer1M = cachedWrite;
+            rows.push({ group, item, input, output });
+        }
+    }
+
+    // 그룹 내 가장 저가 양수 input/output = 100% 기준 비율(%) 계산 (token_cost.js와 동일 규칙).
+    const minInputByGroup: Record<string, number> = {}, minOutputByGroup: Record<string, number> = {};
+    for (const r of rows) {
+        if (r.input != null && r.input > 0 && (!(r.group in minInputByGroup) || r.input < minInputByGroup[r.group])) {
+            minInputByGroup[r.group] = r.input;
+        }
+        if (r.output != null && r.output > 0 && (!(r.group in minOutputByGroup) || r.output < minOutputByGroup[r.group])) {
+            minOutputByGroup[r.group] = r.output;
+        }
+    }
+    for (const r of rows) {
+        const bi = minInputByGroup[r.group], bo = minOutputByGroup[r.group];
+        r.item.costRatioInput = (bi && r.input != null && r.input > 0) ? Math.round((r.input / bi) * 100) :
+                                 (r.input === 0 ? 0 : null);
+        r.item.costRatioOutput = (bo && r.output != null && r.output > 0) ? Math.round((r.output / bo) * 100) :
+                                  (r.output === 0 ? 0 : null);
+    }
+
+    // 그룹별로 in/out 평균 단가 기준 내림차순(비싼 모델이 위) 정렬.
+    // 가격 정보가 없는(null) 항목은 -1로 취급해 맨 아래로 보낸다.
+    const avgCost = (item: any): number => {
+        const i = item.costInputPer1M, o = item.costOutputPer1M;
+        if (i == null && o == null) return -1;
+        return ((i ?? 0) + (o ?? 0)) / 2;
+    };
+    for (const list of Object.values<any>(groups)) {
+        if (!Array.isArray(list)) continue;
+        list.sort((a: any, b: any) => avgCost(b) - avgCost(a));
+    }
+}
+
 // Claude 사용량 API는 최근 실제 호출 흔적이 있어야 값을 채워주는 것으로 보여, 설치·인증된 상태에서도
 // 한동안 안 쓰면 -1(조회 불가)이 나온다. 이 경우 헤드리스로 한 번 짧게 호출해 실제 응답을 받은 뒤
 // 사용량을 재조회하면 채워진다(실측 확인). 매 조회마다 반복 호출하지 않도록 최소 재시도 간격을 둔다.
@@ -197,6 +429,32 @@ async function _pruneAntigravity(cutoffMs: number): Promise<number> {
     return n;
 }
 
+// ---------------- 서버 상태(CPU/메모리) ----------------
+// 네트워크 트래픽은 서브프로세스(powershell 등) 없이는 조회할 수 없어 뺐다 — os.cpus()/os.totalmem()만
+// 쓰는 순수 JS라 서브프로세스로 인한 이벤트 루프 블로킹 위험이 없다.
+// CPU 사용률은 순간값이 아니라 두 시점 사이의 델타로만 계산할 수 있어 짧게 한 번 더 샘플링한다.
+function _cpuTimesSnapshot(): { idle: number; total: number } {
+    let idle = 0, total = 0;
+    for (const c of os.cpus()) {
+        const t = c.times;
+        idle += t.idle;
+        total += t.user + t.nice + t.sys + t.idle + t.irq;
+    }
+    return { idle, total };
+}
+
+async function _sampleServerLoad(sampleMs = 200): Promise<{ cpuPercent: number }> {
+    const cpu0 = _cpuTimesSnapshot();
+    await new Promise(r => setTimeout(r, sampleMs));
+    const cpu1 = _cpuTimesSnapshot();
+
+    const totalDiff = cpu1.total - cpu0.total;
+    const idleDiff = cpu1.idle - cpu0.idle;
+    const cpuPercent = totalDiff > 0 ? Math.max(0, Math.min(100, Math.round((1 - idleDiff / totalDiff) * 100))) : 0;
+
+    return { cpuPercent };
+}
+
 type PruneOutcome = { installed: boolean; deleted: number; error?: string };
 
 // 이 서버 프로세스의 신원. 기동할 때 한 번 만들고 죽을 때까지 고정이라, 서로 다른 주소로 받은
@@ -206,7 +464,7 @@ type PruneOutcome = { installed: boolean; deleted: number; error?: string };
 // 구분되지 않아 엉뚱한 서버에 붙을 수 있어서, 프로세스마다 다른 값이 필요하다.
 const gInstanceId = randomUUID();
 
-@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations", "/AIInfo/workfolder", "/AIInfo/workfolder-set", "/AIInfo/whoami"])
+@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/server-info", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations", "/AIInfo/workfolder", "/AIInfo/workfolder-set", "/AIInfo/whoami"])
 export class CAIInfoRouter extends CAuthServer {
     // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
     // cross-origin(RDP로 전환된 원격 서버) 요청은 쿠키가 기본적으로 전달되지 않으므로 토큰이 필요하다.
@@ -219,6 +477,7 @@ export class CAIInfoRouter extends CAuthServer {
         super();
         this.On("/AIInfo/setting", this.onGetSettingJSON.bind(this));
         this.On("/AIInfo/provider-state", this.onProviderState.bind(this));
+        this.On("/AIInfo/server-info", this.onServerInfo.bind(this));
         this.On("/AIInfo/opencode-pushLocal", this.onPushOpencodeModel.bind(this));
         this.On("/AIInfo/opencode-statusLocal", this.onOpencodeProviderStatus.bind(this));
         this.On("/AIInfo/prune-conversations", this.onPruneConversations.bind(this));
@@ -243,9 +502,10 @@ export class CAIInfoRouter extends CAuthServer {
         void CAIInfoRouter._maybeUpdateModelsOnStart();
     }
 
-    // ai/settings.json modelsUpdate 가 true 일 때만 프로바이더 모델 목록을 조회해 models 에 반영.
-    // 조회 결과가 비어 있는 프로바이더는 기존 목록을 유지(CLI/인증 실패로 목록이 통째로 지워지지 않게).
-    // 성공/실패와 관계없이 한 번 시도한 뒤에는 modelsUpdate 를 false 로 내려 다음 기동에서 반복하지 않는다.
+    // 서버 최초 기동 시 1회만: ai/settings.json 의 modelsUpdate 가 true 일 때만 프로바이더 모델 목록을
+    // 조회해 models 에 반영한다. 조회 결과가 비어 있는 프로바이더는 기존 목록을 유지
+    // (CLI/인증 실패로 목록이 통째로 지워지지 않게). modelsUpdate 값 자체는 사용자가 설정한 그대로
+    // 유지하고 임의로 false 로 되돌리지 않는다.
     private static async _maybeUpdateModelsOnStart(): Promise<void> {
         if (_modelsUpdateOnceDone) return;
         _modelsUpdateOnceDone = true;
@@ -279,10 +539,11 @@ export class CAIInfoRouter extends CAuthServer {
             }
         }
 
-        settings.modelsUpdate = false;
+        await _annotateModelCosts(settings);
+
         try {
             fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
-            CConsol.Log('[CAIInfoRouter] modelsUpdate done → saved modelsUpdate=false', CConsol.eColor.cyan);
+            CConsol.Log('[CAIInfoRouter] modelsUpdate done', CConsol.eColor.cyan);
         } catch (e: any) {
             CConsol.Log(`[CAIInfoRouter] modelsUpdate: settings.json write failed: ${e?.message ?? e}`, CConsol.eColor.red);
         }
@@ -332,10 +593,16 @@ export class CAIInfoRouter extends CAuthServer {
         return null;
     }
 
-    // GET /AIInfo/provider-state
+    // GET /AIInfo/provider-state[?providers=claude,codex]
     // 각 AI 프로바이더의 설치/인증/버전/모델/사용량(5시간·주간 잔여 비율) 현황을 반환한다 (인증 불필요).
+    // providers 쿼리로 조회 대상을 좁힐 수 있다(미지정/빈 값이면 전체 - 기존 호출자와 호환).
+    // 프로바이더 하나당 CLI 프로세스를 띄워 확인하는 비용이라, 안 쓰는 프로바이더를 빼면 그만큼 빨라진다.
+    // 응답의 all은 이 서버가 아는 전체 프로바이더 id 목록으로, 클라이언트가 필터 UI를 그릴 때 쓴다.
     async onProviderState(_json: CJSON, _req: Request, _res: Response): Promise<null> {
-        const list = await Promise.all(_PROVIDER_STATE_LIST.map(async p => {
+        const filterRaw = String(_req.query?.providers ?? '').trim();
+        const filter = filterRaw ? new Set(filterRaw.split(',').map(s => s.trim()).filter(Boolean)) : null;
+        const targets = filter ? _PROVIDER_STATE_LIST.filter(p => filter.has(p)) : _PROVIDER_STATE_LIST;
+        const list = await Promise.all(targets.map(async p => {
             const info = await CAI.ProviderInfo(p);
             const usage = (p === CAI.eProvider.antigravity && info.installed && info.authenticated)
                 ? await _getAgyUsageCached()
@@ -368,7 +635,26 @@ export class CAIInfoRouter extends CAuthServer {
         const _nodeCheck = spawnSync('node', ['--version'], { encoding: 'utf8', windowsHide: true });
         const _nodeOk    = _nodeCheck.status === 0 && !_nodeCheck.error;
         const node = { installed: _nodeOk, version: _nodeOk ? (_nodeCheck.stdout || '').trim().replace(/^v/, '') : '' };
-        _res.json({ node, providers: list });
+        _res.json({ node, providers: list, all: _PROVIDER_STATE_LIST });
+        return null;
+    }
+
+    // GET /AIInfo/server-info -> { ok, cpu:{percent,cores}, memory:{totalBytes,usedBytes,percent} }
+    // provider-state 옆의 Node.js 상태 카드와 같은 성격의 조회라 인증을 요구하지 않는다(디스크 경로 등
+    // 민감정보 없음). CPU는 200ms 간격 두 샘플의 델타로 계산해 응답이 그만큼 지연된다.
+    async onServerInfo(_json: CJSON, _req: Request, _res: Response): Promise<null> {
+        try {
+            const totalBytes = os.totalmem();
+            const usedBytes = totalBytes - os.freemem();
+            const load = await _sampleServerLoad();
+            _res.json({
+                ok: true,
+                cpu: { percent: load.cpuPercent, cores: os.cpus().length },
+                memory: { totalBytes, usedBytes, percent: totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0 },
+            });
+        } catch (e: any) {
+            _res.status(500).json({ ok: false, msg: String(e?.message ?? e) });
+        }
         return null;
     }
 

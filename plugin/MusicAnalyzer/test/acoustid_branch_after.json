@@ -1,0 +1,28 @@
+[CAI] grok binary is currently running (locked); skip reinstall and reuse existing install.
+{
+  "title": "Perfect",
+  "composer": "Ed Sheeran",
+  "performedBy": "Ed Sheeran",
+  "album": "÷ (Deluxe)",
+  "releaseYear": 2017,
+  "usedIn": [
+    "Red Notice",
+    "Sing 2",
+    "Cinderella (2021)",
+    "Suits",
+    "Shameless",
+    "The Good Doctor",
+    "Zoey's Extraordinary Playlist",
+    "Love Island (US)",
+    "The Masked Singer",
+    "I Can See Your Voice",
+    "World of Dance"
+  ],
+  "genre": "Pop",
+  "lyrics": "I found a love for me\nDarling, just dive right in and follow my lead\nI found a girl, beautiful and sweet\nI never knew you were the someone waiting for me\n\n'Cause we were just kids when we fell in love\nNot knowing what it was\nI will not give you up this time\nDarling, just kiss me slow\nYour heart is all I own\nAnd in your eyes, you're holding mine\n\nBaby I'm, dancing in the dark\nWith you between my arms\nBarefoot on the grass\nListening to our favourite song\nWhen you said you looked a mess\nI whispered underneath my breath\nBut you heard it\nDarling, you look perfect tonight\n\nI found a woman, stronger than anyone I know\nShe shares my dreams, I hope that someday I'll share her home\nI found a lover to carry more than just my secrets\nTo carry love, to carry children of our own\n\nWe are still kids, but we're so in love\nFighting against all odds\nI know we'll be alright this time\nDarling, just hold my hand\nBe my girl, I'll be your man\nI see my future in your eyes\n\nBaby, I'm dancing in the dark\nWith you between my arms\nBarefoot on the grass\nListening to our favourite song\nWhen I saw you in that dress\nLooking so beautiful\nI don't deserve this\nDarling, you look perfect tonight\n\nBaby, I'm dancing in the dark\nWith you between my arms\nBarefoot on the grass\nListening to our favourite song\nI have faith in what I see\nNow I know I have met an angel in person\nAnd she looks perfect\nI don't deserve this\nYou look perfect tonight",
+  "source": "AcoustID 지문 매칭(score=0.95) + iTunes(장르) + AI(작곡가/삽입작품 보강)",
+  "confidence": "high",
+  "notes": "AcoustID 고신뢰 지문 매칭 + 무료 API(MusicBrainz/lyrics.ovh/iTunes)로 부족 항목 보강 - 작곡가/삽입작품는 AI 통합 질의 1회로 보강함",
+  "isRemake": false,
+  "versionNote": null
+}

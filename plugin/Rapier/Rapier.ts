@@ -41,7 +41,7 @@ export class CRapierCollider extends CCollider
         super(null);
 
         
-        this.mRestitution=null;
+        this.mRestitutionInit=null;
         this.mEvent=null;
         this.mRB=_rb;
 
@@ -63,11 +63,11 @@ export class CRapierCollider extends CCollider
         this.mCL.setRestitutionCombineRule(_role);
     }
     //복원계수
-    override SetRestitution(_value:number=1) 
+    SetRestitution(_value:number=1) 
     {
         if(this.mCL==null)
         {
-            this.mRestitution=_value;
+            this.mRestitutionInit=_value;
             return;
         }
         this.mCL.setRestitution(_value);   
@@ -78,7 +78,7 @@ export class CRapierCollider extends CCollider
     {
         if(this.mCL==null)
         {
-            this.mFriction=_value;
+            this.mFrictionInit=_value;
             return;
         }
         this.mCL.setFriction(_value);   
@@ -122,7 +122,9 @@ export class CRapierCollider extends CCollider
 
     //mEvent : number;
     //mRestitution=null;
-    mFriction=null;//마찰
+    //Rapier에 콜라이더가 생기기 전에 들어온 값을 잠시 담아 둔다. 적용 후 null로 되돌린다.
+    mRestitutionInit=null;//복원계수(Rapier의 진짜 반발계수)
+    mFrictionInit=null;//마찰계수
     
     override SetOwner(_obj) {
         //super.SetOwner(_obj);
@@ -204,15 +206,15 @@ export class CRapierCollider extends CCollider
         }
         
 
-        if(this.mRestitution!=null)
+        if(this.mRestitutionInit!=null)
         {
-            this.SetRestitution(this.mRestitution);
-            this.mRestitution=null;
+            this.SetRestitution(this.mRestitutionInit);
+            this.mRestitutionInit=null;
         }
-        if(this.mFriction!=null)
+        if(this.mFrictionInit!=null)
         {
-            this.SetFriction(this.mFriction);
-            this.mFriction=null;
+            this.SetFriction(this.mFrictionInit);
+            this.mFrictionInit=null;
         }
         if(this.mDensity!=null)
         {

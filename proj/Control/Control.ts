@@ -3,10 +3,10 @@ import "../../artgine/artgine.js"
 
 //Class
 import {CClass} from "../../artgine/basic/CClass.js";
-import { MountDownloadTab } from "./Downloads/DownloadTab.js";
-CClass.Push(MountDownloadTab);
 import { MountMessengerTab } from "./Messenger/MessengerTab.js";
 CClass.Push(MountMessengerTab);
+import { MountScheduleTab } from "./Schedule/ScheduleTab.js";
+CClass.Push(MountScheduleTab);
 //Atelier
 import {CPreferences} from "../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -20,17 +20,16 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "ms2wpghp_6";
+gPF.mVersion = "mschkcx4_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
 import {CPlugin} from "../../artgine/util/CPlugin.js";
-CPlugin.PushPath('ControlDownload','../../plugin/ControlDownload/');
-import "../../plugin/ControlDownload/ControlDownload.js"
+CPlugin.PushPath('ControlMedia','../../plugin/ControlMedia/');
+import "../../plugin/ControlMedia/ControlMediaClient.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
@@ -41,7 +40,7 @@ await gAtl.Init([],"");
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { CModal, CConfirm } from "../../artgine/basic/CModal.js";
-import { CORMViewer } from "../../artgine/util/CModalUtil.js";
+import { CORMViewer, CSheetViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
@@ -52,6 +51,8 @@ import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
 import { CLan } from "../../artgine/basic/CLan.js";
 import { CStorage } from "../../artgine/system/CStorage.js";
+import { CFile } from "../../artgine/system/CFile.js";
+import { CUtil } from "../../artgine/basic/CUtil.js";
 import { CEvent } from "../../artgine/basic/CEvent.js";
 import { marked } from "../../artgine/external/esnext/md/marked.esm.js";
 
@@ -76,8 +77,6 @@ const SIDEBAR_LEFT_MIN = SIDEBAR_WIDTH + CONTENT_MIN_FOR_LEFT; // 1030
 
 function updateSidebarMode() {
     if (!mainContainer) return;
-    // Multiplexer 최대화 중에는 레이아웃/도킹을 재적용하지 않는다(CSS display:none + 풀폭 컨테이너 유지).
-    if (document.body.classList.contains('tmux-fullscreen')) return;
     const w = window.innerWidth;
     let leftDock = false;
     let rightDock = false;
@@ -124,7 +123,8 @@ applyTheme(savedTheme);
 themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
 
 // ---- 우측 사이드바: 서브 에이전트 세션 숨기기 ----
-// 터미널 세션 중 key가 있는(=set-agent로 등록된 서브 에이전트가 띄운) 항목을 좌측 Agent 목록에서 뺀다.
+// 터미널 세션 중 카탈로그(set-agent)에 등록된 서브 에이전트이면서 그 에이전트의 hidden 플래그가 켜진
+// 항목만 좌측 Agent 목록에서 뺀다(과거엔 key 유무만 봐서 팀장 세션까지 같이 숨겨졌었다).
 // 숨겨진 개수는 사라지지 않고 그룹 헤더에 배지로 남아, "몇 개가 숨어있는지"를 알 수 있게 한다.
 const HIDE_SUBAGENT_LS = 'ctrl.hideSubAgentSessions';
 // 저장된 값이 없으면 기본 ON(숨김). 사용자가 명시적으로 끈 경우('0')만 해제한다.
@@ -232,27 +232,24 @@ function registerControlLan(): void {
             "ctrl.msg.noSubAgentsHint": "등록된 서브 에이전트가 없습니다. 먼저 우측 사이드바 → Sub Agent에서 등록하세요.",
             "ctrl.msg.modelsToJson": "{0}: {1}개 모델 → opencode.json",
             "ctrl.msg.ocNoProviders": "등록된 OpenCode provider가 없습니다. 먼저 \"Add OpenCode Model\"을 사용하세요.",
+            "ctrl.providerSetting": "프로바이더 설정",
+            "ctrl.msg.providerSettingHint": "체크를 해제한 프로바이더는 목록에서 숨겨지고, 상태 갱신 시 조회하지도 않습니다.",
             "ctrl.local": "Local",
             "ctrl.msg.searchScopeFailed": "이 위치는 검색할 수 없습니다(서버에 등록된 워킹 폴더가 아닐 수 있습니다).",
             "ctrl.msg.scanningPath": "검색 중: {0}:{1}",
             "ctrl.msg.cachedScanning": "캐시: {0}건... 검색 중",
+            "ctrl.msg.cachedOnly": "캐시: {0}건 (Enter로 전체 검색)",
             "ctrl.msg.stoppedResults": "중지됨. ({0}건)",
             "ctrl.msg.nResults": "{0}건{1}",
             "ctrl.msg.noScopeSelected": "검색할 패스를 하나 이상 선택하세요.",
             "ctrl.msg.noSearchScope": "검색 가능한 경로가 없습니다.",
+            "ctrl.ph.sideSearch": "파일 검색 (클릭 시 인덱싱)",
+            "ctrl.indexingCount": "인덱싱중... ({0}개)",
             "ctrl.dl.enterUrl": "URL을 입력하세요",
             "ctrl.dl.failedInfo": "정보 조회 실패",
             "ctrl.dl.failedStart": "시작 실패",
             "ctrl.dl.serverError": "서버 오류: {0}",
             "ctrl.dl.serverUnavailable": "서버 응답 없음 - 서버가 제외된 버전일 수 있습니다. 서버 상태를 확인하세요",
-            "ctrl.optionHelp": "Help",
-            "ctrl.scF1": "File ↔ Info (오른쪽 사이드바)",
-            "ctrl.scF2": "파일 검색",
-            "ctrl.scF3": "새 터미널",
-            "ctrl.scF4": "사이드바 포커스/토글",
-            "ctrl.scF6": "터미널 SUPER + 입력 포커스",
-            "ctrl.scF7": "터미널 Log 패널",
-            "ctrl.scUpDown": "세션 목록 (사이드바 열림)",
         }
     });
 }
@@ -301,7 +298,71 @@ applyLanIn(document.body);
 // 인증 여부와 무관하게 즉시 호출 가능한 엔드포인트라 페이지 접속과 동시에 조회한다.
 interface IProviderStateEntry { id: string; installed: boolean; authenticated: boolean; version: string; models: { value: string; label: string }[]; usage: { fiveHour: number; weekly: number }; }
 interface INodeState { installed: boolean; version: string; }
-interface IProviderStateResp { node: INodeState; providers: IProviderStateEntry[]; }
+interface IProviderStateResp { node: INodeState; providers: IProviderStateEntry[]; all?: string[]; }
+interface IServerInfoResp {
+    ok: boolean;
+    cpu: { percent: number; cores: number };
+    memory: { totalBytes: number; usedBytes: number; percent: number };
+}
+
+// 서버(소스)별로 숨긴(= 안 쓰는) 프로바이더 id 집합. 소스 키는 ''(로컬) 또는 remoteId.
+// 숨긴 것은 화면에서 빼는 데서 끝나지 않고 provider-state 요청의 providers 쿼리에서도 빠져,
+// 그 서버가 해당 프로바이더 CLI를 아예 실행하지 않는다(그만큼 빨라짐).
+// 한 소스의 프로바이더를 전부 숨기면 그 소스 섹션 자체가 안 보인다 — 로컬/원격을 보이거나 숨기는
+// 것과 프로바이더를 고르는 것이 옵션 모달에서 서버별로 중첩된 체크박스 하나로 합쳐진다.
+const AI_PROVIDER_HIDDEN_BY_SRC_LS = 'ctrl.aiProviderHiddenBySrc';
+const AI_PROVIDER_HIDDEN_LS_LEGACY = 'ctrl.aiProviderHidden'; // 구버전(서버 구분 없는 전역 숨김 목록) 마이그레이션용.
+let aiProviderHiddenBySrc: Map<string, Set<string>> = (() => {
+    try {
+        const raw = localStorage.getItem(AI_PROVIDER_HIDDEN_BY_SRC_LS);
+        if (raw != null) {
+            const obj = JSON.parse(raw) as Record<string, string[]>;
+            return new Map(Object.entries(obj).map(([k, v]) => [k, new Set(v)]));
+        }
+    } catch { /* fall through to legacy */ }
+    try {
+        const legacy = localStorage.getItem(AI_PROVIDER_HIDDEN_LS_LEGACY);
+        if (legacy) return new Map([['', new Set<string>(JSON.parse(legacy))]]);
+    } catch { /* ignore */ }
+    return new Map();
+})();
+// 명시적으로 설정한 적 없는 소스는 기본으로 전부 보인다(빈 숨김 집합).
+function aiProviderHiddenSet(sourceKey: string): Set<string> {
+    return aiProviderHiddenBySrc.get(sourceKey) ?? new Set<string>();
+}
+function aiProviderSaveHidden() {
+    const obj: Record<string, string[]> = {};
+    for (const [k, v] of aiProviderHiddenBySrc) obj[k] = [...v];
+    localStorage.setItem(AI_PROVIDER_HIDDEN_BY_SRC_LS, JSON.stringify(obj));
+}
+function aiProviderSetHidden(sourceKey: string, providerId: string, hide: boolean) {
+    let set = aiProviderHiddenBySrc.get(sourceKey);
+    if (!set) { set = new Set<string>(); aiProviderHiddenBySrc.set(sourceKey, set); }
+    if (hide) set.add(providerId); else set.delete(providerId);
+    aiProviderSaveHidden();
+}
+// Node.js 행은 실제 프로바이더가 아니라 aiProviderAll에 안 들어있다 — 같은 숨김 집합에 이 가짜 id로
+// 넣어 서버별로 독립 토글되게 한다(providers= 쿼리에는 안 실린다, aiProviderAll에 없으므로).
+const AI_PROVIDER_NODE_KEY = '__node__';
+// 서버 CPU/RAM/네트워크 카드도 Node.js 행과 같은 방식으로 서버별 독립 숨김 토글을 지원한다.
+const AI_PROVIDER_SERVER_KEY = '__server__';
+// 서버가 아는 전체 프로바이더 목록(응답의 all로 매번 갱신된다). 첫 조회 전/구버전 서버 대비 기본값.
+let aiProviderAll: string[] = ['claude', 'codex', 'antigravity', 'opencode', 'grok'];
+
+// Memo 탭이 어느 서버의 /Memo/*를 써야 하는지 판단하는 단일 출처(RDP가 원격을 전환할 때마다 갱신).
+// '' = 로컬. 인증은 여기서 미리 하지 않고, Memo 탭이 열릴 때 memoSendRemoteInfo()가 필요하면 그때 확인/요청한다.
+// (원래는 RDP 상태 섹션 근처에 있었지만, Provider Status가 페이지 로드와 동시에 이 값을 읽으므로
+// let의 TDZ를 피하기 위해 그보다 앞에 선언한다.)
+let currentWebRootUrl = '';
+
+// Provider Status에 알려진 전체 서버 목록(로컬 + 저장된 원격 전부). 실제로 그릴지는 소스별 숨김
+// 집합(aiProviderHiddenSet)에 안 가려진 프로바이더가 하나라도 있는지로 loadAiProviderStatus에서 정한다.
+function aiProviderAllSources(): { remoteId: string; baseUrl: string; label: string }[] {
+    return [
+        { remoteId: '', baseUrl: CPath.WebRootUrl(), label: L('ctrl.local', 'Local') },
+        ...rdpRemotes.map(r => ({ remoteId: r.remoteId, baseUrl: rdpRemoteWebRootUrl(r.entryUrl), label: r.entryUrl })),
+    ];
+}
 
 async function loadAiProviderStatus() {
     const el = document.getElementById('aiProviderStatus');
@@ -310,72 +371,188 @@ async function loadAiProviderStatus() {
     const icon = btn?.querySelector('i');
     if (btn) btn.disabled = true;
     icon?.classList.add('spin');
+    // Node.js/서버상태 행도 프로바이더도 전부 숨겨진 소스는 조회 자체를 건너뛴다(그 서버 CLI를 아예 안 돌림).
+    const sources = aiProviderAllSources().filter(s => {
+        const hidden = aiProviderHiddenSet(s.remoteId);
+        return !hidden.has(AI_PROVIDER_NODE_KEY) || !hidden.has(AI_PROVIDER_SERVER_KEY) || aiProviderAll.some(p => !hidden.has(p));
+    });
     try {
-        const r = await fetch(CPath.WebRootUrl() + 'AIInfo/provider-state');
-        const resp: IProviderStateResp = await r.json();
-        const node = resp.node;
-        const providers = resp.providers ?? [];
-        const nodeRowClass = node?.installed ? 'bg-success-subtle' : 'bg-secondary-subtle';
-        const nodeIcon = node?.installed ? 'bi-check-circle-fill text-success' : 'bi-x-circle text-secondary';
-        const nodeStatus = node?.installed ? 'Ready' : 'Not Installed';
-        const nodeVer = node?.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${node.version}</span>` : '';
-        const nodeStatusHtml = node?.installed
-            ? ''
-            : `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="aiNodeDownloadBtn"><i class="bi ${nodeIcon}"></i>${nodeStatus}</button>`;
-        const nodeRow = `<div class="d-flex align-items-center justify-content-between rounded px-2 py-1 ${nodeRowClass}" style="font-size:0.8rem;">
-                <span class="fw-semibold">Node.js${nodeVer}</span>
-                ${nodeStatusHtml}
-            </div>`;
-        el.innerHTML = nodeRow + providers.map(p => {
-            const rowClass = !p.installed ? 'bg-secondary-subtle' : p.authenticated ? 'bg-success-subtle' : 'bg-warning-subtle';
-            const pIcon = !p.installed ? 'bi-x-circle text-secondary' : p.authenticated ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-warning';
-            const status = !p.installed ? 'Not Installed' : p.authenticated ? 'Ready' : 'Not Authenticated';
-            const ver = p.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${p.version}</span>` : '';
-            const statusHtml = !p.installed
-                ? `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-provider-launch-btn" data-provider="${p.id}"><i class="bi ${pIcon}"></i>${status}</button>`
-                : p.authenticated ? '' : `<span class="d-flex align-items-center gap-1"><i class="bi ${pIcon}"></i>${status}</span>`;
-            // usage.fiveHour/weekly: 0~1 남은 비율, -1이면 조회 실패/미지원.
-            // 한쪽만 지원하는 프로바이더(예: antigravity 신형 = weekly만)는 미지원 버킷을 ?로 넣지 않고 생략한다.
-            // 둘 다 -1일 때만 조회 실패로 `?`를 보여 준다.
-            const pct = (v: number) => Math.round(v * 100);
-            const usageParts: string[] = [];
-            const showUsage = p.authenticated && p.usage;
-            if (showUsage) {
-                const fh = p.usage!.fiveHour;
-                const wk = p.usage!.weekly;
-                if (fh >= 0) usageParts.push(`5h ${pct(fh)}%`);
-                if (wk >= 0) usageParts.push(`Weekly ${pct(wk)}%`);
-                if (fh < 0 && wk < 0) {
-                    usageParts.push(`5h ?`);
-                    usageParts.push(`Weekly ?`);
-                }
+        // provider-state/server-info는 인증 불필요 엔드포인트라(onProviderState/onServerInfo 주석) cross-origin이어도
+        // 토큰 없이 조회 가능 — 보이는 서버 전부를 병렬로 조회한다. server-info는 숨겨진 소스라면 건너뛴다(호출 자체가
+        // CPU/네트워크 샘플링으로 200ms+ 걸리는 조회라, 안 보일 때까지 매번 돌릴 필요가 없다).
+        const results = await Promise.all(sources.map(async s => {
+            const hidden = aiProviderHiddenSet(s.remoteId);
+            const visible = aiProviderAll.filter(p => !hidden.has(p));
+            const query = hidden.size ? `?providers=${encodeURIComponent(visible.join(','))}` : '';
+            const wantServer = !hidden.has(AI_PROVIDER_SERVER_KEY);
+            try {
+                const [r, serverResp] = await Promise.all([
+                    fetch(s.baseUrl + 'AIInfo/provider-state' + query),
+                    wantServer
+                        ? fetch(s.baseUrl + 'AIInfo/server-info').then(r2 => r2.json() as Promise<IServerInfoResp>).catch(() => null)
+                        : Promise.resolve(null),
+                ]);
+                return { s, resp: await r.json() as IProviderStateResp, server: serverResp, ok: true as const };
+            } catch (e) {
+                console.error('provider-state error:', s.baseUrl, e);
+                return { s, resp: null, server: null, ok: false as const };
             }
-            const usageHtml = usageParts.length
-                ? `<div class="text-secondary" style="font-size:0.75em;">${usageParts.join(' · ')} remaining</div>`
-                : '';
-            return `<div class="rounded px-2 py-1 ${rowClass}" style="font-size:0.8rem;">
-                <div class="d-flex align-items-center justify-content-between">
-                    <span class="fw-semibold text-capitalize">${p.id}${ver}</span>
+        }));
+        el.innerHTML = results.map(({ s, resp, server, ok }) => {
+            if (!ok || !resp) {
+                return `<div class="rounded px-2 py-1 bg-secondary-subtle" style="font-size:0.8rem;">
+                    <span class="fw-semibold ${s.remoteId ? rdpTextColor(s.remoteId) : 'text-primary'}">${aiEscapeHtml(s.label)}</span>
+                    <span class="text-secondary ms-1">${L('ctrl.msg.providerStateError', 'unreachable')}</span>
+                </div>`;
+            }
+            if (resp.all?.length) aiProviderAll = resp.all;
+            const hidden = aiProviderHiddenSet(s.remoteId);
+            const providers = (resp.providers ?? []).filter(p => !hidden.has(p.id));
+            const node = resp.node;
+            let nodeRow = '';
+            if (!hidden.has(AI_PROVIDER_NODE_KEY)) {
+                const nodeRowClass = node?.installed ? 'bg-success-subtle' : 'bg-secondary-subtle';
+                const nodeIcon = node?.installed ? 'bi-check-circle-fill text-success' : 'bi-x-circle text-secondary';
+                const nodeStatus = node?.installed ? 'Ready' : 'Not Installed';
+                const nodeStatusHtml = node?.installed
+                    ? ''
+                    : `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-node-download-btn"><i class="bi ${nodeIcon}"></i>${nodeStatus}</button>`;
+                nodeRow = `<div class="d-flex align-items-center justify-content-between rounded px-2 py-1 ${nodeRowClass}" style="font-size:0.8rem;">
+                        <span class="fw-semibold">Node.js</span>
+                        ${nodeStatusHtml}
+                    </div>`;
+            }
+            let serverRow = '';
+            if (!hidden.has(AI_PROVIDER_SERVER_KEY) && server?.ok) {
+                // usage 뱃지와 같은 규칙(빨강<=20%<=주황<=50%<초록)을 쓰되, 사용률은 "높을수록 위험"이라
+                // 남은 비율 기준인 usageColorHtml과 반대 방향(threshold 넘을수록 진해짐)으로 별도 계산한다.
+                const loadColorHtml = (v: number, text: string) =>
+                    v >= 80 ? `<span class="fw-semibold text-danger">${text}</span>`
+                    : v >= 50 ? `<span class="fw-semibold" style="color:#fd7e14;">${text}</span>`
+                    : `<span class="fw-semibold text-success">${text}</span>`;
+                const loadBadge = (label: string, v: number) => `<span class="text-secondary">${label}</span> ${loadColorHtml(v, v + '%')}`;
+                serverRow = `<div class="d-flex align-items-center gap-2 rounded px-2 py-1 bg-body-secondary" style="font-size:0.75em;">${loadBadge('CPU', server.cpu.percent)}<span class="text-secondary">·</span>${loadBadge('RAM', server.memory.percent)}</div>`;
+            }
+            const providerRows = providers.map(p => {
+                const rowClass = !p.installed ? 'bg-secondary-subtle' : p.authenticated ? 'bg-success-subtle' : 'bg-warning-subtle';
+                const pIcon = !p.installed ? 'bi-x-circle text-secondary' : p.authenticated ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-warning';
+                const status = !p.installed ? 'Not Installed' : p.authenticated ? 'Ready' : 'Not Authenticated';
+                const statusHtml = !p.installed
+                    ? `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-provider-launch-btn" data-provider="${p.id}" data-remote="${aiEscapeHtml(s.remoteId)}"><i class="bi ${pIcon}"></i>${status}</button>`
+                    : p.authenticated ? '' : `<span class="d-flex align-items-center gap-1"><i class="bi ${pIcon}"></i>${status}</span>`;
+                // usage.fiveHour/weekly: 0~1 남은 비율, -1이면 조회 실패/미지원.
+                // 한쪽만 지원하는 프로바이더(예: antigravity 신형 = weekly만)는 미지원 버킷을 ?로 넣지 않고 생략한다.
+                // 둘 다 -1일 때만 조회 실패로 `?`를 보여 준다.
+                // 라벨(5h/7d)은 옅게, 남은 비율 숫자는 진하게+구간별 색(빨강<=20%<=주황<=50%<초록)을 줘서
+                // "5h 7% 7d 12%"처럼 붙어 있어도 라벨과 숫자, 두 구간이 한눈에 갈린다.
+                // 중간 구간은 bootstrap text-warning(노랑)이 배경/초록과 대비가 약해 안 보이길래
+                // 더 진한 주황(#fd7e14, bootstrap --bs-orange)을 인라인으로 직접 준다.
+                const pct = (v: number) => Math.round(v * 100);
+                const usageColorHtml = (v: number, text: string) =>
+                    v <= 20 ? `<span class="fw-semibold text-danger">${text}</span>`
+                    : v <= 50 ? `<span class="fw-semibold" style="color:#fd7e14;">${text}</span>`
+                    : `<span class="fw-semibold text-success">${text}</span>`;
+                const usageBadge = (label: string, v: number | null) =>
+                    `<span class="text-secondary">${label}</span> ${v == null ? '<span class="fw-semibold text-secondary">?</span>' : usageColorHtml(v, v + '%')}`;
+                const usageParts: string[] = [];
+                const showUsage = p.authenticated && p.usage;
+                if (showUsage) {
+                    const fh = p.usage!.fiveHour;
+                    const wk = p.usage!.weekly;
+                    if (fh >= 0) usageParts.push(usageBadge('5h', pct(fh)));
+                    if (wk >= 0) usageParts.push(usageBadge('7d', pct(wk)));
+                    if (fh < 0 && wk < 0) {
+                        usageParts.push(usageBadge('5h', null));
+                        usageParts.push(usageBadge('7d', null));
+                    }
+                }
+                const usageHtml = usageParts.length
+                    ? `<span class="ms-2" style="font-size:0.75em;">${usageParts.join(' <span class="text-secondary">·</span> ')}</span>`
+                    : '';
+                return `<div class="d-flex align-items-center justify-content-between rounded px-2 py-1 ${rowClass}" style="font-size:0.8rem;">
+                    <span class="fw-semibold text-capitalize">${p.id}${usageHtml}</span>
                     ${statusHtml}
-                </div>
-                ${usageHtml}
-            </div>`;
+                </div>`;
+            }).join('');
+            // 소스가 여럿일 때만 헤더(로컬/원격 주소, 색으로 구분)를 보여준다 — 하나뿐이면 예전처럼 바로 목록만.
+            const header = sources.length > 1
+                ? `<div class="small fw-semibold text-truncate ${s.remoteId ? rdpTextColor(s.remoteId) : 'text-primary'}" style="font-size:0.72rem;" title="${aiEscapeHtml(s.baseUrl)}">${aiEscapeHtml(s.label)}</div>`
+                : '';
+            return `<div class="ai-provider-source d-flex flex-column gap-1 mb-1">${header}${serverRow}${nodeRow}${providerRows}</div>`;
         }).join('');
-        document.getElementById('aiNodeDownloadBtn')?.addEventListener('click', () => {
-            window.open('https://nodejs.org/en/download', '_blank');
+        el.querySelectorAll<HTMLButtonElement>('.ai-node-download-btn').forEach(b => {
+            b.addEventListener('click', () => window.open('https://nodejs.org/en/download', '_blank'));
         });
         el.querySelectorAll<HTMLButtonElement>('.ai-provider-launch-btn').forEach(b => {
-            b.addEventListener('click', () => termStartNew(b.dataset.provider as Parameters<typeof termStartNew>[0]));
+            // 이 항목이 속한 소스(로컬/원격)에서 터미널을 띄운다.
+            b.addEventListener('click', () => termStartNew(b.dataset.provider as Parameters<typeof termStartNew>[0], undefined, b.dataset.remote || ''));
         });
+        const timeEl = document.getElementById('aiProviderStatusTime');
+        if (timeEl) {
+            const now = new Date();
+            const pad2 = (n: number) => String(n).padStart(2, '0');
+            timeEl.textContent = `(${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())})`;
+        }
     } catch (e) { console.error('provider-state error:', e); }
     finally {
         if (btn) btn.disabled = false;
         icon?.classList.remove('spin');
     }
 }
-loadAiProviderStatus();
+// aiProviderAllSources()가 참조하는 rdpRemotes(let)는 이 지점보다 아래에서 선언되므로, 같은 모듈 안에서
+// 지금 바로 호출하면 TDZ로 죽는다. 한 틱 미뤄 전체 모듈 평가가 끝난 뒤 돌게 한다.
+setTimeout(() => loadAiProviderStatus(), 0);
 setInterval(() => loadAiProviderStatus(), 5 * 60 * 1000);
 document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
+document.getElementById('aiProviderSettingBtn')?.addEventListener('click', () => showProviderVisibilityModal());
+
+// Provider Status 설정 모달: 서버(로컬/원격)별로 그룹을 나누고 그 아래 프로바이더 체크박스를 중첩해서 보여준다
+// (로컬/원격을 보이거나 숨기는 것과 프로바이더를 고르는 것이 서버별 체크박스 하나로 합쳐진다 — 어떤 서버 아래
+// 프로바이더를 하나도 안 켜면 그 서버 섹션 자체가 목록에서 빠지고 조회도 건너뛴다).
+// 선택은 localStorage(AI_PROVIDER_HIDDEN_BY_SRC_LS)에 이 브라우저 기준으로 남는다.
+function showProviderVisibilityModal() {
+    const uid = `provVis_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader(L('ctrl.providerSetting', 'Provider Settings'));
+    const groups = aiProviderAllSources().map(s => {
+        const hidden = aiProviderHiddenSet(s.remoteId);
+        const serverRow = `
+            <label class="d-flex align-items-center gap-2 px-2 py-1 rounded border ms-3">
+                <input type="checkbox" class="form-check-input mt-0 ${uid}_chk" data-remote="${aiEscapeHtml(s.remoteId)}" data-provider="${AI_PROVIDER_SERVER_KEY}" ${hidden.has(AI_PROVIDER_SERVER_KEY) ? '' : 'checked'}>
+                <span>Server (CPU/RAM/NET)</span>
+            </label>`;
+        const nodeRow = `
+            <label class="d-flex align-items-center gap-2 px-2 py-1 rounded border ms-3">
+                <input type="checkbox" class="form-check-input mt-0 ${uid}_chk" data-remote="${aiEscapeHtml(s.remoteId)}" data-provider="${AI_PROVIDER_NODE_KEY}" ${hidden.has(AI_PROVIDER_NODE_KEY) ? '' : 'checked'}>
+                <span>Node.js</span>
+            </label>`;
+        const rows = serverRow + nodeRow + aiProviderAll.map(p => `
+            <label class="d-flex align-items-center gap-2 px-2 py-1 rounded border ms-3">
+                <input type="checkbox" class="form-check-input mt-0 ${uid}_chk" data-remote="${aiEscapeHtml(s.remoteId)}" data-provider="${aiEscapeHtml(p)}" ${hidden.has(p) ? '' : 'checked'}>
+                <span class="text-capitalize">${aiEscapeHtml(p)}</span>
+            </label>`).join('');
+        return `
+        <div class="mb-3">
+            <div class="fw-semibold small text-truncate ${s.remoteId ? rdpTextColor(s.remoteId) : 'text-primary'}" title="${aiEscapeHtml(s.baseUrl)}">${aiEscapeHtml(s.label)}</div>
+            <div class="d-flex flex-column gap-1 mt-1">${rows}</div>
+        </div>`;
+    }).join('');
+    modal.SetBody(`
+        <div class="small text-secondary mb-2">${L('ctrl.msg.providerSettingHint', 'Uncheck a provider to hide it for that server. A server with none checked is hidden entirely and skipped on refresh.')}</div>
+        ${groups}
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(360, 480);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        document.querySelectorAll<HTMLInputElement>(`.${uid}_chk`).forEach(chk => {
+            chk.addEventListener('change', () => {
+                aiProviderSetHidden(chk.dataset.remote ?? '', chk.dataset.provider ?? '', !chk.checked);
+                loadAiProviderStatus();
+            });
+        });
+    }, MODAL_DOM_DELAY);
+}
 document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
 document.getElementById('aiOpencodeStatusBtn')?.addEventListener('click', () => showOpencodeStatusModal());
 document.getElementById('agentAddFolderBtn')?.addEventListener('click', () => showWorkFolderModal());
@@ -598,16 +775,17 @@ function showWorkFolderModal() {
     modal.SetBody(`
         <div class="small text-secondary mb-2">
             <p class="mb-1">Server working folders, served as <code>/Root0</code>, <code>/Root1</code> … (one per line).</p>
+            <p class="mb-1">A git URL (e.g. <code>https://github.com/owner/repo</code>) or svn URL (e.g. <code>svn://host/repo</code>, <code>https://host/svn/repo</code>) is also accepted — after restart it's auto-downloaded into <code>git/&lt;repo&gt;</code> / <code>svn/&lt;repo&gt;</code> and the entry is replaced with that local path.</p>
             <p class="mb-0">Saving writes to <code>Env.json</code> and <strong>restarts the server</strong> to re-register the routes.</p>
         </div>
-        <textarea id="${uid}" class="form-control form-control-sm" rows="4" placeholder="./&#10;D:/Work" spellcheck="false"></textarea>
+        <textarea id="${uid}" class="form-control form-control-sm" rows="10" placeholder="./&#10;D:/Work&#10;https://github.com/owner/repo&#10;svn://host/repo" spellcheck="false"></textarea>
         <div class="d-flex justify-content-end mt-2">
             <button id="${uid}_save" class="btn btn-primary btn-sm">Save &amp; Restart</button>
         </div>
         <div id="${uid}_result" class="small mt-2"></div>
     `);
     modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetSize(520, 320);
+    modal.SetSize(560, 480);
     modal.Open(CModal.ePos.Center);
     setTimeout(async () => {
         const ta      = document.getElementById(uid) as HTMLTextAreaElement | null;
@@ -755,10 +933,9 @@ function wirePopupActions(rootEl: Element, getUrl: () => string, title: string, 
     rootEl.querySelector<HTMLElement>('[data-act="window"]')?.addEventListener('click', () => openSessionPopup(getUrl(), title, true, winName));
 }
 
-// 사이드바는 RDP 목록과 "Chat/Terminal/Browser/Editor 통합 목록" 두 그룹으로 나뉘고, 강조 표시도
-// 그룹별로 독립적으로 하나씩(총 두 개) 켜져야 한다. RDP는 selectedRdpKey만으로 항상 하나가 켜지지만,
-// 통합 목록 쪽은 네 종류가 같은 리스트를 공유하므로 그중 지금 센터에 실제로 보이는 탭의 항목만 켜야
-// 네 개가 동시에 파랗게 표시되는 문제를 피할 수 있다.
+// 사이드바 강조는 Multiplexer에 떠 있는 세션을 그대로 보여 준다(메인 pane=빨강, 서브 pane=파랑,
+// 여러 개 동시). 이전처럼 그룹별로 하나만 켜지 않는다. RDP 목록과 Chat/Terminal/Browser/Editor
+// 통합 목록 모두 tmuxPaneRole() 기준.
 function isPanelShown(panelId: string): boolean {
     return CDOM.ID(panelId).classList.contains('active');
 }
@@ -767,13 +944,16 @@ function isPanelShown(panelId: string): boolean {
 interface SessionItemSpec {
     activeClass: string;
     isActive: boolean;
+    /** activeClass가 -remote 계열일 때 원격지별 강조색(--rdp-accent/-bg)을 싣는 인라인 스타일. rdpAccentStyle() 참고. */
+    accentStyle?: string;
     dataAttr: { name: string; value: string };
     leftHtml: string;
     bodyHtml: string;
     deleteAct: string;
     deleteLabel: string;
     onClick: () => void;
-    onShare: () => void;
+    /** 없으면 Share Link 메뉴 숨김 (Chat 등 공유 미지원 세션) */
+    onShare?: () => void;
     onDelete: () => void;
     popup: { url: () => string; title: string; winName: string };
 }
@@ -782,6 +962,20 @@ interface SessionItemSpec {
 // 그래서 최신 spec을 노드에 얹어두고(_spec) 리스너는 항상 그걸 통해 디스패치한다.
 interface SessionItemEl extends HTMLDivElement { _spec: SessionItemSpec; _left?: string; _body?: string; }
 
+// 세션 아이템을 Multiplexer pane에 드래그해 놓을 때 쓸 tmux 콘텐츠 키. Chat/Terminal/Browser/Editor는
+// dataAttr가 이미 그 형식 그대로(name:'key')라 값을 그대로 쓰고, RDP 원격 항목만 dataAttr가
+// name:'id'(remoteId)라 'rdp:remote:' 접두사를 붙여 변환한다. 그 외(알 수 없는 형식)는 드래그 불가.
+function sessionItemDragKey(spec: SessionItemSpec): string | null {
+    if (spec.dataAttr.name === 'key') return spec.dataAttr.value;
+    if (spec.dataAttr.name === 'id') return `rdp:remote:${spec.dataAttr.value}`;
+    return null;
+}
+// 세션 아이템을 끄는 동안만 body.tmux-dragging을 켜서 Multiplexer pane들의 드롭존(.tmux-leaf-dropzone)이
+// 나타나게 한다(평소엔 숨겨서 iframe 조작을 방해하지 않는다).
+document.addEventListener('dragstart', (e: DragEvent) => {
+    if ((e.target as HTMLElement)?.closest?.('.ai-session-item')) document.body.classList.add('tmux-dragging');
+});
+document.addEventListener('dragend', () => document.body.classList.remove('tmux-dragging'));
 // leftHtml/bodyHtml은 갱신 대상이지만 드롭다운은 유지해야 한다(열려 있는 메뉴가 닫히고 Dropdown 인스턴스가
 // 새로 생기는 것을 막는다). 그래서 둘을 display:contents 래퍼로 감싸 갱신 슬롯을 만든다.
 // display:contents라 래퍼 자신은 레이아웃에 관여하지 않아 기존 flex 배치가 그대로 유지된다.
@@ -789,6 +983,7 @@ function createSessionItem(spec: SessionItemSpec): HTMLDivElement {
     const item = document.createElement('div') as SessionItemEl;
     item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
         + (spec.isActive ? ' ' + spec.activeClass : '');
+    if (spec.accentStyle) item.style.cssText = spec.accentStyle;
     item.dataset[spec.dataAttr.name] = spec.dataAttr.value;
     item.innerHTML = `
         <span class="sess-left" style="display:contents;">${spec.leftHtml}</span>
@@ -799,7 +994,7 @@ function createSessionItem(spec: SessionItemSpec): HTMLDivElement {
             </button>
             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
                 ${POPUP_MENU_ITEMS}
-                <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
+                ${spec.onShare ? '<li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>' : ''}
                 <li><hr class="dropdown-divider"></li>
                 <li><button class="dropdown-item text-danger" data-act="${spec.deleteAct}">${spec.deleteLabel}</button></li>
             </ul>
@@ -812,12 +1007,33 @@ function createSessionItem(spec: SessionItemSpec): HTMLDivElement {
         if ((e.target as HTMLElement).closest('.dropdown')) return;
         item._spec.onClick();
     });
+    // 드래그해서 Multiplexer pane에 놓으면 그 pane 콘텐츠가 이 세션으로 바뀐다(sessionItemDragKey 참고).
+    item.draggable = true;
+    item.addEventListener('dragstart', (e: DragEvent) => {
+        const key = sessionItemDragKey(item._spec);
+        if (!key) { e.preventDefault(); return; }
+        e.dataTransfer?.setData('text/plain', key);
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+    });
+    // 미들(휠) 클릭 = 즉시 삭제. 브라우저 기본 자동 스크롤 동작(mousedown)도 함께 막는다.
+    item.addEventListener('mousedown', (e: MouseEvent) => { if (e.button === 1) e.preventDefault(); });
+    item.addEventListener('auxclick', (e: MouseEvent) => {
+        if (e.button !== 1) return;
+        e.preventDefault();
+        item._spec.onDelete();
+    });
     const dropEl = item.querySelector('.dropdown')!;
     new (window as any).bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]')!, { popperConfig: { strategy: 'fixed' } });
-    item.querySelector<HTMLElement>('[data-act="link"]')!.addEventListener('click', () => item._spec.onShare());
+    item.querySelector<HTMLElement>('[data-act="link"]')?.addEventListener('click', () => item._spec.onShare?.());
     wirePopupActions(item, () => item._spec.popup.url(), spec.popup.title, spec.popup.winName);
     item.querySelector<HTMLElement>(`[data-act="${spec.deleteAct}"]`)!.addEventListener('click', () => item._spec.onDelete());
     return item;
+}
+
+const SESS_ACTIVE_CLASSES = ['ai-session-item-active', 'ai-session-item-active-remote', 'ai-session-item-active-main', 'ai-session-item-active-sub'];
+function applySessActiveClasses(el: HTMLElement, spec: { activeClass: string; isActive: boolean }) {
+    el.classList.remove(...SESS_ACTIVE_CLASSES);
+    if (spec.isActive) el.classList.add(spec.activeClass);
 }
 
 // 이미 있는 노드를 같은 키의 새 spec으로 맞춘다. 실제로 바뀐 슬롯만 건드리므로 클릭·드롭다운·스크롤이
@@ -833,7 +1049,8 @@ function updateSessionItem(el: HTMLDivElement, spec: SessionItemSpec) {
         item._body = spec.bodyHtml;
         item.querySelector<HTMLElement>('.sess-body')!.innerHTML = spec.bodyHtml;
     }
-    item.classList.toggle(spec.activeClass, spec.isActive);
+    applySessActiveClasses(item, spec);
+    item.style.cssText = spec.accentStyle ?? '';
 }
 
 // 노드를 버릴 때 Bootstrap Dropdown 인스턴스를 반드시 정리한다. dispose를 빼먹으면 popper 인스턴스와
@@ -855,12 +1072,23 @@ function updateRdpFramePlaceholder() {
     rdpFramePlaceholder.classList.toggle('rdp-frame-placeholder-hidden', !!activeRdpFrameKey);
 }
 
-function isRdpPaneActive(): boolean { return CDOM.ID('rdp-panel').classList.contains('active'); }
+// RDP는 더 이상 전용 탭이 없으므로, "지금 Multiplexer의 어느 pane이든 이 RDP 세션을 보여주고 있는지"로
+// 판단한다(첫 pane만 보면 분할해서 서브 pane에 놓았을 때 실제로는 보이는데 "숨김" 신호가 계속 가서
+// 화면 캡처/스트리밍이 멈췄다 다시 시작하는 것처럼 보이는 버그가 있었다).
+function isRdpPaneActive(): boolean {
+    return CDOM.ID('tmux-panel').classList.contains('active') && !!activeRdpFrameKey && tmuxFindPaneIdByKey(activeRdpFrameKey) !== null;
+}
 
 function updateRdpFrameVisibility() {
     if (!activeRdpFrameKey) return;
     postFrameVisible(rdpIframePool.get(activeRdpFrameKey), isRdpPaneActive());
 }
+
+// pane이 아직 없을 때만 쓰는 임시 부모. 숨긴 세션 iframe은 여기로 옮기지 않는다 — Chrome은
+// display:none인 iframe을 다른 부모로 appendChild하면 문서를 다시 로드해서 입력창이 비고 WS가 끊긴다.
+const tmuxIdlePool = document.createElement('div');
+tmuxIdlePool.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+document.body.appendChild(tmuxIdlePool);
 
 interface FramePoolCtx {
     pool: Map<string, HTMLIFrameElement>;
@@ -871,24 +1099,29 @@ interface FramePoolCtx {
     onActivate?: (key: string, prevKey: string | null) => void;
     onCreate?: (f: HTMLIFrameElement, key: string) => void;
 }
+// RDP/Chat/Terminal/Browser/Editor 공용 프레임 풀. 예전에는 각 타입마다 자기 전용 탭(패널)에
+// iframe을 붙였지만, 지금은 전부 Multiplexer의 첫 번째 pane(tmuxPlaceFrame)에 옮겨 붙인다 -
+// 새 세션을 열면 그게 곧 "첫 프레임과 교체"다. ctx.container는 더 이상 쓰이지 않지만(각 타입의
+// 옛 전용 탭 컨테이너), FramePoolCtx 생성부를 그대로 두기 위해 필드는 남겨둔다.
 function showPooledFrame(ctx: FramePoolCtx, key: string, src: string): HTMLIFrameElement {
     let f = ctx.pool.get(key);
     if (!f) {
         f = document.createElement('iframe');
         f.src = src;
-        f.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;display:none;';
+        // 좌표는 tmuxSyncPanePositions가 매길 때까지 0크기로 숨겨둔다. #tmux-tree-root에 딱 한 번만
+        // 붙이고 이후로는 절대 다른 부모로 옮기지 않는다(재로드 방지 - Multiplexer 섹션 상단 주석 참고).
+        // 이 attach를 빼먹으면 iframe이 DOM에 아예 안 붙어 새 세션 화면이 안 보인다(tmuxEnsurePooledFrame이
+        // pool에 이미 있는 걸 보고 "이미 붙어있다" 착각해 자기 attach 단계를 건너뛰기 때문).
+        f.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;border:0;display:none;';
         ctx.onCreate?.(f, key);
-        ctx.container.appendChild(f);
         ctx.pool.set(key, f);
+        tmuxAllFrames.set(key, f);
+        tmuxTreeRoot.appendChild(f);
     }
     const prevKey = ctx.getActiveKey();
-    if (prevKey && prevKey !== key) {
-        const prev = ctx.pool.get(prevKey);
-        if (prev) prev.style.display = 'none';
-    }
-    f.style.display = 'block';
     ctx.setActiveKey(key);
     ctx.updatePlaceholder();
+    tmuxPlaceFrame(key, f);
     ctx.onActivate?.(key, prevKey);
     // 센터에 보이는 프레임이 바뀌면(새 터미널/에디터 열림, 세션 전환 등) 좌측 사이드바 하위 탭과 active를
     // 즉시 그 화면과 일치시킨다. chat/term→Agent, browser/editor→Other(RDP 등 그 외는 탭 전환 없음).
@@ -922,12 +1155,11 @@ function showRdpFrame(key: string, src: string): HTMLIFrameElement {
     return showPooledFrame(rdpFrameCtx, key, src);
 }
 
-// 세션 탭(Chat/Terminal/RDP/Browser/Editor) 활성화 공통 처리. Multiplexer(tmux) 화면을 보고 있는 동안
-// 새 세션을 만들거나 사이드바에서 고를 때 탭이 강제로 바뀌면 배치·작업 중이던 Multiplexer가 꺼진다 —
-// 이때는 탭 전환만 건너뛰고 Multiplexer에 그대로 머무른다(완료 알림 콜백 등도 동일).
+// 세션 탭(Chat/Terminal/RDP/Browser/Editor) 활성화 공통 처리. 예전엔 타입별 전용 탭을 Tab.show()
+// 했지만, 지금은 모든 세션이 Multiplexer 첫 pane에 표시되므로 그 패널로 전환하는 것으로 통일한다.
+// _tabId/_label은 더 이상 쓰이지 않지만(과거 호출부 유지를 위해) 시그니처는 그대로 둔다.
 function activatePaneUnlessMultiplexer(_tabId: string, _label?: string) {
-    if (CDOM.ID('tmux-tab').classList.contains('active')) return;
-    (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID(_tabId)).show();
+    tmuxShowPanel();
 }
 
 function rdpActivatePane() {
@@ -957,6 +1189,33 @@ const RDP_STATUS_VIEW: Record<RdpStatus, { cls: string; title: string }> = {
     auth:     { cls: 'text-success',   title: L('ctrl.msg.rdpNeedsAuth', 'Authentication required') },
     offline:  { cls: 'text-danger',    title: L('ctrl.msg.rdpOffline', 'Not connected') },
 };
+
+// 원격지별 색: 상태 점(success/danger)과 겹치지 않는 부트스트랩 기본 테마색만 순서대로 배정한다.
+// 팔레트를 넘어서는 원격지는 마지막 색을 계속 재사용한다. remoteId 기준으로 한 번 배정하면 목록 순서가
+// 바뀌어도(새 원격지가 unshift로 앞에 추가돼도) 기존 항목 색은 유지된다.
+// RDP 사이드바 목록뿐 아니라 Chat/Terminal/Editor/Browser 세션 항목의 "원격" 강조(원래 고정 빨강이던
+// ai-session-item-active-remote / agent-group-remote / text-danger 주소 표시)에도 전부 이 배정을 쓴다.
+// primary는 로컬 강조(파랑)가 이미 쓰고 있어 제외 — 안 그러면 첫 번째 원격지가 로컬과 같은 파랑이 된다.
+const RDP_COLOR_NAMES = ['danger', 'warning', 'info', 'dark'];
+const rdpColorAssign = new Map<string, string>();
+function rdpColorName(remoteId: string): string {
+    let name = rdpColorAssign.get(remoteId);
+    if (!name) {
+        name = RDP_COLOR_NAMES[Math.min(rdpColorAssign.size, RDP_COLOR_NAMES.length - 1)];
+        rdpColorAssign.set(remoteId, name);
+    }
+    return name;
+}
+function rdpTextColor(remoteId: string): string {
+    return `text-${rdpColorName(remoteId)}`;
+}
+// active-remote 하이라이트/그룹 헤더 액센트에 쓸 인라인 CSS 커스텀 프로퍼티.
+// CSS 쪽(.ai-session-item-active-remote, .agent-group-remote)은 --rdp-accent(-bg)를 읽고,
+// 값이 없으면(로컬 항목 등) var()의 두 번째 인자로 기존 danger 색으로 폴백한다.
+function rdpAccentStyle(remoteId: string): string {
+    const name = rdpColorName(remoteId);
+    return `--rdp-accent:var(--bs-${name});--rdp-accent-bg:var(--bs-${name}-bg-subtle);`;
+}
 
 // 저장된 목록을 서버에서 불러온다. 미인증/서버 오류면 조용히 넘어간다(저장 목록 없이 평소대로 동작).
 // 로그인 전(로컬 토큰 없음)이면 애초에 시도하지 않는다 — 로그인 성공 시 rdpPromptRemoteAuth의 doAuth()에서 다시 불러온다.
@@ -1021,12 +1280,20 @@ async function rdpRefreshAllStatus() {
     if (!targets.length) return;
     const results = await Promise.all(targets.map(r => rdpProbeRemote(r.entryUrl)));
     if (seq !== rdpStatusSeq) return;
+    const prevStatus = new Map(rdpStatus);
     targets.forEach((r, i) => rdpStatus.set(r.remoteId, results[i]));
     rdpRenderList();
+    targets.forEach((r, i) => {
+        if (results[i] === 'offline' && prevStatus.get(r.remoteId) !== 'offline') rdpClearRemoteSessions(r.remoteId);
+    });
+    if (results.some(st => st === 'offline')) rdpEnsureOfflinePolling();
 }
 // 사이드바에서 "선택됨"으로 표시할 항목. activeRdpFrameKey(실제 로드된 iframe)와 달리
 // 프레임이 아직 열리지 않은 최초 상태에도 Local을 강제로 선택 표시하기 위해 별도로 둔다.
 let selectedRdpKey = 'rdp:local';
+// tmuxRoot/tmuxPaneRole보다 먼저 rdpRenderList()가 호출되므로, let TDZ를 피하려면
+// 이 플래그를 그보다 위에 둬야 한다. tmuxLoadLayout 직후 true가 된다.
+let tmuxTreeReady = false;
 
 function rdpRenderList() {
     // RDP 목록은 이벤트가 있을 때만 다시 그리므로 통째로 만들어도 무방하지만, 버리는 항목의
@@ -1035,8 +1302,9 @@ function rdpRenderList() {
     rdpSidebarList.innerHTML = '';
 
     const localItem = document.createElement('div');
-    localItem.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
-        + (selectedRdpKey === 'rdp:local' ? ' ai-session-item-active' : '');
+    localItem.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded';
+    localItem.dataset.key = 'rdp:local';
+    applySessActiveClasses(localItem, sessActiveFromKey('rdp:local'));
     localItem.innerHTML = `<i class="bi bi-pc-display"></i><span class="flex-grow-1">Local</span>`
         + `<button type="button" class="btn btn-sm btn-link text-secondary p-0" data-act="local-link" title="Show accessible link"><i class="bi bi-link-45deg"></i></button>`;
     localItem.addEventListener('click', () => rdpOpenLocal());
@@ -1052,12 +1320,11 @@ function rdpRenderList() {
         const st = rdpStatus.get(r.remoteId) ?? 'checking';
         const stv = RDP_STATUS_VIEW[st];
         const item = createSessionItem({
-            activeClass: 'ai-session-item-active',
-            isActive: selectedRdpKey === key,
+            ...sessActiveFromKey(key),
             dataAttr: { name: 'id', value: r.remoteId },
             leftHtml: `<span class="${stv.cls} small flex-shrink-0" title="${aiEscapeHtml(stv.title)}">●</span>`,
-            // 미연결 항목은 흐리게 — 목록만 보고도 지금 붙을 수 있는 원격지를 가려낼 수 있게.
-            bodyHtml: `<span class="flex-grow-1 text-truncate small${st === 'offline' ? ' text-secondary' : ''}"`
+            // 연결 상태와 무관하게 원격지별로 다른 색을 준다(rdpTextColor).
+            bodyHtml: `<span class="flex-grow-1 text-truncate small ${rdpTextColor(r.remoteId)}"`
                 + (r.saved ? ` title="${aiEscapeHtml(L('ctrl.msg.rdpSaved', 'Saved'))}"` : '')
                 + `>${aiEscapeHtml(r.entryUrl)}</span>`,
             deleteAct: 'delete',
@@ -1085,18 +1352,18 @@ function rdpRenderList() {
     refreshAllRemoteRoots();
 }
 
-// Memo 탭이 어느 서버의 /Memo/*를 써야 하는지 판단하는 단일 출처(RDP가 원격을 전환할 때마다 갱신).
-// '' = 로컬. 인증은 여기서 미리 하지 않고, Memo 탭이 열릴 때 memoSendRemoteInfo()가 필요하면 그때 확인/요청한다.
-let currentWebRootUrl = '';
-
-// ---- 경로(Root) 목록 상태: 예전엔 사이드바 상단에 실제 <select> UI가 있었으나 제거됨(Agent 탭 최하단의
-// Add Working Folder 버튼으로 대체). currentWebRootUrl(현재 활성 서버)의 File/Root를 조회해 채우는
-// ctrlRootOpts/ctrlSelectedRootPath는 Agent 그룹핑, 새 세션 기본 Working Directory 등에서 여전히 쓴다
+// ---- 경로(Root) 목록 상태: 오른쪽 File 탭 최상단 셀렉트(#ctrlSideFileRootSel)로 선택한다.
+// currentWebRootUrl(현재 활성 서버)의 File/Root를 조회해 채우는 ctrlRootOpts/ctrlSelectedRootPath는
+// Agent 그룹핑, 새 세션 기본 Working Directory, 우측 파일 목록 RootPath 파라미터에도 쓰인다.
 // (File.ts로의 'set-file-root' 동기화 메시지는 더 이상 발생하지 않지만 File.ts는 자체 fetch/localStorage로
 // 독립 동작하므로 영향 없다).
 interface ICtrlRootOpt { path: string; name: string; url?: string; }
 let ctrlRootOpts: ICtrlRootOpt[] = [];
 let ctrlRootReqSeq = 0;
+// 로컬 + 등록된 모든 원격의 워킹 폴더 목록(어느 RDP 탭을 보고 있든 항상 둘 다 유지) - Agent 그룹 표시와
+// 우측 File 탭 셀렉트(#ctrlSideFileRootSel, optgroup으로 로컬/원격 구분)가 함께 이 캐시를 쓴다.
+let localRootOpts: ICtrlRootOpt[] = [];
+const remoteRootsCache = new Map<string, ICtrlRootOpt[]>();
 // New Chat/New Terminal 모달의 기본 Working Directory로 쓰는 현재 선택된 경로.
 // 서버(File/Root)가 Artgine 작업경로를 항상 절대경로로 실어 보내므로 여기 담기는 값도 절대경로다.
 // CTerminalRouter/CAIChatRouter는 어차피 받은 경로를 자기 작업경로 기준으로 resolve하므로 절대/상대 어느 쪽이든 안전하다.
@@ -1106,18 +1373,68 @@ let ctrlSelectedRootPath = '';
 let ctrlInitRootPathConsumed = false;
 const ctrlNormPath = (s: string) => s.replace(/\\/g, '/').replace(/\/+$/, '');
 
+// 오른쪽 File 탭 워킹폴더 셀렉트를 로컬(localRootOpts) + 등록된 모든 원격(remoteRootsCache)의 경로로
+// 채운다 - RDP에서 지금 보고 있는 서버와 무관하게 로컬/원격 워킹 폴더가 항상 함께 나열된다(optgroup으로 구분).
+// 현재 선택(ctrlSelectedRootPath + currentWebRootUrl에 대응하는 원격)과 일치하는 항목을 하이라이트한다.
+function ctrlSyncSideFileRootSel() {
+    const sel = CDOM.ID('ctrlSideFileRootSel') as HTMLSelectElement | null;
+    if (!sel) return;
+    sel.innerHTML = '';
+
+    const addGroup = (label: string, remoteId: string, roots: ICtrlRootOpt[]) => {
+        if (!roots.length) return;
+        const group = document.createElement('optgroup');
+        group.label = label;
+        for (const r of roots) {
+            const opt = document.createElement('option');
+            opt.value = r.path;
+            opt.dataset.remoteId = remoteId;
+            // 표시는 name, title에 실제 절대경로를 넣어 구분한다.
+            opt.textContent = r.name || r.path;
+            opt.title = r.path;
+            group.appendChild(opt);
+        }
+        sel.appendChild(group);
+    };
+
+    addGroup(L('ctrl.local', 'Local'), '', localRootOpts);
+    for (const remote of rdpRemotes) {
+        const roots = remoteRootsCache.get(remote.remoteId);
+        if (roots) addGroup(remote.entryUrl, remote.remoteId, roots);
+    }
+
+    const activeRemoteId = currentWebRootUrl
+        ? (rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === currentWebRootUrl)?.remoteId ?? '')
+        : '';
+    const options = Array.from(sel.options);
+    let match = options.find(o => (o.dataset.remoteId ?? '') === activeRemoteId && ctrlNormPath(o.value) === ctrlNormPath(ctrlSelectedRootPath));
+    if (!match) match = options.find(o => (o.dataset.remoteId ?? '') === activeRemoteId);
+    if (match) {
+        sel.selectedIndex = options.indexOf(match);
+        ctrlSelectedRootPath = match.value;
+    } else if (options.length) {
+        sel.selectedIndex = 0;
+        ctrlSelectedRootPath = options[0].value;
+    }
+}
+
 function ctrlRenderRootOpts(roots: ICtrlRootOpt[]) {
     // 서버(getRoots)가 Artgine 작업경로를 name='./'인 항목으로 항상 실어 보낸다 - 표시 이름만 바꿔치기한다.
     ctrlRootOpts = roots.map(r => r.name === './' ? { ...r, name: 'Artgine (WorkingPath)' } : r);
-    // 기본 선택은 Artgine 작업경로 항목. 못 찾으면(이론상 없음) 마지막 항목으로 대체.
-    let defaultIdx = ctrlRootOpts.findIndex(r => r.name === 'Artgine (WorkingPath)');
-    if (defaultIdx < 0) defaultIdx = ctrlRootOpts.length - 1;
+    // 이미 고른 루트가 목록에 남아 있으면 유지. 없거나 최초면 목록 첫 항목.
+    const prev = ctrlSelectedRootPath;
+    const prevIdx = prev
+        ? ctrlRootOpts.findIndex(r => ctrlNormPath(r.path) === ctrlNormPath(prev))
+        : -1;
+    let defaultIdx = prevIdx;
+    if (defaultIdx < 0) defaultIdx = ctrlRootOpts.length > 0 ? 0 : -1;
     if (!ctrlInitRootPathConsumed && ctrlInitRootPath) {
         ctrlInitRootPathConsumed = true;
         const matchIdx = ctrlRootOpts.findIndex(r => ctrlNormPath(r.path) === ctrlNormPath(ctrlInitRootPath));
         if (matchIdx >= 0) defaultIdx = matchIdx;
     }
     ctrlSelectedRootPath = ctrlRootOpts[defaultIdx]?.path ?? '';
+    ctrlSyncSideFileRootSel();
     // 등록 경로가 바뀌면 Agent 그룹(빈 그룹 포함)을 다시 그린다.
     renderSessionSidebar();
 }
@@ -1145,12 +1462,28 @@ async function ctrlRefreshRootSelect() {
         ctrlRenderRootOpts(data.roots ?? []);
         ctrlSideFileGoTo('/');
     } catch {
-        // 표시할 UI가 없으므로 무시 - 다음 refresh(RDP 전환 등)에서 재시도된다.
+        // 다음 refresh(RDP 전환 등)에서 재시도된다.
     }
 }
 
-// 사용자가 직접 root를 고르는 UI는 제거됨. 경로 전환은 이제 rdpOpenLocal/rdpOpenRemote의
-// ctrlRefreshRootSelect() 재조회와 ctrlRenderRootOpts()의 기본 선택 로직만으로 이뤄진다.
+// 오른쪽 File 탭 워킹폴더 셀렉트 변경 → 로컬/원격 optgroup 중 어느 쪽을 골랐는지에 따라
+// currentWebRootUrl까지 전환한 뒤(ctrlSideFileOpenFromSearch와 동일한 패턴 - RDP 중앙 프레임은 그대로 두고
+// File 탭이 보는 서버만 바꾼다) 선택 루트를 갱신하고 목록을 루트(/)부터 다시 연다.
+CDOM.ID('ctrlSideFileRootSel')?.addEventListener('change', () => {
+    const sel = CDOM.ID('ctrlSideFileRootSel') as HTMLSelectElement;
+    const opt = sel?.selectedOptions[0];
+    if (!opt) return;
+    const remoteId = opt.dataset.remoteId ?? '';
+    const remote = remoteId ? rdpRemotes.find(r => r.remoteId === remoteId) : undefined;
+    const nextWeb = remote ? rdpRemoteWebRootUrl(remote.entryUrl) : '';
+    const next = opt.value;
+    if (ctrlNormPath(next) === ctrlNormPath(ctrlSelectedRootPath) && (currentWebRootUrl || '') === (nextWeb || '')) return;
+    if ((currentWebRootUrl || '') !== (nextWeb || '')) { currentWebRootUrl = nextWeb; logOnServerChanged(); }
+    ctrlSelectedRootPath = next;
+    // 이전 워킹 폴더 인덱싱이 돌고 있으면 즉시 중단한다(검색창 잠금·BFS 요청이 새 폴더로 새지 않게).
+    ctrlSideSrchStop();
+    ctrlSideFileGoTo('/');
+});
 
 function rdpOpenLocal() {
     rdpInited = true;
@@ -1178,6 +1511,7 @@ async function rdpClickRemote(remoteId: string) {
         rdpStatus.set(remoteId, st);
         if (st === 'offline') {
             rdpRenderList();
+            rdpEnsureOfflinePolling();
             CAlert.Warning(LF('ctrl.msg.rdpStillOffline', 'Cannot reach {0}.', remote.entryUrl));
             return;
         }
@@ -1288,6 +1622,7 @@ function rdpAddRemote(entryUrl: string, save = false, password?: string) {
         if (!rdpRemotes.some(x => x.remoteId === remote.remoteId)) return;
         rdpStatus.set(remote.remoteId, st);
         rdpRenderList();
+        if (st === 'offline') rdpEnsureOfflinePolling();
     });
 }
 
@@ -1398,7 +1733,6 @@ function fileEnsureLayout() {
     fileIframe.id = "file-iframe";
     fileIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
     filePanel.appendChild(fileIframe);
-    wireIframeArrowKeys(fileIframe);
 }
 
 // Control.html 자체가 ?path=E:/ 처럼 열렸으면, 그 값은 settings.json의 rootPath 항목(예: "E:/") 중
@@ -1445,8 +1779,9 @@ function helpLoadFrame() {
     helpPanel.appendChild(helpIframe);
 }
 helpLoadFrame();
-// 초기 진입 시 Help 패널을 기본으로 보이게 한다(More > Help로 다시 열 수 있음).
-// 단, ?path=로 특정 루트를 지정해 들어온 경우는 그 폴더를 보러 온 것이므로 File 탭을 바로 보여준다.
+// 초기 진입 시 Help 패널을 기본으로 보이게 한다(More > Help로 다시 열 수 있음). 세션(터미널/채팅 등)을
+// 열면 activatePaneUnlessMultiplexer가 Multiplexer로 전환한다. 단, ?path=로 특정 루트를 지정해
+// 들어온 경우는 그 폴더를 보러 온 것이므로 File 탭을 바로 보여준다.
 function helpActivatePane() {
     (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('help-panel-tab')).show();
 }
@@ -1460,6 +1795,20 @@ function ctrlShowFileTab() {
         (window as any).bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
     }
     (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-file-tab')).show();
+}
+
+// 검색 결과 폴더 클릭: 우측 File 목록이 보고 있는 서버/루트를 결과 스코프에 맞춘 뒤 해당 경로로 이동한다.
+// 다중 경로 검색에서는 현재 선택 루트와 다른 스코프 결과가 나오므로, 같음 여부와 무관하게 전환한다.
+function ctrlSideFileOpenFromSearch(scope: ICtrlSearchScope, pathVal: string) {
+    // 로컬 스코프는 currentWebRootUrl='', 원격은 그 서버 apiUrl. File/List·토큰이 이 값을 본다.
+    const nextWeb = scope.remoteId ? scope.webRootUrl : '';
+    if ((currentWebRootUrl || '') !== (nextWeb || '')) { currentWebRootUrl = nextWeb; logOnServerChanged(); }
+    if (ctrlNormPath(ctrlSelectedRootPath ?? '') !== ctrlNormPath(scope.rootPath ?? '')) {
+        ctrlSelectedRootPath = scope.rootPath ?? '';
+        ctrlSyncSideFileRootSel();
+    }
+    ctrlShowFileTab();
+    ctrlSideFileGoTo(pathVal);
 }
 
 // ---- 파일 검색 모달 ----
@@ -1517,16 +1866,42 @@ function ctrlAllSearchScopeItems(): ICtrlSearchScopeItem[] {
 // 스코프별 스캔 캐시(스코프 키 -> 경로 -> 목록). 여러 스코프가 동시에 켜질 수 있어 서버 키 하나로
 // 통째로 비우던 기존 방식 대신 스코프별로 독립 유지한다(File.ts의 g_srchCache와 같은 목적).
 const g_ctrlSrchCache: Map<string, Map<string, CtrlSrchFile[]>> = new Map();
+// 스코프별 실제 루트 경로/다운로드 baseUrl(File/List 응답에서 채워짐). 위 캐시와 마찬가지로 전역으로 유지해야
+// 한다 - 모달을 닫았다 다시 열면(F2) g_ctrlSrchCache는 남아있어 타이핑 즉시 캐시 결과가 뜨는데(자동완성처럼 보임),
+// 이 맵들이 모달 호출마다 초기화되는 로컬 변수였다면 그 세션에서 아직 실제 스캔(File/List)이 한 번도 안 일어나
+// 루트 경로가 비어있는 채로 클릭 시 잘못된(루트 prefix 빠진) 경로가 만들어져 404가 났다.
+const g_ctrlSrchRoot: Map<string, string> = new Map();
+const g_ctrlSrchDown: Map<string, string> = new Map();
+// 마지막으로 사용자가 체크해둔 스코프 조합(F2로 다시 열 때 재사용). localStorage에 저장해 새로고침/재접속
+// 후에도 유지되고, 저장된 값이 전혀 없는 최초 실행 때만 null로 남아 전부 미체크로 시작한다.
+const CTRL_SRCH_LAST_CHECKED_KEY = 'ctrlSrchLastChecked';
+let g_ctrlSrchLastChecked: Set<string> | null = (() => {
+    try {
+        const raw = localStorage.getItem(CTRL_SRCH_LAST_CHECKED_KEY);
+        return raw ? new Set<string>(JSON.parse(raw)) : null;
+    } catch { return null; }
+})();
 
-// onlyKey 없이(F2) 호출하면 전체 패스가 체크된 상태로, 특정 그룹의 '...' > Search로 호출하면(onlyKey) 그 패스만
-// 체크된 상태로 모달이 열린다. 목록 자체는 항상 전체 패스(로컬 + 인증된 원격들의 등록 루트)가 나열되고,
-// 사용자가 체크박스를 직접 켜고 끌 수 있다 - 체크된 스코프들을 모두 대상으로 검색한다.
+// onlyKey 없이(F2) 호출하면 마지막으로 사용자가 체크해둔 조합을 그대로 복원하고(한 번도 토글한 적이 없으면
+// 전부 미체크), 특정 그룹의 '...' > Search로 호출하면(onlyKey) 그 패스만 체크된 상태로 모달이 열린다. 목록 자체는
+// 항상 전체 패스(로컬 + 인증된 원격들의 등록 루트)가 나열되고, 사용자가 체크박스를 직접 켜고 끌 수 있다 -
+// 체크된 스코프들을 모두 대상으로 검색한다.
 async function ctrlFileSearch(onlyKey?: string) {
     let searchCancelled = false;
     const uid = Date.now();
 
     const scopeItems = ctrlAllSearchScopeItems();
-    const initialChecked = new Set<string>(onlyKey ? [onlyKey] : scopeItems.map(s => s.key));
+    const initialChecked = new Set<string>(
+        onlyKey ? [onlyKey] :
+        g_ctrlSrchLastChecked ? scopeItems.map(s => s.key).filter(k => g_ctrlSrchLastChecked!.has(k)) :
+        []
+    );
+    // onlyKey(그룹 '...' > Search)로 열렸을 때는 체크박스가 사용자 조작 없이 미리 체크된 채로 뜨므로 change 이벤트가
+    // 발생하지 않는다 - 그대로 두면 다음 순수 F2 때 이 선택이 기억되지 않는다. 여기서 바로 "마지막 체크 조합"에 반영한다.
+    if (onlyKey) {
+        g_ctrlSrchLastChecked = new Set(initialChecked);
+        try { localStorage.setItem(CTRL_SRCH_LAST_CHECKED_KEY, JSON.stringify(Array.from(g_ctrlSrchLastChecked))); } catch {}
+    }
 
     const modal = new CModal();
     modal.SetHeader(`<i class="bi bi-search me-1"></i>${L('ctrl.search', 'Search')}`);
@@ -1545,7 +1920,7 @@ async function ctrlFileSearch(onlyKey?: string) {
             <button id="ctrlSrchStop_${uid}" class="btn btn-sm btn-outline-danger" style="display:none;">${L('ctrl.stop', 'Stop')}</button>
         </div>
         <div id="ctrlSrchStatus_${uid}" class="small text-secondary mb-1" style="min-height:1.2em;"></div>
-        <div id="ctrlSrchResults_${uid}" class="list-group" style="max-height:320px;overflow-y:auto;font-size:13px;"></div>
+        <div id="ctrlSrchResults_${uid}" class="list-group ctrl-srch-results" style="max-height:320px;overflow-y:auto;font-size:13px;"></div>
     `);
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetSize(520, 620);
@@ -1560,13 +1935,16 @@ async function ctrlFileSearch(onlyKey?: string) {
     const status  = document.getElementById(`ctrlSrchStatus_${uid}`) as HTMLElement;
     const results = document.getElementById(`ctrlSrchResults_${uid}`) as HTMLElement;
 
-    // 결과의 폴더 클릭(우측 File 목록으로 이동)은 지금 그 목록이 보고 있는 서버/루트와 스코프가 같을 때만 의미가 있다.
-    // 다른 서버(원격)나 다른 루트를 검색한 경우엔 폴더 항목을 이동 불가로 두고 파일만 Editor로 연다(Editor는 baseUrl을 직접 받으므로 안전).
-    const sameAsSideList = (scope: ICtrlSearchScope) => scope.webRootUrl === (currentWebRootUrl || CPath.WebRootUrl())
-        && ctrlNormPath(scope.rootPath ?? '') === ctrlNormPath(ctrlSelectedRootPath ?? '');
-    // 스코프별 실제 루트 경로/다운로드 baseUrl(File/List 응답에서 채워짐).
-    const gRoot = new Map<string, string>();
-    const gDown = new Map<string, string>();
+    // 사용자가 체크박스를 토글할 때마다 다음 F2 호출을 위해 조합을 저장해둔다(새로고침 후에도 유지되도록 localStorage에도 기록).
+    scopesEl.addEventListener('change', (e) => {
+        if (!(e.target as HTMLElement)?.classList.contains('ctrl-srch-scope-cb')) return;
+        g_ctrlSrchLastChecked = new Set(
+            Array.from(scopesEl.querySelectorAll<HTMLInputElement>('.ctrl-srch-scope-cb'))
+                .filter(cb => cb.checked)
+                .map(cb => cb.dataset.key!)
+        );
+        try { localStorage.setItem(CTRL_SRCH_LAST_CHECKED_KEY, JSON.stringify(Array.from(g_ctrlSrchLastChecked))); } catch {}
+    });
 
     const makeItem = (scopeKey: string, scope: ICtrlSearchScope, fl: CtrlSrchFile, dirPath: string) => {
         const item = document.createElement('div');
@@ -1578,20 +1956,19 @@ async function ctrlFileSearch(onlyKey?: string) {
         // 사이드바 File 목록(ctrlSideFileRenderList)과 동일하게, 터미널 탭(iframe)에 드롭하면 경로가 입력창에 삽입된다.
         item.draggable = true;
         item.addEventListener('dragstart', (e) => {
-            e.dataTransfer?.setData('text/plain', (gRoot.get(scopeKey) ?? '') + dirPath + fl.name);
+            e.dataTransfer?.setData('text/plain', (g_ctrlSrchRoot.get(scopeKey) ?? '') + dirPath + fl.name);
             if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
         });
         if (fl.file) {
             item.addEventListener('click', () => {
                 modal.Hide();
-                editorOpenFile((gRoot.get(scopeKey) ?? '') + dirPath + fl.name, scope.editorBaseUrl, (gDown.get(scopeKey) ?? '') + ctrlEncodeUrlPath(dirPath + fl.name));
+                editorOpenFile((g_ctrlSrchRoot.get(scopeKey) ?? '') + dirPath + fl.name, scope.editorBaseUrl, (g_ctrlSrchDown.get(scopeKey) ?? '') + ctrlEncodeUrlPath(dirPath + fl.name));
             });
-        } else if (sameAsSideList(scope)) {
-            // 폴더 클릭 시 우측 File 탭을 열고, 그 폴더 자체가 아니라 상위 폴더(목록 안에 이 폴더가 보이는 위치)로 이동시킨다.
+        } else {
+            // File.ts FileSearch와 동일: 폴더 클릭 시 그 폴더 안으로 이동. 스코프가 우측 목록과 다르면 루트/서버도 전환.
             item.addEventListener('click', () => {
                 modal.Hide();
-                ctrlShowFileTab();
-                ctrlSideFileGoTo(dirPath);
+                ctrlSideFileOpenFromSearch(scope, dirPath + fl.name + '/');
             });
         }
         return item;
@@ -1657,7 +2034,9 @@ async function ctrlFileSearch(onlyKey?: string) {
                 const dirPath = queue.shift()!;
                 status.textContent = LF('ctrl.msg.scanningPath', 'Scanning: {0}:{1}', scope.serverLabel, dirPath);
                 try {
-                    const p2: any = { path: dirPath };
+                    // skipVcs: 사이드바 인덱싱과 동일하게, 폴더마다 git/svn 프로세스를 스폰하는 VCS 상태 조회를
+                    // 생략해 스캔 속도를 크게 높인다.
+                    const p2: any = { path: dirPath, skipVcs: 'true' };
                     if (rootPathParam) p2.RootPath = rootPathParam;
                     const token = getAuthToken(webRootUrl);
                     const data = await CFecth.Exe(webRootUrl + "File/List", { ...p2, token }, "json") as { list: CtrlSrchFile[], RootPath?: string, RootUrl?: string, msg?: string };
@@ -1665,12 +2044,12 @@ async function ctrlFileSearch(onlyKey?: string) {
                         if (dirPath === "/") scopeErrors.push(`${scope.serverLabel}: ${data.msg || L('ctrl.msg.searchScopeFailed', 'Cannot search this location.')}`);
                         continue;
                     }
-                    if (data.RootPath != null) gRoot.set(scopeKey, data.RootPath.replace(/\/+$/, ''));
+                    if (data.RootPath != null) g_ctrlSrchRoot.set(scopeKey, data.RootPath.replace(/\/+$/, ''));
                     // RootUrl은 서버 origin 기준 상대경로("/Artgine/Root0")로 오므로 webRootUrl에 대해 절대 URL로 풀어야 한다
                     // (File.ts의 ResolveFileUrl과 동일한 처리). 끝 슬래시는 제거만 하고 붙이지 않는다 — dirPath가 항상
                     // "/"로 시작하므로 여기서 슬래시를 추가하면 "Root0//artgine/..."처럼 중복되어, Monaco가 등록된
                     // extra lib 경로와 다른 문자열로 취급해 "Cannot find module" 에러가 난다.
-                    if (data.RootUrl != null) gDown.set(scopeKey, new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, ''));
+                    if (data.RootUrl != null) g_ctrlSrchDown.set(scopeKey, new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, ''));
                     cache.set(dirPath, data.list);
                     for (const fl of data.list) {
                         if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name)) queue.push(dirPath + fl.name + '/');
@@ -1694,9 +2073,48 @@ async function ctrlFileSearch(onlyKey?: string) {
         stopBtn.style.display = 'none';
     };
 
+    // 한 글자씩 입력할 때마다(네트워크 요청 없이) 이미 스캔해둔 캐시(g_ctrlSrchCache)에서만 즉시 필터링해서
+    // 보여준다 - 실제 폴더 스캔은 doSearch(Enter/버튼)에서만 일어난다. 스캔 중(btn.disabled)에는 doSearch가
+    // 이미 results를 채우고 있으므로 건드리지 않는다.
+    input.addEventListener('input', () => {
+        if (btn.disabled) return;
+        const query = input.value.trim().toLowerCase();
+        results.innerHTML = '';
+        if (!query) { status.textContent = ''; return; }
+        const checkedKeys = new Set(
+            Array.from(scopesEl.querySelectorAll<HTMLInputElement>('.ctrl-srch-scope-cb'))
+                .filter(cb => cb.checked)
+                .map(cb => cb.dataset.key!)
+        );
+        const activeScopes = scopeItems.filter(s => checkedKeys.has(s.key));
+        if (activeScopes.length === 0) return;
+        const found = renderFromCache(activeScopes, query, new Set<string>());
+        status.textContent = found > 0 ? LF('ctrl.msg.cachedOnly', 'Cached: {0} result(s) (Enter for full search)', found) : '';
+    });
+
     stopBtn.addEventListener('click', () => { searchCancelled = true; });
     btn.addEventListener('click', doSearch);
-    input.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') doSearch(); });
+    // 위/아래 화살표로 결과 목록을 하나씩 탐색(사이드바 자동완성과 동일한 방식). 항목이 키보드로
+    // 선택된 상태에서 Enter는 그 항목을 열고, 아니면 기존처럼 전체 스캔(doSearch)을 돌린다.
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            const items = Array.from(results.querySelectorAll<HTMLElement>('.list-group-item'));
+            if (items.length === 0) return;
+            e.preventDefault();
+            const curIdx = items.findIndex(el => el.classList.contains('ctrl-srch-kbd-active'));
+            const dir = e.key === 'ArrowDown' ? 1 : -1;
+            const nxt = curIdx === -1 ? (dir === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+            if (curIdx >= 0) items[curIdx].classList.remove('ctrl-srch-kbd-active');
+            items[nxt].classList.add('ctrl-srch-kbd-active');
+            items[nxt].scrollIntoView({ block: 'nearest' });
+            return;
+        }
+        if (e.key === 'Enter') {
+            const activeItem = results.querySelector<HTMLElement>('.ctrl-srch-kbd-active');
+            if (activeItem) { activeItem.click(); return; }
+            doSearch();
+        }
+    });
     input.focus();
 }
 
@@ -1783,10 +2201,357 @@ function ctrlSideFileIcon(fl: CtrlSideFileEntry): string {
 }
 const ctrlSideFilePathEl = CDOM.ID('ctrlSideFilePath') as HTMLElement;
 const ctrlSideFileListEl = CDOM.ID('ctrlSideFileList') as HTMLDivElement;
+const ctrlSideFileCopyListEl = CDOM.ID('ctrlSideFileCopyList') as HTMLDivElement;
 let ctrlSideFilePath = '/';
 let ctrlSideFileRoot = '';
 let ctrlSideFileDown = '';
 let ctrlSideFileReqSeq = 0;
+
+// File 탭 드래그(dataTransfer의 'text/plain')로 넘어오는 값은 서버 로컬 절대경로 문자열이다.
+// 다른 탭(예: Media 탭)이 드롭을 받아 fetch로 파일을 읽으려면 이 절대경로를 실제 다운로드 URL로
+// 바꿔야 한다. 사이드바가 지금 보여주고 있는 루트(ctrlSideFileRoot) 하나만 보고 매칭하면, 드래그한
+// 파일이 다른 등록 루트(예: E:/) 소속일 때 매칭에 실패한다 — termOpenTappedPath와 동일하게
+// File/Root의 전체 루트 목록을 받아 대소문자 무시하고 매칭하는 방식으로 전역 함수를 노출한다
+// (ctrlRequireAuthed와 같은 패턴).
+(window as any).ctrlPathToUrl = async (absPath: string): Promise<string | null> => {
+    const norm = termNormAbsPath(absPath);
+    const normLower = norm.toLowerCase();
+    try {
+        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json") as { roots: Array<{ path: string; url: string; name: string }> };
+        const root = (data.roots || []).find(r => {
+            const rp = termNormAbsPath(r.path).toLowerCase();
+            return normLower === rp || normLower.startsWith(rp + '/');
+        });
+        if (!root) return null;
+        const rel = norm.slice(termNormAbsPath(root.path).length).replace(/^\/+/, '');
+        const downBase = new URL(root.url, CPath.WebRootUrl()).href.replace(/\/+$/, '');
+        return downBase + '/' + ctrlEncodeUrlPath(rel);
+    } catch {
+        return null;
+    }
+};
+
+// ctrlPathToUrl의 반대 방향: Editor.html(Monaco)이 다른 파일의 정의로 이동할 때 보내는 다운로드 URL을
+// File/Root 목록과 대조해 절대경로로 되돌린다 (editorOpenFile의 path 인자는 항상 절대경로여야 함).
+async function ctrlUrlToPath(url: string, baseUrl: string): Promise<string | null> {
+    const apiUrl = baseUrl || CPath.WebRootUrl();
+    try {
+        const data = await CFecth.Exe(apiUrl + "File/Root", {}, "json") as { roots: Array<{ path: string; url: string; name: string }> };
+        for (const root of data.roots || []) {
+            const downBase = new URL(root.url, apiUrl).href.replace(/\/+$/, '');
+            if (url === downBase || url.startsWith(downBase + '/')) {
+                const rel = decodeURIComponent(url.slice(downBase.length).replace(/^\/+/, ''));
+                return termNormAbsPath(root.path) + '/' + rel;
+            }
+        }
+    } catch { }
+    return null;
+}
+
+// 오른쪽 File 탭 길게 누르기 복사 클립보드. 경로 바 아래에 표시, X=목록 제거, 복사=현재 경로에 붙여넣기.
+// 파일·폴더 모두 지원. 폴더는 File/List + Mkdir + Upload로 재귀 복사.
+interface CtrlSideCopyItem {
+    name: string;
+    absPath: string;
+    /** 루트 기준 상대 경로. 폴더는 trailing '/' */
+    relPath: string;
+    isFile: boolean;
+    downloadBase: string;
+    webRootUrl: string;
+    /** 복사 시점 RootPath (소스 File/List·다운로드용) */
+    rootPath: string;
+}
+const CTRL_SIDE_FILE_LONG_MS = 550;
+// 길게 누른 직후 레이아웃이 밀리며 X 버튼이 손가락/커서 아래에 생겨 오클릭되는 것을 막는다.
+const CTRL_SIDE_FILE_COPY_CLICK_GUARD_MS = 450;
+const ctrlSideFileCopyItems: CtrlSideCopyItem[] = [];
+let ctrlSideFileCopyClickGuardUntil = 0;
+
+function ctrlSideFileAuthToken(webRootUrl: string): string {
+    // 원격은 해당 origin 토큰, 로컬은 세션 쿠키 또는 로컬 토큰
+    if (webRootUrl && webRootUrl !== CPath.WebRootUrl()) return getAuthToken(webRootUrl) || '';
+    return getAuthToken(webRootUrl || CPath.WebRootUrl()) || '';
+}
+
+function ctrlSideFileRenderCopyList() {
+    if (!ctrlSideFileCopyListEl) return;
+    if (!ctrlSideFileCopyItems.length) {
+        ctrlSideFileCopyListEl.innerHTML = '';
+        ctrlSideFileCopyListEl.classList.add('d-none');
+        ctrlSideFileCopyListEl.classList.remove('d-flex');
+        return;
+    }
+    ctrlSideFileCopyListEl.classList.remove('d-none');
+    ctrlSideFileCopyListEl.classList.add('d-flex');
+    ctrlSideFileCopyListEl.innerHTML = '';
+    for (const ci of ctrlSideFileCopyItems) {
+        const row = document.createElement('div');
+        row.className = 'd-flex align-items-center gap-1 px-1';
+        const icon = ci.isFile ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
+        // 경로 표시 + 액션은 X(삭제)/복사(현재 경로 붙여넣기) 아이콘 두 개만
+        row.innerHTML =
+            `<i class="bi ${icon} flex-shrink-0" style="font-size:0.75rem;"></i>` +
+            `<span class="small text-truncate flex-grow-1" title="${aiEscapeHtml(ci.relPath)}">${aiEscapeHtml(ci.relPath)}</span>` +
+            `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 flex-shrink-0" data-copy-act="remove" title="Remove"><i class="bi bi-x-lg"></i></button>` +
+            `<button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 flex-shrink-0" data-copy-act="paste" title="Paste here"><i class="bi bi-clipboard"></i></button>`;
+        row.querySelector<HTMLButtonElement>('[data-copy-act="remove"]')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // 길게 누르기 직후 합성 클릭으로 X가 눌리는 경우 무시
+            if (Date.now() < ctrlSideFileCopyClickGuardUntil) return;
+            const idx = ctrlSideFileCopyItems.indexOf(ci);
+            if (idx >= 0) ctrlSideFileCopyItems.splice(idx, 1);
+            ctrlSideFileRenderCopyList();
+        });
+        row.querySelector<HTMLButtonElement>('[data-copy-act="paste"]')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (Date.now() < ctrlSideFileCopyClickGuardUntil) return;
+            void ctrlSideFilePasteCopy(ci);
+        });
+        ctrlSideFileCopyListEl.appendChild(row);
+    }
+}
+
+function ctrlSideFileAddCopy(fl: CtrlSideFileEntry) {
+    const relPath = fl.file
+        ? ctrlSideFilePath + fl.name
+        : ctrlSideFilePath + fl.name + '/';
+    const absPath = ctrlSideFileRoot + relPath;
+    if (ctrlSideFileCopyItems.some(x => x.absPath === absPath)) return;
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    ctrlSideFileCopyItems.push({
+        name: fl.name,
+        absPath,
+        relPath,
+        isFile: !!fl.file,
+        downloadBase: ctrlSideFileDown,
+        webRootUrl,
+        rootPath: ctrlSelectedRootPath || '',
+    });
+    // 목록 DOM이 생긴 직후 오클릭 방지
+    ctrlSideFileCopyClickGuardUntil = Date.now() + CTRL_SIDE_FILE_COPY_CLICK_GUARD_MS;
+    ctrlSideFileRenderCopyList();
+}
+
+/** 단일 파일을 소스 URL → dest 절대 디렉터리로 업로드. 실패 시 false */
+async function ctrlSideFileUploadOne(
+    downloadUrl: string,
+    destAbsDir: string,
+    fileName: string,
+    destWebRootUrl: string,
+): Promise<boolean> {
+    const buf = await CFile.Load(downloadUrl, false, true);
+    if (!buf) return false;
+    const b64 = CUtil.ArrayToBase64(buf);
+    const token = ctrlSideFileAuthToken(destWebRootUrl);
+    const up: any = { path: destAbsDir, name: [fileName], data: [b64] };
+    if (token) up.token = token;
+    const res = await CFecth.Exe(destWebRootUrl + 'File/Upload', up, 'json') as { ok?: boolean };
+    return !!res?.ok;
+}
+
+/**
+ * 폴더 재귀 복사.
+ * @param overwrite true면 동명 파일 덮어쓰기·동명 폴더 병합. false면 동명 항목은 패스(스킵).
+ */
+async function ctrlSideFileCopyFolderTree(
+    item: CtrlSideCopyItem,
+    destParentRel: string,
+    destWebRootUrl: string,
+    destRootPath: string,
+    destAbsRoot: string,
+    overwrite: boolean,
+): Promise<boolean> {
+    const srcToken = ctrlSideFileAuthToken(item.webRootUrl);
+    const destToken = ctrlSideFileAuthToken(destWebRootUrl);
+    const destFolderRel = destParentRel + item.name + '/';
+    // 1) 대상 폴더 생성 (이미 있어도 mkdir recursive라 성공)
+    const mk: any = { data: destParentRel + item.name };
+    if (destRootPath) mk.RootPath = destRootPath;
+    if (destToken) mk.token = destToken;
+    const mkRes = await CFecth.Exe(destWebRootUrl + 'File/Mkdir', mk, 'json') as { ok?: boolean; msg?: string };
+    if (mkRes && mkRes.ok === false) return false;
+
+    // 2) 소스 폴더 목록
+    const lp: any = { path: item.relPath };
+    if (item.rootPath) lp.RootPath = item.rootPath;
+    if (srcToken) lp.token = srcToken;
+    const listed = await CFecth.Exe(item.webRootUrl + 'File/List', lp, 'json') as {
+        list?: CtrlSideFileEntry[]; ok?: boolean; msg?: string;
+    };
+    if ((listed as any)?.ok === false) return false;
+    const children = (listed.list ?? []).filter(fl => !fl.hidden);
+
+    // 3) 대상 기존 이름 집합 (패스 모드에서 동명 스킵용)
+    const destAbsDir = destAbsRoot + destFolderRel;
+    const checkP: any = { path: destFolderRel };
+    if (destRootPath) checkP.RootPath = destRootPath;
+    if (destToken) checkP.token = destToken;
+    const destList = await CFecth.Exe(destWebRootUrl + 'File/List', checkP, 'json') as { list?: CtrlSideFileEntry[] };
+    const destNames = new Set((destList.list ?? []).map(x => x.name));
+
+    for (const fl of children) {
+        const nameExists = destNames.has(fl.name);
+        if (nameExists && !overwrite) continue;
+        if (fl.file) {
+            const srcRel = item.relPath + fl.name;
+            const url = item.downloadBase + ctrlEncodeUrlPath(srcRel);
+            const ok = await ctrlSideFileUploadOne(url, destAbsDir, fl.name, destWebRootUrl);
+            if (!ok) return false;
+            destNames.add(fl.name);
+        } else {
+            const sub: CtrlSideCopyItem = {
+                name: fl.name,
+                absPath: item.absPath + fl.name + '/',
+                relPath: item.relPath + fl.name + '/',
+                isFile: false,
+                downloadBase: item.downloadBase,
+                webRootUrl: item.webRootUrl,
+                rootPath: item.rootPath,
+            };
+            const ok = await ctrlSideFileCopyFolderTree(
+                sub, destFolderRel, destWebRootUrl, destRootPath, destAbsRoot, overwrite,
+            );
+            if (!ok) return false;
+            destNames.add(fl.name);
+        }
+    }
+    return true;
+}
+
+/** 실제 붙여넣기 수행. overwrite: 동명 시 덮어쓰기 여부(최상위는 호출 전에 컨펌으로 결정). */
+async function ctrlSideFilePasteCopyDo(item: CtrlSideCopyItem, overwrite: boolean) {
+    const destDir = ctrlSideFileRoot + ctrlSideFilePath;
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    try {
+        let ok = false;
+        if (item.isFile) {
+            const downloadUrl = item.downloadBase + ctrlEncodeUrlPath(item.relPath);
+            ok = await ctrlSideFileUploadOne(downloadUrl, destDir, item.name, webRootUrl);
+            if (!ok) CAlert.Info(L('ctrl.msg.copyFailed', 'Copy failed.'));
+        } else {
+            ok = await ctrlSideFileCopyFolderTree(
+                item,
+                ctrlSideFilePath,
+                webRootUrl,
+                ctrlSelectedRootPath || '',
+                ctrlSideFileRoot,
+                overwrite,
+            );
+            if (!ok) CAlert.Info(L('ctrl.msg.copyFailed', 'Copy failed.'));
+        }
+        if (!ok) return;
+        // 붙여넣기 성공 시 복사 목록에서 제거
+        const idx = ctrlSideFileCopyItems.indexOf(item);
+        if (idx >= 0) ctrlSideFileCopyItems.splice(idx, 1);
+        await ctrlSideFileGoTo(ctrlSideFilePath);
+        ctrlSideFileRenderCopyList();
+    } catch {
+        CAlert.Info(L('ctrl.msg.copyFailed', 'Copy failed.'));
+    }
+}
+
+async function ctrlSideFilePasteCopy(item: CtrlSideCopyItem) {
+    const destDir = ctrlSideFileRoot + ctrlSideFilePath;
+    const destAbs = item.isFile ? destDir + item.name : destDir + item.name + '/';
+    if (destAbs === item.absPath) {
+        CAlert.Info(L('ctrl.msg.copySamePath', 'Same path. Skipped.'));
+        return;
+    }
+    // 폴더를 자기 자신/하위 경로로 붙여넣으면 순환이므로 스킵
+    if (!item.isFile) {
+        const src = item.relPath.endsWith('/') ? item.relPath : item.relPath + '/';
+        const dest = ctrlSideFilePath + item.name + '/';
+        if (dest === src || dest.startsWith(src)) {
+            CAlert.Info(L('ctrl.msg.copyIntoSelf', 'Cannot paste a folder into itself. Skipped.'));
+            return;
+        }
+    }
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    try {
+        // 대상에 동명 있는지 확인 → 있으면 덮어쓰기/패스 컨펌
+        const p: any = { path: ctrlSideFilePath };
+        if (ctrlSelectedRootPath) p.RootPath = ctrlSelectedRootPath;
+        if (token) p.token = token;
+        const data = await CFecth.Exe(webRootUrl + 'File/List', p, 'json') as { list?: CtrlSideFileEntry[]; ok?: boolean; msg?: string };
+        if ((data as any)?.ok === false) {
+            CAlert.Info((data as any).msg || L('ctrl.failedToLoad', 'Failed to load'));
+            return;
+        }
+        const exists = (data.list ?? []).some(fl => fl.name === item.name);
+        if (!exists) {
+            await ctrlSideFilePasteCopyDo(item, true);
+            return;
+        }
+        const kind = item.isFile
+            ? L('ctrl.file', 'File')
+            : L('ctrl.folder', 'Folder');
+        const body =
+            `<div class="small">` +
+            `<div class="mb-2">${aiEscapeHtml(kind)} <code>${aiEscapeHtml(item.name)}</code> ${L('ctrl.msg.copyExistsAsk', 'already exists in this folder.')}</div>` +
+            `<div class="text-secondary">${L('ctrl.msg.copyExistsHint', 'Overwrite replaces existing files. Pass skips this paste.')}</div>` +
+            `</div>`;
+        CConfirm.List(
+            body,
+            [
+                () => { void ctrlSideFilePasteCopyDo(item, true); },
+                () => { /* 패스: 아무 것도 안 함 */ },
+            ],
+            [
+                L('ctrl.overwrite', 'Overwrite'),
+                L('ctrl.pass', 'Pass'),
+            ],
+        );
+    } catch {
+        CAlert.Info(L('ctrl.msg.copyFailed', 'Copy failed.'));
+    }
+}
+
+function ctrlSideFileBindLongPress(item: HTMLElement, fl: CtrlSideFileEntry) {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let longReady = false;
+    let suppressClick = false;
+    const clearTimer = () => {
+        if (timer != null) { clearTimeout(timer); timer = null; }
+    };
+    const abortPress = () => {
+        clearTimer();
+        longReady = false;
+        item.classList.remove('active');
+    };
+    // 누르는 동안에는 목록 DOM을 건드리지 않는다(레이아웃 밀림 → X 오클릭 방지).
+    // 길게 눌렀다가 손을 뗄 때(pointerup) 목록에 넣는다. 파일·폴더 모두 동일.
+    item.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        abortPress();
+        suppressClick = false;
+        timer = setTimeout(() => {
+            timer = null;
+            longReady = true;
+            item.classList.add('active');
+        }, CTRL_SIDE_FILE_LONG_MS);
+    });
+    item.addEventListener('pointerup', () => {
+        clearTimer();
+        item.classList.remove('active');
+        if (!longReady) return;
+        longReady = false;
+        suppressClick = true;
+        ctrlSideFileAddCopy(fl);
+    });
+    item.addEventListener('pointerleave', abortPress);
+    item.addEventListener('pointercancel', abortPress);
+    item.addEventListener('dragstart', abortPress);
+    // 길게 누른 뒤에는 클릭(열기/폴더 진입)이 이어지지 않게 막는다.
+    item.addEventListener('click', (e) => {
+        if (!suppressClick) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        suppressClick = false;
+    }, true);
+}
 
 function ctrlSideFileRenderEmpty(msg: string) {
     ctrlSideFileListEl.innerHTML = `<div class="text-secondary small px-1">${aiEscapeHtml(msg)}</div>`;
@@ -1796,8 +2561,27 @@ function ctrlSideFileRenderList(list: CtrlSideFileEntry[]) {
     const visible = list
         .filter(fl => !fl.hidden)
         .sort((a, b) => (a.file === b.file) ? a.name.localeCompare(b.name) : (a.file ? 1 : -1));
-    if (!visible.length) { ctrlSideFileRenderEmpty('Empty'); return; }
+    if (!visible.length && ctrlSideFilePath === '/') { ctrlSideFileRenderEmpty('Empty'); return; }
     ctrlSideFileListEl.innerHTML = '';
+    // File.ts(DirListRefresh)와 동일하게, 최상위(루트)가 아닐 때만 맨 위에 Root/Parent 이동 항목을 넣는다.
+    if (ctrlSideFilePath !== '/') {
+        const rootItem = document.createElement('button');
+        rootItem.type = 'button';
+        rootItem.className = 'list-group-item list-group-item-warning list-group-item-action py-1 px-2';
+        rootItem.innerHTML = `<i class="bi bi-folder"></i> ${L('ctrl.rootFolder', 'Root Folder')}`;
+        rootItem.addEventListener('click', () => ctrlSideFileGoTo('/'));
+        ctrlSideFileListEl.appendChild(rootItem);
+
+        const trimmed = ctrlSideFilePath.replace(/\/+$/, '');
+        const parent = trimmed.substring(0, trimmed.lastIndexOf('/') + 1) || '/';
+        const parentItem = document.createElement('button');
+        parentItem.type = 'button';
+        parentItem.className = 'list-group-item list-group-item-primary list-group-item-action py-1 px-2';
+        parentItem.innerHTML = `<i class="bi bi-folder"></i> ${L('ctrl.parentFolder', 'Parent Folder')}`;
+        parentItem.addEventListener('click', () => ctrlSideFileGoTo(parent));
+        ctrlSideFileListEl.appendChild(parentItem);
+    }
+    if (!visible.length) return;
     for (const fl of visible) {
         const item = document.createElement('button');
         item.type = 'button';
@@ -1834,6 +2618,7 @@ function ctrlSideFileRenderList(list: CtrlSideFileEntry[]) {
                 ctrlSideFileGoTo(ctrlSideFilePath + fl.name + '/');
             }
         });
+        ctrlSideFileBindLongPress(item, fl);
         ctrlSideFileListEl.appendChild(item);
     }
 }
@@ -1856,46 +2641,214 @@ async function ctrlSideFileGoTo(pathVal: string) {
         if (data.RootUrl != null) ctrlSideFileDown = new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, '');
         if (data.path != null) { ctrlSideFilePath = data.path; ctrlSideFilePathEl.textContent = data.path; }
         ctrlSideFileRenderList(data.list ?? []);
+        // 검색 인덱스가 이미 만들어져 있는 루트라면, 지금 새로 받아온 이 폴더 목록으로 그 폴더의 캐시 항목만
+        // 교체한다(전체 재인덱싱은 하지 않음) - Refresh 버튼이 ctrlSideFileGoTo(현재 경로)를 그대로 호출하므로
+        // 새로고침을 누르면 자동으로 그 폴더의 검색 자동완성 정보도 최신화된다.
+        if (g_ctrlSideSrch.indexed && g_ctrlSideSrch.rootKey === ctrlSideSrchKey()) {
+            g_ctrlSideSrch.cache.set(ctrlSideFilePath, (data.list ?? []) as unknown as CtrlSrchFile[]);
+        }
     } catch (e) {
         if (seq !== ctrlSideFileReqSeq) return;
         ctrlSideFileRenderEmpty(L('ctrl.failedToLoad', 'Failed to load'));
+        // 원격 보는 중 실패면(서버 재시작으로 토큰이 죽었거나 일시적으로 끊겼거나) 재연결 감지로 넘긴다.
+        // 다시 응답하면 rdpHandleReconnect가 currentWebRootUrl 일치를 보고 이 File 패널도 자동으로 다시 부른다.
+        if (currentWebRootUrl) {
+            const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === currentWebRootUrl);
+            if (remote) rdpNoteFetchFailure(remote);
+        }
     }
 }
 
-CDOM.ID('ctrlSideFileUpBtn').addEventListener('click', () => {
-    if (ctrlSideFilePath === '/' || ctrlSideFilePath === '') return;
-    const trimmed = ctrlSideFilePath.replace(/\/+$/, '');
-    const parent = trimmed.substring(0, trimmed.lastIndexOf('/') + 1) || '/';
-    ctrlSideFileGoTo(parent);
-});
 CDOM.ID('ctrlSideFileRefreshBtn').addEventListener('click', () => ctrlSideFileGoTo(ctrlSideFilePath));
 
 ctrlSideFileGoTo('/');
 
-// ---- 전역 단축키 ----
-// F1: 우측 사이드바 File ↔ Info 토글. 이미 File이면 Info로, 아니면 File로.
-// 작은 화면(사이드바 오버레이 모드)이면 우측 사이드바를 먼저 연다.
-// F2(서치)는 File 탭과 무관하게 Control 페이지 자체에서 검색 모달만 띄운다(탭 전환/iframe 메시지 없음).
-// F3는 More > Terminal 버튼 클릭과 동일하게 New Terminal 모달만 띄운다(탭 전환은 termStartNew 이후 Open을 눌러야 일어남).
-function runControlHotkey(key: string): boolean {
-    switch (key) {
-        case 'F1': {
-            // 도킹 모드가 아니면(작은 화면) 우측 사이드바 offcanvas를 연다. 이미 열려 있으면 show()는 no-op에 가깝다.
-            if (appSidebarRight && !appSidebarRight.classList.contains('sidebar-docked')) {
-                (window as any).bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
+// ---- 우측 사이드바 File 탭: 검색(자동완성) ----
+// F2 검색 모달(ctrlFileSearch)과 같은 방식(BFS로 File/List를 재귀 스캔해 캐시)이지만, 상시 인덱싱은 느리므로
+// 여기서는 입력창을 처음 포커스하는 순간에만 현재 워킹 폴더(webRootUrl+RootPath) 하나를 인덱싱한다.
+// 인덱싱 중엔 입력을 비활성화하고 "인덱싱중..."을 보여주며, 끝나면 타이핑마다 그 캐시만 필터링(자동완성)한다 -
+// F2 모달의 renderFromCache와 동일한 개념이지만 네트워크 재요청 없이 캐시만 쓴다는 점이 다르다.
+const ctrlSideFileSearchInputEl = CDOM.ID('ctrlSideFileSearchInput') as HTMLInputElement;
+const ctrlSideFileSearchResultsEl = CDOM.ID('ctrlSideFileSearchResults') as HTMLDivElement;
+const CTRL_SIDE_SRCH_SCAN_CAP = 100000;
+// 폴더 하나씩 순차 요청(BFS 싱글) 대신, 동시에 이만큼의 File/List 요청을 병렬로 띄운다(워커 풀).
+const CTRL_SIDE_SRCH_CONCURRENCY = 16;
+interface ICtrlSideSrchState { rootKey: string; indexed: boolean; indexing: boolean; cache: Map<string, CtrlSrchFile[]>; root: string; down: string; }
+let g_ctrlSideSrch: ICtrlSideSrchState = { rootKey: '', indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+let ctrlSideSrchSeq = 0;
+
+function ctrlSideSrchKey(): string {
+    return (currentWebRootUrl || '') + '|' + (ctrlSelectedRootPath || '');
+}
+
+// 워킹 폴더 셀렉트가 바뀌면 호출한다. 진행 중인 BFS 인덱싱을 끊고(워커는 seq 불일치로 다음 폴더를
+// 요청하지 않음) 검색창/캐시를 초기화한다. 이미 날아간 File/List 응답은 캐시·placeholder에 반영되지 않는다.
+function ctrlSideSrchStop() {
+    ctrlSideSrchSeq++;
+    const wasIndexing = g_ctrlSideSrch.indexing;
+    g_ctrlSideSrch = { rootKey: '', indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+    if (wasIndexing) {
+        ctrlSideFileSearchInputEl.disabled = false;
+        ctrlSideFileSearchInputEl.placeholder = L('ctrl.ph.sideSearch', 'Search (click to index)');
+    }
+    ctrlSideFileSearchInputEl.value = '';
+    ctrlSideFileSearchResultsEl.classList.add('d-none');
+}
+
+// 현재 워킹 폴더 전체를 BFS로 스캔해 파일명 캐시를 채운다. 이미 인덱싱됐거나 진행 중이면 아무 것도 하지 않는다.
+async function ctrlSideSrchIndex(): Promise<void> {
+    const key = ctrlSideSrchKey();
+    if (g_ctrlSideSrch.rootKey !== key) g_ctrlSideSrch = { rootKey: key, indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+    if (g_ctrlSideSrch.indexed || g_ctrlSideSrch.indexing) return;
+
+    const seq = ++ctrlSideSrchSeq;
+    g_ctrlSideSrch.indexing = true;
+    ctrlSideFileSearchInputEl.disabled = true;
+    const prevPlaceholder = ctrlSideFileSearchInputEl.placeholder;
+    ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingCount', 'Indexing... ({0})', 0);
+
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    const rootPathParam = ctrlSelectedRootPath || undefined;
+    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const queue: string[] = ['/'];
+    let scanned = 0;
+    let stopped = false;
+
+    // 폴더 하나 요청 + 결과 반영. 워커 여러 개가 같은 queue/cache를 공유해도, JS는 단일 스레드라
+    // await 사이 구간에서만 다른 워커로 넘어가므로 queue.shift()/cache.set() 자체는 안전하다.
+    const fetchDir = async (dirPath: string) => {
+        try {
+            // skipVcs: 인덱싱은 폴더를 대량으로 훑으므로, 폴더마다 git/svn 프로세스를 스폰하는 VCS 상태 조회를
+            // 생략해 서버 부하와 응답 시간을 크게 줄인다(파일 탐색기 쪽 File/List는 그대로 VCS 배지를 받음).
+            const p: any = { path: dirPath, skipVcs: 'true' };
+            if (rootPathParam) p.RootPath = rootPathParam;
+            if (token) p.token = token;
+            const data = await CFecth.Exe(webRootUrl + "File/List", p, "json") as { list: CtrlSrchFile[]; RootPath?: string; RootUrl?: string };
+            if (seq !== ctrlSideSrchSeq) return;
+            if (!Array.isArray(data.list)) return;
+            if (data.RootPath != null) g_ctrlSideSrch.root = data.RootPath.replace(/\/+$/, '');
+            if (data.RootUrl != null) g_ctrlSideSrch.down = new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, '');
+            g_ctrlSideSrch.cache.set(dirPath, data.list);
+            scanned += data.list.length;
+            ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingCount', 'Indexing... ({0})', scanned);
+            for (const fl of data.list) {
+                if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name)) queue.push(dirPath + fl.name + '/');
             }
-            const fileTab = CDOM.ID('right-file-tab');
-            // File 탭이 이미 활성(aria-selected 또는 active 클래스)이면 Info로 되돌린다.
-            const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
-            if (onFile) {
-                (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-info-tab')).show();
-            } else {
-                ctrlShowFileTab();
-            }
-            return true;
+        } catch { stopped = true; }
+    };
+
+    // 워커 풀: 각 워커가 queue에서 하나씩 꺼내 순차 처리하되, 여러 워커가 동시에 돌아 전체적으로는 병렬 스캔이 된다.
+    const worker = async () => {
+        while (queue.length > 0 && scanned < CTRL_SIDE_SRCH_SCAN_CAP && !stopped && seq === ctrlSideSrchSeq) {
+            const dirPath = queue.shift();
+            if (dirPath === undefined) break;
+            await fetchDir(dirPath);
         }
+    };
+    await Promise.all(Array.from({ length: CTRL_SIDE_SRCH_CONCURRENCY }, () => worker()));
+
+    if (seq !== ctrlSideSrchSeq) return;
+    g_ctrlSideSrch.indexing = false;
+    g_ctrlSideSrch.indexed = true;
+    ctrlSideFileSearchInputEl.disabled = false;
+    ctrlSideFileSearchInputEl.placeholder = prevPlaceholder;
+}
+
+function ctrlSideSrchRenderResults(query: string) {
+    ctrlSideFileSearchResultsEl.innerHTML = '';
+    if (!query) { ctrlSideFileSearchResultsEl.classList.add('d-none'); return; }
+    let found = 0;
+    outer:
+    for (const [dirPath, list] of g_ctrlSideSrch.cache) {
+        for (const fl of list) {
+            if (fl.hidden || ctrlIsSearchExcluded(fl.name)) continue;
+            if (!fl.name.toLowerCase().includes(query)) continue;
+            const item = document.createElement('div');
+            item.className = 'list-group-item list-group-item-action py-1 px-2';
+            const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
+            item.innerHTML =
+                `<i class="bi ${icon} me-1"></i><strong>${aiEscapeHtml(fl.name)}</strong>` +
+                `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(dirPath)}</span>`;
+            item.addEventListener('click', () => {
+                ctrlSideFileSearchInputEl.value = '';
+                ctrlSideFileSearchResultsEl.classList.add('d-none');
+                if (fl.file) {
+                    editorOpenFile(g_ctrlSideSrch.root + dirPath + fl.name, currentWebRootUrl, g_ctrlSideSrch.down + ctrlEncodeUrlPath(dirPath + fl.name));
+                } else {
+                    ctrlSideFileGoTo(dirPath + fl.name + '/');
+                }
+            });
+            ctrlSideFileSearchResultsEl.appendChild(item);
+            if (++found >= 100) break outer;
+        }
+    }
+    ctrlSideFileSearchResultsEl.classList.toggle('d-none', found === 0);
+}
+
+ctrlSideFileSearchInputEl.addEventListener('focus', () => { void ctrlSideSrchIndex(); });
+ctrlSideFileSearchInputEl.addEventListener('input', () => {
+    ctrlSideSrchRenderResults(ctrlSideFileSearchInputEl.value.trim().toLowerCase());
+});
+// 검색 입력에 포커스가 있을 때 위/아래 화살표로 자동완성 결과를 하나씩 이동, Enter로 선택.
+// document 레벨 핸들러는 이 입력에서 온 ArrowUp/ArrowDown을 이미 무시하므로(좌측 사이드바 이동 방지),
+// 여기서 자체적으로 결과 목록의 키보드 탐색만 처리하면 된다.
+ctrlSideFileSearchInputEl.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (ctrlSideFileSearchResultsEl.classList.contains('d-none')) return;
+    const items = Array.from(ctrlSideFileSearchResultsEl.querySelectorAll<HTMLElement>('.list-group-item'));
+    if (items.length === 0) return;
+    const curIdx = items.findIndex(el => el.classList.contains('ctrl-srch-kbd-active'));
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const dir = e.key === 'ArrowDown' ? 1 : -1;
+        const nxt = curIdx === -1 ? (dir === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+        if (curIdx >= 0) items[curIdx].classList.remove('ctrl-srch-kbd-active');
+        items[nxt].classList.add('ctrl-srch-kbd-active');
+        items[nxt].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+        if (curIdx >= 0) { e.preventDefault(); items[curIdx].click(); }
+    } else if (e.key === 'Escape') {
+        ctrlSideFileSearchResultsEl.classList.add('d-none');
+    }
+});
+document.addEventListener('click', (e) => {
+    if (ctrlSideFileSearchResultsEl.classList.contains('d-none')) return;
+    const t = e.target as Node;
+    if (t === ctrlSideFileSearchInputEl || ctrlSideFileSearchResultsEl.contains(t)) return;
+    ctrlSideFileSearchResultsEl.classList.add('d-none');
+});
+
+// ---- 전역 단축키 ----
+// F1: 왼쪽 사이드바(옛 F4 자리를 이어받음) - 꺼져 있으면(모바일 오버레이 기본 숨김이든, Multiplexer
+// 드롭다운에서 강제로 꺼놨든) 켜고, 이어서 방향키로 세션 목록을 탐색할 수 있도록 포커스까지 준다.
+// Shift+F1은 강제로 끔(Multiplexer 드롭다운의 "왼쪽 끄기"와 동일).
+// F2: 오른쪽 사이드바(옛 F1의 File↔Info 토글을 이어받음) - 마찬가지로 꺼져 있으면 켜고, File 탭이 이미
+// 활성이면 Info로, 아니면 File로 토글한다(방금 이걸로 처음 연 경우도 동일하게 토글). Shift+F2는 강제로 끔.
+// F3는 그대로 More > Terminal 버튼과 동일하게 New Terminal 모달만 띄운다.
+function ctrlOpenLeftSidebar() {
+    if (!appSidebar) return;
+    // Other 탭을 보고 있으면 Agent 탭으로 전환한다(F1은 에이전트 작업 흐름용, 옛 F4와 동일).
+    if (sbSubTab === 'other') { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); }
+    if (!tmuxSidebarVisible('left')) tmuxShowSidebar('left');
+    appSidebar.focus();
+}
+function ctrlOpenRightSidebarToggleFile() {
+    if (!tmuxSidebarVisible('right')) tmuxShowSidebar('right');
+    const fileTab = CDOM.ID('right-file-tab');
+    // File 탭이 이미 활성(aria-selected 또는 active 클래스)이면 Info로 되돌린다.
+    const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
+    if (onFile) {
+        (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-info-tab')).show();
+    } else {
+        ctrlShowFileTab();
+    }
+}
+function runControlHotkey(key: string, shift: boolean = false): boolean {
+    switch (key) {
+        case 'F1':
+            if (shift) tmuxHideSidebar('left'); else ctrlOpenLeftSidebar();
+            return true;
         case 'F2':
-            ctrlFileSearch();
+            if (shift) tmuxHideSidebar('right'); else ctrlOpenRightSidebarToggleFile();
             return true;
         case 'F3':
             if (!ctrlRequireAuthed()) return true;
@@ -1904,169 +2857,86 @@ function runControlHotkey(key: string): boolean {
     }
     return false;
 }
-// 지금 활성 탭(패널)에 물려있는 iframe과, 그게 터미널인지를 함께 돌려준다.
-// Home.ts의 focusActiveFrame()과 동일하게 터미널만 특별 취급(입력창 포커스는 xterm.js 쪽에서 해야 해서
-// DOM으로 직접 흉내낼 수 없어 'focus-input' 메시지로 위임한다).
-function getActiveControlFrame(): { f: HTMLIFrameElement | null; isTerm: boolean } {
-    if (isPanelShown('term-panel')) return { f: activeTermFrameKey ? termIframePool.get(activeTermFrameKey) ?? null : null, isTerm: true };
-    if (isPanelShown('chat-panel')) return { f: activeChatFrameKey ? chatIframePool.get(activeChatFrameKey) ?? null : null, isTerm: false };
-    if (isPanelShown('rdp-panel')) return { f: activeRdpFrameKey ? rdpIframePool.get(activeRdpFrameKey) ?? null : null, isTerm: false };
-    if (isPanelShown('browser-panel')) return { f: activeBrowserFrameKey ? browserIframePool.get(activeBrowserFrameKey) ?? null : null, isTerm: false };
-    if (isPanelShown('editor-panel')) return { f: activeEditorFrameKey ? editorIframePool.get(activeEditorFrameKey) ?? null : null, isTerm: false };
-    if (isPanelShown('file-panel')) return { f: fileIframe, isTerm: false };
-    if (isPanelShown('memo-panel')) return { f: memoIframe, isTerm: false };
-    return { f: null, isTerm: false };
-}
-// 액티브 iframe으로 포커스를 넘긴다. 터미널이면 'focus-input' 메시지로 xterm 입력창에 포커스시키고,
-// 그 외에는 contentWindow를 포커스한 뒤 안에서 첫 textarea/input을 찾아 포커스한다.
-function focusActiveControlFrame() {
-    const { f, isTerm } = getActiveControlFrame();
-    if (!f) return;
-    if (isTerm) {
-        if (f.contentWindow) CIframeMsg.Send(f.contentWindow, 'focus-input');
-        return;
-    }
-    try {
-        f.contentWindow?.focus();
-        const input = f.contentDocument?.querySelector<HTMLElement>('textarea, input');
-        if (input) { input.focus(); return; }
-    } catch (_) {}
-    f.focus();
-}
-// F4 키(또는 Ctrl 빠르게 두 번 누르기): 한 번 누르면 좌측 메뉴 사이드바로 포커스(오버레이 모드면 먼저 연다), 이미 사이드바에 포커스가
-// 가 있는 상태에서 한 번 더 누르면 지금 보고 있는 액티브 iframe으로 포커스를 돌려준다(Home.ts의
-// Tab 키=toggleSidebar()+focusActiveFrame() 조합과 동일한 패턴).
-// - 오버레이 모드(작은 화면): data-bs-backdrop="false"라 바깥 클릭으로 안 닫히므로, F4 자체가 열고/닫는
-//   유일한 수단이다. "포커스 위치"로 판단하면 한번 열린 뒤 닫을 방법이 없어져 꼬이므로, 예전처럼 매번
-//   순수 토글(열림<->닫힘)로 처리하고 여는 순간만 사이드바로, 닫는 순간엔 액티브 iframe으로 포커스를 보낸다.
-// - 도킹 모드(큰 화면): 사이드바가 항상 보이므로 open/close 대신 "포커스가 지금 사이드바 안에 있는가"로
-//   1차/2차 누름을 구분한다.
-function runControlF4Key() {
-    if (!appSidebar) return;
-    // Other 탭을 보고 있으면 Agent 탭으로 전환한다(F4는 에이전트 작업 흐름용).
-    if (sbSubTab === 'other') { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); }
-    if (!appSidebar.classList.contains('sidebar-docked')) {
-        const wasShown = appSidebar.classList.contains('show');
-        (window as any).bootstrap.Offcanvas.getOrCreateInstance(appSidebar).toggle();
-        if (wasShown) focusActiveControlFrame();
-        else setTimeout(() => appSidebar.focus(), 0);
-        return;
-    }
-    const focusInSidebar = document.activeElement instanceof Node && appSidebar.contains(document.activeElement);
-    if (focusInSidebar) {
-        focusActiveControlFrame();
-    } else {
-        appSidebar.focus();
-    }
+// 방향키(상하좌우)는 F1으로 좌측 사이드바에 실제 포커스가 가 있을 때만 동작한다(ctrlOpenLeftSidebar가
+// 끝에 appSidebar.focus()를 호출해 만들어주는 상태). 프레임(채팅/터미널/브라우저/File 등 iframe)에
+// 포커스가 있을 때는 방향키가 그 프레임 본래 용도(터미널 히스토리, 텍스트 커서 이동 등)로만 쓰이고
+// 사이드바를 건드리지 않는다.
+function isSidebarFocused(): boolean {
+    if (!appSidebar) return false;
+    return document.activeElement instanceof Node && appSidebar.contains(document.activeElement);
 }
 // 위/아래 화살표: 현재 보고 있는 하위 탭(Agent=agent-sidebar-list / Other=other-sidebar-list)의 세션 목록에서만
 // 선택을 이동한다. RDP 목록(rdp-sidebar-list, 위쪽)은 대상에서 제외.
-function isAppSidebarVisible(): boolean {
-    if (!appSidebar) return false;
-    return appSidebar.classList.contains('sidebar-docked') || appSidebar.classList.contains('show');
-}
 function runControlArrowKey(dir: 1 | -1): boolean {
-    if (!isAppSidebarVisible()) return false;
+    if (!isSidebarFocused()) return false;
     // 현재 보고 있는 하위 탭(Agent/Other)의 목록에서, 접힌 그룹에 가려지지 않은(보이는) 항목만 대상으로 한다.
     const listEl = sbSubTab === 'agent' ? agentSidebarList : otherSidebarList;
     const items = Array.from(listEl.querySelectorAll<HTMLElement>('.ai-session-item')).filter(el => el.offsetParent !== null);
     if (items.length === 0) return false;
-    const curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active'));
+    // 메인(빨강)을 현재 선택으로 보고, 없으면 서브(파랑) 중 첫 항목. 예전 클래스명도 함께 본다.
+    let curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-main') || el.classList.contains('ai-session-item-active-remote'));
+    if (curIdx < 0) curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-sub') || el.classList.contains('ai-session-item-active'));
     const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
     if (nxt === curIdx) return false;
     items[nxt].click();
     items[nxt].scrollIntoView({ block: 'nearest' });
     return true;
 }
-// Ctrl "빠른 두 번 누르기"(다른 키와 조합되지 않은 단독 Ctrl을 짧은 시간 안에 두 번) 감지기.
-// Ctrl+C/V/S 같은 흔한 조합키의 첫 keydown과는 확실히 구분해야 하므로(조합키 사용 시마다 오작동하면 안 됨),
-// 이 Ctrl을 누르고 있는 동안 다른 키가 같이 눌렸는지(otherKeyUsed)를 추적해서, 조합으로 쓰인 Ctrl은
-// "단독 탭"으로 치지 않는다. Firefox의 Alt 단독 키 = 메뉴바 노출 같은 브라우저 기본 동작이 Ctrl에는
-// 없어서 별도 preventDefault 트릭이 필요 없다(Alt 방식에서 이 문제 때문에 Ctrl로 변경).
-function wireCtrlDoubleTap(target: Document | Window, onTrigger: () => void) {
-    const THRESHOLD_MS = 400;
-    let otherKeyUsed = false;
-    let lastSoloUpTime = 0;
-    target.addEventListener('keydown', ((e: KeyboardEvent) => {
-        if (e.key === 'Control') return;
-        if (e.ctrlKey) otherKeyUsed = true;
-    }) as EventListener, true);
-    target.addEventListener('keyup', ((e: KeyboardEvent) => {
-        if (e.key !== 'Control') return;
-        if (otherKeyUsed) {
-            otherKeyUsed = false;
-            lastSoloUpTime = 0;
-            return;
-        }
-        const now = performance.now();
-        if (now - lastSoloUpTime < THRESHOLD_MS) {
-            lastSoloUpTime = 0;
-            onTrigger();
-        } else {
-            lastSoloUpTime = now;
-        }
-    }) as EventListener, true);
+// 좌/우 화살표: 사이드바가 포커스된 상태에서 Agent ↔ Other 서브탭을 전환한다(sb-agent-tab/sb-other-tab
+// 클릭과 동일 효과). 이미 그 탭이면 아무 것도 하지 않는다.
+function runControlSubTabArrowKey(dir: 1 | -1): boolean {
+    if (!isSidebarFocused()) return false;
+    const next: 'agent' | 'other' = dir === 1 ? 'other' : 'agent';
+    if (sbSubTab === next) return false;
+    sbSubTab = next;
+    localStorage.setItem(SB_TAB_LS, next);
+    applySidebarSubTab();
+    return true;
 }
-// File/Memo iframe은 자체 keydown에서 ArrowUp/ArrowDown을 부모로 위임하지 않으므로
-// (그 스크립트는 artgine/ 보호 경로라 직접 수정하지 않고) 같은 출처 iframe에 직접 keydown을 걸어 잡는다.
-// Ctrl 더블탭도 마찬가지로 이 iframe 안에서 직접 감지한다.
-function wireIframeArrowKeys(f: HTMLIFrameElement) {
-    f.addEventListener('load', () => {
-        try {
-            f.contentWindow?.addEventListener('keydown', (e: KeyboardEvent) => {
-                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                    if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
-                }
-            }, true);
-            if (f.contentWindow) wireCtrlDoubleTap(f.contentWindow, runControlF4Key);
-        } catch (_) {}
-    });
-}
+// File/Memo iframe 안에서 벌어지는 keydown은 부모까지 안 올라오므로, File.ts/Memo.ts가 자체적으로
+// F1~F3/F7을 잡아 'home-hotkey' postMessage로 위임한다(아래 CIframeMsg.Recv). 여기서 따로 더 걸 게 없다.
 // Chat/Terminal/Browser 프레임 풀(showPooledFrame의 onCreate)에서 공용으로 쓰는 단축키 브리지.
 // RDP(원격 데스크탑 제어)와 Editor(Monaco - F1은 커맨드 팔레트, 방향키는 커서 이동)는 이 키들을 가로채면
 // 본래 기능이 깨지므로 일부러 연결하지 않는다.
+// Terminal(같은 출처든 원격 cross-origin이든)은 Terminal.html 자체가 F1~F3를 잡아 'home-hotkey'
+// postMessage로 위임하므로(File.ts/Memo.ts와 동일 패턴) 여기서 직접 가로채지 않는다 - 그대로 두면
+// 같은 출처(로컬) 터미널에서 F1~F3가 두 경로로 겹쳐 들어와 두 번 실행된다. Chat/Browser는 아직 이
+// 위임 로직이 없어서(같은 출처일 때만 동작) 직접 가로채기가 여전히 필요하다.
 function wirePooledFrameHotkeys(f: HTMLIFrameElement, key: string) {
     const isTerm = key.startsWith('term:') || key.startsWith('term-new:');
     f.addEventListener('load', () => {
         try {
-            f.contentWindow?.addEventListener('keydown', (e: KeyboardEvent) => {
-                if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
-                    e.preventDefault();
-                    runControlHotkey(e.key);
-                    return;
-                }
-                if (e.key === 'F4') {
-                    e.preventDefault();
-                    runControlF4Key();
-                    return;
-                }
-                // 터미널은 위/아래 화살표가 명령어 히스토리 탐색 용도이므로 제외(Home.ts와 동일 예외).
-                if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-                    if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
-                }
-            }, true);
-            // 터미널은 Ctrl+C가 SIGINT로 쓰이지만, 더블탭 감지기는 조합(otherKeyUsed)으로 쓰인 Ctrl은
-            // 무시하므로 Ctrl+C 자체와는 충돌하지 않는다.
-            if (f.contentWindow) wireCtrlDoubleTap(f.contentWindow, runControlF4Key);
+            if (!isTerm) {
+                f.contentWindow?.addEventListener('keydown', (e: KeyboardEvent) => {
+                    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
+                        e.preventDefault();
+                        runControlHotkey(e.key, e.shiftKey);
+                        return;
+                    }
+                    // 방향키는 사이드바가 포커스된 상태에서만 동작해야 하므로(프레임 포커스 시엔 그 프레임
+                    // 본래 용도로 - 텍스트 커서 이동 등) 더 이상 이 프레임 안에서 가로채지 않는다.
+                }, true);
+            }
         } catch (_) {}
     });
 }
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
-        e.preventDefault();
-        runControlHotkey(e.key);
+    // 사이드바 File 탭 검색창(자동완성)에 포커스가 있을 땐 위/아래 화살표가 좌측 사이드바 세션 이동으로
+    // 새지 않도록 여기서 먼저 걸러낸다. F1~F3/F7 단축키는 검색 중에도 그대로 유지.
+    if (e.target === ctrlSideFileSearchInputEl && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         return;
     }
-    if (e.key === 'F4' || e.key === 'F6') {
-        // F6은 Terminal iframe 안에서는 Terminal.html이 자체 keydown으로 잡아 SUPER 토글로 쓴다.
-        // 여기(document 레벨)는 포커스가 iframe 밖 Control 페이지 자체에 있을 때만 걸리므로,
-        // 그 경우엔 F4와 동일하게 사이드바 포커스 토글로 처리한다.
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
         e.preventDefault();
-        runControlF4Key();
+        runControlHotkey(e.key, e.shiftKey);
         return;
     }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
+    }
+    // 좌/우 화살표: 사이드바 포커스 시 Agent ↔ Other 서브탭 전환.
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (runControlSubTabArrowKey(e.key === 'ArrowRight' ? 1 : -1)) e.preventDefault();
     }
     // F7은 Control 자체 기능은 없지만(Terminal.html이 자기 iframe 안에서 직접 처리), 포커스가
     // Control 페이지(iframe 밖)에 있을 때 브라우저 기본 동작(예: Firefox 캐럿 브라우징 토글)이
@@ -2076,16 +2946,12 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
 });
-wireCtrlDoubleTap(document, runControlF4Key);
-// File.ts/Memo.ts는 자체 keydown에서 F1/F2/F3/F4/F7을 잡아 'home-hotkey'로 부모에 위임한다(Home.ts와 동일 패턴).
-// Ctrl 더블탭은 File.ts/Memo.ts가 위임하지 않으므로(wireIframeArrowKeys가 해당 iframe에서 직접 잡음) 여기엔
-// 오지 않는다.
-// Control.ts는 F1/F2/F3/F4만 지원하므로(F7은 무시) runControlHotkey가 알 수 없는 키는 그냥 무시된다.
+// File.ts/Memo.ts/Terminal.html은 자체 keydown에서 F1~F3/F7을 잡아 'home-hotkey'로 부모에 위임한다
+// (shift도 함께 실어 보낸다 - F1/F2는 Shift 여부로 동작이 갈린다). F7은 무시되므로(runControlHotkey가
+// 모르는 키는 그냥 false를 반환) 실질적으로 F1~F3만 처리된다.
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
-        const key = String(data.key ?? '');
-        if (key === 'F4') runControlF4Key();
-        else runControlHotkey(key);
+        runControlHotkey(String(data.key ?? ''), !!data.shift);
     },
 });
 
@@ -2095,6 +2961,7 @@ CIframeMsg.Recv({
     'file-remote-changed': (data) => {
         currentWebRootUrl = String(data.baseUrl ?? '');
         memoSendRemoteInfo();
+        logOnServerChanged();
     },
     'file-opened': (data) => {
         promptSourceAction(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
@@ -2119,6 +2986,22 @@ CIframeMsg.Recv({
             break;
         }
     },
+    // Editor.html(Monaco)이 Ctrl+클릭/F12로 아직 열려있지 않은 다른 파일의 정의로 이동하려 할 때 보내는
+    // 요청. 원본 URL을 그냥 새 탭으로 열면 다운로드로 처리되므로, 대신 절대경로로 되돌려 새 에디터 탭을 연다.
+    // 소스 iframe이 속한 세션의 baseUrl을 그대로 물려받아(로컬/원격 구분) File/Root를 조회한다.
+    'editor-open-ref': (data, source) => {
+        const url = String(data.url ?? '');
+        if (!url) return;
+        let baseUrl = '';
+        for (const [key, f] of editorIframePool) {
+            if (f.contentWindow !== source) continue;
+            baseUrl = editorSessions.get(key)?.baseUrl ?? '';
+            break;
+        }
+        void ctrlUrlToPath(url, baseUrl).then(path => {
+            if (path) promptSourceAction(path, baseUrl, url);
+        });
+    },
     // 핸드오프 완료: 요약을 넘겨받은 새 프로바이더 세션으로 화면을 전환한다(기존 세션은 서버가 이미 종료함).
     // 새 세션은 아직 pending(웹소켓이 붙어야 스폰)이라 /cmd/sessions 목록에 없으므로, termConnectSession의
     // 'term:<token>' 키를 쓰면 곧 실행되는 termRenderList 정리 로직이 목록에 없는 그 프레임을 지워버린다.
@@ -2133,8 +3016,6 @@ CIframeMsg.Recv({
         setTimeout(termRenderList, 4000);
     },
 });
-
-// ---- 다운로드 탭 (MountDownloadTab) ---- 파일 맨 아래 "다운로드(Download) 관련 소스" 구간으로 이동함.
 
 // ---- 로그 탭: provider(CLI)별 대화 로그를 세션 아코디언으로 보여준다 (CProviderLog/cmd/log-* 기반) ----
 interface LogSessionEntry { name: string; offset: number; model: string; firstText: string; cwd: string; time: number; }
@@ -2171,6 +3052,7 @@ function logUpdateSource() {
 function logOnServerChanged() {
     logUpdateSource();
     if (isPanelShown('log-panel')) logLoadSessions(true);
+    loadAiProviderStatus();
 }
 
 function logRegexEscape(s: string): string {
@@ -2456,7 +3338,6 @@ function memoEnsureLayout() {
     memoIframe.id = "memo-iframe";
     memoIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
     memoPanel.appendChild(memoIframe);
-    wireIframeArrowKeys(memoIframe);
 }
 
 function memoLoadFrame() {
@@ -2654,9 +3535,9 @@ function ctrlRequireAuthed(): boolean {
 // File 탭을 제외한 나머지 탭은 인증 전에는 전환되지 않도록 막는다. 트리거 방식(직접 클릭/사이드바
 // 클릭으로 인한 프로그램적 Tab.show() 호출)에 상관없이 'show.bs.tab'은 실제 전환 직전에 공통으로
 // 발생하므로 여기서 preventDefault()하면 그 뒤의 shown.bs.tab 기반 초기화(패널 로드 등)도 함께 막힌다.
-// 플러그인이 동적으로 추가하는 탭(예: ControlDownload의 download-tab)은 이 목록에 넣지 않는다.
-// 플러그인 client js는 Control.js보다 먼저 실행되므로 여기서 ctrlRequireAuthed를 전역으로 노출해두고,
-// 플러그인 쪽에서 이벤트 발생 시점에 지연 조회해 같은 가드를 건다.
+// 플러그인이 동적으로 추가하는 탭은 이 목록에 넣지 않는다. 플러그인 client js는 Control.js보다
+// 먼저 실행되므로 여기서 ctrlRequireAuthed를 전역으로 노출해두고, 플러그인 쪽에서 이벤트 발생
+// 시점에 지연 조회해 같은 가드를 걸 수 있게 한다(현재는 이를 쓰는 플러그인 탭 없음).
 (window as any).ctrlRequireAuthed = ctrlRequireAuthed;
 // 없는 탭에서 최상위 throw가 나면 이 아래 모듈 본문 전체(사이드바/채팅/터미널/인증 초기화 등)가
 // 실행되지 않으므로, 반드시 옵셔널 체이닝으로 방어한다.
@@ -2831,39 +3712,39 @@ function destroyAgentGroup(el: AgentGroupEl) {
     el.remove();
 }
 
-// remoteLabel이 있으면 원격 소유 그룹 - 주소를 경로 위 줄에 표시하고 빨강 액센트(agent-group-remote)를 켠다.
-interface IAgentGroupMeta { pathText: string; remoteLabel?: string; }
+// remoteLabel이 있으면 원격 소유 그룹 - 주소를 경로 위 줄에 표시하고 원격지별 배정색 액센트(agent-group-remote)를 켠다.
+interface IAgentGroupMeta { pathText: string; remoteLabel?: string; remoteId?: string; }
 function updateAgentGroupHeader(el: AgentGroupEl, meta: IAgentGroupMeta) {
     const head = el.querySelector('.agent-group-head') as HTMLElement;
     head.classList.toggle('agent-group-remote', !!meta.remoteLabel);
+    head.style.cssText = meta.remoteLabel ? rdpAccentStyle(meta.remoteId ?? meta.remoteLabel) : '';
     const addrEl = el.querySelector('.agent-group-addr') as HTMLElement;
     addrEl.style.display = meta.remoteLabel ? 'block' : 'none';
     addrEl.textContent = meta.remoteLabel ?? '';
     el.querySelector('.agent-group-path > span')!.textContent = meta.pathText;
 }
 
-// ---- Agent 그룹 표시 전용 경로 캐시(로컬 + 원격 각각 독립) ----
+// ---- Agent 그룹 표시 + File 탭 셀렉트 공용 경로 캐시(로컬 + 원격 각각 독립) ----
 // ctrlRootOpts/ctrlRefreshRootSelect는 "지금 RDP 탭에서 보고 있는 서버 하나"(currentWebRootUrl)를
-// 따라 로컬↔원격으로 통째로 바뀐다(File 탭 기본 경로·New Chat/Terminal 기본 작업폴더용이라 그게 맞음).
-// 그 값을 Agent 그룹 소스로 그대로 쓰면, 원격을 RDP에서 보는 동안 그 원격 경로가 "로컬"인 것처럼
+// 따라 로컬↔원격으로 통째로 바뀐다(New Chat/Terminal 기본 작업폴더·File/List RootPath 파라미터용이라 그게 맞음).
+// 그 값을 Agent 그룹/File 탭 셀렉트 소스로 그대로 쓰면, 원격을 RDP에서 보는 동안 그 원격 경로가 "로컬"인 것처럼
 // (prefix 없이) 한 번 더 나타나 remoteRootsCache 표시와 중복된다. 그래서 로컬 경로도 여기서
 // 완전히 별도로 관리한다 - 어느 RDP 탭을 보고 있든 로컬은 로컬대로, 원격은 원격대로 항상 동시에 보인다.
-let localRootOpts: ICtrlRootOpt[] = [];
-const remoteRootsCache = new Map<string, ICtrlRootOpt[]>();
-
 async function refreshLocalRoots() {
     try {
         const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json") as { roots: ICtrlRootOpt[] };
         // ctrlRenderRootOpts와 동일하게 Artgine 작업경로 항목만 표시 이름을 바꿔치기한다.
         localRootOpts = (data.roots ?? []).map(r => r.name === './' ? { ...r, name: 'Artgine (WorkingPath)' } : r);
         renderSessionSidebar();
+        ctrlSyncSideFileRootSel();
     } catch { /* 다음 rdpRenderList 재호출 때 재시도된다 */ }
 }
 
 async function refreshRemoteRoots(r: IRdpRemote) {
     const webRootUrl = rdpRemoteWebRootUrl(r.entryUrl);
     if (!(await rdpEnsureRemoteAuth(r))) {
-        if (remoteRootsCache.delete(r.remoteId)) renderSessionSidebar();
+        if (remoteRootsCache.delete(r.remoteId)) { renderSessionSidebar(); ctrlSyncSideFileRootSel(); }
+        rdpNoteFetchFailure(r);
         return;
     }
     try {
@@ -2871,11 +3752,107 @@ async function refreshRemoteRoots(r: IRdpRemote) {
         const data = await CFecth.Exe(webRootUrl + "File/Root", token ? { token } : {}, "json") as { roots: ICtrlRootOpt[] };
         remoteRootsCache.set(r.remoteId, data.roots ?? []);
         renderSessionSidebar();
-    } catch { /* 다음 rdpRenderList 재호출 때 재시도된다 */ }
+        ctrlSyncSideFileRootSel();
+    } catch { rdpNoteFetchFailure(r); }
 }
 // RDP 목록이 다시 그려질 때마다(추가/삭제/로컬·원격 전환/초기 로드) 로컬 + 등록된 모든 원격의 경로를
 // 다시 갱신한다 - 폴링이 아니라 그 시점들에서만 호출되므로 과도한 요청이 아니다.
 function refreshAllRemoteRoots() { refreshLocalRoots(); rdpRemotes.forEach(refreshRemoteRoots); }
+
+// ---- 원격 재연결 감지 ----
+// 평소엔 rdpRenderList()가 사용자 조작(클릭/추가/삭제/로그인 성공)이 있을 때만 좌/우 목록을 다시
+// 불러오므로, 이미 열어 둔 원격이 "죽었다가 다시 살아나는" 동안에는 아무도 다시 불러주지 않아
+// 페이지를 새로고침해야만 했다. 그래서 "연결이 끊긴 원격"이 있을 때만 낮은 빈도로 재확인하다가
+// 다시 응답하면(재시작으로 토큰이 죽어 있어도 rdpEnsureRemoteAuth가 저장된 비밀번호로 재로그인한다)
+// 좌측 Agent 그룹 + (지금 보고 있는 원격이면) 우측 File 패널까지 자동으로 다시 불러온다.
+// 끊긴 원격이 하나도 없으면 폴링 자체가 없다 - 상시로 도는 타이머를 두지 않기 위함.
+async function rdpHandleReconnect(remote: IRdpRemote) {
+    await refreshRemoteRoots(remote);
+    const webRootUrl = rdpRemoteWebRootUrl(remote.entryUrl);
+    if (currentWebRootUrl === webRootUrl) await ctrlRefreshRootSelect();
+}
+
+const RDP_OFFLINE_POLL_MS = 15000;
+let rdpOfflinePollTimer: ReturnType<typeof setInterval> | null = null;
+function rdpEnsureOfflinePolling() {
+    if (rdpOfflinePollTimer != null) return;
+    rdpOfflinePollTimer = setInterval(async () => {
+        const offlineRemotes = rdpRemotes.filter(r => rdpStatus.get(r.remoteId) === 'offline');
+        if (!offlineRemotes.length) {
+            clearInterval(rdpOfflinePollTimer!);
+            rdpOfflinePollTimer = null;
+            return;
+        }
+        for (const r of offlineRemotes) {
+            const st = await rdpProbeRemote(r.entryUrl);
+            if (!rdpRemotes.some(x => x.remoteId === r.remoteId)) continue; // 확인 중 삭제됨
+            if (st === 'offline') continue; // 아직도 안 닿음 - 다음 틱에 재시도
+            rdpStatus.set(r.remoteId, st);
+            rdpRenderList();
+            rdpHandleReconnect(r);
+        }
+    }, RDP_OFFLINE_POLL_MS);
+}
+// 원격이 완전히 오프라인으로 "새로 확정"되는 순간 그 원격 몫의 상태를 전부 지운다.
+// 서버 재시작이면 토큰/터미널 프로세스/브라우저 세션이 전부 무효화되므로, 재연결됐을 때 죽은 정보를
+// 그대로 보여주는 대신 빈 목록에서 새로 시작하는 게 맞다. (일시적 fetch 실패만으로는 호출하지 않음 -
+// termRenderList/chatRenderList/browserRefreshList는 그런 경우 기존 프레임을 보존하도록 이미 설계돼 있다.)
+function rdpClearRemoteSessions(remoteId: string) {
+    remoteRootsCache.delete(remoteId);
+
+    for (const [key, f] of Array.from(termIframePool.entries())) {
+        if (!key.startsWith('term:') || keyRemoteId(key) !== remoteId) continue;
+        f.remove();
+        termIframePool.delete(key);
+        tmuxAllFrames.delete(key);
+        tmuxClearIfShowing(key);
+        if (activeTermFrameKey === key) { activeTermFrameKey = null; updateTermFramePlaceholder(); }
+    }
+    if (lastTermSessions) lastTermSessions = lastTermSessions.filter(s => s.remoteId !== remoteId);
+
+    for (const [key, f] of Array.from(chatIframePool.entries())) {
+        if (keyRemoteId(key) !== remoteId) continue;
+        f.remove();
+        chatIframePool.delete(key);
+        tmuxAllFrames.delete(key);
+        tmuxClearIfShowing(key);
+        if (activeChatFrameKey === key) { activeChatFrameKey = null; updateChatFramePlaceholder(); }
+    }
+    if (lastChatSessions) lastChatSessions = lastChatSessions.filter(s => s.remoteId !== remoteId);
+
+    for (const [key, s] of Array.from(browserSessions.entries())) {
+        if (s.remoteId !== remoteId) continue;
+        browserSessions.delete(key);
+        destroyBrowserFrame(key);
+    }
+
+    renderSessionSidebar();
+}
+
+// 어느 원격에 대한 fetch가 실패했을 때 공용으로 부른다. 실제로 끊긴 것이면 상태를 offline으로
+// 갱신하고 재연결 폴링을 시작하고, 서버는 살아있는데 인증만 깨진 것이면(토큰 만료 등) 즉시
+// 재연결 처리(재로그인 + 재조회)를 한다 - 이 경우는 굳이 폴링을 기다릴 필요가 없다.
+async function rdpNoteFetchFailure(remote: IRdpRemote) {
+    const prev = rdpStatus.get(remote.remoteId);
+    const st = await rdpProbeRemote(remote.entryUrl);
+    if (!rdpRemotes.some(x => x.remoteId === remote.remoteId)) return;
+    if (st === prev) return; // 상태 변화 없음 - 이미 처리 중이거나 폴링이 담당
+    rdpStatus.set(remote.remoteId, st);
+    rdpRenderList();
+    if (st === 'offline') {
+        rdpClearRemoteSessions(remote.remoteId); // st!==prev가 위에서 걸러졌으므로 여긴 항상 "새로 오프라인"인 경우
+        rdpEnsureOfflinePolling();
+    }
+    else rdpHandleReconnect(remote);
+}
+// chat/term/browser 세션 폴링(sessionPollLoop, 5초 주기)은 실패한 서버를 조용히 스킵하도록
+// 설계돼 있어(깜빡임 방지) rdpStatus를 갱신하지 않는다. fetch가 실제 네트워크 에러로 실패했을 때만
+// 여기로 흘려보내 사이드바 online/offline 표시와 세션 정리가 뒤따르게 한다.
+function noteSessionFetchFailure(remoteId: string) {
+    if (!remoteId) return; // 로컬은 별도 처리(ensureLocalAuth) 대상 - 여기서 다루지 않음
+    const remote = rdpRemotes.find(r => r.remoteId === remoteId);
+    if (remote) rdpNoteFetchFailure(remote);
+}
 
 // ==================================================================================================================
 // 서버 컨텍스트: 로컬 + 각 원격을 동일 인터페이스로 다룬다(멀티서버 Chat/Terminal용)
@@ -3014,18 +3991,36 @@ let browserAuthState: ISessionAuthState = 'unknown';
 
 // remoteId: '' = 로컬, 그 외 = 등록된 원격의 remoteId. 세션이 어느 서버 것인지의 단일 출처.
 type IChatSess = { sessionId: string; title: string; updatedAt?: number; busy?: boolean; lastMsg?: string; workingDir?: string; remoteId: string };
-type ITermSess = { token: string; mode: string; key?: string; lastMsg: string; updatedAt: number; createdAt: number; alive: boolean; busy: boolean; permPending?: boolean; workingDir?: string; remoteId: string };
+type ITermSess = { token: string; mode: string; key?: string; lastMsg: string; updatedAt: number; createdAt: number; alive: boolean; busy: boolean; permPending?: boolean; workingDir?: string; remoteId: string; hidden?: boolean };
 let lastChatSessions: IChatSess[] | null = null;
 let lastTermSessions: ITermSess[] | null = null;
 
-// 통합 목록의 강조는 "지금 센터에 보이는 탭"의 활성 프레임 하나만 켜야 한다(네 유형이 같은 목록을
-// 공유하므로 각자 켜면 네 개가 동시에 파래진다). 판정을 여기 한 곳에만 두고 각 항목 spec은 이걸 쓴다.
-function activeSessionKey(): string | null {
-    if (isPanelShown('chat-panel')) return activeChatFrameKey;
-    if (isPanelShown('term-panel')) return activeTermFrameKey;
-    if (isPanelShown('browser-panel')) return activeBrowserFrameKey;
-    if (isPanelShown('editor-panel')) return activeEditorFrameKey;
-    return null;
+// Multiplexer에 떠 있는 세션을 사이드바에 표시한다. 메인 pane(트리에서 항상 children[0]로 내려간
+// 첫 leaf, 새 세션이 들어가는 칸)은 빨강, 나머지 서브 pane은 파랑. 여러 개가 동시에 켜진다.
+function tmuxPaneRole(key: string): 'main' | 'sub' | null {
+    if (!tmuxTreeReady) return null;
+    const mainId = tmuxFirstPaneId();
+    let role: 'main' | 'sub' | null = null;
+    (function walk(p: ITmuxPane) {
+        if (role === 'main') return;
+        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+        if (p.contentKey !== key) return;
+        role = p.id === mainId ? 'main' : 'sub';
+    })(tmuxRoot);
+    return role;
+}
+function sessActiveFromKey(key: string): { activeClass: string; isActive: boolean } {
+    const role = tmuxPaneRole(key);
+    return {
+        activeClass: role === 'main' ? 'ai-session-item-active-main' : 'ai-session-item-active-sub',
+        isActive: role != null,
+    };
+}
+function refreshRdpHighlights() {
+    for (const el of Array.from(rdpSidebarList.querySelectorAll<HTMLElement>('.ai-session-item'))) {
+        const key = el.dataset.key || (el.dataset.id ? `rdp:remote:${el.dataset.id}` : '');
+        if (key) applySessActiveClasses(el, sessActiveFromKey(key));
+    }
 }
 
 // 렌더는 여러 로더가 각자 끝날 때마다 부르므로(한 주기에 3~4번) rAF로 합류시켜 실제 DOM 작업은 1번만 한다.
@@ -3063,27 +4058,29 @@ function flushSessionSidebar() {
     }
     if (sessionSidebarSignedOut) { sessionSidebarSignedOut = false; agentSidebarList.innerHTML = ''; otherSidebarList.innerHTML = ''; }
 
-    const activeKey = activeSessionKey();
-
     // Agent(Chat/Terminal)와 Other(Browser/Editor)로 분리한다.
     type AgentEntry = { key: string; groupKey: string; sortKey: number; spec: SessionItemSpec };
     type OtherEntry = { key: string; sortKey: number; spec: SessionItemSpec };
     const agentEntries: AgentEntry[] = [];
-    if (lastChatSessions) for (const s of lastChatSessions) agentEntries.push({ key: sessKey('chat', s.remoteId, s.sessionId), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s, activeKey) });
-    // key가 있는 터미널 세션 = 서브 에이전트가 띄운 세션. 숨김이 켜져 있으면 목록에서 빼되,
-    // 그룹별로 몇 개가 숨었는지 세어 헤더 배지로 보여준다(아예 안 보이면 "왜 없지" 하고 다시 헷갈리게 된다).
+    if (lastChatSessions) for (const s of lastChatSessions) agentEntries.push({ key: sessKey('chat', s.remoteId, s.sessionId), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s) });
+    // s.hidden = 그 세션의 key가 카탈로그에 등록된 서브 에이전트이고 그 에이전트의 hidden 플래그가 켜져
+    // 있다는 뜻(서버 onSessions가 계산해서 내려줌). key 유무가 아니라 이 플래그로 판정해야 팀장/팀
+    // 자동생성 사원(카탈로그에 없어 항상 hidden=false)이 실수로 같이 숨겨지지 않는다.
+    // 숨김이 켜져 있으면 목록에서 빼되, 그룹별로 몇 개가 숨었는지 세어 헤더 배지로 보여준다
+    // (아예 안 보이면 "왜 없지" 하고 다시 헷갈리게 된다).
     const hiddenByGroup = new Map<string, number>();
     if (lastTermSessions) for (const s of lastTermSessions) {
         const groupKey = sessionGroupKey(s.remoteId, s.workingDir);
-        if (hideSubAgentSessions && s.key) {
+        if (hideSubAgentSessions && s.hidden) {
             hiddenByGroup.set(groupKey, (hiddenByGroup.get(groupKey) ?? 0) + 1);
             continue;
         }
-        agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+        agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s) });
     }
     const otherEntries: OtherEntry[] = [];
-    for (const s of browserSessions.values()) otherEntries.push({ key: `browser:${s.sessionId}`, sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s, activeKey) });
-    for (const s of editorSessions.values()) otherEntries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s, activeKey) });
+    for (const s of browserSessions.values()) otherEntries.push({ key: sessKey('browser', s.remoteId, s.sessionId), sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s) });
+    for (const s of editorSessions.values()) otherEntries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s) });
+    for (const s of webSessions.values()) otherEntries.push({ key: s.key, sortKey: s.openedAt, spec: webItemSpec(s) });
     otherEntries.sort((a, b) => b.sortKey - a.sortKey);
 
     // 사라진 세션 노드 정리(두 목록 공용 캐시).
@@ -3129,7 +4126,7 @@ function renderAgentGroups(entries: { key: string; groupKey: string; sortKey: nu
         for (const ro of roots) {
             const base = agentGroupKey(ro.path);
             const k = `remote:${remote.remoteId}:${base}`;
-            if (!regSet.has(k)) { regSet.add(k); registered.push(k); groupMeta.set(k, { pathText: agentGroupPathText(base), remoteLabel: remote.entryUrl }); }
+            if (!regSet.has(k)) { regSet.add(k); registered.push(k); groupMeta.set(k, { pathText: agentGroupPathText(base), remoteLabel: remote.entryUrl, remoteId: remote.remoteId }); }
         }
     }
     // 보이는 세션이 하나도 없어도(전부 숨겨진 서브 에이전트 세션뿐이어도) 그룹 자체는 남아야
@@ -3166,7 +4163,7 @@ function renderAgentGroups(entries: { key: string; groupKey: string; sortKey: nu
         // 등록 그룹은 groupMeta에 메타가 있고, 세션만 있는 adhoc 그룹은 키에서 직접 파싱한다
         // (원격 adhoc 그룹도 빨강+주소가 붙도록 remoteLabel을 채운다).
         let meta = groupMeta.get(k);
-        if (!meta) { const pg = parseGroupKey(k); meta = { pathText: pg.pathText, remoteLabel: pg.remoteId ? remoteEntryUrl(pg.remoteId) : undefined }; }
+        if (!meta) { const pg = parseGroupKey(k); meta = { pathText: pg.pathText, remoteLabel: pg.remoteId ? remoteEntryUrl(pg.remoteId) : undefined, remoteId: pg.remoteId }; }
         updateAgentGroupHeader(g, meta);
         const items = byGroup.get(k) ?? [];
         g.querySelector('.agent-group-count')!.textContent = items.length ? String(items.length) : '';
@@ -3327,8 +4324,11 @@ async function termOpenTappedPath(tappedPath: string, token: string) {
         CAlert.E(LF('ctrl.msg.cannotOpenUnknownWd', 'Cannot open path — working directory is unknown: {0}', tappedPath));
         return;
     }
+    // 세션이 원격(rdpRemotes) 것이면 그 서버의 File/Root를 조회해야 한다 — 로컬 File/Root로는
+    // 원격 경로가 절대 매칭되지 않는다(refreshRemoteRoots와 동일 패턴).
+    const ctx = serverCtxOf(sess?.remoteId || '') ?? localServerCtx();
     try {
-        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json") as { roots: Array<{ path: string; url: string; name: string }> };
+        const data = await CFecth.Exe(ctx.apiUrl + "File/Root", ctx.authToken ? { token: ctx.authToken } : {}, "json") as { roots: Array<{ path: string; url: string; name: string }> };
         const normFull = termNormAbsPath(fullPath);
         const normFullLower = normFull.toLowerCase();
         const root = (data.roots || []).find(r => {
@@ -3340,9 +4340,11 @@ async function termOpenTappedPath(tappedPath: string, token: string) {
             return;
         }
         const relPath = normFull.slice(termNormAbsPath(root.path).length);
-        const downBase = new URL(root.url, CPath.WebRootUrl()).href.replace(/\/+$/, '');
+        const downBase = new URL(root.url, ctx.apiUrl).href.replace(/\/+$/, '');
         const url = downBase + relPath.split('/').map(encodeURIComponent).join('/');
-        promptSourceAction(fullPath, '', url);
+        // baseUrl: 로컬은 ''(file-opened와 동일 규약), 원격은 그 서버 주소 — editorFrameSrc/editorItemSpec이
+        // 이 값으로 Editor.html을 원격 오리진에서 열고 사이드바에 원격 표시(빨간 강조)를 붙인다.
+        promptSourceAction(fullPath, ctx.remoteId ? ctx.apiUrl : '', url);
     } catch (e) {
         console.error('termOpenTappedPath error:', e);
         CAlert.E(L('ctrl.msg.openPathError', 'An error occurred while opening the path.'));
@@ -3359,10 +4361,37 @@ function executeOpenedSource(fullPath: string, url: string) {
     window.open(url, "_blank");
 }
 
+// File 탭에서 편집한 시트(csv/xlsx/xls)를 저장할 때 쓰는 업로드 헬퍼.
+// File.ts의 saveEditedFile과 동일한 File/Upload API를 baseUrl 기준(로컬/원격)으로 호출한다.
+async function ctrlSaveOpenedSheet(filePath: string, base64: string, baseUrl: string) {
+    const fileName = filePath.split('/').pop() ?? filePath;
+    const dir = filePath.slice(0, filePath.length - fileName.length);
+    const webRootUrl = baseUrl || CPath.WebRootUrl();
+    const token = baseUrl ? getAuthToken(baseUrl) : '';
+    const up: any = { path: dir, name: [fileName], data: [base64] };
+    if (token) up.token = token;
+    try {
+        await CFecth.Exe(webRootUrl + 'File/Upload', up, 'json');
+        CAlert.Info('저장 완료');
+    } catch (e: any) {
+        CAlert.E('저장 실패: ' + e.message);
+    }
+}
+
 // File 탭(file-opened)과 Terminal 탭(terminal-path-tapped)이 공유하는 단일 진입점.
-// html/htm만 Edit·Execute 확인창을 띄우고(새 창 실행 여부 선택), 그 외 소스는 기존처럼 바로 에디터로 연다.
+// html/htm만 Edit·Execute 확인창을 띄우고(새 창 실행 여부 선택), sqlite/db는 ORM 뷰어,
+// csv/xlsx/xls는 시트 뷰어로 열며, 그 외 소스는 기존처럼 바로 에디터로 연다.
 function promptSourceAction(fullPath: string, baseUrl: string, url: string) {
     const ext = fileExtOf(fullPath);
+    if (ext === 'sqlite' || ext === 'db') {
+        const token = baseUrl ? getAuthToken(baseUrl) : '';
+        new CORMViewer(undefined, 'sqlite', fullPath, baseUrl, token).Open(CModal.ePos.Center);
+        return;
+    }
+    if (ext === 'csv' || ext === 'xlsx' || ext === 'xls') {
+        new CSheetViewer([url], async (filePath, base64) => ctrlSaveOpenedSheet(filePath, base64, baseUrl)).Open();
+        return;
+    }
     const canExecute = ext === 'html' || ext === 'htm';
     if (!canExecute) { editorOpenFile(fullPath, baseUrl, url); return; }
 
@@ -3375,24 +4404,24 @@ function promptSourceAction(fullPath: string, baseUrl: string, url: string) {
     confirm.Open();
 }
 
-function editorItemSpec(s: IEditorSession, activeKey: string | null): SessionItemSpec {
+function editorItemSpec(s: IEditorSession): SessionItemSpec {
     const name = s.path.split('/').pop() || s.path;
     const dir = s.path.slice(0, s.path.length - name.length);
     const dot = s.dirty
         ? `<span class="text-warning small" title="${L('ctrl.st.modified', 'Modified (unsaved)')}">●</span>`
         : `<span class="text-success small" title="${L('ctrl.st.saved', 'Saved')}">●</span>`;
-    // 원격 서버에서 연 파일이면(File 탭에서 currentWebRootUrl과 함께 열렸음) 로컬(파랑)과 구분되도록
-    // 빨강 강조를 쓰고, 경로 줄 위에 원격 주소를 한 줄 더 보여준다(Agent 그룹의 agent-group-remote와 동일 규칙).
+    // 원격 서버에서 연 파일이면 경로 줄 위에 원격 주소를 한 줄 더 보여준다(Agent 그룹의 agent-group-remote와 동일 규칙).
+    // 사이드바 강조색(빨강/파랑)은 로컬/원격이 아니라 Multiplexer 메인/서브 pane 여부로 결정한다.
     const isRemote = !!s.baseUrl;
+    const remoteId = isRemote ? (rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === s.baseUrl)?.remoteId ?? s.baseUrl) : '';
     return {
-        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
-        isActive: activeKey === s.key,
+        ...sessActiveFromKey(s.key),
         dataAttr: { name: 'key', value: s.key },
         leftHtml: `${dot}`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.path)}">
             <span class="text-truncate small"><i class="bi bi-file-earmark-code"></i> ${aiEscapeHtml(name)}</span>
-            ${isRemote ? `<span class="text-secondary" style="font-size:0.68rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${aiEscapeHtml(s.baseUrl)}</span>` : ''}
+            ${isRemote ? `<span class="${rdpTextColor(remoteId)}" style="font-size:0.68rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${aiEscapeHtml(s.baseUrl)}</span>` : ''}
             ${dir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(dir)}</span>` : ''}
         </span>`,
         deleteAct: 'delete',
@@ -3405,7 +4434,7 @@ function editorItemSpec(s: IEditorSession, activeKey: string | null): SessionIte
         onShare: () => showShareLinkModal(L('ctrl.share.editorTitle', 'Editor Share Link'), LF('ctrl.share.editor', 'Anyone with this link can view: <strong>{0}</strong>', aiEscapeHtml(s.path)), editorFrameSrc(s)),
         onDelete: () => {
             const f = editorIframePool.get(s.key);
-            if (f) { f.remove(); editorIframePool.delete(s.key); }
+            if (f) { f.remove(); editorIframePool.delete(s.key); tmuxAllFrames.delete(s.key); tmuxClearIfShowing(s.key); }
             if (activeEditorFrameKey === s.key) { activeEditorFrameKey = null; updateEditorFramePlaceholder(); }
             editorSessions.delete(s.key);
             renderSessionSidebar();
@@ -3422,6 +4451,126 @@ function genUuid(): string {
         return v.toString(16);
     });
 }
+
+// ---- Web 탭 (More > Web: 서버/세션 개념 없이 임의 URL을 그대로 iframe에 띄워 빠르게 확인만 하는 용도.
+// Editor 탭과 동일 패턴 — 프레임 풀 + 클라이언트 전용 세션 목록만 있고 서버 폴링은 없다.) ----
+const webIframePool = new Map<string, HTMLIFrameElement>();
+let activeWebFrameKey: string | null = null;
+
+const webFrameCtx: FramePoolCtx = {
+    pool: webIframePool,
+    container: tmuxIdlePool,
+    getActiveKey: () => activeWebFrameKey,
+    setActiveKey: (key) => { activeWebFrameKey = key; },
+    updatePlaceholder: () => {},
+};
+
+function showWebFrame(key: string, src: string): HTMLIFrameElement {
+    return showPooledFrame(webFrameCtx, key, src);
+}
+
+function webActivatePane() {
+    activatePaneUnlessMultiplexer('web-panel-tab', 'Web');
+}
+
+interface IWebSession { key: string; url: string; openedAt: number; }
+const webSessions = new Map<string, IWebSession>();
+
+// 유튜브 watch/공유 링크는 X-Frame-Options로 iframe 삽입이 막혀 있어 임베드 전용 URL(/embed/ID)로
+// 바꿔야 열린다. 사용자가 주소창에서 그대로 복사해오는 링크가 대부분 이 형태라 여기서 자동 변환한다.
+function webNormalizeUrl(url: string): string {
+    try {
+        const u = new URL(url);
+        const host = u.hostname.replace(/^www\./, '');
+        let id = '';
+        let start = '';
+        if (host === 'youtube.com' && u.pathname === '/watch') {
+            id = u.searchParams.get('v') || '';
+            start = u.searchParams.get('t') || '';
+        } else if (host === 'youtu.be') {
+            id = u.pathname.slice(1);
+            start = u.searchParams.get('t') || '';
+        }
+        if (!id) return url;
+        const startSec = start ? start.replace(/s$/, '') : '';
+        return `https://www.youtube.com/embed/${id}${startSec ? `?start=${encodeURIComponent(startSec)}` : ''}`;
+    } catch (_) {
+        return url;
+    }
+}
+
+function webOpenUrl(rawUrl: string) {
+    const url = webNormalizeUrl(rawUrl);
+    const key = `web:${genUuid()}`;
+    webSessions.set(key, { key, url, openedAt: Date.now() });
+    webActivatePane();
+    showWebFrame(key, url);
+    renderSessionSidebar();
+}
+
+function webItemSpec(s: IWebSession): SessionItemSpec {
+    return {
+        ...sessActiveFromKey(s.key),
+        dataAttr: { name: 'key', value: s.key },
+        leftHtml: `<i class="bi bi-globe"></i>`,
+        bodyHtml: `
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.url)}">
+            <span class="text-truncate small">${aiEscapeHtml(s.url)}</span>
+        </span>`,
+        deleteAct: 'delete',
+        deleteLabel: L('ctrl.deleteIcon', '🗑️ Delete'),
+        onClick: () => {
+            webActivatePane();
+            showWebFrame(s.key, s.url);
+            renderSessionSidebar();
+        },
+        onShare: () => showShareLinkModal(L('ctrl.share.webTitle', 'Web Link'), LF('ctrl.share.web', 'Anyone with this link can view: <strong>{0}</strong>', aiEscapeHtml(s.url)), s.url),
+        onDelete: () => {
+            const f = webIframePool.get(s.key);
+            if (f) { f.remove(); webIframePool.delete(s.key); tmuxAllFrames.delete(s.key); tmuxClearIfShowing(s.key); }
+            if (activeWebFrameKey === s.key) activeWebFrameKey = null;
+            webSessions.delete(s.key);
+            renderSessionSidebar();
+        },
+        popup: { url: () => s.url, title: s.url, winName: `web_${s.key}` },
+    };
+}
+
+// More > Web: URL 하나만 입력받아 바로 iframe으로 연다(Browser처럼 서버에 원격 브라우저 프로세스를
+// 띄우는 게 아니라, 유튜브 등을 그냥 훑어보는 용도의 가벼운 미리보기).
+CDOM.ID('web-new-btn').addEventListener('click', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">${L('ctrl.hdr.newWeb', 'Open Web Page')}</p>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.url', 'URL')}</label>
+            <input id="web-url" type="text" class="form-control form-control-sm" placeholder="https://..." autocomplete="off">
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="web-open" class="btn btn-primary">${L('ctrl.open', 'Open')}</button>
+            <button id="web-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
+        </div>`;
+
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+
+    setTimeout(() => {
+        const urlInput = container.querySelector<HTMLInputElement>('#web-url')!;
+        const doOpen = () => {
+            let url = urlInput.value.trim();
+            if (!url) return;
+            if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url)) url = 'https://' + url;
+            modal.Close();
+            webOpenUrl(url);
+        };
+        container.querySelector<HTMLButtonElement>('#web-open')!.addEventListener('click', doOpen);
+        container.querySelector<HTMLButtonElement>('#web-cancel')!.addEventListener('click', () => modal.Close());
+        urlInput.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') doOpen(); });
+        setTimeout(() => urlInput.focus(), 50);
+    }, 0);
+});
 
 // New Chat 모달(MCP/Copy MD/Write 옵션 + 경로 입력). 사이드바에서 선택된 경로가 initialWorkingDir로
 // 넘어와 기본값으로 채워지지만, 모달 안에서 직접 수정할 수 있다.
@@ -3500,12 +4649,7 @@ function chatLoadSession(s: { remoteId: string; sessionId: string }) {
     renderSessionSidebar();
 }
 
-function chatShowShareLink(ctx: IServerCtx, sid: string, title: string) {
-    const shareUrl = `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`;
-    showShareLinkModal('Chat Share Link', `Anyone with this link can access the chat: <strong>${aiEscapeHtml(title)}</strong>`, shareUrl);
-}
-
-function chatItemSpec(s: IChatSess, activeKey: string | null): SessionItemSpec {
+function chatItemSpec(s: IChatSess): SessionItemSpec {
     const ctx = serverCtxOf(s.remoteId);
     const key = sessKey('chat', s.remoteId, s.sessionId);
     const isRemote = !!s.remoteId;
@@ -3517,9 +4661,7 @@ function chatItemSpec(s: IChatSess, activeKey: string | null): SessionItemSpec {
               : st === 'busy' ? `<span class="ai-busy-dot text-warning small" title="${L('ctrl.st.busy', 'Busy')}">●</span>`
               :                 `<span class="text-success small" title="${L('ctrl.st.idle', 'Idle')}">●</span>`;
     return {
-        // 원격 세션은 로컬(파랑)과 구분되도록 빨강(-remote) 강조를 쓴다.
-        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
-        isActive: activeKey === key,
+        ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -3528,19 +4670,18 @@ function chatItemSpec(s: IChatSess, activeKey: string | null): SessionItemSpec {
         </span>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
-            ${isRemote && addr ? `<span class="text-truncate text-danger" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
+            ${isRemote && addr ? `<span class="text-truncate ${rdpTextColor(s.remoteId)}" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
             <span class="text-truncate text-secondary" style="font-size:0.65rem;font-family:monospace;">${aiEscapeHtml(s.sessionId)}</span>
             <span class="text-truncate small">${aiEscapeHtml(s.lastMsg || s.title)}</span>
         </span>`,
         deleteAct: 'delete',
         deleteLabel: '🗑️ Delete',
         onClick: () => chatLoadSession(s),
-        onShare: () => { if (ctx) chatShowShareLink(ctx, s.sessionId, s.title); },
         onDelete: async () => {
             // 원격이면 그 서버로 authToken 실어 삭제, 로컬이면 same-origin 쿠키(authedFetch)로.
             if (ctx) await fetch(ctxApiUrl(ctx, `AIChat/session?id=${s.sessionId}`), { method: 'DELETE' });
             const f = chatIframePool.get(key);
-            if (f) { f.remove(); chatIframePool.delete(key); }
+            if (f) { f.remove(); chatIframePool.delete(key); tmuxAllFrames.delete(key); tmuxClearIfShowing(key); }
             if (activeChatFrameKey === key) { activeChatFrameKey = null; updateChatFramePlaceholder(); }
             chatRenderList();
         },
@@ -3576,7 +4717,7 @@ async function chatRenderList() {
                 const r = await ctxFetch(ctx, 'AIChat/sessions?limit=30');
                 if (r.status === 401) unauthed = true;
                 else if (r.ok) { const j = await r.json(); sessions = j.ok ? j.sessions as IChatSess[] : null; }
-            } catch { /* sessions=null: 실패 서버 스킵 */ }
+            } catch { noteSessionFetchFailure(remoteId); /* sessions=null: 실패 서버 스킵 */ }
 
             // 로컬 401이면 전체 사인인 게이트. 원격 401은 그 서버만 건너뛴다.
             if (unauthed && !remoteId) {
@@ -3668,7 +4809,7 @@ async function termKillSession(s: { remoteId: string; token: string }) {
         if (!j.ok) { CAlert.E(LF('ctrl.msg.deleteFailed', 'Delete failed: {0}', j.msg || 'unknown error')); return; }
         const key = sessKey('term', s.remoteId, s.token);
         const f = termIframePool.get(key);
-        if (f) { f.remove(); termIframePool.delete(key); }
+        if (f) { f.remove(); termIframePool.delete(key); tmuxAllFrames.delete(key); tmuxClearIfShowing(key); }
         if (activeTermFrameKey === key) { activeTermFrameKey = null; updateTermFramePlaceholder(); }
         termRenderList();
     } catch (e) { console.error('termKillSession error:', e); }
@@ -3683,12 +4824,11 @@ function termShowShareLink(ctx: IServerCtx, token: string) {
     );
 }
 
-function termItemSpec(s: ITermSess, activeKey: string | null): SessionItemSpec {
+function termItemSpec(s: ITermSess): SessionItemSpec {
     const ctx = serverCtxOf(s.remoteId);
     const key = sessKey('term', s.remoteId, s.token);
     const isRemote = !!s.remoteId;
     const addr = remoteEntryUrl(s.remoteId);
-    const isActive = activeKey === key;
     const isLoaded = termIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     const preview = aiEscapeHtml(s.lastMsg || '(empty)');
@@ -3704,9 +4844,7 @@ function termItemSpec(s: ITermSess, activeKey: string | null): SessionItemSpec {
               : st === 'busy' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
               :                 `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
     return {
-        // 원격 세션은 로컬(파랑)과 구분되도록 빨강(-remote) 강조를 쓴다.
-        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
-        isActive,
+        ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -3715,7 +4853,7 @@ function termItemSpec(s: ITermSess, activeKey: string | null): SessionItemSpec {
         </span>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
-            ${isRemote && addr ? `<span class="text-truncate text-danger" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
+            ${isRemote && addr ? `<span class="text-truncate ${rdpTextColor(s.remoteId)}" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
             <span class="text-truncate text-secondary" style="font-size:0.65rem;font-family:monospace;">${aiEscapeHtml(s.token)}</span>
             ${s.key ? `<span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.key)}</span>` : ''}
             <span class="text-truncate small">${preview}</span>
@@ -3755,7 +4893,7 @@ async function termRenderList() {
                 const r = await ctxFetch(ctx, 'cmd/sessions');
                 if (r.status === 401) unauthed = true;
                 else if (r.ok) { const j = await r.json(); sessions = j.ok ? j.sessions as ITermSess[] : null; }
-            } catch { /* sessions=null 유지: 실패한 서버는 스킵(기존 프레임 보존) */ }
+            } catch { noteSessionFetchFailure(remoteId); /* sessions=null 유지: 실패한 서버는 스킵(기존 프레임 보존) */ }
 
             if (unauthed && !remoteId) {
                 removeAuthToken(CPath.WebRootUrl());
@@ -3783,7 +4921,23 @@ async function termRenderList() {
                 const f = termIframePool.get(newKey)!;
                 termIframePool.delete(newKey);
                 termIframePool.set(key, f);
+                // tmuxAllFrames(모든 세션 iframe 통합 인덱스)도 같이 옮겨야 한다 - 안 그러면 이 iframe이
+                // 여전히 옛 term-new: 키로만 등록된 채 남아서, 다음 tmuxSyncPanePositions가 "이 키는 이제
+                // 어느 pane에도 배정 안 됐다"고 착각해(pane.contentKey는 이미 새 키로 바뀌었으므로) 방금
+                // 정상적으로 띄운 iframe을 곧바로 다시 숨겨버린다 - 새로 만든 터미널이 잠깐 보이다 사라지는
+                // 버그의 원인이었다.
+                tmuxAllFrames.delete(newKey);
+                tmuxAllFrames.set(key, f);
                 if (activeTermFrameKey === newKey) activeTermFrameKey = key;
+                // 이 세션이 지금 Multiplexer 첫 pane에 떠 있었다면(term-new:로 막 열어 승격 전이었던 경우)
+                // pane.contentKey도 새 토큰 키로 맞춰준다 - 안 그러면 이후 tmuxClearIfShowing/라벨이
+                // 옛 임시 키를 찾다가 어긋난다.
+                let promoted = false;
+                (function walk(p: ITmuxPane) {
+                    if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+                    if (p.contentKey === newKey) { p.contentKey = key; promoted = true; }
+                })(tmuxRoot);
+                if (promoted) { tmuxSyncPanePositions(); tmuxSaveLayout(); }
             }
             for (const s of withRemote) {
                 const key = sessKey('term', remoteId, s.token);
@@ -3813,7 +4967,7 @@ async function termRenderList() {
                 if (keyRemoteId(key) !== remoteId) continue;
                 if (!liveKeys.has(key)) {
                     const f = termIframePool.get(key);
-                    if (f) { f.remove(); termIframePool.delete(key); }
+                    if (f) { f.remove(); termIframePool.delete(key); tmuxAllFrames.delete(key); tmuxClearIfShowing(key); }
                     if (activeTermFrameKey === key) { activeTermFrameKey = null; updateTermFramePlaceholder(); }
                 }
             }
@@ -4021,7 +5175,11 @@ function updateBrowserFramePlaceholder() {
     browserFramePlaceholder.classList.toggle('browser-frame-placeholder-hidden', !!activeBrowserFrameKey);
 }
 
-function isBrowserPaneActive(): boolean { return CDOM.ID('browser-panel').classList.contains('active'); }
+// Browser도 RDP와 동일하게 전용 탭이 없으므로 어느 pane이든 이 세션을 보여주고 있는지로 판단한다
+// (isRdpPaneActive 참고 - 첫 pane만 보면 서브 pane에 놓았을 때 "숨김" 신호가 잘못 간다).
+function isBrowserPaneActive(): boolean {
+    return CDOM.ID('tmux-panel').classList.contains('active') && !!activeBrowserFrameKey && tmuxFindPaneIdByKey(activeBrowserFrameKey) !== null;
+}
 
 function updateBrowserFrameVisibility() {
     if (!activeBrowserFrameKey) return;
@@ -4050,6 +5208,8 @@ function destroyBrowserFrame(key: string) {
     if (!f) return;
     f.remove();
     browserIframePool.delete(key);
+    tmuxAllFrames.delete(key);
+    tmuxClearIfShowing(key);
     if (activeBrowserFrameKey === key) activeBrowserFrameKey = null;
     updateBrowserFramePlaceholder();
 }
@@ -4060,6 +5220,7 @@ function browserActivatePane() {
 
 interface IBrowserSessionData {
     sessionId: string;
+    remoteId: string;
     url: string;
     browserName: string;
     expiresAt: number;
@@ -4067,11 +5228,14 @@ interface IBrowserSessionData {
     updatedAt: number;
 }
 // 순수 데이터 캐시. DOM(사이드바 항목)은 매번 renderSessionSidebar()가 이 데이터로부터 새로 만든다.
+// 키는 Chat/Terminal과 동일하게 sessKey('browser', remoteId, sessionId) — 로컬은 'browser:xxx', 원격은 'browser:remoteId:xxx'.
 const browserSessions = new Map<string, IBrowserSessionData>();
 
-function browserLoadSession(sessionId: string) {
+function browserLoadSession(remoteId: string, sessionId: string) {
+    const ctx = serverCtxOf(remoteId);
+    if (!ctx) return;
     browserActivatePane();
-    showBrowserFrame(`browser:${sessionId}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`);
+    showBrowserFrame(sessKey('browser', remoteId, sessionId), `${ctx.artgineUrl}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`);
     renderSessionSidebar();
 }
 
@@ -4083,14 +5247,15 @@ function browserFmtTtl(expiresAt: number): string {
     return m > 0 ? `−${m}m${s}s` : `−${s}s`;
 }
 
-function browserItemSpec(s: IBrowserSessionData, activeKey: string | null): SessionItemSpec {
-    const key = `browser:${s.sessionId}`;
-    const isActive = activeKey === key;
+function browserItemSpec(s: IBrowserSessionData): SessionItemSpec {
+    const ctx = serverCtxOf(s.remoteId);
+    const key = sessKey('browser', s.remoteId, s.sessionId);
+    const isRemote = !!s.remoteId;
+    const addr = remoteEntryUrl(s.remoteId);
     const isLoaded = browserIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     return {
-        activeClass: 'ai-session-item-active',
-        isActive,
+        ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -4099,6 +5264,7 @@ function browserItemSpec(s: IBrowserSessionData, activeKey: string | null): Sess
         </span>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            ${isRemote && addr ? `<span class="text-truncate ${rdpTextColor(s.remoteId)}" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
             <span class="text-truncate small" title="${aiEscapeHtml(s.url)}">${aiEscapeHtml(s.url)}</span>
             <span class="d-flex gap-2 text-secondary" style="font-size:0.7rem;">
                 <span>${aiEscapeHtml(s.browserName || 'auto')}</span>
@@ -4107,27 +5273,31 @@ function browserItemSpec(s: IBrowserSessionData, activeKey: string | null): Sess
         </span>`,
         deleteAct: 'delete',
         deleteLabel: '🗑️ Delete',
-        onClick: () => browserLoadSession(s.sessionId),
-        onShare: () => browserShowShareLink(s.sessionId, s.url),
-        onDelete: () => browserRemoveSession(s.sessionId),
-        popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.sessionId}` },
+        onClick: () => browserLoadSession(s.remoteId, s.sessionId),
+        onShare: () => browserShowShareLink(ctx, s.sessionId, s.url),
+        onDelete: () => browserRemoveSession(s.remoteId, s.sessionId),
+        popup: { url: () => `${ctx?.artgineUrl ?? CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.remoteId}_${s.sessionId}` },
     };
 }
 
-function browserAddSession(sessionId: string, url: string, browserName: string = '', expiresAt: number = 0, navigate = true, createdAt: number = Date.now()) {
-    if (browserSessions.has(sessionId)) return;
-    browserSessions.set(sessionId, { sessionId, url, browserName, expiresAt, createdAt, updatedAt: createdAt });
+function browserAddSession(sessionId: string, url: string, browserName: string = '', expiresAt: number = 0, navigate = true, createdAt: number = Date.now(), remoteId: string = '') {
+    const key = sessKey('browser', remoteId, sessionId);
+    if (browserSessions.has(key)) return;
+    browserSessions.set(key, { sessionId, remoteId, url, browserName, expiresAt, createdAt, updatedAt: createdAt });
     renderSessionSidebar();
-    if (navigate) browserLoadSession(sessionId);
+    if (navigate) browserLoadSession(remoteId, sessionId);
 }
 
-async function browserRemoveSession(sessionId: string) {
-    if (!browserSessions.has(sessionId)) return;
-    browserSessions.delete(sessionId);
-    destroyBrowserFrame(`browser:${sessionId}`);
+async function browserRemoveSession(remoteId: string, sessionId: string) {
+    const key = sessKey('browser', remoteId, sessionId);
+    if (!browserSessions.has(key)) return;
+    browserSessions.delete(key);
+    destroyBrowserFrame(key);
     renderSessionSidebar();
+    const ctx = serverCtxOf(remoteId);
+    if (!ctx) return;
     try {
-        await authedFetch(`${CPath.WebRootUrl()}PlayWright/remove`, {
+        await fetch(ctxApiUrl(ctx, 'PlayWright/remove'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId })
@@ -4148,37 +5318,52 @@ async function browserRefreshList() {
     if (browserListInFlight) return;
     browserListInFlight = true;
     try {
-        const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/list`);
-        if (r.status === 401) {
-            removeAuthToken(CPath.WebRootUrl());
-            markLocalAuthLost();
-            browserAuthState = 'signin';
-            browserSessions.clear();
+        // 로컬 + 인증된 모든 원격을 병렬 조회하되, 서버별 응답이 오는 즉시 그 서버 몫만 반영한다(Chat/Terminal과 동일 패턴).
+        const ctxs = sessionServerCtxs();
+        await Promise.all(ctxs.map(async (ctx) => {
+            const remoteId = ctx.remoteId;
+            let sessions: { sessionId: string; currentUrl: string; browserName: string; expiresAt: number; createdAt: number; updatedAt: number }[] | null = null;
+            let unauthed = false;
+            try {
+                const r = await ctxFetch(ctx, 'PlayWright/list');
+                if (r.status === 401) unauthed = true;
+                else if (r.ok) { const j = await r.json(); sessions = j.ok ? j.sessions : null; }
+            } catch { noteSessionFetchFailure(remoteId); /* sessions=null: 실패한 서버는 스킵(기존 프레임 보존) */ }
+
+            if (unauthed && !remoteId) {
+                removeAuthToken(CPath.WebRootUrl());
+                markLocalAuthLost();
+                browserAuthState = 'signin';
+                browserSessions.clear();
+                renderSessionSidebar();
+                return;
+            }
+            if (!sessions) return; // 실패/미인증 원격: 응답 못 받은 서버 항목은 그대로 유지
+
+            browserAuthState = 'ok';
+            const serverIds = new Set<string>(sessions.map(s => s.sessionId));
+            for (const [key, s] of Array.from(browserSessions.entries())) {
+                if (s.remoteId !== remoteId) continue; // 이 서버(remoteId) 몫만 정리
+                if (!serverIds.has(s.sessionId)) { browserSessions.delete(key); destroyBrowserFrame(key); }
+            }
+            for (const s of sessions) {
+                const key = sessKey('browser', remoteId, s.sessionId);
+                const existing = browserSessions.get(key);
+                if (existing) { existing.expiresAt = s.expiresAt; existing.updatedAt = s.updatedAt; }
+                else browserSessions.set(key, { sessionId: s.sessionId, remoteId, url: s.currentUrl, browserName: s.browserName, expiresAt: s.expiresAt, createdAt: s.createdAt, updatedAt: s.updatedAt });
+            }
             renderSessionSidebar();
-            return;
-        }
-        const j = await r.json();
-        if (!j.ok) return;
-        browserAuthState = 'ok';
-        const serverIds = new Set<string>((j.sessions as { sessionId: string }[]).map(s => s.sessionId));
-        for (const sid of Array.from(browserSessions.keys())) {
-            if (!serverIds.has(sid)) { browserSessions.delete(sid); destroyBrowserFrame(`browser:${sid}`); }
-        }
-        for (const s of j.sessions as { sessionId: string; currentUrl: string; browserName: string; expiresAt: number; createdAt: number; updatedAt: number }[]) {
-            const existing = browserSessions.get(s.sessionId);
-            if (existing) { existing.expiresAt = s.expiresAt; existing.updatedAt = s.updatedAt; }
-            else browserSessions.set(s.sessionId, { sessionId: s.sessionId, url: s.currentUrl, browserName: s.browserName, expiresAt: s.expiresAt, createdAt: s.createdAt, updatedAt: s.updatedAt });
-        }
-        renderSessionSidebar();
+        }));
     } catch (_) {}
     finally { browserListInFlight = false; }
 }
 
-function browserShowShareLink(sessionId: string, url: string) {
+function browserShowShareLink(ctx: IServerCtx | null, sessionId: string, url: string) {
+    const base = ctx?.artgineUrl ?? CPath.WebRootArtgineUrl();
     showShareLinkModal(
         L('ctrl.share.browserTitle', 'Browser Share Link'),
         LF('ctrl.share.browser', 'Anyone with this link can view the session in read-only mode: <strong>{0}</strong>', aiEscapeHtml(url)),
-        `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`
+        `${base}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`
     );
 }
 
@@ -4275,8 +5460,7 @@ CDOM.ID('browser-panel-tab').addEventListener('hidden.bs.tab', () => updateBrows
 // 통째로 다시 그리므로, 매초 전체를 재렌더링하는 대신 현재 DOM에 남은 ttl 라벨만 찾아 갱신한다.
 setInterval(() => {
     otherSidebarList.querySelectorAll<HTMLElement>('[data-key^="browser:"]').forEach(el => {
-        const sid = el.dataset.key!.slice('browser:'.length);
-        const s = browserSessions.get(sid);
+        const s = browserSessions.get(el.dataset.key!);
         const ttlEl = el.querySelector<HTMLSpanElement>('.browser-ttl-label');
         if (s && ttlEl) ttlEl.textContent = s.expiresAt ? browserFmtTtl(s.expiresAt) : '';
     });
@@ -4301,20 +5485,23 @@ async function sessionPollOnce() {
 // 다시 보이는 순간 그동안 쌓인 최신 데이터로 한 번 그려준다.
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderSessionSidebar(); });
 
-// Chat/Terminal/Browser/Editor 통합 목록의 강조 표시(isPanelShown 기반)는 그중 어떤 탭이 지금
-// 센터에 보이는지에 따라 달라지므로, 넷 중 하나로 전환될 때마다(꺼지는 탭/켜지는 탭 둘 다) 다시 그려
-// 최신 상태를 반영한다. RDP 쪽 강조는 selectedRdpKey만으로 결정되어 탭 전환과 무관하다.
-['chat-panel-tab', 'term-tab', 'browser-panel-tab', 'editor-panel-tab'].forEach((tabId) => {
-    const tabEl = CDOM.ID(tabId);
-    tabEl.addEventListener('shown.bs.tab', () => renderSessionSidebar());
-    tabEl.addEventListener('hidden.bs.tab', () => renderSessionSidebar());
-});
+// Chat/Terminal/Browser/Editor/RDP 사이드바 강조는 Multiplexer 레이아웃(tmuxPaneRole) 기준.
+// pane 내용이 바뀔 때마다 tmuxSaveLayout() → renderSessionSidebar/refreshRdpHighlights 가 맞춘다.
 
-// ---- Tmux 패널: 센터 영역을 tmux처럼 좌우/상하로 분할해 여러 iframe을 동시에 띄운다.
-// 트리는 leaf(콘텐츠 1칸)와 split(row/col 두 자식)로 구성되며, 설정 모드에서 분할/병합/셀렉트를
-// 수행하고 작업 모드에서는 오버레이 없이(iframe이 직접 입력을 받도록) 결과만 보여준다.
-// leaf DOM 요소는 분할/병합 시 통째로 재사용하므로(appendChild로 이동) iframe이 다시 로드되지 않는다 —
-// 단, 분할되지 않은 채로 남아있는 다른 leaf들은 재생성되지 않아 그대로 유지된다.
+// ---- Multiplexer 패널: 센터 영역을 tmux처럼 좌우/상하로 분할해 여러 iframe을 동시에 띄운다.
+// 트리는 leaf(콘텐츠 1칸)와 split(row/col 두 자식)로 구성된다. 분할/병합/콘텐츠 선택은 더 이상
+// 패널 안 오버레이가 아니라 상단 Multiplexer 드롭다운(tmuxRenderMenu)에서 하므로, 패널 자체는
+// 항상 "work 모드"처럼 오버레이 없이 iframe이 직접 입력을 받는다.
+// 세션 iframe은 leaf(pane)의 DOM 자식이 아니다 - pane을 옮길 때마다 appendChild로 부모를 바꾸면
+// Chrome이 iframe을 무조건 재로드한다(display:block/none 여부와 무관 - 실측 확인됨). 그래서 모든
+// 세션 iframe은 #tmux-tree-root에 한 번만 붙이고 다시는 부모를 바꾸지 않는다. 대신 어느 pane에
+// 보여줄지는 그 pane의 leaf-content 위치로 iframe 좌표(left/top/width/height)만 옮겨서 표현한다
+// (tmuxSyncPanePositions). #tmux-tree-root는 overflow:hidden이라 iframe이 패널 밖으로 나갈 수 없다.
+// 새 iframe을 만드는 곳은 두 군데다(tmuxEnsurePooledFrame, showPooledFrame) - 어느 쪽이든 반드시
+// #tmux-tree-root에 붙이고 tmuxAllFrames에 등록해야 한다. 둘 다 pool(termIframePool 등, 타입별로
+// 나뉘어 있지만 tmuxPoolForKey/FramePoolCtx가 같은 Map을 공유)에 먼저 들어간 키는 "이미 붙어있다"고
+// 보고 건너뛰므로, 한쪽에서 attach를 빼먹으면 그 iframe은 pool에는 있지만 DOM에는 없는 채로 남아
+// 화면에 영영 나타나지 않는다.
 interface ITmuxPane {
     id: string;
     split?: 'row' | 'col';
@@ -4322,11 +5509,12 @@ interface ITmuxPane {
     contentKey?: string | null;
 }
 const TMUX_LS_KEY = 'ctrl-tmux-layout-v1';
-const TMUX_MODE_LS_KEY = 'ctrl-tmux-mode-v1';
 const tmuxPaneEls = new Map<string, HTMLElement>();
 const tmuxTreeRoot = CDOM.ID('tmux-tree-root') as HTMLDivElement;
-const tmuxModeWorkBtn = CDOM.ID('tmux-mode-work-btn') as HTMLButtonElement;
-const tmuxModeConfigBtn = CDOM.ID('tmux-mode-config-btn') as HTMLButtonElement;
+const tmuxTreeStruct = CDOM.ID('tmux-tree-struct') as HTMLDivElement;
+// key -> 지금까지 생성된 모든 세션 iframe(어느 pane에도 배정 안 되어 숨겨진 것 포함). 풀 자체는
+// 타입별로 나뉘어 있지만(termIframePool 등) "지금 화면에 보여야 하는지"를 한 번에 훑기 위한 통합 인덱스.
+const tmuxAllFrames = new Map<string, HTMLIFrameElement>();
 
 function tmuxLoadLayout(): ITmuxPane {
     try {
@@ -4341,10 +5529,14 @@ function tmuxStrip(p: ITmuxPane): ITmuxPane {
 }
 function tmuxSaveLayout() {
     try { localStorage.setItem(TMUX_LS_KEY, JSON.stringify(tmuxStrip(tmuxRoot))); } catch (_) {}
+    tmuxRenderMenu();
+    // pane 콘텐츠가 바뀌면 사이드바 강조(메인=빨강/서브=파랑)를 바로 맞춘다.
+    renderSessionSidebar();
+    refreshRdpHighlights();
 }
 
 let tmuxRoot: ITmuxPane = tmuxLoadLayout();
-let tmuxMode: 'work' | 'config' = (localStorage.getItem(TMUX_MODE_LS_KEY) as 'work' | 'config') || 'config';
+tmuxTreeReady = true;
 
 function tmuxFind(node: ITmuxPane, id: string): ITmuxPane | null {
     if (node.id === id) return node;
@@ -4355,6 +5547,140 @@ function tmuxFindParent(node: ITmuxPane, id: string, parent: ITmuxPane | null = 
     if (node.id === id) return { pane: node, parent };
     if (node.children) { for (const c of node.children) { const f = tmuxFindParent(c, id, node); if (f) return f; } }
     return null;
+}
+// "첫 번째 pane" = 트리에서 항상 children[0]를 따라 내려간 leaf. 새 세션을 열면 이 pane과 교체된다.
+function tmuxFirstPaneId(): string {
+    let p = tmuxRoot;
+    while (p.split && p.children) p = p.children[0];
+    return p.id;
+}
+function tmuxPoolForKey(key: string): { pool: Map<string, HTMLIFrameElement>, onCreate?: (f: HTMLIFrameElement, key: string) => void } | null {
+    if (key.startsWith('term:') || key.startsWith('term-new:')) return { pool: termIframePool, onCreate: wirePooledFrameHotkeys };
+    if (key.startsWith('chat:')) return { pool: chatIframePool, onCreate: wirePooledFrameHotkeys };
+    if (key.startsWith('browser:')) return { pool: browserIframePool, onCreate: wirePooledFrameHotkeys };
+    if (key.startsWith('editor:')) return { pool: editorIframePool };
+    if (key.startsWith('web:')) return { pool: webIframePool };
+    if (key.startsWith('rdp:')) return { pool: rdpIframePool };
+    return null;
+}
+function tmuxEnsurePooledFrame(key: string): HTMLIFrameElement | null {
+    const spec = tmuxPoolForKey(key);
+    if (!spec) return null;
+    const existing = spec.pool.get(key);
+    if (existing) return existing;
+    const src = tmuxKeyToSrc(key);
+    if (!src) return null;
+    const f = document.createElement('iframe');
+    f.src = src;
+    // 좌표는 tmuxSyncPanePositions가 매길 때까지 0크기로 숨겨둔다. #tmux-tree-root에 딱 한 번만
+    // 붙이고 이후로는 절대 다른 부모로 옮기지 않는다(재로드 방지 - 파일 상단 주석 참고).
+    f.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;border:0;display:none;';
+    spec.onCreate?.(f, key);
+    spec.pool.set(key, f);
+    tmuxAllFrames.set(key, f);
+    tmuxTreeRoot.appendChild(f);
+    return f;
+}
+// key가 정확히 하나의 pane에만 배정되도록 강제한다. 다른 pane이 이미 이 key를 갖고 있었다면 비운다
+// (안 그러면 두 pane이 같은 key를 동시에 들고 있는 상태가 남아, tmuxSyncPanePositions가 그중 트리
+// 순회상 나중에 만난 pane 위치로만 iframe을 옮기고 먼저 만난 쪽은 배정된 척하지만 실제론 빈 화면인
+// 핑퐁 버그가 생긴다). DOM 이동이 없으므로(좌표만 바뀜) 여기선 이동/재로드 걱정은 없다.
+function tmuxAssignPaneContent(paneId: string, key: string | null): void {
+    const affected = new Set<string>([paneId]);
+    (function walk(p: ITmuxPane) {
+        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+        if (key && p.contentKey === key && p.id !== paneId) { p.contentKey = null; affected.add(p.id); }
+    })(tmuxRoot);
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (pane && !pane.split) pane.contentKey = key;
+    affected.forEach(tmuxRefreshEmptyState);
+}
+// pane의 "Empty — 콘텐츠 선택" 안내 문구를 그 pane의 현재 contentKey 상태에 맞춰 다시 그린다.
+// 트리 전체를 재빌드하지 않고 contentKey만 바뀌었을 때(tmuxAssignPaneContent 등) 쓴다.
+function tmuxRefreshEmptyState(paneId: string): void {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split) return;
+    const content = tmuxPaneEls.get(paneId)?.querySelector('.tmux-leaf-content') as HTMLElement | null;
+    if (!content) return;
+    content.querySelectorAll('.tmux-leaf-empty').forEach(e => e.remove());
+    if (!pane.contentKey) {
+        const empty = document.createElement('div');
+        empty.className = 'tmux-leaf-empty';
+        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — pick content from the Multiplexer menu');
+        content.appendChild(empty);
+    }
+}
+// 지금 트리 상태(어느 pane이 어느 key를 보여줘야 하는지)에 맞춰, 화면에 보여야 하는 세션 iframe들의
+// 좌표를 그 pane의 leaf-content 위치로 옮기고, 어느 pane에도 배정 안 된 iframe은 숨긴다.
+// pane 위치가 바뀔 수 있는 모든 경우(분할/병합/콘텐츠 변경/리사이즈)마다 호출한다.
+function tmuxSyncPanePositions(): void {
+    const rootRect = tmuxTreeRoot.getBoundingClientRect();
+    const assignedKeys = new Set<string>();
+    (function walk(p: ITmuxPane) {
+        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+        if (!p.contentKey) return;
+        const f = tmuxEnsurePooledFrame(p.contentKey);
+        if (!f) return;
+        assignedKeys.add(p.contentKey);
+        const leafContent = tmuxPaneEls.get(p.id)?.querySelector('.tmux-leaf-content') as HTMLElement | null;
+        if (!leafContent) return;
+        const r = leafContent.getBoundingClientRect();
+        f.style.left = `${r.left - rootRect.left}px`;
+        f.style.top = `${r.top - rootRect.top}px`;
+        f.style.width = `${r.width}px`;
+        f.style.height = `${r.height}px`;
+        if (f.style.display !== 'block') { f.style.display = 'block'; postFrameVisible(f, true); }
+    })(tmuxRoot);
+    tmuxAllFrames.forEach((f, key) => {
+        if (!assignedKeys.has(key) && f.style.display !== 'none') {
+            postFrameVisible(f, false);
+            f.style.display = 'none';
+        }
+    });
+}
+// 패널 크기가 바뀔 수 있는 외부 요인(창 리사이즈, 사이드바 토글 등)에 대응한다. 우리 코드가 직접
+// 트리 구조를 바꾸는 경우(분할/병합/콘텐츠 변경)는 각 함수가 끝에서 tmuxSyncPanePositions를 직접
+// 부르므로 이 옵저버는 그 외의 외부 리사이즈만 커버하면 된다.
+new ResizeObserver(() => tmuxSyncPanePositions()).observe(tmuxTreeRoot);
+function tmuxPlaceInPane(paneId: string, key: string): void {
+    tmuxAssignPaneContent(paneId, key);
+    tmuxSyncPanePositions();
+}
+// key가 이미 어느 pane(예: 분할된 두 번째 pane)에 떠 있으면 그 pane id를 돌려준다.
+// 없으면 null — 이 경우에만 "첫 번째 pane과 교체" 기본 동작을 쓴다.
+function tmuxFindPaneIdByKey(key: string): string | null {
+    let found: string | null = null;
+    (function walk(p: ITmuxPane) {
+        if (found) return;
+        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+        if (p.contentKey === key) found = p.id;
+    })(tmuxRoot);
+    return found;
+}
+// _f는 호출부(showPooledFrame 등) 시그니처를 유지하기 위해 남겨뒀을 뿐 더 이상 쓰지 않는다
+// (배정된 iframe은 tmuxSyncPanePositions가 알아서 찾아 좌표를 옮긴다).
+function tmuxPlaceFrame(key: string, _f: HTMLIFrameElement) {
+    // 이미 열려 있는 pane이 있으면(A/B 분할 상태에서 B를 다시 클릭한 경우 등) 그 pane을
+    // 그대로 두고 첫 pane과 바꾸지 않는다 — 안 그러면 그 pane이 비어버린다.
+    tmuxPlaceInPane(tmuxFindPaneIdByKey(key) ?? tmuxFirstPaneId(), key);
+    tmuxSaveLayout();
+    tmuxShowPanel();
+}
+// 세션이 삭제됐는데 그게 지금 화면(어느 pane이든)에 떠 있던 것이었다면 그 pane을 비운다.
+// 풀에서 iframe을 지우는 각 삭제 처리부(f.remove() 직후)에서 호출한다.
+function tmuxClearIfShowing(key: string) {
+    let changed = false;
+    (function walk(p: ITmuxPane) {
+        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+        if (p.contentKey !== key) return;
+        p.contentKey = null;
+        tmuxRefreshEmptyState(p.id);
+        changed = true;
+    })(tmuxRoot);
+    if (changed) {
+        tmuxSyncPanePositions();
+        tmuxSaveLayout();
+    }
 }
 function tmuxCollectIds(p: ITmuxPane, out: string[] = []): string[] {
     out.push(p.id);
@@ -4374,7 +5700,8 @@ function tmuxKeyToSrc(key: string): string | null {
         return ctx ? ctxApiUrl(ctx, `cmd/terminal-proxy?token=${encodeURIComponent(p.id)}`) : null;
     }
     if (key.startsWith('browser:')) {
-        return `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(key.slice(8))}`;
+        const p = parseSessKey(key); const ctx = serverCtxOf(p.remoteId);
+        return ctx ? `${ctx.artgineUrl}artgine/server/html/Browser.html?session=${encodeURIComponent(p.id)}` : null;
     }
     if (key === 'rdp:local') {
         return `${CPath.WebRootArtgineUrl()}artgine/server/html/RemoteDesktop.html`;
@@ -4387,36 +5714,11 @@ function tmuxKeyToSrc(key: string): string | null {
         const s = editorSessions.get(key);
         return s ? editorFrameSrc(s) : null;
     }
+    if (key.startsWith('web:')) {
+        const s = webSessions.get(key);
+        return s ? s.url : null;
+    }
     return null;
-}
-function tmuxRenderLeafContent(el: HTMLElement, key: string | null) {
-    const content = el.querySelector('.tmux-leaf-content') as HTMLElement;
-    content.innerHTML = '';
-    if (!key) return;
-    const src = tmuxKeyToSrc(key);
-    if (!src) return;
-    const f = document.createElement('iframe');
-    f.src = src;
-    content.appendChild(f);
-}
-// leaf 하나의 상단에 뜨는 분할/병합/셀렉트 버튼 묶음. 별도 "선택" 단계 없이 버튼이 곧 그 칸에 대한
-// 조작이므로, 클릭 시 pane.id를 그대로 넘긴다. 루트(부모 없음)에는 병합 버튼을 만들지 않는다.
-function tmuxBuildLeafToolbar(paneId: string): HTMLElement {
-    const toolbar = document.createElement('div');
-    toolbar.className = 'tmux-leaf-toolbar';
-    const canMerge = !!tmuxFindParent(tmuxRoot, paneId)?.parent;
-    toolbar.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-h" data-CLan-title="ctrl.tmux.splitH" title="Split horizontal"><i class="bi bi-layout-split"></i></button>
-        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-v" data-CLan-title="ctrl.tmux.splitV" title="Split vertical"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
-        ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-merge" data-CLan-title="ctrl.tmux.merge" title="Merge"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
-        <button type="button" class="btn btn-sm btn-outline-primary tmux-pane-select" data-CLan-title="ctrl.tmux.select" title="Select content"><i class="bi bi-card-list"></i></button>
-    `;
-    toolbar.querySelector('.tmux-pane-split-h')!.addEventListener('click', () => tmuxSplitPane(paneId, 'row'));
-    toolbar.querySelector('.tmux-pane-split-v')!.addEventListener('click', () => tmuxSplitPane(paneId, 'col'));
-    toolbar.querySelector('.tmux-pane-merge')?.addEventListener('click', () => tmuxMergePane(paneId));
-    toolbar.querySelector('.tmux-pane-select')!.addEventListener('click', () => tmuxOpenSelectModal(paneId));
-    applyLanIn(toolbar);
-    return toolbar;
 }
 function tmuxBuildEl(pane: ITmuxPane): HTMLElement {
     if (pane.split && pane.children) {
@@ -4437,37 +5739,39 @@ function tmuxBuildEl(pane: ITmuxPane): HTMLElement {
     if (!pane.contentKey) {
         const empty = document.createElement('div');
         empty.className = 'tmux-leaf-empty';
-        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — Select content in Config mode');
+        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — pick content from the Multiplexer menu');
         content.appendChild(empty);
-    } else {
-        tmuxRenderLeafContent(el, pane.contentKey);
     }
-    const overlay = document.createElement('div');
-    overlay.className = 'tmux-leaf-overlay';
-    overlay.appendChild(tmuxBuildLeafToolbar(pane.id));
-    el.appendChild(overlay);
+    // 사이드바 세션 아이템을 드래그해 놓는 자리. 평소엔 안 보이고(pointer-events도 안 받고) iframe을
+    // 그대로 조작할 수 있다가, body.tmux-dragging일 때만(세션 아이템 드래그 시작~끝) 나타나 드롭을 받는다.
+    // iframe 위에 그냥 리스너를 달면 드롭 이벤트가 iframe 내부 문서로 새서 안 잡히므로 이 오버레이가 필요하다.
+    const dropzone = document.createElement('div');
+    dropzone.className = 'tmux-leaf-dropzone';
+    dropzone.addEventListener('dragover', (e: DragEvent) => { e.preventDefault(); dropzone.classList.add('tmux-leaf-dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('tmux-leaf-dragover'));
+    dropzone.addEventListener('drop', (e: DragEvent) => {
+        e.preventDefault();
+        dropzone.classList.remove('tmux-leaf-dragover');
+        const key = e.dataTransfer?.getData('text/plain');
+        if (key) tmuxSetPaneContent(pane.id, key);
+    });
+    el.appendChild(dropzone);
     tmuxPaneEls.set(pane.id, el);
     return el;
 }
 function tmuxRenderAll() {
     tmuxPaneEls.clear();
-    tmuxTreeRoot.innerHTML = '';
-    tmuxTreeRoot.appendChild(tmuxBuildEl(tmuxRoot));
+    tmuxTreeStruct.innerHTML = '';
+    tmuxTreeStruct.appendChild(tmuxBuildEl(tmuxRoot));
+    tmuxSyncPanePositions();
 }
 
-function tmuxApplyMode() {
-    tmuxTreeRoot.classList.toggle('tmux-config-mode', tmuxMode === 'config');
-    tmuxModeWorkBtn.classList.toggle('active', tmuxMode === 'work');
-    tmuxModeConfigBtn.classList.toggle('active', tmuxMode === 'config');
-}
-
-// 해당 leaf를 좌우(row)/상하(col)로 분할한다. 기존 콘텐츠(iframe)는 첫 번째 자식으로 그대로 옮겨진다
-// (appendChild 단일 이동이라 iframe이 다시 로드되지 않는다).
+// 해당 leaf를 좌우(row)/상하(col)로 분할한다. iframe은 옮기지 않는다(애초에 leaf의 DOM 자식이
+// 아니므로) - tmuxSyncPanePositions가 새로 생긴 child1의 위치로 좌표만 옮겨준다.
 function tmuxSplitPane(paneId: string, dir: 'row' | 'col') {
     const pane = tmuxFind(tmuxRoot, paneId);
     if (!pane || pane.split) return;
     const oldEl = tmuxPaneEls.get(pane.id);
-    const existingIframe = oldEl?.querySelector('.tmux-leaf-content iframe') as HTMLIFrameElement | null;
 
     const child1: ITmuxPane = { id: genUuid(), contentKey: pane.contentKey ?? null };
     const child2: ITmuxPane = { id: genUuid(), contentKey: null };
@@ -4478,29 +5782,23 @@ function tmuxSplitPane(paneId: string, dir: 'row' | 'col') {
     const splitEl = document.createElement('div');
     splitEl.className = `tmux-split tmux-split-${dir}`;
     splitEl.dataset.paneId = pane.id;
-    const child1El = tmuxBuildEl(child1);
-    if (existingIframe) {
-        const c1content = child1El.querySelector('.tmux-leaf-content') as HTMLElement;
-        c1content.innerHTML = '';
-        c1content.appendChild(existingIframe);
-    }
-    const child2El = tmuxBuildEl(child2);
-    splitEl.appendChild(child1El);
-    splitEl.appendChild(child2El);
+    splitEl.appendChild(tmuxBuildEl(child1));
+    splitEl.appendChild(tmuxBuildEl(child2));
 
     oldEl?.replaceWith(splitEl);
     tmuxPaneEls.set(pane.id, splitEl);
+    tmuxSyncPanePositions();
     tmuxSaveLayout();
 }
 
-// paneId와 그 형제를 부모 자리에서 하나의 leaf로 합친다. paneId 쪽 콘텐츠(iframe)만 유지되고
-// 형제 쪽(중첩된 하위 트리 포함)은 버려진다.
+// paneId와 그 형제를 부모 자리에서 하나의 leaf로 합친다. paneId 쪽 콘텐츠만 유지되고 형제 쪽
+// (중첩된 하위 트리 포함)은 버려진다. iframe은 옮기지 않는다 - tmuxSyncPanePositions가 병합된
+// leaf의 새 위치로 좌표만 옮겨준다(형제 쪽에서 버려진 세션의 iframe은 어느 pane에도 배정되지
+// 않으므로 다음 sync에서 자동으로 숨겨진다 - 지워지지 않으니 나중에 다시 열어도 재로드 없음).
 function tmuxMergePane(paneId: string) {
     const found = tmuxFindParent(tmuxRoot, paneId);
     if (!found || !found.parent) return; // 루트는 병합 대상 없음
     const { pane, parent } = found;
-    const paneEl = tmuxPaneEls.get(pane.id);
-    const keptIframe = paneEl?.querySelector('.tmux-leaf-content iframe') as HTMLIFrameElement | null;
     const keptContentKey = pane.contentKey ?? null;
 
     const staleIds = tmuxCollectIds(parent);
@@ -4511,15 +5809,11 @@ function tmuxMergePane(paneId: string) {
     parent.children = undefined;
     parent.contentKey = keptContentKey;
 
-    const newLeafEl = tmuxBuildEl({ id: parent.id, contentKey: null });
-    if (keptIframe) {
-        const c = newLeafEl.querySelector('.tmux-leaf-content') as HTMLElement;
-        c.innerHTML = '';
-        c.appendChild(keptIframe);
-    }
+    const newLeafEl = tmuxBuildEl(parent);
     parentEl?.replaceWith(newLeafEl);
     staleIds.forEach(id => { if (id !== parent.id) tmuxPaneEls.delete(id); });
     tmuxPaneEls.set(parent.id, newLeafEl);
+    tmuxSyncPanePositions();
     tmuxSaveLayout();
 }
 
@@ -4537,9 +5831,10 @@ function tmuxOpenSelectModal(paneId: string) {
     const groups: { label: string; items: { key: string; label: string; sub?: string }[] }[] = [
         { label: 'Chat', items: chatItems },
         { label: 'Terminal', items: (lastTermSessions ?? []).map(s => ({ key: sessKey('term', s.remoteId, s.token), label: s.key || s.lastMsg || `(${s.mode})`, sub: s.workingDir || s.token })) },
-        { label: 'Browser', items: Array.from(browserSessions.values()).map(s => ({ key: `browser:${s.sessionId}`, label: s.url, sub: s.browserName })) },
+        { label: 'Browser', items: Array.from(browserSessions.values()).map(s => ({ key: sessKey('browser', s.remoteId, s.sessionId), label: s.url, sub: s.browserName })) },
         { label: 'RDP', items: [{ key: 'rdp:local', label: 'Local' }, ...rdpRemotes.map(r => ({ key: `rdp:remote:${r.remoteId}`, label: r.entryUrl }))] },
         { label: 'Editor', items: Array.from(editorSessions.values()).map(s => ({ key: s.key, label: s.path.split('/').pop() || s.path, sub: s.path })) },
+        { label: 'Web', items: Array.from(webSessions.values()).map(s => ({ key: s.key, label: s.url })) },
     ];
     const bodyHtml = groups.map(g => `
         <div class="mb-2">
@@ -4574,323 +5869,169 @@ function tmuxOpenSelectModal(paneId: string) {
 function tmuxSetPaneContent(paneId: string, key: string | null) {
     const pane = tmuxFind(tmuxRoot, paneId);
     if (!pane || pane.split) return;
-    pane.contentKey = key;
-    const el = tmuxPaneEls.get(paneId);
-    if (el) {
-        el.querySelector('.tmux-leaf-content')!.innerHTML = '';
-        if (!key) {
-            const empty = document.createElement('div');
-            empty.className = 'tmux-leaf-empty';
-            empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — Select content in Config mode');
-            el.querySelector('.tmux-leaf-content')!.appendChild(empty);
-        } else {
-            tmuxRenderLeafContent(el, key);
-        }
+    if (key) tmuxEnsurePooledFrame(key);
+    // 옮기려는 세션이 이미 다른 pane에 떠 있으면, 그 pane이 비어버리지 않도록 두 pane의
+    // 콘텐츠를 맞바꾼다(대상 pane이 갖고 있던 콘텐츠를 원래 pane으로 되돌려준다).
+    const sourcePaneId = key ? tmuxFindPaneIdByKey(key) : null;
+    if (sourcePaneId && sourcePaneId !== paneId) {
+        const sourcePane = tmuxFind(tmuxRoot, sourcePaneId)!;
+        const displaced = pane.contentKey ?? null;
+        sourcePane.contentKey = displaced;
+        pane.contentKey = key;
+        tmuxRefreshEmptyState(sourcePaneId);
+        tmuxRefreshEmptyState(paneId);
+    } else {
+        tmuxAssignPaneContent(paneId, key);
     }
+    tmuxSyncPanePositions();
     tmuxSaveLayout();
 }
 
-tmuxRenderAll();
-tmuxApplyMode();
-
-tmuxModeWorkBtn.addEventListener('click', () => { tmuxMode = 'work'; localStorage.setItem(TMUX_MODE_LS_KEY, tmuxMode); tmuxApplyMode(); });
-tmuxModeConfigBtn.addEventListener('click', () => { tmuxMode = 'config'; localStorage.setItem(TMUX_MODE_LS_KEY, tmuxMode); tmuxApplyMode(); });
-// 종료: 레이아웃/콘텐츠는 그대로 둔 채(localStorage에 이미 저장됨) Tmux 탭에서 나가기만 한다 — 초기 진입 기본 탭인 Help로 전환.
-function tmuxClose() {
-    (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('help-panel-tab')).show();
-}
-CDOM.ID('tmux-close-btn').addEventListener('click', () => tmuxClose());
-// 이미 활성화된 Multiplexer 탭을 다시 누르면 종료(Help로 전환)하는 토글.
-// Bootstrap 5 위임 클릭은 document capture에서 Tab.show()를 먼저 돌려 active를 붙이므로,
-// click 시점에 classList.contains('active')를 보면 "방금 연 것"과 "원래 켜져 있던 것"을 구분할 수 없다.
-// 그래서 click보다 앞서는 pointerdown에서 사전 active 여부를 스냅샷 해 두고, click에서 그 값만 본다.
-const tmuxTabEl = CDOM.ID('tmux-tab');
-let tmuxTabWasActiveOnPointer = false;
-tmuxTabEl.addEventListener('pointerdown', () => {
-    tmuxTabWasActiveOnPointer = tmuxTabEl.classList.contains('active');
-}, true);
-tmuxTabEl.addEventListener('click', (e) => {
-    if (!tmuxTabWasActiveOnPointer) return;
-    e.preventDefault();
-    e.stopPropagation();
-    tmuxClose();
-}, true);
-
-// 최대/최소 토글(드롭다운 안 버튼 하나): 최대=사이드바 숨김+폭 전체(탭 바는 보임, 지금까지의 기본 동작),
-// 최소=사이드바가 보이는 일반 센터 레이아웃. body.tmux-fullscreen 클래스 하나로 좌우 사이드바를 숨기고
-// .container 폭 제한을 없애던 기존 CSS를 그대로 재사용하되, 이제는 탭에 들어올 때마다 자동으로 켜는 대신
-// 저장된 선호 상태를 적용하고 드롭다운에서 즉시 전환할 수 있게 한다.
-const tmuxMaximizeBtn = CDOM.ID('tmux-maximize-btn') as HTMLButtonElement;
-const TMUX_MAX_LS_KEY = 'ctrl-tmux-maximized-v1';
-let tmuxMaximized = localStorage.getItem(TMUX_MAX_LS_KEY) !== '0'; // 기본값: 최대(기존 동작과 동일)
-function tmuxApplyMaximize() {
-    document.body.classList.toggle('tmux-fullscreen', tmuxMaximized);
-    if (tmuxMaximized) {
-        // 열려 있던 오버레이 사이드바만 닫는다. 도킹 모드는 CSS display:none 으로 숨기며,
-        // 도킹 중인 offcanvas에 hide()를 호출하면 최소 복귀 시 상태 불일치로 히트영역이 꼬일 수 있다.
-        if (appSidebar?.classList.contains('show'))
-            (window as any).bootstrap.Offcanvas.getOrCreateInstance(appSidebar).hide();
-        if (appSidebarRight?.classList.contains('show'))
-            (window as any).bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).hide();
-    } else {
-        // 최소: 도킹 flex 자리를 다시 잡는다(사이드바 static + 본문 나머지 폭).
-        updateSidebarMode();
+// pane의 대표 라벨(메뉴 목록/모달에 쓰임). 원격 RDP/Editor는 구체적인 대상까지 보여준다.
+function tmuxPaneLabel(pane: ITmuxPane): string {
+    const key = pane.contentKey;
+    if (!key) return L('ctrl.tmux.emptyPane2', 'Empty');
+    if (key === 'rdp:local') return 'RDP · Local';
+    if (key.startsWith('rdp:remote:')) {
+        const remote = rdpRemotes.find(r => r.remoteId === key.slice(11));
+        return remote ? `RDP · ${remote.entryUrl}` : 'RDP';
     }
-    // 버튼에는 현재 상태가 아니라 "눌렀을 때 전환될 대상"을 보여준다(종료 항목과 같은 액션형 문구).
-    tmuxMaximizeBtn.innerHTML = tmuxMaximized
-        ? `<i class="bi bi-fullscreen-exit"></i> <span data-CLan="ctrl.tmux.minimize">Minimize</span>`
-        : `<i class="bi bi-arrows-fullscreen"></i> <span data-CLan="ctrl.tmux.maximize">Maximize</span>`;
-    applyLanIn(tmuxMaximizeBtn);
+    if (key.startsWith('editor:')) {
+        const s = editorSessions.get(key);
+        return s ? `Editor · ${s.path.split('/').pop() || s.path}` : 'Editor';
+    }
+    if (key.startsWith('chat:')) return 'Chat';
+    if (key.startsWith('term:')) return 'Terminal';
+    if (key.startsWith('browser:')) return 'Browser';
+    if (key.startsWith('web:')) {
+        const s = webSessions.get(key);
+        return s ? `Web · ${s.url}` : 'Web';
+    }
+    return key;
 }
-tmuxMaximizeBtn.addEventListener('click', () => {
-    tmuxMaximized = !tmuxMaximized;
-    localStorage.setItem(TMUX_MAX_LS_KEY, tmuxMaximized ? '1' : '0');
-    tmuxApplyMaximize();
-});
-
-// Tmux 탭 진입 시 저장된 최대/최소 선호 상태를 적용하고, 나갈 때는 다른 탭에 영향 없도록 항상 원복한다.
-CDOM.ID('tmux-tab').addEventListener('shown.bs.tab', () => {
-    tmuxApplyMaximize();
-});
-CDOM.ID('tmux-tab').addEventListener('hidden.bs.tab', () => {
-    document.body.classList.remove('tmux-fullscreen');
+function tmuxShowPanel() {
+    (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('tmux-panel-tab')).show();
+}
+// 지금 그 사이드바가 실제로 보이는 상태인지(도킹 모드는 hide-* 클래스만 안 걸려 있으면 항상 보임,
+// 오버레이 모드는 offcanvas의 show 클래스로 판단).
+function tmuxSidebarVisible(side: 'left' | 'right'): boolean {
+    if (document.body.classList.contains(side === 'left' ? 'hide-left-sidebar' : 'hide-right-sidebar')) return false;
+    const el = side === 'left' ? appSidebar : appSidebarRight;
+    if (!el) return false;
+    if (el.classList.contains('sidebar-docked')) return true;
+    return el.classList.contains('show');
+}
+// 사이드바 강제로 끄기(도킹/오버레이 모드 무관). 도킹 모드라 평소엔 숨겨진 햄버거 버튼을 강제로 보여줘서
+// 다시 열 수단을 남긴다 - 그 버튼(또는 F4)으로 다시 열리는 순간 'show.bs.offcanvas'에서 원복된다.
+function tmuxHideSidebar(side: 'left' | 'right') {
+    const el = side === 'left' ? appSidebar : appSidebarRight;
+    const wrap = side === 'left' ? sidebarToggleBtnWrap : sidebarToggleBtnWrapRight;
+    document.body.classList.add(side === 'left' ? 'hide-left-sidebar' : 'hide-right-sidebar');
+    if (wrap) wrap.style.display = '';
+    if (el?.classList.contains('show')) (window as any).bootstrap.Offcanvas.getOrCreateInstance(el).hide();
+}
+function tmuxShowSidebar(side: 'left' | 'right') {
+    const el = side === 'left' ? appSidebar : appSidebarRight;
+    document.body.classList.remove(side === 'left' ? 'hide-left-sidebar' : 'hide-right-sidebar');
     updateSidebarMode();
-});
-
-// ---- Schedule management (Home.ts의 스케줄러를 이식. 옵션 패널의 Schedule 제목 옆
-// New 버튼(#sched-new-btn) → schedOpenModal()로 생성/편집한다) ----
-const schedSessionList = CDOM.ID("schedSessionList");
-
-type SchedulerOption = { delay?: number; count?: number; start?: number; end?: number; days?: number[]; hour?: number; minute?: number; autoEnd?: boolean };
-type ScheduleData = { name: string; subAgentKey: string; mode: string; option: SchedulerOption; command: string };
-
-function schedIntervalStr(s: ScheduleData): string {
-    if (s.mode === 'time') {
-        const hh = String(s.option.hour ?? 0).padStart(2, '0');
-        const mm = String(s.option.minute ?? 0).padStart(2, '0');
-        return `${hh}:${mm}`;
+    if (el && !el.classList.contains('sidebar-docked') && !el.classList.contains('show')) {
+        (window as any).bootstrap.Offcanvas.getOrCreateInstance(el).show();
     }
-    const parts: string[] = [`${s.option.delay ?? 0}s`];
-    if ((s.option.count ?? 0) > 0) parts.push(`×${s.option.count}`);
-    if ((s.option.start ?? 0) > 0) parts.push(`+${s.option.start}s`);
-    if ((s.option.end ?? 0) > 0)   parts.push(`~${s.option.end}s`);
-    return parts.join(' ');
 }
+function tmuxToggleSidebar(side: 'left' | 'right') {
+    if (tmuxSidebarVisible(side)) tmuxHideSidebar(side); else tmuxShowSidebar(side);
+}
+appSidebar?.addEventListener('show.bs.offcanvas', () => { document.body.classList.remove('hide-left-sidebar'); updateSidebarMode(); });
+appSidebarRight?.addEventListener('show.bs.offcanvas', () => { document.body.classList.remove('hide-right-sidebar'); updateSidebarMode(); });
 
-async function schedRefresh() {
-    try {
-        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/schedules');
-        const j = await r.json();
-        if (!j.ok) return;
-        schedSessionList.innerHTML = '';
-        const schedules = j.schedules as ScheduleData[];
-        if (schedules.length === 0) return;
-        for (const s of schedules) {
-            const item = document.createElement('div');
-            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-1 rounded';
-            item.style.cursor = 'pointer';
-            item.innerHTML = `
-                <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
-                    <span class="badge rounded-pill ${s.mode==='time'?'bg-primary':'bg-info'}" style="font-size:0.65rem;">${s.mode}</span>
-                    <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
-                </span>
-                <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
-                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.name)}</span>
-                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.subAgentKey)}</span>
-                    <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
-                </span>
-                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="${L('ctrl.delete', 'Delete')}"><i class="bi bi-trash"></i></button>
-            `;
-            item.addEventListener('click', () => schedOpenModal(s));
-            item.querySelector('.sched-del-btn')!.addEventListener('click', (e: Event) => {
-                e.stopPropagation();
-                const dlg = new CConfirm();
-                dlg.SetBody(LF('ctrl.msg.deleteSchedule', 'Delete schedule "{0}"?', aiEscapeHtml(s.name)));
-                dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
-                    async () => {
-                        await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
-                        schedRefresh();
-                    },
-                    () => {},
-                ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
-                dlg.Open();
-            });
-            item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
-            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
-            schedSessionList.appendChild(item);
+// 같은 분할(split)에서 나온 두 pane은 같은 group 번호를 받는다(분할 트리 선행순회 중 split 노드를
+// 만날 때마다 번호를 하나씩 새로 매기고, 그 아래 두 자식 leaf에게 그대로 물려준다). 한 번도 분할된 적
+// 없는 단일 pane은 group 0(번호 표시 안 함).
+function tmuxCollectLeavesGrouped(): { pane: ITmuxPane; group: number }[] {
+    const out: { pane: ITmuxPane; group: number }[] = [];
+    let groupSeq = 0;
+    (function walk(p: ITmuxPane, group: number) {
+        if (p.split && p.children) {
+            const g = ++groupSeq;
+            walk(p.children[0], g);
+            walk(p.children[1], g);
+        } else {
+            out.push({ pane: p, group });
         }
-    } catch (e) { console.error('schedRefresh error:', e); }
+    })(tmuxRoot, 0);
+    return out;
 }
+// Multiplexer 드롭다운(#tmux-dropdown-menu) 내용을 매번 새로 그린다: 좌/우 사이드바 켜기·끄기 토글 2개
+// (현재 상태에 따라 문구가 바뀐다) + 지금 트리의 leaf(pane) 목록(각각 상하/좌우 분할·병합·콘텐츠 선택
+// 버튼). 레이아웃이 바뀔 때마다 tmuxSaveLayout()에서 호출되고, 드롭다운을 열 때도 다시 그려
+// RDP/Editor 라벨과 사이드바 토글 문구를 최신으로 맞춘다.
+// 같은 분할에서 나온 pane끼리는 같은 번호를 붙이고, 번호(그룹)가 바뀌는 경계마다 구분선을 넣어
+// 어느 pane들이 같은 분할에서 나왔는지 한눈에 보이게 한다. 각 줄은 라벨이 잘리지 않도록
+// 위에 라벨, 아래에 조작 버튼을 두는 2단 구성이다.
+function tmuxRenderMenu() {
+    const menu = CDOM.ID('tmux-dropdown-menu');
+    if (!menu) return;
+    const entries = tmuxCollectLeavesGrouped();
 
-async function schedOpenModal(existing?: ScheduleData) {
-    const isEdit = !!existing;
-    let agents: SubAgentData[] = [];
-    try {
-        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/agents');
-        const j = await r.json();
-        if (j.ok) agents = j.agents as SubAgentData[];
-    } catch (e) { console.error('schedOpenModal agents fetch error:', e); }
-
-    const container = document.createElement('div');
-    container.innerHTML = `
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.schedName', 'Name (schedule key)')}</label>
-            <input id="sched-name" type="text" class="form-control form-control-sm" placeholder="e.g. daily-backup" autocomplete="off" value="${aiEscapeHtml(existing?.name || '')}">
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.subAgent', 'Sub Agent')}</label>
-            <select id="sched-agent" class="form-select form-select-sm">
-                ${agents.map(a => `<option value="${aiEscapeHtml(a.key)}" ${existing?.subAgentKey === a.key ? 'selected' : ''}>${aiEscapeHtml(a.key)}</option>`).join('') || `<option value="">${L('ctrl.msg.noSubAgents', '(No sub agents registered)')}</option>`}
-            </select>
-        </div>
-        <div class="mb-2">
-            <div class="d-flex gap-1 mb-2">
-                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${existing?.mode!=='time' ? 'btn-primary' : 'btn-outline-secondary'}">${L('ctrl.lbl.interval', 'Interval')}</button>
-                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.mode==='time'  ? 'btn-primary' : 'btn-outline-secondary'}">${L('ctrl.lbl.time', 'Time')}</button>
-            </div>
-            <div id="sched-panel-interval" style="display:${existing?.mode!=='time' ? '' : 'none'}">
-                <div class="d-flex gap-2 mb-2">
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.delaySec', 'Delay (sec)')}</label>
-                        <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.option.delay ?? 60}">
-                    </div>
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.countInf', 'Count (0=infinite)')}</label>
-                        <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.count ?? 0}">
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.startOffset', 'Start offset (sec, 0=now)')}</label>
-                        <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.start ?? 0}">
-                    </div>
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.endOffset', 'End offset (sec, 0=never)')}</label>
-                        <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.end ?? 0}">
-                    </div>
-                </div>
-                <div class="form-check mt-2">
-                    <input id="sched-autoend-interval" type="checkbox" class="form-check-input" ${(existing?.option.autoEnd ?? true) ? 'checked' : ''}>
-                    <label for="sched-autoend-interval" class="form-check-label small text-secondary">${L('ctrl.lbl.autoEndInterval', 'Auto-delete when count is exhausted')}</label>
+    let rowsHtml = '';
+    entries.forEach((entry, i) => {
+        if (i > 0 && entry.group !== entries[i - 1].group) rowsHtml += `<li><hr class="dropdown-divider"></li>`;
+        const { pane } = entry;
+        const canMerge = !!tmuxFindParent(tmuxRoot, pane.id)?.parent;
+        const numPrefix = entry.group > 0 ? `${aiEscapeHtml(String(entry.group))}. ` : '';
+        rowsHtml += `<li>
+            <div class="tmux-menu-pane" data-pane-id="${pane.id}">
+                <span class="tmux-menu-pane-label" data-act="show">${numPrefix}${aiEscapeHtml(tmuxPaneLabel(pane))}</span>
+                <div class="tmux-menu-pane-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-act="split-h" data-CLan-title="ctrl.tmux.splitH" title="Split horizontal"><i class="bi bi-layout-split"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-act="split-v" data-CLan-title="ctrl.tmux.splitV" title="Split vertical"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
+                    ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-act="merge" data-CLan-title="ctrl.tmux.merge" title="Merge"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-act="select" data-CLan-title="ctrl.tmux.select" title="Select content"><i class="bi bi-card-list"></i></button>
                 </div>
             </div>
-            <div id="sched-panel-time" style="display:${existing?.mode==='time' ? '' : 'none'}">
-                <div class="mb-2">
-                    <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.daysOfWeek', 'Days of Week')}</label>
-                    <div class="d-flex gap-1 flex-wrap">
-                        ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((lbl,i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.option.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
-                    </div>
-                </div>
-                <div class="d-flex gap-2 align-items-end">
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.hour', 'Hour (0–23)')}</label>
-                        <select id="sched-hour" class="form-select form-select-sm">
-                            ${Array.from({length:24},(_,h)=>`<option value="${h}" ${(existing?.option.hour??9)===h?'selected':''}>${String(h).padStart(2,'0')}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.minute', 'Minute')}</label>
-                        <select id="sched-minute" class="form-select form-select-sm">
-                            ${Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${m}" ${(existing?.option.minute??0)===m?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-check mt-2">
-                    <input id="sched-autoend-time" type="checkbox" class="form-check-input" ${(existing?.option.autoEnd ?? false) ? 'checked' : ''}>
-                    <label for="sched-autoend-time" class="form-check-label small text-secondary">${L('ctrl.lbl.autoEndTime', 'Run once then delete')}</label>
-                </div>
-            </div>
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.command', 'Command')}</label>
-            <textarea id="sched-cmd" class="form-control form-control-sm" rows="3" placeholder="e.g. node backup.js">${aiEscapeHtml(existing?.command || '')}</textarea>
-        </div>
-        <div class="d-flex justify-content-between">
-            <button id="sched-modal-save" class="btn btn-primary">${isEdit ? L('ctrl.save', 'Save') : L('ctrl.create', 'Create')}</button>
-            <button id="sched-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
-        </div>`;
+        </li>`;
+    });
 
-    const modal = new CModal();
-    modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetHeader(isEdit ? L('ctrl.hdr.editSchedule', 'Edit Schedule') : L('ctrl.hdr.newSchedule', 'New Schedule'));
-    modal.SetBody(container);
-    modal.SetZIndex(CModal.eSort.Top);
-    modal.Open(CModal.ePos.Center);
+    const rightVisible = tmuxSidebarVisible('right');
+    const leftVisible = tmuxSidebarVisible('left');
+    menu.innerHTML =
+        `<li><button type="button" class="dropdown-item" id="tmux-toggle-left-btn"><i class="bi bi-layout-sidebar-inset"></i> ${aiEscapeHtml(leftVisible ? L('ctrl.tmux.hideLeft', 'Turn off left side') : L('ctrl.tmux.showLeft', 'Turn on left side'))}</button></li>
+        <li><button type="button" class="dropdown-item" id="tmux-toggle-right-btn"><i class="bi bi-layout-sidebar-inset-reverse"></i> ${aiEscapeHtml(rightVisible ? L('ctrl.tmux.hideRight', 'Turn off right side') : L('ctrl.tmux.showRight', 'Turn on right side'))}</button></li>
+        <li><hr class="dropdown-divider"></li>` +
+        rowsHtml;
 
-    setTimeout(() => {
-        // 탭 전환
-        let isTimeMode = existing?.mode === 'time';
-        const tabInterval = container.querySelector<HTMLButtonElement>('#sched-tab-interval')!;
-        const tabTime     = container.querySelector<HTMLButtonElement>('#sched-tab-time')!;
-        const panelInterval = container.querySelector<HTMLElement>('#sched-panel-interval')!;
-        const panelTime     = container.querySelector<HTMLElement>('#sched-panel-time')!;
-        const switchTab = (toTime: boolean) => {
-            isTimeMode = toTime;
-            tabInterval.className = `btn btn-sm flex-fill ${!toTime ? 'btn-primary' : 'btn-outline-secondary'}`;
-            tabTime.className     = `btn btn-sm flex-fill ${ toTime ? 'btn-primary' : 'btn-outline-secondary'}`;
-            panelInterval.style.display = toTime ? 'none' : '';
-            panelTime.style.display     = toTime ? '' : 'none';
-        };
-        tabInterval.addEventListener('click', () => switchTab(false));
-        tabTime.addEventListener('click', () => switchTab(true));
-
-        // 요일 토글
-        const dayBtns = container.querySelectorAll<HTMLButtonElement>('.sched-day-btn');
-        dayBtns.forEach(b => b.addEventListener('click', () => {
-            const active = b.classList.contains('btn-primary');
-            b.classList.toggle('btn-primary', !active);
-            b.classList.toggle('btn-outline-secondary', active);
-        }));
-
-        const doSave = async () => {
-            const name        = (container.querySelector<HTMLInputElement>('#sched-name')!).value.trim();
-            const subAgentKey = (container.querySelector<HTMLSelectElement>('#sched-agent')!).value.trim();
-            const command     = (container.querySelector<HTMLTextAreaElement>('#sched-cmd')!).value.trim();
-            if (!name || !subAgentKey || !command) { CAlert.E(L('ctrl.msg.nameAgentCmdRequired', 'Name, sub agent, and command are required')); return; }
-
-            const option: SchedulerOption = {};
-            if (isTimeMode) {
-                const selectedDays = Array.from(dayBtns).filter(b => b.classList.contains('btn-primary')).map(b => Number(b.dataset.day));
-                if (selectedDays.length === 0) { CAlert.E(L('ctrl.msg.selectOneDay', 'Select at least one day')); return; }
-                option.days = selectedDays;
-                option.hour = parseInt((container.querySelector<HTMLSelectElement>('#sched-hour')!).value) || 0;
-                option.minute = parseInt((container.querySelector<HTMLSelectElement>('#sched-minute')!).value) || 0;
-                option.autoEnd = (container.querySelector<HTMLInputElement>('#sched-autoend-time')!).checked;
-            } else {
-                const delay = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-delay')!).value) || 0);
-                if (delay === 0) { CAlert.E(L('ctrl.msg.delayMin1', 'Delay must be at least 1 second')); return; }
-                option.delay = delay;
-                option.count = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-count')!).value) || 0);
-                option.start = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-start')!).value) || 0);
-                option.end   = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-end')!).value) || 0);
-                option.autoEnd = (container.querySelector<HTMLInputElement>('#sched-autoend-interval')!).checked;
-            }
-
-            const params = new URLSearchParams({ name, subAgentKey, mode: isTimeMode ? 'time' : 'interval', command, option: JSON.stringify(option) });
-            const r = await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
-            const j = await r.json();
-            if (!j.ok) { CAlert.E(j.msg || 'Failed'); return; }
-            modal.Close();
-            schedRefresh();
-        };
-
-        container.querySelector<HTMLButtonElement>('#sched-modal-save')!.addEventListener('click', doSave);
-        container.querySelector<HTMLButtonElement>('#sched-modal-cancel')!.addEventListener('click', () => modal.Close());
-    }, MODAL_DOM_DELAY);
+    CDOM.ID('tmux-toggle-left-btn')?.addEventListener('click', () => tmuxToggleSidebar('left'));
+    CDOM.ID('tmux-toggle-right-btn')?.addEventListener('click', () => tmuxToggleSidebar('right'));
+    menu.querySelectorAll<HTMLElement>('.tmux-menu-pane').forEach(row => {
+        const paneId = row.dataset.paneId!;
+        row.querySelector('[data-act="show"]')?.addEventListener('click', () => tmuxShowPanel());
+        // 분할/병합/셀렉트는 드롭다운을 계속 열어둔 채로 이어서 조작할 수 있어야 하므로(연속 분할 등)
+        // 상위(document)까지 전파되는 걸 막아 Bootstrap의 바깥 클릭 자동 닫기를 피한다.
+        row.querySelector('[data-act="split-h"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxSplitPane(paneId, 'row'); tmuxShowPanel(); });
+        row.querySelector('[data-act="split-v"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxSplitPane(paneId, 'col'); tmuxShowPanel(); });
+        row.querySelector('[data-act="merge"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxMergePane(paneId); tmuxShowPanel(); });
+        row.querySelector('[data-act="select"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxOpenSelectModal(paneId); });
+    });
+    applyLanIn(menu);
 }
+CDOM.ID('tmux-tab').addEventListener('show.bs.dropdown', () => tmuxRenderMenu());
 
-CDOM.ID('sched-new-btn').addEventListener('click', () => schedOpenModal());
+tmuxRenderAll();
+tmuxRenderMenu();
+refreshRdpHighlights();
+renderSessionSidebar();
 
-// 옵션 패널이 항상 열려있지 않아도 최신 목록을 유지하도록 첫 로딩 시 + 5초 주기로 갱신한다.
-schedRefresh();
-setInterval(schedRefresh, 5000);
+// ---- Schedule management ----
+// Schedule/ScheduleTab.ts로 분리됨(옵션 패널의 #schedSessionList / #sched-new-btn DOM에 직접 마운트).
+// 원래 코드 위치에서 그대로 호출해 실행 순서(gAtl.Init 이후)를 보존한다.
+MountScheduleTab();
 
 // ---- Sub Agent management (옵션 패널의 Sub Agent 섹션. New 버튼 또는 목록 항목 클릭 시
 // CModal로 key/provider/model/score/traits 입력폼을 띄운다. 저장은 key 기준 upsert이므로
 // 신규/편집 모두 같은 Save 버튼 하나로 처리한다) ----
 type AgentPermRule = { type?: string; tool?: string; command?: string };
 type AgentPermissions = { allow: AgentPermRule[]; deny: AgentPermRule[] };
-type SubAgentData = { key: string; provider: string; model: string; score: number; traits: string[]; workingDir: string; super: number; retryText: string; retryCount: number; permissions?: AgentPermissions };
+type SubAgentData = { key: string; provider: string; model: string; score: number; traits: string[]; workingDir: string; super: number; retryText: string; retryCount: number; permissions?: AgentPermissions; hidden?: number };
 
 // 권한 규칙 ↔ 한 줄 텍스트 상호 변환(설정 UI용).
 // 형식: 한 줄에 규칙 하나. `type:write` `tool:Edit` `cmd:<나머지 전부>` 토큰을 조합한다.
@@ -4943,7 +6084,7 @@ async function agentRefresh() {
             item.style.cursor = 'pointer';
             item.innerHTML = `
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
-                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(a.key)}${a.super ? ' <span class="badge bg-warning text-dark" style="font-size:0.6rem;">SUPER</span>' : ''}${a.retryCount > 0 ? ` <span class="badge bg-info text-dark" style="font-size:0.6rem;">RETRY x${a.retryCount}</span>` : ''}</span>
+                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(a.key)}${a.super ? ' <span class="badge bg-warning text-dark" style="font-size:0.6rem;">SUPER</span>' : ''}${a.retryCount > 0 ? ` <span class="badge bg-info text-dark" style="font-size:0.6rem;">RETRY x${a.retryCount}</span>` : ''}${a.hidden ? ' <span class="badge bg-secondary" style="font-size:0.6rem;">HIDDEN</span>' : ''}</span>
                     <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.provider)} / ${aiEscapeHtml(a.model)} · ${a.score}</span>
                     <span class="text-truncate small text-body-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.workingDir || './')}</span>
                     <span class="text-truncate small text-body-secondary">${aiEscapeHtml(a.traits.join(', '))}</span>
@@ -4978,6 +6119,9 @@ async function agentRefresh() {
 // New Terminal은 원격 서버에도 열 수 있으므로 그 서버의 ai/settings.json 모델 목록을 각각 받아온다.
 // 마지막 선택 provider/model은 Chat·Memo와 동일 키로 CStorage에 공유한다.
 type AgentModelMap = Record<string, { value: string; label: string }[]>;
+// 팀 하나가 자동 생성할 수 있는 사원 총 수 상한. 사원 한 명이 곧 CLI 프로세스 하나라 큰 수를 넣으면
+// 머신이 주저앉는다 — 서버(CTerminalRouter의 TEAM_AUTO_MAX)도 같은 값으로 자르므로 둘을 함께 고쳐야 한다.
+const TEAM_AUTO_MAX = 20;
 const AGENT_PROVIDER_IDS: string[] = ['claude', 'codex', 'antigravity', 'opencode', 'grok'];
 const AGENT_PROVIDER_LABELS: Record<string, string> = { claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode', grok: 'Grok' };
 const LS_PROVIDER = 'ai.provider';
@@ -5089,6 +6233,10 @@ async function agentOpenModal(existing?: SubAgentData) {
                             <input class="form-check-input" type="checkbox" id="agent-super" ${existing?.super ? 'checked' : ''}>
                             <label class="form-check-label small text-secondary" for="agent-super">Super</label>
                         </div>
+                        <div class="mb-2 form-check">
+                            <input class="form-check-input" type="checkbox" id="agent-hidden" ${existing?.hidden ? 'checked' : ''}>
+                            <label class="form-check-label small text-secondary" for="agent-hidden">${L('ctrl.lbl.hideInSidebar', 'Hide in sidebar (when the hide toggle is on)')}</label>
+                        </div>
                         <div class="mb-2">
                             <label class="form-label small text-secondary mb-1">Retry Text (auto-repeat instruction while idle)</label>
                             <textarea id="agent-retry-text" class="form-control form-control-sm" rows="2" placeholder="e.g. Review the result once more and improve quality">${aiEscapeHtml(existing?.retryText || '')}</textarea>
@@ -5144,6 +6292,7 @@ async function agentOpenModal(existing?: SubAgentData) {
             if (!key) { CAlert.E(L('ctrl.msg.keyRequired', 'Key is required')); return; }
             const workingDir = (container.querySelector<HTMLInputElement>('#agent-working-dir')!).value.trim() || './';
             const superChecked = (container.querySelector<HTMLInputElement>('#agent-super')!).checked;
+            const hiddenChecked = (container.querySelector<HTMLInputElement>('#agent-hidden')!).checked;
             const permissions: AgentPermissions = {
                 allow: agentTextToRules((container.querySelector<HTMLTextAreaElement>('#agent-perm-allow')!).value),
                 deny:  agentTextToRules((container.querySelector<HTMLTextAreaElement>('#agent-perm-deny')!).value),
@@ -5160,6 +6309,7 @@ async function agentOpenModal(existing?: SubAgentData) {
                 retryText: (container.querySelector<HTMLTextAreaElement>('#agent-retry-text')!).value.trim(),
                 retryCount: String(Math.max(0, Number((container.querySelector<HTMLInputElement>('#agent-retry-count')!).value) || 0)),
                 permissions: JSON.stringify(permissions),
+                hidden: hiddenChecked ? '1' : '0',
             });
             const r = await authedFetch(`${CPath.WebRootUrl()}cmd/agent-set?${params.toString()}`);
             const j = await r.json();
@@ -5184,6 +6334,12 @@ setInterval(agentRefresh, 5000);
 // 메인은 직접 작업하지 않고 work_order로 서브 에이전트에게 발주·대기·취합만 반복한다.
 // 메인 키는 sub_agent에 등록되지 않으므로 자동 재생성(_ensureSubAgentSessions) 대상도, 워크오더 배분
 // (_dispatchWorkOrders) 대상도 아니다 - 자기가 낸 발주를 자기가 받는 일이 구조적으로 없다.
+//
+// 사원은 두 방식을 섞어 쓴다.
+//   자동(Auto Staff)   : provider/model/수량만 리스트에 담아 넘기면 서버가 이 팀 전용 사원을 즉석에서
+//                        만들어 띄운다(key·권한·특성 전부 서버 몫). 팀이 끝나면 서버가 지운다.
+//   수동(Manual Staff) : 우측 사이드바 → Sub Agent에 미리 등록해둔 에이전트를 골라 쓰는 기존 방식.
+//                        팀보다 오래 사는 사용자 자산이라 팀 종료 시에도 지워지지 않는다.
 
 async function teamOpenModal() {
     const modelMap = await agentFetchModels();
@@ -5227,13 +6383,26 @@ async function teamOpenModal() {
             <textarea id="team-goal" class="form-control form-control-sm" rows="3" placeholder="e.g. Analyze the text files in the xx folder and summarize them into an md file"></textarea>
         </div>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Sub Agents</label>
+            <label class="form-label small text-secondary mb-1">Auto Staff (provider / model / count)</label>
+            <div class="d-flex gap-1 mb-1">
+                <select id="team-auto-provider" class="form-select form-select-sm" style="flex:0 0 8rem;">
+                    ${AGENT_PROVIDER_IDS.map(id => `<option value="${id}" ${id === defaultProvider ? 'selected' : ''}>${AGENT_PROVIDER_LABELS[id]}</option>`).join('')}
+                </select>
+                <select id="team-auto-model" class="form-select form-select-sm">${buildModelOptions(defaultProvider, defaultModel)}</select>
+                <input id="team-auto-count" type="number" min="1" max="${TEAM_AUTO_MAX}" step="1" value="1" class="form-control form-control-sm" style="flex:0 0 4.5rem;">
+                <button id="team-auto-add" class="btn btn-sm btn-outline-primary" style="white-space:nowrap;">Add</button>
+            </div>
+            <div id="team-auto-list" class="border rounded p-2" style="max-height:120px;overflow-y:auto;"></div>
+            <div class="form-text" style="font-size:0.7rem;">Added staff are created fresh for this team, run in the team leader's working folder with approvals auto-granted, and are deleted when the team ends.</div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Manual Staff (already-registered sub agents)</label>
             <div id="team-agents" class="border rounded p-2" style="max-height:140px;overflow-y:auto;">
                 ${agents.length === 0
                     ? `<div class="text-secondary small">${L('ctrl.msg.noSubAgentsHint', 'No sub agents registered. Register one first in the right sidebar → Sub Agent.')}</div>`
                     : agents.map(a => `
                         <div class="form-check">
-                            <input class="form-check-input team-agent-check" type="checkbox" value="${aiEscapeHtml(a.key)}" id="team-agent-${aiEscapeHtml(a.key)}" checked>
+                            <input class="form-check-input team-agent-check" type="checkbox" value="${aiEscapeHtml(a.key)}" id="team-agent-${aiEscapeHtml(a.key)}">
                             <label class="form-check-label small" for="team-agent-${aiEscapeHtml(a.key)}">
                                 ${aiEscapeHtml(a.key)}
                                 <span class="text-secondary">${aiEscapeHtml(a.provider)} / ${aiEscapeHtml(a.model)} · ${a.score}</span>
@@ -5272,6 +6441,57 @@ async function teamOpenModal() {
             modelSelect.innerHTML = buildModelOptions(providerSelect.value, prefer);
         });
 
+        // ---- 자동 생성 사원 리스트 ----
+        // 여기 담긴 항목은 "이런 사원을 이만큼 만들어라"는 주문서일 뿐이다. 실제 key 생성·권한 설정·스폰은
+        // 전부 서버(onStartTeam)가 하므로 클라이언트는 provider/model/수량만 모아 그대로 넘긴다.
+        const autoProvider = container.querySelector<HTMLSelectElement>('#team-auto-provider')!;
+        const autoModel    = container.querySelector<HTMLSelectElement>('#team-auto-model')!;
+        const autoCount    = container.querySelector<HTMLInputElement>('#team-auto-count')!;
+        const autoAddBtn   = container.querySelector<HTMLButtonElement>('#team-auto-add')!;
+        const autoListBox  = container.querySelector<HTMLDivElement>('#team-auto-list')!;
+        const autoRows: { provider: string; model: string; count: number }[] = [];
+
+        const autoTotal = () => autoRows.reduce((sum, r) => sum + r.count, 0);
+
+        const renderAutoList = () => {
+            if (autoRows.length === 0) {
+                autoListBox.innerHTML = `<div class="text-secondary small">No auto staff yet. Pick provider/model/count and press Add.</div>`;
+                return;
+            }
+            autoListBox.innerHTML = autoRows.map((r, i) => `
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="small">${aiEscapeHtml(AGENT_PROVIDER_LABELS[r.provider] || r.provider)}
+                        <span class="text-secondary">${aiEscapeHtml(r.model || '(default)')}</span>
+                        × ${r.count}</span>
+                    <button class="btn btn-sm btn-link text-danger p-0 team-auto-del" data-idx="${i}">✕</button>
+                </div>`).join('');
+            // 삭제 버튼은 매 렌더마다 새로 만들어지므로 여기서 함께 다시 연결한다.
+            autoListBox.querySelectorAll<HTMLButtonElement>('.team-auto-del').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    autoRows.splice(Number(btn.dataset.idx), 1);
+                    renderAutoList();
+                });
+            });
+        };
+        renderAutoList();
+
+        autoProvider.addEventListener('change', () => {
+            autoModel.innerHTML = buildModelOptions(autoProvider.value, '');
+        });
+
+        autoAddBtn.addEventListener('click', () => {
+            // 같은 provider/model을 또 추가하면 줄을 늘리지 않고 수량만 합친다(리스트가 금방 지저분해진다).
+            const provider = autoProvider.value;
+            const model = autoModel.value;
+            const room = TEAM_AUTO_MAX - autoTotal();
+            if (room <= 0) { CAlert.E(`You can add at most ${TEAM_AUTO_MAX} auto staff.`); return; }
+            const count = Math.min(Math.max(1, Math.floor(Number(autoCount.value) || 1)), room);
+            const same = autoRows.find(r => r.provider === provider && r.model === model);
+            if (same) same.count += count;
+            else autoRows.push({ provider, model, count });
+            renderAutoList();
+        });
+
         let creating = false;
         const doCreate = async () => {
             if (creating) return;
@@ -5279,7 +6499,9 @@ async function teamOpenModal() {
             if (!goal) { CAlert.E(L('ctrl.msg.enterGoal', 'Enter a goal')); return; }
             const subAgents = Array.from(container.querySelectorAll<HTMLInputElement>('.team-agent-check'))
                 .filter(c => c.checked).map(c => c.value);
-            if (subAgents.length === 0) { CAlert.E(L('ctrl.msg.selectOneSubAgent', 'Select at least one sub agent')); return; }
+            // 자동 생성과 수동 선택 중 어느 쪽이든 사원이 하나는 있어야 한다 - 감독은 직접 일하지 않으므로
+            // 사원이 없는 팀은 아무 일도 못 한다.
+            if (subAgents.length === 0 && autoRows.length === 0) { CAlert.E('Add at least one staff member (auto or manual)'); return; }
 
             creating = true;
             createBtn.disabled = true; cancelBtn.disabled = true;
@@ -5293,6 +6515,7 @@ async function teamOpenModal() {
                     model: modelSelect.value,
                     goal,
                     subAgents: subAgents.join(','),
+                    autoAgents: JSON.stringify(autoRows),
                     limitMin: String(Number((container.querySelector<HTMLInputElement>('#team-limit-min')!).value) || 0),
                 });
                 const r = await authedFetch(`${CPath.WebRootUrl()}cmd/start-team?${params.toString()}`);
@@ -5323,9 +6546,9 @@ async function teamOpenModal() {
 CDOM.ID('team-tab').addEventListener('click', () => teamOpenModal());
 
 // ============================================================
-// 다운로드(Download) 탭은 Downloads/DownloadTab.ts가 import되는 시점에
-// 자기 자신을 More 메뉴 + 탭 패널로 등록하고 마운트까지 처리한다(registerDownloadTab()).
-// 여기서는 더 이상 할 일이 없다. import를 빼면 탭 자체가 사라진다.
+// Media 탭(다운로드 기능 포함)은 plugin/ControlMedia/ControlMediaClient.ts에 있다. 그 스크립트가
+// import되는 시점에 자기 자신을 More 메뉴 + 탭 패널("Media")로 등록하고 마운트까지 처리한다.
+// 위쪽 헤더의 CPlugin.PushPath('ControlMedia', ...) + import 두 줄을 빼면 탭 자체가 사라진다.
 // ============================================================
 
 // ============================================================
@@ -5346,6 +6569,10 @@ if (CDOM.ID('messenger-panel').classList.contains('active')) {
 // ============================================================
 // ↑↑↑ 메신저(Messenger) 탭 관련 소스 끝 ↑↑↑
 // ============================================================
+
+
+
+
 
 
 

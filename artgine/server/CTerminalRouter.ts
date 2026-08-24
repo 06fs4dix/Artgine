@@ -3,12 +3,13 @@ import { CJSON } from '../basic/CJSON.js';
 import { Request, Response } from 'express';
 import { CAuthServer } from './CAuthServer.js';
 
-@URLPatterns(["/cmd/start-term", "/cmd/start-team", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode", "/cmd/handoff", "/cmd/agents", "/cmd/agent-set", "/cmd/agent-del", "/cmd/log-sessions", "/cmd/log-session", "/cmd/log-session-del", "/cmd/log-clear", "/cmd/log-term", "/cmd/upload-file"])
+@URLPatterns(["/cmd/start-term", "/cmd/start-team", "/cmd/team-end", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode", "/cmd/handoff", "/cmd/agents", "/cmd/agent-set", "/cmd/agent-del", "/cmd/log-sessions", "/cmd/log-session", "/cmd/log-session-del", "/cmd/log-clear", "/cmd/log-term", "/cmd/upload-file"])
 export class CTerminalRouter extends CAuthServer {
     constructor() {
         super();
         this.On("/cmd/start-term", this.onStartTerm.bind(this));
         this.On("/cmd/start-team", this.onStartTeam.bind(this));
+        this.On("/cmd/team-end", this.onTeamEnd.bind(this));
         this.On("/cmd/schedules", this.onSchedules.bind(this));
         this.On("/cmd/schedule-set", this.onScheduleSet.bind(this));
         this.On("/cmd/schedule-del", this.onScheduleDel.bind(this));
@@ -34,6 +35,7 @@ export class CTerminalRouter extends CAuthServer {
 
     async onStartTerm(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onStartTeam(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
+    async onTeamEnd(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSchedules(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onScheduleSet(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onScheduleDel(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }

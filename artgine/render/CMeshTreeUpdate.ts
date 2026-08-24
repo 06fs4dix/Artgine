@@ -9,13 +9,13 @@ export class CMeshTreeUpdate
 {
 	static TreeCopy(_md : CTree<CMeshDataNode>,_mpi : CTree<CMeshCopyNode>,_sum : CMat,_bound : any)
 	{
-		
+
 	}
 	static TreeReset(_md : CTree<CMeshDataNode>,_mpi : CTree<CMeshCopyNode>)
 	{
-		
+
 	}
-	
+
 	// static FindBFrame(_frameList : Array<CKeyFrame>,_key : number)
 	// {
 	// 	let frame : CKeyFrame=null;
@@ -88,12 +88,12 @@ export class CMeshTreeUpdate
 		}
 		return frame;
 	}
-	
+
 	static TreeUpdateMeshAni(_pst : number,_st : number,_ed : number,_pmd : CMeshDataNode,_amd : CMeshDataNode,_mci : CMeshCopyNode,_all : CMat)
-	{	
+	{
 
 
-		
+
 	}
 	static TreeMeshInter(_mci : CMeshCopyNode,_create)
 	{

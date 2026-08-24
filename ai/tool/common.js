@@ -124,7 +124,7 @@ export function getEntry(base) {
 // 락 안에서 파일을 다시 읽어 병합한다. 그냥 자기가 들고 있던 맵을 쓰면 그 사이에 다른 봇이
 // 추가한 서버 항목이 통째로 날아간다.
 // guard는 락을 잡은 뒤의 실제 값을 보고 쓸지 말지 정한다(읽은 시점과 쓰는 시점 사이의 변화 대응).
-async function updateEntry(base, patch, guard = null) {
+export async function updateEntry(base, patch, guard = null) {
     await acquireLock();
     try {
         const map = loadMap();
@@ -157,6 +157,18 @@ async function fetchInstanceId(base, timeoutMs) {
     finally { clearTimeout(timer); }
 }
 
+// 다른 봇들이 동시에 서버를 두드리고 있으면 단 한 번의 시도만으로 타임아웃이 나서 헤어핀 판별이
+// 조용히 실패할 수 있다(그러면 resolveLocalBase가 원래 공인 주소로 폴백해 2차 인증 전체 절차가
+// 걸린다 - 실측 확인: 같은 명령이 9분 간격으로 한 번은 로컬로 전환되고 한 번은 안 됨). 실패하면
+// 짧게 한 번 더 시도해 일시적 지연/혼잡을 흡수한다.
+async function fetchInstanceIdRetry(base, timeoutMs, retries = 1, retryDelayMs = 300) {
+    for (let i = 0; ; i++) {
+        const id = await fetchInstanceId(base, timeoutMs);
+        if (id || i >= retries) return id;
+        await sleep(retryDelayMs);
+    }
+}
+
 // 공인 주소(예: http://myhost.iptime.org:8050/Artgine)로 자기 PC의 서버에 붙으면 라우터를 한 바퀴
 // 돌아오느라(헤어핀 NAT) 서버가 보는 피어 IP가 loopback이 아니게 되고, 그래서 로컬인데도 2차 인증이
 // 걸린다. 사람이 승인해 줄 수 없는 자동화 경로라 이러면 도구가 통째로 멈춘다.
@@ -171,7 +183,7 @@ async function fetchInstanceId(base, timeoutMs) {
 //
 // 부수 효과로 base가 여기서 한 번 확정된다 - 인증 저장소의 키이기도 하므로 같은 서버가
 // 원래 주소와 127.0.0.1 두 항목으로 갈라지지 않는다.
-export async function resolveLocalBase(base, timeoutMs = 1500) {
+export async function resolveLocalBase(base, timeoutMs = 3000) {
     let u;
     try { u = new URL(base); } catch { return base; }
     if (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '::1') return base;
@@ -181,10 +193,10 @@ export async function resolveLocalBase(base, timeoutMs = 1500) {
     const localBase = localUrl.toString().replace(/\/+$/, '');
 
     // 로컬부터 물어본다. 안 떠 있으면(대부분의 순수 원격 접속) 즉시 실패하므로 원격 왕복이 없다.
-    const localId = await fetchInstanceId(localBase, timeoutMs);
+    const localId = await fetchInstanceIdRetry(localBase, timeoutMs);
     if (!localId) return base;
 
-    const remoteId = await fetchInstanceId(base, timeoutMs);
+    const remoteId = await fetchInstanceIdRetry(base, timeoutMs);
     return remoteId && remoteId === localId ? localBase : base;
 }
 

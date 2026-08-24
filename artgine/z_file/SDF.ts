@@ -41,12 +41,14 @@ export class SDF {
 		Cas0:0,
 		Cas1:1,
 		Cas2:2,
-		Near:3,
-		Far:4,
-		Top:5,
-		Bottom:6,
-		Left:7,
-		Right:8,
+        Cas3:3,
+
+		Near:0,
+		Far:1,
+		Top:2,
+		Bottom:3,
+		Left:4,
+		Right:5,
 	}
 
 	static eGBuf=
@@ -166,15 +168,24 @@ export class SDF {
 		V4WindInfo:32,
 		V4LightColor:33,
 		V4LightDir:34,
-		MatShadowNearCasV0:40,
-		MatShadowFarCasP0:44,
-		MatShadowTopCasV1:48,
-		MatShadowBottomCasP1:52,
-		MatShadowLeftCasV2:56,
-		MatShadowRightCasP2:60,
-		MatShadowPointProj:64,
-		V4ShadowReadList:68,
-		V4LightMask:69,
+
+		MatShadowNear:40,
+        MatShadowFar:44,
+        MatShadowTop:48,
+        MatShadowBottom:52,
+        MatShadowLeft:56,
+        MatShadowRight:60,
+
+        MatShadowCas0VPWithZRow:40,
+        MatShadowCas1VPWithZRow:44,
+        MatShadowCas2VPWithZRow:48,
+        MatShadowCas3VPWithZRow:52,
+        
+        V4ShadowReadList:64,
+        V4ShadowInfoList:65,
+		V4ShadowCascadeDataList:66,
+        V4ShadowDivideList:67,
+		V4LightMask:68,
 
 		SlotShadow:2,//512계 사용함2048
 		SlotUni:2,//512계 사용함2048

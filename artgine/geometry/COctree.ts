@@ -4,7 +4,9 @@ import {CMath} from "./CMath.js";
 import {CPlane} from "./CPlane.js";
 import {CVec3} from "./CVec3.js";
 import {CUtilMath} from "./CUtilMath.js";
-
+import COctree_imple from "../geometry_imple/COctree.js";
+import { CRay } from "./CRay.js";
+import { CConsol } from "../basic/CConsol.js";
 export class COctreeData
 {
     mData : any = null;
@@ -15,18 +17,18 @@ export class COctreeData
     mCol=new CArray<COctreeData>();
     mUpdate=0;
     mStatic=false;
-    
+
 
     constructor() {
         //this.m_data = null;
         //this.m_center.CopyImport(_center);
         //this.m_size.CopyImport(_size);
-  
+
     }
 }
 let gOctreePool : Array<COctree>=[];
 let gOCCount=0;
-export class COctree 
+export class COctree
 {
     mPool : CArray<COctree>;
 	mCenter : CVec3;
@@ -38,7 +40,7 @@ export class COctree
     //m_preCollusion=true;
 
     //복사로 사용한다 위험한데 최적화
-    constructor(_center:CVec3, _half:CVec3,_pool=null) 
+    constructor(_center:CVec3, _half:CVec3,_pool=null)
     {
         // this.mCenter.Import(_center);
         // this.mHalf.Import(_half);
@@ -66,7 +68,7 @@ export class COctree
     {
         return 0;
     }
-    
+
 
     IsLeafNode() {
         return this.mChild == null;
@@ -78,22 +80,22 @@ export class COctree
     }
     ResetBound(_max : CVec3)
     {
-        
+
     }
     SortXMinData()
     {
-        
-        
+
+
     }
-    Insert(_ocData : COctreeData,_depth : number) 
+    Insert(_ocData : COctreeData,_depth : number)
     {
 
     }
     InsideRay(_ray : CRay, _RayLength : number, _boundary : number, results : Function)
     {
-        
+
     }
-   
+
     InsidePlane(bplane : CPlane, results: Function)
     {
         if(this.IsLeafNode()) {
@@ -103,7 +105,7 @@ export class COctree
         } else {
             for (let i = 0; i < this.mChild.length; ++i) {
                 if(this.mChild[i]==null)  continue;
-                
+
                 var r = CMath.Max(CMath.Max(this.mHalf.mF32A[0],this.mHalf.mF32A[1]),this.mHalf.mF32A[2]);
                 var rad = Math.sqrt(r*r+r*r+r*r);
                 if(CUtilMath.PlaneSphereInside(bplane,this.mChild[i].mCenter,rad,null)) {
@@ -148,9 +150,9 @@ export class COctreeMgr
         this.mDynamic=null;
 
     }
-    
+
     RegistHeap(_F32A: Float32Array) {
-        
+
     }
     GetBound()
     {
@@ -167,7 +169,7 @@ export class COctreeMgr
                 que.push(this.mDynamic.mChild[i]);
         }
 
-        
+
 
         while(que.length>0)
         {
@@ -179,101 +181,55 @@ export class COctreeMgr
                 for(let i=0;i<pst.mChild.length;++i)
                     que.push(pst.mChild[i]);
             }
-            
+
 
         }
 
         return bList;
     }
-   
+
 
     Build()
     {
-        
+
 
     }
-  
-    Insert(_center : CVec3, _size : CVec3, _data : any,_min : CVec3=null,_max : CVec3=null,_static=false) 
+
+    Insert(_center : CVec3, _size : CVec3, _data : any,_min : CVec3=null,_max : CVec3=null,_static=false)
     {
 
     }
 
     InsideRay(_ray : CRay, _RayLength : number, _boundary : number, results : Function)
     {
-       
-        this.mDynamic.InsideRay(_ray, _RayLength,_boundary,results);
-        
-        if(this.mStatic!=null) this.mStatic.InsideRay(_ray, _RayLength,_boundary,results);
+
     }
 
     InsidePlane(_bplane : CPlane, _results : Function)
     {
-       
-        this.mDynamic.InsidePlane(_bplane, _results);  
-        
-        
+
     }
     InsideBoxData(_bmin:CVec3, _bmax:CVec3, _results:COctreeInsideHandler,_data : any)
     {
-        let odata=this.mOCDMap.get(_data);
-        if(odata==null) return;
 
-        //이전 충돌검사에서 정보가 있으면 그걸 보낸다
-        for(let i=0;i<odata.mCol.Size();++i)
-        {
-            _results(odata.mCol.Find(i));
-        }
-        this.mDynamic.InsideBox(_bmin, _bmax, _results,odata);
-        if(this.mStatic!=null)       this.mStatic.InsideBox(_bmin, _bmax, _results);
     }
     InsideBox(_bmin:CVec3, _bmax:CVec3, _results:COctreeInsideHandler)
     {
-        this.mDynamic.InsideBox(_bmin, _bmax, _results);
-        if(this.mStatic!=null)       this.mStatic.InsideBox(_bmin, _bmax, _results);
+
     }
- 
-    
 
     Find(_st: CVec3, _ed: CVec3, _bound: CBound,_layerPass = null,_path : Array<CVec3>,_size = 100,_loopScale=1) : boolean
     {
-        
+
         return null;
     }
     CorrectPosition(_pos: CVec3, _boundary: number, _size: number, _layerPass = null): CVec3
     {
-        
 
-        
-
-        for(let i=0;i<8;++i)
-        {
-            const pMin = CMath.V3AddV3(_pos, new CVec3(-_boundary, -_boundary, -_boundary));
-            const pMax = CMath.V3AddV3(_pos, new CVec3(_boundary, _boundary, _boundary));
-            let nearestDist = Infinity;
-            let nearestCenter: CVec3 = null;
-            this.InsideBox(pMin, pMax, (ocData: COctreeData) => {
-                if(_layerPass != null && _layerPass(ocData) == true) return;
-                const dist = CMath.V3Distance(_pos, ocData.mCenter);
-                if(dist < nearestDist) {
-                    nearestDist = dist;
-                    nearestCenter = ocData.mCenter;
-                }
-            });
-
-            if(nearestCenter != null) {
-                const pushDir = CMath.V3Nor(CMath.V3SubV3(_pos, nearestCenter));
-                _pos=CMath.V3AddV3(_pos, CMath.V3MulFloat(pushDir, _size));
-            }
-            else
-                break;
-        }
-        
         return _pos;
     }
-    
+
 }
 
-import COctree_imple from "../geometry_imple/COctree.js";
-import { CRay } from "./CRay.js";
-import { CConsol } from "../basic/CConsol.js";
+
 COctree_imple();

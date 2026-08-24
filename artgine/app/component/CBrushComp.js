@@ -1,1 +1,49 @@
-import{CComponent as t}from"./CComponent.js";import{CPaint3D as r}from"./paint/CPaint3D.js";export class CBrushComp extends t{constructor(r){super(),this.mSysc=t.eSysn.CamComp,this.mTexKey=r}mTexKey;mWriteRP=new Array;mReadTag=null;mReadLen=1e4;mTexOff=0;mBrush=null;IsShould(t,r){return"mBruch"!=t&&super.IsShould(t,r)}GetWrite(){return this.mWriteRP}GetTex(){return this.mTexKey+".tex"}PushRPAuto(t){this.mWriteRP.push(t)}StartChk(){if(1==this.mStartChk&&null!=this.mBrush)return this.mStartChk=!1,!0;var t=this.ProductMsg("SendGetBrush");return t.mInter="canvas",t.mMsgData[0]=this,!1}Update(t){if(null!=this.mReadTag){var e=this.ProductMsg("CubeMap");e.mIntra=r,e.mInter="",e.mMsgData[0]=this}return!1}RecvGetBrush(t){this.mBrush=t}}
+import { CComponent } from "./CComponent.js";
+import { CPaint3D } from "./paint/CPaint3D.js";
+export class CBrushComp extends CComponent {
+    constructor(_key) {
+        super();
+        this.mSysc = CComponent.eSysn.CamComp;
+        this.mTexKey = _key;
+    }
+    mTexKey;
+    mWriteRP = new Array();
+    mReadTag = null;
+    mReadLen = 10000;
+    mTexOff = 0;
+    mBrush = null;
+    IsShould(_member, _type) {
+        if (_member == "mBruch")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    GetWrite() { return this.mWriteRP; }
+    GetTex() { return this.mTexKey + ".tex"; }
+    PushRPAuto(_write) {
+        this.mWriteRP.push(_write);
+    }
+    StartChk() {
+        if (this.mStartChk == true && this.mBrush != null) {
+            this.mStartChk = false;
+            return true;
+        }
+        else {
+            var cm = this.ProductMsg("SendGetBrush");
+            cm.mInter = "canvas";
+            cm.mMsgData[0] = this;
+        }
+        return false;
+    }
+    Update(_update) {
+        if (this.mReadTag != null) {
+            var cm = this.ProductMsg("CubeMap");
+            cm.mIntra = CPaint3D;
+            cm.mInter = "";
+            cm.mMsgData[0] = this;
+        }
+        return false;
+    }
+    RecvGetBrush(_brush) {
+        this.mBrush = _brush;
+    }
+}

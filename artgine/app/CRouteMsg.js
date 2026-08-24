@@ -1,1 +1,19 @@
-import{CClass as s}from"../basic/CClass.js";export class CRouteMsg{mInter=null;mChild;mIntra=null;mMsgName="";mMsgData=new Array;constructor(s,l=null,t=null,a=null,m=!1){this.mMsgName=s,null!=l&&(this.mMsgData=l),this.mIntra=t,this.mInter=a,this.mChild=m}Call(l){s.Call(l,this.mMsgName,this.mMsgData)}}
+import { CClass } from "../basic/CClass.js";
+export class CRouteMsg {
+    mInter = null;
+    mChild;
+    mIntra = null;
+    mMsgName = "";
+    mMsgData = new Array();
+    constructor(_msgName, _msgData = null, _component = null, _objHD = null, _child = false) {
+        this.mMsgName = _msgName;
+        if (_msgData != null)
+            this.mMsgData = _msgData;
+        this.mIntra = _component;
+        this.mInter = _objHD;
+        this.mChild = _child;
+    }
+    Call(_target) {
+        CClass.Call(_target, this.mMsgName, this.mMsgData);
+    }
+}

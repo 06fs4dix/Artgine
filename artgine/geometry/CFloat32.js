@@ -1,1 +1,70 @@
-import{CObject as t}from"../basic/CObject.js";import{CWASM as r}from"../basic/CWASM.js";export class CFloat32 extends t{mF32A=null;Ptr(){return this.mF32A.ptr}NewWASM(){this.mF32A=r.ProductF32A(this.mF32A.length)}ReleaseWASM(){r.Recycle(this.mF32A)}IsZero(){for(let t=0;t<this.mF32A.length;++t)if(0!=this.mF32A[t])return!1;return!0}Zero(){for(let t=0;t<this.mF32A.length;++t)this.mF32A[t]=0}Equals(t){for(let r=0;r<this.mF32A.length;++r)if(this.mF32A[r]!=t.mF32A[r])return!1;return!0}F32A(){return this.mF32A}Import(t){null!=t&&this.mF32A.set(t.F32A())}Export(t=!0,r=!0){const e=new this.constructor;return e.Import(this),e}set array(t){for(let r=0;r<t.length&&this.mF32A.length!=r;++r)this.mF32A[r]=t[r]}Snap(t=8){const r=10**t,e=this.mF32A;for(let t=0;t<e.length;++t)e[t]=Math.trunc(e[t]*r)/r}ToLog(){let t="";for(let r=0;r<this.mF32A.length;++r)t+=this.mF32A[r]+",";return t}}
+import { CObject } from "../basic/CObject.js";
+import { CWASM } from "../basic/CWASM.js";
+export class CFloat32 extends CObject {
+    mF32A = null;
+    Ptr() {
+        return this.mF32A["ptr"];
+    }
+    NewWASM() {
+        this.mF32A = CWASM.ProductF32A(this.mF32A.length);
+        CWASM.RegisterF32A(this);
+    }
+    ReleaseWASM() {
+        CWASM.UnregisterF32A(this);
+        CWASM.Recycle(this.mF32A);
+    }
+    IsZero() {
+        for (let i = 0; i < this.mF32A.length; ++i) {
+            if (this.mF32A[i] != 0)
+                return false;
+        }
+        return true;
+    }
+    Zero() {
+        for (let i = 0; i < this.mF32A.length; ++i) {
+            this.mF32A[i] = 0;
+        }
+    }
+    Equals(_target) {
+        for (let i = 0; i < this.mF32A.length; ++i) {
+            if (this.mF32A[i] != _target.mF32A[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    F32A() {
+        return this.mF32A;
+    }
+    Import(_target) {
+        if (_target == null)
+            return;
+        this.mF32A.set(_target.F32A());
+    }
+    Export(_copy = true, _resetKey = true) {
+        const copy = new this.constructor();
+        copy.Import(this);
+        return copy;
+    }
+    set array(_val) {
+        for (let i = 0; i < _val.length; ++i) {
+            if (this.mF32A.length == i)
+                break;
+            this.mF32A[i] = _val[i];
+        }
+    }
+    Snap(decimals = 8) {
+        const m = 10 ** decimals;
+        const a = this.mF32A;
+        for (let i = 0; i < a.length; ++i) {
+            a[i] = Math.trunc(a[i] * m) / m;
+        }
+    }
+    ToLog() {
+        let str = "";
+        for (let i = 0; i < this.mF32A.length; ++i) {
+            str += this.mF32A[i] + ",";
+        }
+        return str;
+    }
+}

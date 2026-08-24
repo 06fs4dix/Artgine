@@ -1,9 +1,9 @@
 import "../../artgine/artgine.js";
 import { CClass } from "../../artgine/basic/CClass.js";
-import { MountDownloadTab } from "./Downloads/DownloadTab.js";
-CClass.Push(MountDownloadTab);
 import { MountMessengerTab } from "./Messenger/MessengerTab.js";
 CClass.Push(MountMessengerTab);
+import { MountScheduleTab } from "./Schedule/ScheduleTab.js";
+CClass.Push(MountScheduleTab);
 import { CPreferences } from "../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
@@ -16,22 +16,21 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "ms2wpghp_6";
+gPF.mVersion = "mschkcx4_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
-CPlugin.PushPath('ControlDownload', '../../plugin/ControlDownload/');
-import "../../plugin/ControlDownload/ControlDownload.js";
+CPlugin.PushPath('ControlMedia', '../../plugin/ControlMedia/');
+import "../../plugin/ControlMedia/ControlMediaClient.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([], "");
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { CModal, CConfirm } from "../../artgine/basic/CModal.js";
-import { CORMViewer } from "../../artgine/util/CModalUtil.js";
+import { CORMViewer, CSheetViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
@@ -42,6 +41,8 @@ import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
 import { CLan } from "../../artgine/basic/CLan.js";
 import { CStorage } from "../../artgine/system/CStorage.js";
+import { CFile } from "../../artgine/system/CFile.js";
+import { CUtil } from "../../artgine/basic/CUtil.js";
 import { CEvent } from "../../artgine/basic/CEvent.js";
 import { marked } from "../../artgine/external/esnext/md/marked.esm.js";
 marked.setOptions({ gfm: true, breaks: true });
@@ -58,8 +59,6 @@ const SIDEBAR_BOTH_MIN = CONTENT_MAX + 325 + 325;
 const SIDEBAR_LEFT_MIN = SIDEBAR_WIDTH + CONTENT_MIN_FOR_LEFT;
 function updateSidebarMode() {
     if (!mainContainer)
-        return;
-    if (document.body.classList.contains('tmux-fullscreen'))
         return;
     const w = window.innerWidth;
     let leftDock = false;
@@ -201,27 +200,24 @@ function registerControlLan() {
             "ctrl.msg.noSubAgentsHint": "등록된 서브 에이전트가 없습니다. 먼저 우측 사이드바 → Sub Agent에서 등록하세요.",
             "ctrl.msg.modelsToJson": "{0}: {1}개 모델 → opencode.json",
             "ctrl.msg.ocNoProviders": "등록된 OpenCode provider가 없습니다. 먼저 \"Add OpenCode Model\"을 사용하세요.",
+            "ctrl.providerSetting": "프로바이더 설정",
+            "ctrl.msg.providerSettingHint": "체크를 해제한 프로바이더는 목록에서 숨겨지고, 상태 갱신 시 조회하지도 않습니다.",
             "ctrl.local": "Local",
             "ctrl.msg.searchScopeFailed": "이 위치는 검색할 수 없습니다(서버에 등록된 워킹 폴더가 아닐 수 있습니다).",
             "ctrl.msg.scanningPath": "검색 중: {0}:{1}",
             "ctrl.msg.cachedScanning": "캐시: {0}건... 검색 중",
+            "ctrl.msg.cachedOnly": "캐시: {0}건 (Enter로 전체 검색)",
             "ctrl.msg.stoppedResults": "중지됨. ({0}건)",
             "ctrl.msg.nResults": "{0}건{1}",
             "ctrl.msg.noScopeSelected": "검색할 패스를 하나 이상 선택하세요.",
             "ctrl.msg.noSearchScope": "검색 가능한 경로가 없습니다.",
+            "ctrl.ph.sideSearch": "파일 검색 (클릭 시 인덱싱)",
+            "ctrl.indexingCount": "인덱싱중... ({0}개)",
             "ctrl.dl.enterUrl": "URL을 입력하세요",
             "ctrl.dl.failedInfo": "정보 조회 실패",
             "ctrl.dl.failedStart": "시작 실패",
             "ctrl.dl.serverError": "서버 오류: {0}",
             "ctrl.dl.serverUnavailable": "서버 응답 없음 - 서버가 제외된 버전일 수 있습니다. 서버 상태를 확인하세요",
-            "ctrl.optionHelp": "Help",
-            "ctrl.scF1": "File ↔ Info (오른쪽 사이드바)",
-            "ctrl.scF2": "파일 검색",
-            "ctrl.scF3": "새 터미널",
-            "ctrl.scF4": "사이드바 포커스/토글",
-            "ctrl.scF6": "터미널 SUPER + 입력 포커스",
-            "ctrl.scF7": "터미널 Log 패널",
-            "ctrl.scUpDown": "세션 목록 (사이드바 열림)",
         }
     });
 }
@@ -268,6 +264,56 @@ function applyLanIn(root) {
 }
 registerControlLan();
 applyLanIn(document.body);
+const AI_PROVIDER_HIDDEN_BY_SRC_LS = 'ctrl.aiProviderHiddenBySrc';
+const AI_PROVIDER_HIDDEN_LS_LEGACY = 'ctrl.aiProviderHidden';
+let aiProviderHiddenBySrc = (() => {
+    try {
+        const raw = localStorage.getItem(AI_PROVIDER_HIDDEN_BY_SRC_LS);
+        if (raw != null) {
+            const obj = JSON.parse(raw);
+            return new Map(Object.entries(obj).map(([k, v]) => [k, new Set(v)]));
+        }
+    }
+    catch { }
+    try {
+        const legacy = localStorage.getItem(AI_PROVIDER_HIDDEN_LS_LEGACY);
+        if (legacy)
+            return new Map([['', new Set(JSON.parse(legacy))]]);
+    }
+    catch { }
+    return new Map();
+})();
+function aiProviderHiddenSet(sourceKey) {
+    return aiProviderHiddenBySrc.get(sourceKey) ?? new Set();
+}
+function aiProviderSaveHidden() {
+    const obj = {};
+    for (const [k, v] of aiProviderHiddenBySrc)
+        obj[k] = [...v];
+    localStorage.setItem(AI_PROVIDER_HIDDEN_BY_SRC_LS, JSON.stringify(obj));
+}
+function aiProviderSetHidden(sourceKey, providerId, hide) {
+    let set = aiProviderHiddenBySrc.get(sourceKey);
+    if (!set) {
+        set = new Set();
+        aiProviderHiddenBySrc.set(sourceKey, set);
+    }
+    if (hide)
+        set.add(providerId);
+    else
+        set.delete(providerId);
+    aiProviderSaveHidden();
+}
+const AI_PROVIDER_NODE_KEY = '__node__';
+const AI_PROVIDER_SERVER_KEY = '__server__';
+let aiProviderAll = ['claude', 'codex', 'antigravity', 'opencode', 'grok'];
+let currentWebRootUrl = '';
+function aiProviderAllSources() {
+    return [
+        { remoteId: '', baseUrl: CPath.WebRootUrl(), label: L('ctrl.local', 'Local') },
+        ...rdpRemotes.map(r => ({ remoteId: r.remoteId, baseUrl: rdpRemoteWebRootUrl(r.entryUrl), label: r.entryUrl })),
+    ];
+}
 async function loadAiProviderStatus() {
     const el = document.getElementById('aiProviderStatus');
     if (!el)
@@ -277,62 +323,114 @@ async function loadAiProviderStatus() {
     if (btn)
         btn.disabled = true;
     icon?.classList.add('spin');
+    const sources = aiProviderAllSources().filter(s => {
+        const hidden = aiProviderHiddenSet(s.remoteId);
+        return !hidden.has(AI_PROVIDER_NODE_KEY) || !hidden.has(AI_PROVIDER_SERVER_KEY) || aiProviderAll.some(p => !hidden.has(p));
+    });
     try {
-        const r = await fetch(CPath.WebRootUrl() + 'AIInfo/provider-state');
-        const resp = await r.json();
-        const node = resp.node;
-        const providers = resp.providers ?? [];
-        const nodeRowClass = node?.installed ? 'bg-success-subtle' : 'bg-secondary-subtle';
-        const nodeIcon = node?.installed ? 'bi-check-circle-fill text-success' : 'bi-x-circle text-secondary';
-        const nodeStatus = node?.installed ? 'Ready' : 'Not Installed';
-        const nodeVer = node?.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${node.version}</span>` : '';
-        const nodeStatusHtml = node?.installed
-            ? ''
-            : `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="aiNodeDownloadBtn"><i class="bi ${nodeIcon}"></i>${nodeStatus}</button>`;
-        const nodeRow = `<div class="d-flex align-items-center justify-content-between rounded px-2 py-1 ${nodeRowClass}" style="font-size:0.8rem;">
-                <span class="fw-semibold">Node.js${nodeVer}</span>
-                ${nodeStatusHtml}
-            </div>`;
-        el.innerHTML = nodeRow + providers.map(p => {
-            const rowClass = !p.installed ? 'bg-secondary-subtle' : p.authenticated ? 'bg-success-subtle' : 'bg-warning-subtle';
-            const pIcon = !p.installed ? 'bi-x-circle text-secondary' : p.authenticated ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-warning';
-            const status = !p.installed ? 'Not Installed' : p.authenticated ? 'Ready' : 'Not Authenticated';
-            const ver = p.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${p.version}</span>` : '';
-            const statusHtml = !p.installed
-                ? `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-provider-launch-btn" data-provider="${p.id}"><i class="bi ${pIcon}"></i>${status}</button>`
-                : p.authenticated ? '' : `<span class="d-flex align-items-center gap-1"><i class="bi ${pIcon}"></i>${status}</span>`;
-            const pct = (v) => Math.round(v * 100);
-            const usageParts = [];
-            const showUsage = p.authenticated && p.usage;
-            if (showUsage) {
-                const fh = p.usage.fiveHour;
-                const wk = p.usage.weekly;
-                if (fh >= 0)
-                    usageParts.push(`5h ${pct(fh)}%`);
-                if (wk >= 0)
-                    usageParts.push(`Weekly ${pct(wk)}%`);
-                if (fh < 0 && wk < 0) {
-                    usageParts.push(`5h ?`);
-                    usageParts.push(`Weekly ?`);
-                }
+        const results = await Promise.all(sources.map(async (s) => {
+            const hidden = aiProviderHiddenSet(s.remoteId);
+            const visible = aiProviderAll.filter(p => !hidden.has(p));
+            const query = hidden.size ? `?providers=${encodeURIComponent(visible.join(','))}` : '';
+            const wantServer = !hidden.has(AI_PROVIDER_SERVER_KEY);
+            try {
+                const [r, serverResp] = await Promise.all([
+                    fetch(s.baseUrl + 'AIInfo/provider-state' + query),
+                    wantServer
+                        ? fetch(s.baseUrl + 'AIInfo/server-info').then(r2 => r2.json()).catch(() => null)
+                        : Promise.resolve(null),
+                ]);
+                return { s, resp: await r.json(), server: serverResp, ok: true };
             }
-            const usageHtml = usageParts.length
-                ? `<div class="text-secondary" style="font-size:0.75em;">${usageParts.join(' · ')} remaining</div>`
-                : '';
-            return `<div class="rounded px-2 py-1 ${rowClass}" style="font-size:0.8rem;">
-                <div class="d-flex align-items-center justify-content-between">
-                    <span class="fw-semibold text-capitalize">${p.id}${ver}</span>
+            catch (e) {
+                console.error('provider-state error:', s.baseUrl, e);
+                return { s, resp: null, server: null, ok: false };
+            }
+        }));
+        el.innerHTML = results.map(({ s, resp, server, ok }) => {
+            if (!ok || !resp) {
+                return `<div class="rounded px-2 py-1 bg-secondary-subtle" style="font-size:0.8rem;">
+                    <span class="fw-semibold ${s.remoteId ? rdpTextColor(s.remoteId) : 'text-primary'}">${aiEscapeHtml(s.label)}</span>
+                    <span class="text-secondary ms-1">${L('ctrl.msg.providerStateError', 'unreachable')}</span>
+                </div>`;
+            }
+            if (resp.all?.length)
+                aiProviderAll = resp.all;
+            const hidden = aiProviderHiddenSet(s.remoteId);
+            const providers = (resp.providers ?? []).filter(p => !hidden.has(p.id));
+            const node = resp.node;
+            let nodeRow = '';
+            if (!hidden.has(AI_PROVIDER_NODE_KEY)) {
+                const nodeRowClass = node?.installed ? 'bg-success-subtle' : 'bg-secondary-subtle';
+                const nodeIcon = node?.installed ? 'bi-check-circle-fill text-success' : 'bi-x-circle text-secondary';
+                const nodeStatus = node?.installed ? 'Ready' : 'Not Installed';
+                const nodeStatusHtml = node?.installed
+                    ? ''
+                    : `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-node-download-btn"><i class="bi ${nodeIcon}"></i>${nodeStatus}</button>`;
+                nodeRow = `<div class="d-flex align-items-center justify-content-between rounded px-2 py-1 ${nodeRowClass}" style="font-size:0.8rem;">
+                        <span class="fw-semibold">Node.js</span>
+                        ${nodeStatusHtml}
+                    </div>`;
+            }
+            let serverRow = '';
+            if (!hidden.has(AI_PROVIDER_SERVER_KEY) && server?.ok) {
+                const loadColorHtml = (v, text) => v >= 80 ? `<span class="fw-semibold text-danger">${text}</span>`
+                    : v >= 50 ? `<span class="fw-semibold" style="color:#fd7e14;">${text}</span>`
+                        : `<span class="fw-semibold text-success">${text}</span>`;
+                const loadBadge = (label, v) => `<span class="text-secondary">${label}</span> ${loadColorHtml(v, v + '%')}`;
+                serverRow = `<div class="d-flex align-items-center gap-2 rounded px-2 py-1 bg-body-secondary" style="font-size:0.75em;">${loadBadge('CPU', server.cpu.percent)}<span class="text-secondary">·</span>${loadBadge('RAM', server.memory.percent)}</div>`;
+            }
+            const providerRows = providers.map(p => {
+                const rowClass = !p.installed ? 'bg-secondary-subtle' : p.authenticated ? 'bg-success-subtle' : 'bg-warning-subtle';
+                const pIcon = !p.installed ? 'bi-x-circle text-secondary' : p.authenticated ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-warning';
+                const status = !p.installed ? 'Not Installed' : p.authenticated ? 'Ready' : 'Not Authenticated';
+                const statusHtml = !p.installed
+                    ? `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-provider-launch-btn" data-provider="${p.id}" data-remote="${aiEscapeHtml(s.remoteId)}"><i class="bi ${pIcon}"></i>${status}</button>`
+                    : p.authenticated ? '' : `<span class="d-flex align-items-center gap-1"><i class="bi ${pIcon}"></i>${status}</span>`;
+                const pct = (v) => Math.round(v * 100);
+                const usageColorHtml = (v, text) => v <= 20 ? `<span class="fw-semibold text-danger">${text}</span>`
+                    : v <= 50 ? `<span class="fw-semibold" style="color:#fd7e14;">${text}</span>`
+                        : `<span class="fw-semibold text-success">${text}</span>`;
+                const usageBadge = (label, v) => `<span class="text-secondary">${label}</span> ${v == null ? '<span class="fw-semibold text-secondary">?</span>' : usageColorHtml(v, v + '%')}`;
+                const usageParts = [];
+                const showUsage = p.authenticated && p.usage;
+                if (showUsage) {
+                    const fh = p.usage.fiveHour;
+                    const wk = p.usage.weekly;
+                    if (fh >= 0)
+                        usageParts.push(usageBadge('5h', pct(fh)));
+                    if (wk >= 0)
+                        usageParts.push(usageBadge('7d', pct(wk)));
+                    if (fh < 0 && wk < 0) {
+                        usageParts.push(usageBadge('5h', null));
+                        usageParts.push(usageBadge('7d', null));
+                    }
+                }
+                const usageHtml = usageParts.length
+                    ? `<span class="ms-2" style="font-size:0.75em;">${usageParts.join(' <span class="text-secondary">·</span> ')}</span>`
+                    : '';
+                return `<div class="d-flex align-items-center justify-content-between rounded px-2 py-1 ${rowClass}" style="font-size:0.8rem;">
+                    <span class="fw-semibold text-capitalize">${p.id}${usageHtml}</span>
                     ${statusHtml}
-                </div>
-                ${usageHtml}
-            </div>`;
+                </div>`;
+            }).join('');
+            const header = sources.length > 1
+                ? `<div class="small fw-semibold text-truncate ${s.remoteId ? rdpTextColor(s.remoteId) : 'text-primary'}" style="font-size:0.72rem;" title="${aiEscapeHtml(s.baseUrl)}">${aiEscapeHtml(s.label)}</div>`
+                : '';
+            return `<div class="ai-provider-source d-flex flex-column gap-1 mb-1">${header}${serverRow}${nodeRow}${providerRows}</div>`;
         }).join('');
-        document.getElementById('aiNodeDownloadBtn')?.addEventListener('click', () => {
-            window.open('https://nodejs.org/en/download', '_blank');
+        el.querySelectorAll('.ai-node-download-btn').forEach(b => {
+            b.addEventListener('click', () => window.open('https://nodejs.org/en/download', '_blank'));
         });
         el.querySelectorAll('.ai-provider-launch-btn').forEach(b => {
-            b.addEventListener('click', () => termStartNew(b.dataset.provider));
+            b.addEventListener('click', () => termStartNew(b.dataset.provider, undefined, b.dataset.remote || ''));
         });
+        const timeEl = document.getElementById('aiProviderStatusTime');
+        if (timeEl) {
+            const now = new Date();
+            const pad2 = (n) => String(n).padStart(2, '0');
+            timeEl.textContent = `(${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())})`;
+        }
     }
     catch (e) {
         console.error('provider-state error:', e);
@@ -343,9 +441,53 @@ async function loadAiProviderStatus() {
         icon?.classList.remove('spin');
     }
 }
-loadAiProviderStatus();
+setTimeout(() => loadAiProviderStatus(), 0);
 setInterval(() => loadAiProviderStatus(), 5 * 60 * 1000);
 document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
+document.getElementById('aiProviderSettingBtn')?.addEventListener('click', () => showProviderVisibilityModal());
+function showProviderVisibilityModal() {
+    const uid = `provVis_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader(L('ctrl.providerSetting', 'Provider Settings'));
+    const groups = aiProviderAllSources().map(s => {
+        const hidden = aiProviderHiddenSet(s.remoteId);
+        const serverRow = `
+            <label class="d-flex align-items-center gap-2 px-2 py-1 rounded border ms-3">
+                <input type="checkbox" class="form-check-input mt-0 ${uid}_chk" data-remote="${aiEscapeHtml(s.remoteId)}" data-provider="${AI_PROVIDER_SERVER_KEY}" ${hidden.has(AI_PROVIDER_SERVER_KEY) ? '' : 'checked'}>
+                <span>Server (CPU/RAM/NET)</span>
+            </label>`;
+        const nodeRow = `
+            <label class="d-flex align-items-center gap-2 px-2 py-1 rounded border ms-3">
+                <input type="checkbox" class="form-check-input mt-0 ${uid}_chk" data-remote="${aiEscapeHtml(s.remoteId)}" data-provider="${AI_PROVIDER_NODE_KEY}" ${hidden.has(AI_PROVIDER_NODE_KEY) ? '' : 'checked'}>
+                <span>Node.js</span>
+            </label>`;
+        const rows = serverRow + nodeRow + aiProviderAll.map(p => `
+            <label class="d-flex align-items-center gap-2 px-2 py-1 rounded border ms-3">
+                <input type="checkbox" class="form-check-input mt-0 ${uid}_chk" data-remote="${aiEscapeHtml(s.remoteId)}" data-provider="${aiEscapeHtml(p)}" ${hidden.has(p) ? '' : 'checked'}>
+                <span class="text-capitalize">${aiEscapeHtml(p)}</span>
+            </label>`).join('');
+        return `
+        <div class="mb-3">
+            <div class="fw-semibold small text-truncate ${s.remoteId ? rdpTextColor(s.remoteId) : 'text-primary'}" title="${aiEscapeHtml(s.baseUrl)}">${aiEscapeHtml(s.label)}</div>
+            <div class="d-flex flex-column gap-1 mt-1">${rows}</div>
+        </div>`;
+    }).join('');
+    modal.SetBody(`
+        <div class="small text-secondary mb-2">${L('ctrl.msg.providerSettingHint', 'Uncheck a provider to hide it for that server. A server with none checked is hidden entirely and skipped on refresh.')}</div>
+        ${groups}
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(360, 480);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        document.querySelectorAll(`.${uid}_chk`).forEach(chk => {
+            chk.addEventListener('change', () => {
+                aiProviderSetHidden(chk.dataset.remote ?? '', chk.dataset.provider ?? '', !chk.checked);
+                loadAiProviderStatus();
+            });
+        });
+    }, MODAL_DOM_DELAY);
+}
 document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
 document.getElementById('aiOpencodeStatusBtn')?.addEventListener('click', () => showOpencodeStatusModal());
 document.getElementById('agentAddFolderBtn')?.addEventListener('click', () => showWorkFolderModal());
@@ -576,16 +718,17 @@ function showWorkFolderModal() {
     modal.SetBody(`
         <div class="small text-secondary mb-2">
             <p class="mb-1">Server working folders, served as <code>/Root0</code>, <code>/Root1</code> … (one per line).</p>
+            <p class="mb-1">A git URL (e.g. <code>https://github.com/owner/repo</code>) or svn URL (e.g. <code>svn://host/repo</code>, <code>https://host/svn/repo</code>) is also accepted — after restart it's auto-downloaded into <code>git/&lt;repo&gt;</code> / <code>svn/&lt;repo&gt;</code> and the entry is replaced with that local path.</p>
             <p class="mb-0">Saving writes to <code>Env.json</code> and <strong>restarts the server</strong> to re-register the routes.</p>
         </div>
-        <textarea id="${uid}" class="form-control form-control-sm" rows="4" placeholder="./&#10;D:/Work" spellcheck="false"></textarea>
+        <textarea id="${uid}" class="form-control form-control-sm" rows="10" placeholder="./&#10;D:/Work&#10;https://github.com/owner/repo&#10;svn://host/repo" spellcheck="false"></textarea>
         <div class="d-flex justify-content-end mt-2">
             <button id="${uid}_save" class="btn btn-primary btn-sm">Save &amp; Restart</button>
         </div>
         <div id="${uid}_result" class="small mt-2"></div>
     `);
     modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetSize(520, 320);
+    modal.SetSize(560, 480);
     modal.Open(CModal.ePos.Center);
     setTimeout(async () => {
         const ta = document.getElementById(uid);
@@ -733,10 +876,24 @@ function wirePopupActions(rootEl, getUrl, title, winName) {
 function isPanelShown(panelId) {
     return CDOM.ID(panelId).classList.contains('active');
 }
+function sessionItemDragKey(spec) {
+    if (spec.dataAttr.name === 'key')
+        return spec.dataAttr.value;
+    if (spec.dataAttr.name === 'id')
+        return `rdp:remote:${spec.dataAttr.value}`;
+    return null;
+}
+document.addEventListener('dragstart', (e) => {
+    if (e.target?.closest?.('.ai-session-item'))
+        document.body.classList.add('tmux-dragging');
+});
+document.addEventListener('dragend', () => document.body.classList.remove('tmux-dragging'));
 function createSessionItem(spec) {
     const item = document.createElement('div');
     item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
         + (spec.isActive ? ' ' + spec.activeClass : '');
+    if (spec.accentStyle)
+        item.style.cssText = spec.accentStyle;
     item.dataset[spec.dataAttr.name] = spec.dataAttr.value;
     item.innerHTML = `
         <span class="sess-left" style="display:contents;">${spec.leftHtml}</span>
@@ -747,7 +904,7 @@ function createSessionItem(spec) {
             </button>
             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
                 ${POPUP_MENU_ITEMS}
-                <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
+                ${spec.onShare ? '<li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>' : ''}
                 <li><hr class="dropdown-divider"></li>
                 <li><button class="dropdown-item text-danger" data-act="${spec.deleteAct}">${spec.deleteLabel}</button></li>
             </ul>
@@ -761,12 +918,37 @@ function createSessionItem(spec) {
             return;
         item._spec.onClick();
     });
+    item.draggable = true;
+    item.addEventListener('dragstart', (e) => {
+        const key = sessionItemDragKey(item._spec);
+        if (!key) {
+            e.preventDefault();
+            return;
+        }
+        e.dataTransfer?.setData('text/plain', key);
+        if (e.dataTransfer)
+            e.dataTransfer.effectAllowed = 'copy';
+    });
+    item.addEventListener('mousedown', (e) => { if (e.button === 1)
+        e.preventDefault(); });
+    item.addEventListener('auxclick', (e) => {
+        if (e.button !== 1)
+            return;
+        e.preventDefault();
+        item._spec.onDelete();
+    });
     const dropEl = item.querySelector('.dropdown');
     new window.bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
-    item.querySelector('[data-act="link"]').addEventListener('click', () => item._spec.onShare());
+    item.querySelector('[data-act="link"]')?.addEventListener('click', () => item._spec.onShare?.());
     wirePopupActions(item, () => item._spec.popup.url(), spec.popup.title, spec.popup.winName);
     item.querySelector(`[data-act="${spec.deleteAct}"]`).addEventListener('click', () => item._spec.onDelete());
     return item;
+}
+const SESS_ACTIVE_CLASSES = ['ai-session-item-active', 'ai-session-item-active-remote', 'ai-session-item-active-main', 'ai-session-item-active-sub'];
+function applySessActiveClasses(el, spec) {
+    el.classList.remove(...SESS_ACTIVE_CLASSES);
+    if (spec.isActive)
+        el.classList.add(spec.activeClass);
 }
 function updateSessionItem(el, spec) {
     const item = el;
@@ -779,7 +961,8 @@ function updateSessionItem(el, spec) {
         item._body = spec.bodyHtml;
         item.querySelector('.sess-body').innerHTML = spec.bodyHtml;
     }
-    item.classList.toggle(spec.activeClass, spec.isActive);
+    applySessActiveClasses(item, spec);
+    item.style.cssText = spec.accentStyle ?? '';
 }
 function destroySessionItem(el) {
     const toggle = el.querySelector('[data-bs-toggle="dropdown"]');
@@ -795,31 +978,32 @@ let activeRdpFrameKey = null;
 function updateRdpFramePlaceholder() {
     rdpFramePlaceholder.classList.toggle('rdp-frame-placeholder-hidden', !!activeRdpFrameKey);
 }
-function isRdpPaneActive() { return CDOM.ID('rdp-panel').classList.contains('active'); }
+function isRdpPaneActive() {
+    return CDOM.ID('tmux-panel').classList.contains('active') && !!activeRdpFrameKey && tmuxFindPaneIdByKey(activeRdpFrameKey) !== null;
+}
 function updateRdpFrameVisibility() {
     if (!activeRdpFrameKey)
         return;
     postFrameVisible(rdpIframePool.get(activeRdpFrameKey), isRdpPaneActive());
 }
+const tmuxIdlePool = document.createElement('div');
+tmuxIdlePool.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+document.body.appendChild(tmuxIdlePool);
 function showPooledFrame(ctx, key, src) {
     let f = ctx.pool.get(key);
     if (!f) {
         f = document.createElement('iframe');
         f.src = src;
-        f.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;display:none;';
+        f.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;border:0;display:none;';
         ctx.onCreate?.(f, key);
-        ctx.container.appendChild(f);
         ctx.pool.set(key, f);
+        tmuxAllFrames.set(key, f);
+        tmuxTreeRoot.appendChild(f);
     }
     const prevKey = ctx.getActiveKey();
-    if (prevKey && prevKey !== key) {
-        const prev = ctx.pool.get(prevKey);
-        if (prev)
-            prev.style.display = 'none';
-    }
-    f.style.display = 'block';
     ctx.setActiveKey(key);
     ctx.updatePlaceholder();
+    tmuxPlaceFrame(key, f);
     ctx.onActivate?.(key, prevKey);
     syncSidebarTabToFrame(key);
     renderSessionSidebar();
@@ -851,9 +1035,7 @@ function showRdpFrame(key, src) {
     return showPooledFrame(rdpFrameCtx, key, src);
 }
 function activatePaneUnlessMultiplexer(_tabId, _label) {
-    if (CDOM.ID('tmux-tab').classList.contains('active'))
-        return;
-    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID(_tabId)).show();
+    tmuxShowPanel();
 }
 function rdpActivatePane() {
     activatePaneUnlessMultiplexer('rdp-panel-tab', 'RDP');
@@ -867,6 +1049,23 @@ const RDP_STATUS_VIEW = {
     auth: { cls: 'text-success', title: L('ctrl.msg.rdpNeedsAuth', 'Authentication required') },
     offline: { cls: 'text-danger', title: L('ctrl.msg.rdpOffline', 'Not connected') },
 };
+const RDP_COLOR_NAMES = ['danger', 'warning', 'info', 'dark'];
+const rdpColorAssign = new Map();
+function rdpColorName(remoteId) {
+    let name = rdpColorAssign.get(remoteId);
+    if (!name) {
+        name = RDP_COLOR_NAMES[Math.min(rdpColorAssign.size, RDP_COLOR_NAMES.length - 1)];
+        rdpColorAssign.set(remoteId, name);
+    }
+    return name;
+}
+function rdpTextColor(remoteId) {
+    return `text-${rdpColorName(remoteId)}`;
+}
+function rdpAccentStyle(remoteId) {
+    const name = rdpColorName(remoteId);
+    return `--rdp-accent:var(--bs-${name});--rdp-accent-bg:var(--bs-${name}-bg-subtle);`;
+}
 async function rdpLoadRemotes() {
     if (!getAuthToken(CPath.WebRootUrl()))
         return;
@@ -937,17 +1136,26 @@ async function rdpRefreshAllStatus() {
     const results = await Promise.all(targets.map(r => rdpProbeRemote(r.entryUrl)));
     if (seq !== rdpStatusSeq)
         return;
+    const prevStatus = new Map(rdpStatus);
     targets.forEach((r, i) => rdpStatus.set(r.remoteId, results[i]));
     rdpRenderList();
+    targets.forEach((r, i) => {
+        if (results[i] === 'offline' && prevStatus.get(r.remoteId) !== 'offline')
+            rdpClearRemoteSessions(r.remoteId);
+    });
+    if (results.some(st => st === 'offline'))
+        rdpEnsureOfflinePolling();
 }
 let selectedRdpKey = 'rdp:local';
+let tmuxTreeReady = false;
 function rdpRenderList() {
     for (const el of Array.from(rdpSidebarList.children))
         destroySessionItem(el);
     rdpSidebarList.innerHTML = '';
     const localItem = document.createElement('div');
-    localItem.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
-        + (selectedRdpKey === 'rdp:local' ? ' ai-session-item-active' : '');
+    localItem.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded';
+    localItem.dataset.key = 'rdp:local';
+    applySessActiveClasses(localItem, sessActiveFromKey('rdp:local'));
     localItem.innerHTML = `<i class="bi bi-pc-display"></i><span class="flex-grow-1">Local</span>`
         + `<button type="button" class="btn btn-sm btn-link text-secondary p-0" data-act="local-link" title="Show accessible link"><i class="bi bi-link-45deg"></i></button>`;
     localItem.addEventListener('click', () => rdpOpenLocal());
@@ -961,11 +1169,10 @@ function rdpRenderList() {
         const st = rdpStatus.get(r.remoteId) ?? 'checking';
         const stv = RDP_STATUS_VIEW[st];
         const item = createSessionItem({
-            activeClass: 'ai-session-item-active',
-            isActive: selectedRdpKey === key,
+            ...sessActiveFromKey(key),
             dataAttr: { name: 'id', value: r.remoteId },
             leftHtml: `<span class="${stv.cls} small flex-shrink-0" title="${aiEscapeHtml(stv.title)}">●</span>`,
-            bodyHtml: `<span class="flex-grow-1 text-truncate small${st === 'offline' ? ' text-secondary' : ''}"`
+            bodyHtml: `<span class="flex-grow-1 text-truncate small ${rdpTextColor(r.remoteId)}"`
                 + (r.saved ? ` title="${aiEscapeHtml(L('ctrl.msg.rdpSaved', 'Saved'))}"` : '')
                 + `>${aiEscapeHtml(r.entryUrl)}</span>`,
             deleteAct: 'delete',
@@ -993,17 +1200,64 @@ function rdpRenderList() {
     rdpSidebarList.appendChild(divider);
     refreshAllRemoteRoots();
 }
-let currentWebRootUrl = '';
 let ctrlRootOpts = [];
 let ctrlRootReqSeq = 0;
+let localRootOpts = [];
+const remoteRootsCache = new Map();
 let ctrlSelectedRootPath = '';
 let ctrlInitRootPathConsumed = false;
 const ctrlNormPath = (s) => s.replace(/\\/g, '/').replace(/\/+$/, '');
+function ctrlSyncSideFileRootSel() {
+    const sel = CDOM.ID('ctrlSideFileRootSel');
+    if (!sel)
+        return;
+    sel.innerHTML = '';
+    const addGroup = (label, remoteId, roots) => {
+        if (!roots.length)
+            return;
+        const group = document.createElement('optgroup');
+        group.label = label;
+        for (const r of roots) {
+            const opt = document.createElement('option');
+            opt.value = r.path;
+            opt.dataset.remoteId = remoteId;
+            opt.textContent = r.name || r.path;
+            opt.title = r.path;
+            group.appendChild(opt);
+        }
+        sel.appendChild(group);
+    };
+    addGroup(L('ctrl.local', 'Local'), '', localRootOpts);
+    for (const remote of rdpRemotes) {
+        const roots = remoteRootsCache.get(remote.remoteId);
+        if (roots)
+            addGroup(remote.entryUrl, remote.remoteId, roots);
+    }
+    const activeRemoteId = currentWebRootUrl
+        ? (rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === currentWebRootUrl)?.remoteId ?? '')
+        : '';
+    const options = Array.from(sel.options);
+    let match = options.find(o => (o.dataset.remoteId ?? '') === activeRemoteId && ctrlNormPath(o.value) === ctrlNormPath(ctrlSelectedRootPath));
+    if (!match)
+        match = options.find(o => (o.dataset.remoteId ?? '') === activeRemoteId);
+    if (match) {
+        sel.selectedIndex = options.indexOf(match);
+        ctrlSelectedRootPath = match.value;
+    }
+    else if (options.length) {
+        sel.selectedIndex = 0;
+        ctrlSelectedRootPath = options[0].value;
+    }
+}
 function ctrlRenderRootOpts(roots) {
     ctrlRootOpts = roots.map(r => r.name === './' ? { ...r, name: 'Artgine (WorkingPath)' } : r);
-    let defaultIdx = ctrlRootOpts.findIndex(r => r.name === 'Artgine (WorkingPath)');
+    const prev = ctrlSelectedRootPath;
+    const prevIdx = prev
+        ? ctrlRootOpts.findIndex(r => ctrlNormPath(r.path) === ctrlNormPath(prev))
+        : -1;
+    let defaultIdx = prevIdx;
     if (defaultIdx < 0)
-        defaultIdx = ctrlRootOpts.length - 1;
+        defaultIdx = ctrlRootOpts.length > 0 ? 0 : -1;
     if (!ctrlInitRootPathConsumed && ctrlInitRootPath) {
         ctrlInitRootPathConsumed = true;
         const matchIdx = ctrlRootOpts.findIndex(r => ctrlNormPath(r.path) === ctrlNormPath(ctrlInitRootPath));
@@ -1011,6 +1265,7 @@ function ctrlRenderRootOpts(roots) {
             defaultIdx = matchIdx;
     }
     ctrlSelectedRootPath = ctrlRootOpts[defaultIdx]?.path ?? '';
+    ctrlSyncSideFileRootSel();
     renderSessionSidebar();
 }
 async function ctrlRefreshRootSelect() {
@@ -1041,6 +1296,25 @@ async function ctrlRefreshRootSelect() {
     catch {
     }
 }
+CDOM.ID('ctrlSideFileRootSel')?.addEventListener('change', () => {
+    const sel = CDOM.ID('ctrlSideFileRootSel');
+    const opt = sel?.selectedOptions[0];
+    if (!opt)
+        return;
+    const remoteId = opt.dataset.remoteId ?? '';
+    const remote = remoteId ? rdpRemotes.find(r => r.remoteId === remoteId) : undefined;
+    const nextWeb = remote ? rdpRemoteWebRootUrl(remote.entryUrl) : '';
+    const next = opt.value;
+    if (ctrlNormPath(next) === ctrlNormPath(ctrlSelectedRootPath) && (currentWebRootUrl || '') === (nextWeb || ''))
+        return;
+    if ((currentWebRootUrl || '') !== (nextWeb || '')) {
+        currentWebRootUrl = nextWeb;
+        logOnServerChanged();
+    }
+    ctrlSelectedRootPath = next;
+    ctrlSideSrchStop();
+    ctrlSideFileGoTo('/');
+});
 function rdpOpenLocal() {
     rdpInited = true;
     rdpActivatePane();
@@ -1066,6 +1340,7 @@ async function rdpClickRemote(remoteId) {
         rdpStatus.set(remoteId, st);
         if (st === 'offline') {
             rdpRenderList();
+            rdpEnsureOfflinePolling();
             CAlert.Warning(LF('ctrl.msg.rdpStillOffline', 'Cannot reach {0}.', remote.entryUrl));
             return;
         }
@@ -1170,6 +1445,8 @@ function rdpAddRemote(entryUrl, save = false, password) {
             return;
         rdpStatus.set(remote.remoteId, st);
         rdpRenderList();
+        if (st === 'offline')
+            rdpEnsureOfflinePolling();
     });
 }
 let rdpInited = false;
@@ -1286,7 +1563,6 @@ function fileEnsureLayout() {
     fileIframe.id = "file-iframe";
     fileIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
     filePanel.appendChild(fileIframe);
-    wireIframeArrowKeys(fileIframe);
 }
 const ctrlInitRootPath = CUtilWeb.Parameter("path");
 function fileLoadFrame() {
@@ -1332,6 +1608,19 @@ function ctrlShowFileTab() {
         window.bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
     }
     window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-file-tab')).show();
+}
+function ctrlSideFileOpenFromSearch(scope, pathVal) {
+    const nextWeb = scope.remoteId ? scope.webRootUrl : '';
+    if ((currentWebRootUrl || '') !== (nextWeb || '')) {
+        currentWebRootUrl = nextWeb;
+        logOnServerChanged();
+    }
+    if (ctrlNormPath(ctrlSelectedRootPath ?? '') !== ctrlNormPath(scope.rootPath ?? '')) {
+        ctrlSelectedRootPath = scope.rootPath ?? '';
+        ctrlSyncSideFileRootSel();
+    }
+    ctrlShowFileTab();
+    ctrlSideFileGoTo(pathVal);
 }
 function ctrlServerLabel(url) {
     if (!url)
@@ -1382,11 +1671,32 @@ function ctrlAllSearchScopeItems() {
     return items;
 }
 const g_ctrlSrchCache = new Map();
+const g_ctrlSrchRoot = new Map();
+const g_ctrlSrchDown = new Map();
+const CTRL_SRCH_LAST_CHECKED_KEY = 'ctrlSrchLastChecked';
+let g_ctrlSrchLastChecked = (() => {
+    try {
+        const raw = localStorage.getItem(CTRL_SRCH_LAST_CHECKED_KEY);
+        return raw ? new Set(JSON.parse(raw)) : null;
+    }
+    catch {
+        return null;
+    }
+})();
 async function ctrlFileSearch(onlyKey) {
     let searchCancelled = false;
     const uid = Date.now();
     const scopeItems = ctrlAllSearchScopeItems();
-    const initialChecked = new Set(onlyKey ? [onlyKey] : scopeItems.map(s => s.key));
+    const initialChecked = new Set(onlyKey ? [onlyKey] :
+        g_ctrlSrchLastChecked ? scopeItems.map(s => s.key).filter(k => g_ctrlSrchLastChecked.has(k)) :
+            []);
+    if (onlyKey) {
+        g_ctrlSrchLastChecked = new Set(initialChecked);
+        try {
+            localStorage.setItem(CTRL_SRCH_LAST_CHECKED_KEY, JSON.stringify(Array.from(g_ctrlSrchLastChecked)));
+        }
+        catch { }
+    }
     const modal = new CModal();
     modal.SetHeader(`<i class="bi bi-search me-1"></i>${L('ctrl.search', 'Search')}`);
     const scopeRows = scopeItems.map(s => `
@@ -1404,7 +1714,7 @@ async function ctrlFileSearch(onlyKey) {
             <button id="ctrlSrchStop_${uid}" class="btn btn-sm btn-outline-danger" style="display:none;">${L('ctrl.stop', 'Stop')}</button>
         </div>
         <div id="ctrlSrchStatus_${uid}" class="small text-secondary mb-1" style="min-height:1.2em;"></div>
-        <div id="ctrlSrchResults_${uid}" class="list-group" style="max-height:320px;overflow-y:auto;font-size:13px;"></div>
+        <div id="ctrlSrchResults_${uid}" class="list-group ctrl-srch-results" style="max-height:320px;overflow-y:auto;font-size:13px;"></div>
     `);
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetSize(520, 620);
@@ -1416,10 +1726,17 @@ async function ctrlFileSearch(onlyKey) {
     const stopBtn = document.getElementById(`ctrlSrchStop_${uid}`);
     const status = document.getElementById(`ctrlSrchStatus_${uid}`);
     const results = document.getElementById(`ctrlSrchResults_${uid}`);
-    const sameAsSideList = (scope) => scope.webRootUrl === (currentWebRootUrl || CPath.WebRootUrl())
-        && ctrlNormPath(scope.rootPath ?? '') === ctrlNormPath(ctrlSelectedRootPath ?? '');
-    const gRoot = new Map();
-    const gDown = new Map();
+    scopesEl.addEventListener('change', (e) => {
+        if (!e.target?.classList.contains('ctrl-srch-scope-cb'))
+            return;
+        g_ctrlSrchLastChecked = new Set(Array.from(scopesEl.querySelectorAll('.ctrl-srch-scope-cb'))
+            .filter(cb => cb.checked)
+            .map(cb => cb.dataset.key));
+        try {
+            localStorage.setItem(CTRL_SRCH_LAST_CHECKED_KEY, JSON.stringify(Array.from(g_ctrlSrchLastChecked)));
+        }
+        catch { }
+    });
     const makeItem = (scopeKey, scope, fl, dirPath) => {
         const item = document.createElement('div');
         item.className = 'list-group-item list-group-item-action py-1 px-2';
@@ -1429,21 +1746,20 @@ async function ctrlFileSearch(onlyKey) {
                 `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(scope.serverLabel)}:${dirPath}</span>`;
         item.draggable = true;
         item.addEventListener('dragstart', (e) => {
-            e.dataTransfer?.setData('text/plain', (gRoot.get(scopeKey) ?? '') + dirPath + fl.name);
+            e.dataTransfer?.setData('text/plain', (g_ctrlSrchRoot.get(scopeKey) ?? '') + dirPath + fl.name);
             if (e.dataTransfer)
                 e.dataTransfer.effectAllowed = 'copy';
         });
         if (fl.file) {
             item.addEventListener('click', () => {
                 modal.Hide();
-                editorOpenFile((gRoot.get(scopeKey) ?? '') + dirPath + fl.name, scope.editorBaseUrl, (gDown.get(scopeKey) ?? '') + ctrlEncodeUrlPath(dirPath + fl.name));
+                editorOpenFile((g_ctrlSrchRoot.get(scopeKey) ?? '') + dirPath + fl.name, scope.editorBaseUrl, (g_ctrlSrchDown.get(scopeKey) ?? '') + ctrlEncodeUrlPath(dirPath + fl.name));
             });
         }
-        else if (sameAsSideList(scope)) {
+        else {
             item.addEventListener('click', () => {
                 modal.Hide();
-                ctrlShowFileTab();
-                ctrlSideFileGoTo(dirPath);
+                ctrlSideFileOpenFromSearch(scope, dirPath + fl.name + '/');
             });
         }
         return item;
@@ -1508,7 +1824,7 @@ async function ctrlFileSearch(onlyKey) {
                 const dirPath = queue.shift();
                 status.textContent = LF('ctrl.msg.scanningPath', 'Scanning: {0}:{1}', scope.serverLabel, dirPath);
                 try {
-                    const p2 = { path: dirPath };
+                    const p2 = { path: dirPath, skipVcs: 'true' };
                     if (rootPathParam)
                         p2.RootPath = rootPathParam;
                     const token = getAuthToken(webRootUrl);
@@ -1519,9 +1835,9 @@ async function ctrlFileSearch(onlyKey) {
                         continue;
                     }
                     if (data.RootPath != null)
-                        gRoot.set(scopeKey, data.RootPath.replace(/\/+$/, ''));
+                        g_ctrlSrchRoot.set(scopeKey, data.RootPath.replace(/\/+$/, ''));
                     if (data.RootUrl != null)
-                        gDown.set(scopeKey, new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, ''));
+                        g_ctrlSrchDown.set(scopeKey, new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, ''));
                     cache.set(dirPath, data.list);
                     for (const fl of data.list) {
                         if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name))
@@ -1546,10 +1862,50 @@ async function ctrlFileSearch(onlyKey) {
         btn.disabled = false;
         stopBtn.style.display = 'none';
     };
+    input.addEventListener('input', () => {
+        if (btn.disabled)
+            return;
+        const query = input.value.trim().toLowerCase();
+        results.innerHTML = '';
+        if (!query) {
+            status.textContent = '';
+            return;
+        }
+        const checkedKeys = new Set(Array.from(scopesEl.querySelectorAll('.ctrl-srch-scope-cb'))
+            .filter(cb => cb.checked)
+            .map(cb => cb.dataset.key));
+        const activeScopes = scopeItems.filter(s => checkedKeys.has(s.key));
+        if (activeScopes.length === 0)
+            return;
+        const found = renderFromCache(activeScopes, query, new Set());
+        status.textContent = found > 0 ? LF('ctrl.msg.cachedOnly', 'Cached: {0} result(s) (Enter for full search)', found) : '';
+    });
     stopBtn.addEventListener('click', () => { searchCancelled = true; });
     btn.addEventListener('click', doSearch);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter')
-        doSearch(); });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            const items = Array.from(results.querySelectorAll('.list-group-item'));
+            if (items.length === 0)
+                return;
+            e.preventDefault();
+            const curIdx = items.findIndex(el => el.classList.contains('ctrl-srch-kbd-active'));
+            const dir = e.key === 'ArrowDown' ? 1 : -1;
+            const nxt = curIdx === -1 ? (dir === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+            if (curIdx >= 0)
+                items[curIdx].classList.remove('ctrl-srch-kbd-active');
+            items[nxt].classList.add('ctrl-srch-kbd-active');
+            items[nxt].scrollIntoView({ block: 'nearest' });
+            return;
+        }
+        if (e.key === 'Enter') {
+            const activeItem = results.querySelector('.ctrl-srch-kbd-active');
+            if (activeItem) {
+                activeItem.click();
+                return;
+            }
+            doSearch();
+        }
+    });
     input.focus();
 }
 function ctrlSideFileVcsBadge(status, filePath) {
@@ -1627,10 +1983,312 @@ function ctrlSideFileIcon(fl) {
 }
 const ctrlSideFilePathEl = CDOM.ID('ctrlSideFilePath');
 const ctrlSideFileListEl = CDOM.ID('ctrlSideFileList');
+const ctrlSideFileCopyListEl = CDOM.ID('ctrlSideFileCopyList');
 let ctrlSideFilePath = '/';
 let ctrlSideFileRoot = '';
 let ctrlSideFileDown = '';
 let ctrlSideFileReqSeq = 0;
+window.ctrlPathToUrl = async (absPath) => {
+    const norm = termNormAbsPath(absPath);
+    const normLower = norm.toLowerCase();
+    try {
+        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json");
+        const root = (data.roots || []).find(r => {
+            const rp = termNormAbsPath(r.path).toLowerCase();
+            return normLower === rp || normLower.startsWith(rp + '/');
+        });
+        if (!root)
+            return null;
+        const rel = norm.slice(termNormAbsPath(root.path).length).replace(/^\/+/, '');
+        const downBase = new URL(root.url, CPath.WebRootUrl()).href.replace(/\/+$/, '');
+        return downBase + '/' + ctrlEncodeUrlPath(rel);
+    }
+    catch {
+        return null;
+    }
+};
+async function ctrlUrlToPath(url, baseUrl) {
+    const apiUrl = baseUrl || CPath.WebRootUrl();
+    try {
+        const data = await CFecth.Exe(apiUrl + "File/Root", {}, "json");
+        for (const root of data.roots || []) {
+            const downBase = new URL(root.url, apiUrl).href.replace(/\/+$/, '');
+            if (url === downBase || url.startsWith(downBase + '/')) {
+                const rel = decodeURIComponent(url.slice(downBase.length).replace(/^\/+/, ''));
+                return termNormAbsPath(root.path) + '/' + rel;
+            }
+        }
+    }
+    catch { }
+    return null;
+}
+const CTRL_SIDE_FILE_LONG_MS = 550;
+const CTRL_SIDE_FILE_COPY_CLICK_GUARD_MS = 450;
+const ctrlSideFileCopyItems = [];
+let ctrlSideFileCopyClickGuardUntil = 0;
+function ctrlSideFileAuthToken(webRootUrl) {
+    if (webRootUrl && webRootUrl !== CPath.WebRootUrl())
+        return getAuthToken(webRootUrl) || '';
+    return getAuthToken(webRootUrl || CPath.WebRootUrl()) || '';
+}
+function ctrlSideFileRenderCopyList() {
+    if (!ctrlSideFileCopyListEl)
+        return;
+    if (!ctrlSideFileCopyItems.length) {
+        ctrlSideFileCopyListEl.innerHTML = '';
+        ctrlSideFileCopyListEl.classList.add('d-none');
+        ctrlSideFileCopyListEl.classList.remove('d-flex');
+        return;
+    }
+    ctrlSideFileCopyListEl.classList.remove('d-none');
+    ctrlSideFileCopyListEl.classList.add('d-flex');
+    ctrlSideFileCopyListEl.innerHTML = '';
+    for (const ci of ctrlSideFileCopyItems) {
+        const row = document.createElement('div');
+        row.className = 'd-flex align-items-center gap-1 px-1';
+        const icon = ci.isFile ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
+        row.innerHTML =
+            `<i class="bi ${icon} flex-shrink-0" style="font-size:0.75rem;"></i>` +
+                `<span class="small text-truncate flex-grow-1" title="${aiEscapeHtml(ci.relPath)}">${aiEscapeHtml(ci.relPath)}</span>` +
+                `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 flex-shrink-0" data-copy-act="remove" title="Remove"><i class="bi bi-x-lg"></i></button>` +
+                `<button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 flex-shrink-0" data-copy-act="paste" title="Paste here"><i class="bi bi-clipboard"></i></button>`;
+        row.querySelector('[data-copy-act="remove"]')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (Date.now() < ctrlSideFileCopyClickGuardUntil)
+                return;
+            const idx = ctrlSideFileCopyItems.indexOf(ci);
+            if (idx >= 0)
+                ctrlSideFileCopyItems.splice(idx, 1);
+            ctrlSideFileRenderCopyList();
+        });
+        row.querySelector('[data-copy-act="paste"]')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (Date.now() < ctrlSideFileCopyClickGuardUntil)
+                return;
+            void ctrlSideFilePasteCopy(ci);
+        });
+        ctrlSideFileCopyListEl.appendChild(row);
+    }
+}
+function ctrlSideFileAddCopy(fl) {
+    const relPath = fl.file
+        ? ctrlSideFilePath + fl.name
+        : ctrlSideFilePath + fl.name + '/';
+    const absPath = ctrlSideFileRoot + relPath;
+    if (ctrlSideFileCopyItems.some(x => x.absPath === absPath))
+        return;
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    ctrlSideFileCopyItems.push({
+        name: fl.name,
+        absPath,
+        relPath,
+        isFile: !!fl.file,
+        downloadBase: ctrlSideFileDown,
+        webRootUrl,
+        rootPath: ctrlSelectedRootPath || '',
+    });
+    ctrlSideFileCopyClickGuardUntil = Date.now() + CTRL_SIDE_FILE_COPY_CLICK_GUARD_MS;
+    ctrlSideFileRenderCopyList();
+}
+async function ctrlSideFileUploadOne(downloadUrl, destAbsDir, fileName, destWebRootUrl) {
+    const buf = await CFile.Load(downloadUrl, false, true);
+    if (!buf)
+        return false;
+    const b64 = CUtil.ArrayToBase64(buf);
+    const token = ctrlSideFileAuthToken(destWebRootUrl);
+    const up = { path: destAbsDir, name: [fileName], data: [b64] };
+    if (token)
+        up.token = token;
+    const res = await CFecth.Exe(destWebRootUrl + 'File/Upload', up, 'json');
+    return !!res?.ok;
+}
+async function ctrlSideFileCopyFolderTree(item, destParentRel, destWebRootUrl, destRootPath, destAbsRoot, overwrite) {
+    const srcToken = ctrlSideFileAuthToken(item.webRootUrl);
+    const destToken = ctrlSideFileAuthToken(destWebRootUrl);
+    const destFolderRel = destParentRel + item.name + '/';
+    const mk = { data: destParentRel + item.name };
+    if (destRootPath)
+        mk.RootPath = destRootPath;
+    if (destToken)
+        mk.token = destToken;
+    const mkRes = await CFecth.Exe(destWebRootUrl + 'File/Mkdir', mk, 'json');
+    if (mkRes && mkRes.ok === false)
+        return false;
+    const lp = { path: item.relPath };
+    if (item.rootPath)
+        lp.RootPath = item.rootPath;
+    if (srcToken)
+        lp.token = srcToken;
+    const listed = await CFecth.Exe(item.webRootUrl + 'File/List', lp, 'json');
+    if (listed?.ok === false)
+        return false;
+    const children = (listed.list ?? []).filter(fl => !fl.hidden);
+    const destAbsDir = destAbsRoot + destFolderRel;
+    const checkP = { path: destFolderRel };
+    if (destRootPath)
+        checkP.RootPath = destRootPath;
+    if (destToken)
+        checkP.token = destToken;
+    const destList = await CFecth.Exe(destWebRootUrl + 'File/List', checkP, 'json');
+    const destNames = new Set((destList.list ?? []).map(x => x.name));
+    for (const fl of children) {
+        const nameExists = destNames.has(fl.name);
+        if (nameExists && !overwrite)
+            continue;
+        if (fl.file) {
+            const srcRel = item.relPath + fl.name;
+            const url = item.downloadBase + ctrlEncodeUrlPath(srcRel);
+            const ok = await ctrlSideFileUploadOne(url, destAbsDir, fl.name, destWebRootUrl);
+            if (!ok)
+                return false;
+            destNames.add(fl.name);
+        }
+        else {
+            const sub = {
+                name: fl.name,
+                absPath: item.absPath + fl.name + '/',
+                relPath: item.relPath + fl.name + '/',
+                isFile: false,
+                downloadBase: item.downloadBase,
+                webRootUrl: item.webRootUrl,
+                rootPath: item.rootPath,
+            };
+            const ok = await ctrlSideFileCopyFolderTree(sub, destFolderRel, destWebRootUrl, destRootPath, destAbsRoot, overwrite);
+            if (!ok)
+                return false;
+            destNames.add(fl.name);
+        }
+    }
+    return true;
+}
+async function ctrlSideFilePasteCopyDo(item, overwrite) {
+    const destDir = ctrlSideFileRoot + ctrlSideFilePath;
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    try {
+        let ok = false;
+        if (item.isFile) {
+            const downloadUrl = item.downloadBase + ctrlEncodeUrlPath(item.relPath);
+            ok = await ctrlSideFileUploadOne(downloadUrl, destDir, item.name, webRootUrl);
+            if (!ok)
+                CAlert.Info(L('ctrl.msg.copyFailed', 'Copy failed.'));
+        }
+        else {
+            ok = await ctrlSideFileCopyFolderTree(item, ctrlSideFilePath, webRootUrl, ctrlSelectedRootPath || '', ctrlSideFileRoot, overwrite);
+            if (!ok)
+                CAlert.Info(L('ctrl.msg.copyFailed', 'Copy failed.'));
+        }
+        if (!ok)
+            return;
+        const idx = ctrlSideFileCopyItems.indexOf(item);
+        if (idx >= 0)
+            ctrlSideFileCopyItems.splice(idx, 1);
+        await ctrlSideFileGoTo(ctrlSideFilePath);
+        ctrlSideFileRenderCopyList();
+    }
+    catch {
+        CAlert.Info(L('ctrl.msg.copyFailed', 'Copy failed.'));
+    }
+}
+async function ctrlSideFilePasteCopy(item) {
+    const destDir = ctrlSideFileRoot + ctrlSideFilePath;
+    const destAbs = item.isFile ? destDir + item.name : destDir + item.name + '/';
+    if (destAbs === item.absPath) {
+        CAlert.Info(L('ctrl.msg.copySamePath', 'Same path. Skipped.'));
+        return;
+    }
+    if (!item.isFile) {
+        const src = item.relPath.endsWith('/') ? item.relPath : item.relPath + '/';
+        const dest = ctrlSideFilePath + item.name + '/';
+        if (dest === src || dest.startsWith(src)) {
+            CAlert.Info(L('ctrl.msg.copyIntoSelf', 'Cannot paste a folder into itself. Skipped.'));
+            return;
+        }
+    }
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    try {
+        const p = { path: ctrlSideFilePath };
+        if (ctrlSelectedRootPath)
+            p.RootPath = ctrlSelectedRootPath;
+        if (token)
+            p.token = token;
+        const data = await CFecth.Exe(webRootUrl + 'File/List', p, 'json');
+        if (data?.ok === false) {
+            CAlert.Info(data.msg || L('ctrl.failedToLoad', 'Failed to load'));
+            return;
+        }
+        const exists = (data.list ?? []).some(fl => fl.name === item.name);
+        if (!exists) {
+            await ctrlSideFilePasteCopyDo(item, true);
+            return;
+        }
+        const kind = item.isFile
+            ? L('ctrl.file', 'File')
+            : L('ctrl.folder', 'Folder');
+        const body = `<div class="small">` +
+            `<div class="mb-2">${aiEscapeHtml(kind)} <code>${aiEscapeHtml(item.name)}</code> ${L('ctrl.msg.copyExistsAsk', 'already exists in this folder.')}</div>` +
+            `<div class="text-secondary">${L('ctrl.msg.copyExistsHint', 'Overwrite replaces existing files. Pass skips this paste.')}</div>` +
+            `</div>`;
+        CConfirm.List(body, [
+            () => { void ctrlSideFilePasteCopyDo(item, true); },
+            () => { },
+        ], [
+            L('ctrl.overwrite', 'Overwrite'),
+            L('ctrl.pass', 'Pass'),
+        ]);
+    }
+    catch {
+        CAlert.Info(L('ctrl.msg.copyFailed', 'Copy failed.'));
+    }
+}
+function ctrlSideFileBindLongPress(item, fl) {
+    let timer = null;
+    let longReady = false;
+    let suppressClick = false;
+    const clearTimer = () => {
+        if (timer != null) {
+            clearTimeout(timer);
+            timer = null;
+        }
+    };
+    const abortPress = () => {
+        clearTimer();
+        longReady = false;
+        item.classList.remove('active');
+    };
+    item.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0)
+            return;
+        abortPress();
+        suppressClick = false;
+        timer = setTimeout(() => {
+            timer = null;
+            longReady = true;
+            item.classList.add('active');
+        }, CTRL_SIDE_FILE_LONG_MS);
+    });
+    item.addEventListener('pointerup', () => {
+        clearTimer();
+        item.classList.remove('active');
+        if (!longReady)
+            return;
+        longReady = false;
+        suppressClick = true;
+        ctrlSideFileAddCopy(fl);
+    });
+    item.addEventListener('pointerleave', abortPress);
+    item.addEventListener('pointercancel', abortPress);
+    item.addEventListener('dragstart', abortPress);
+    item.addEventListener('click', (e) => {
+        if (!suppressClick)
+            return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        suppressClick = false;
+    }, true);
+}
 function ctrlSideFileRenderEmpty(msg) {
     ctrlSideFileListEl.innerHTML = `<div class="text-secondary small px-1">${aiEscapeHtml(msg)}</div>`;
 }
@@ -1638,11 +2296,29 @@ function ctrlSideFileRenderList(list) {
     const visible = list
         .filter(fl => !fl.hidden)
         .sort((a, b) => (a.file === b.file) ? a.name.localeCompare(b.name) : (a.file ? 1 : -1));
-    if (!visible.length) {
+    if (!visible.length && ctrlSideFilePath === '/') {
         ctrlSideFileRenderEmpty('Empty');
         return;
     }
     ctrlSideFileListEl.innerHTML = '';
+    if (ctrlSideFilePath !== '/') {
+        const rootItem = document.createElement('button');
+        rootItem.type = 'button';
+        rootItem.className = 'list-group-item list-group-item-warning list-group-item-action py-1 px-2';
+        rootItem.innerHTML = `<i class="bi bi-folder"></i> ${L('ctrl.rootFolder', 'Root Folder')}`;
+        rootItem.addEventListener('click', () => ctrlSideFileGoTo('/'));
+        ctrlSideFileListEl.appendChild(rootItem);
+        const trimmed = ctrlSideFilePath.replace(/\/+$/, '');
+        const parent = trimmed.substring(0, trimmed.lastIndexOf('/') + 1) || '/';
+        const parentItem = document.createElement('button');
+        parentItem.type = 'button';
+        parentItem.className = 'list-group-item list-group-item-primary list-group-item-action py-1 px-2';
+        parentItem.innerHTML = `<i class="bi bi-folder"></i> ${L('ctrl.parentFolder', 'Parent Folder')}`;
+        parentItem.addEventListener('click', () => ctrlSideFileGoTo(parent));
+        ctrlSideFileListEl.appendChild(parentItem);
+    }
+    if (!visible.length)
+        return;
     for (const fl of visible) {
         const item = document.createElement('button');
         item.type = 'button';
@@ -1673,6 +2349,7 @@ function ctrlSideFileRenderList(list) {
                 ctrlSideFileGoTo(ctrlSideFilePath + fl.name + '/');
             }
         });
+        ctrlSideFileBindLongPress(item, fl);
         ctrlSideFileListEl.appendChild(item);
     }
 }
@@ -1702,40 +2379,215 @@ async function ctrlSideFileGoTo(pathVal) {
             ctrlSideFilePathEl.textContent = data.path;
         }
         ctrlSideFileRenderList(data.list ?? []);
+        if (g_ctrlSideSrch.indexed && g_ctrlSideSrch.rootKey === ctrlSideSrchKey()) {
+            g_ctrlSideSrch.cache.set(ctrlSideFilePath, (data.list ?? []));
+        }
     }
     catch (e) {
         if (seq !== ctrlSideFileReqSeq)
             return;
         ctrlSideFileRenderEmpty(L('ctrl.failedToLoad', 'Failed to load'));
+        if (currentWebRootUrl) {
+            const remote = rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === currentWebRootUrl);
+            if (remote)
+                rdpNoteFetchFailure(remote);
+        }
     }
 }
-CDOM.ID('ctrlSideFileUpBtn').addEventListener('click', () => {
-    if (ctrlSideFilePath === '/' || ctrlSideFilePath === '')
-        return;
-    const trimmed = ctrlSideFilePath.replace(/\/+$/, '');
-    const parent = trimmed.substring(0, trimmed.lastIndexOf('/') + 1) || '/';
-    ctrlSideFileGoTo(parent);
-});
 CDOM.ID('ctrlSideFileRefreshBtn').addEventListener('click', () => ctrlSideFileGoTo(ctrlSideFilePath));
 ctrlSideFileGoTo('/');
-function runControlHotkey(key) {
-    switch (key) {
-        case 'F1': {
-            if (appSidebarRight && !appSidebarRight.classList.contains('sidebar-docked')) {
-                window.bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
+const ctrlSideFileSearchInputEl = CDOM.ID('ctrlSideFileSearchInput');
+const ctrlSideFileSearchResultsEl = CDOM.ID('ctrlSideFileSearchResults');
+const CTRL_SIDE_SRCH_SCAN_CAP = 100000;
+const CTRL_SIDE_SRCH_CONCURRENCY = 16;
+let g_ctrlSideSrch = { rootKey: '', indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+let ctrlSideSrchSeq = 0;
+function ctrlSideSrchKey() {
+    return (currentWebRootUrl || '') + '|' + (ctrlSelectedRootPath || '');
+}
+function ctrlSideSrchStop() {
+    ctrlSideSrchSeq++;
+    const wasIndexing = g_ctrlSideSrch.indexing;
+    g_ctrlSideSrch = { rootKey: '', indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+    if (wasIndexing) {
+        ctrlSideFileSearchInputEl.disabled = false;
+        ctrlSideFileSearchInputEl.placeholder = L('ctrl.ph.sideSearch', 'Search (click to index)');
+    }
+    ctrlSideFileSearchInputEl.value = '';
+    ctrlSideFileSearchResultsEl.classList.add('d-none');
+}
+async function ctrlSideSrchIndex() {
+    const key = ctrlSideSrchKey();
+    if (g_ctrlSideSrch.rootKey !== key)
+        g_ctrlSideSrch = { rootKey: key, indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+    if (g_ctrlSideSrch.indexed || g_ctrlSideSrch.indexing)
+        return;
+    const seq = ++ctrlSideSrchSeq;
+    g_ctrlSideSrch.indexing = true;
+    ctrlSideFileSearchInputEl.disabled = true;
+    const prevPlaceholder = ctrlSideFileSearchInputEl.placeholder;
+    ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingCount', 'Indexing... ({0})', 0);
+    const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
+    const rootPathParam = ctrlSelectedRootPath || undefined;
+    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const queue = ['/'];
+    let scanned = 0;
+    let stopped = false;
+    const fetchDir = async (dirPath) => {
+        try {
+            const p = { path: dirPath, skipVcs: 'true' };
+            if (rootPathParam)
+                p.RootPath = rootPathParam;
+            if (token)
+                p.token = token;
+            const data = await CFecth.Exe(webRootUrl + "File/List", p, "json");
+            if (seq !== ctrlSideSrchSeq)
+                return;
+            if (!Array.isArray(data.list))
+                return;
+            if (data.RootPath != null)
+                g_ctrlSideSrch.root = data.RootPath.replace(/\/+$/, '');
+            if (data.RootUrl != null)
+                g_ctrlSideSrch.down = new URL(data.RootUrl, webRootUrl).href.replace(/\/+$/, '');
+            g_ctrlSideSrch.cache.set(dirPath, data.list);
+            scanned += data.list.length;
+            ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingCount', 'Indexing... ({0})', scanned);
+            for (const fl of data.list) {
+                if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name))
+                    queue.push(dirPath + fl.name + '/');
             }
-            const fileTab = CDOM.ID('right-file-tab');
-            const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
-            if (onFile) {
-                window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-info-tab')).show();
-            }
-            else {
-                ctrlShowFileTab();
-            }
-            return true;
         }
+        catch {
+            stopped = true;
+        }
+    };
+    const worker = async () => {
+        while (queue.length > 0 && scanned < CTRL_SIDE_SRCH_SCAN_CAP && !stopped && seq === ctrlSideSrchSeq) {
+            const dirPath = queue.shift();
+            if (dirPath === undefined)
+                break;
+            await fetchDir(dirPath);
+        }
+    };
+    await Promise.all(Array.from({ length: CTRL_SIDE_SRCH_CONCURRENCY }, () => worker()));
+    if (seq !== ctrlSideSrchSeq)
+        return;
+    g_ctrlSideSrch.indexing = false;
+    g_ctrlSideSrch.indexed = true;
+    ctrlSideFileSearchInputEl.disabled = false;
+    ctrlSideFileSearchInputEl.placeholder = prevPlaceholder;
+}
+function ctrlSideSrchRenderResults(query) {
+    ctrlSideFileSearchResultsEl.innerHTML = '';
+    if (!query) {
+        ctrlSideFileSearchResultsEl.classList.add('d-none');
+        return;
+    }
+    let found = 0;
+    outer: for (const [dirPath, list] of g_ctrlSideSrch.cache) {
+        for (const fl of list) {
+            if (fl.hidden || ctrlIsSearchExcluded(fl.name))
+                continue;
+            if (!fl.name.toLowerCase().includes(query))
+                continue;
+            const item = document.createElement('div');
+            item.className = 'list-group-item list-group-item-action py-1 px-2';
+            const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
+            item.innerHTML =
+                `<i class="bi ${icon} me-1"></i><strong>${aiEscapeHtml(fl.name)}</strong>` +
+                    `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(dirPath)}</span>`;
+            item.addEventListener('click', () => {
+                ctrlSideFileSearchInputEl.value = '';
+                ctrlSideFileSearchResultsEl.classList.add('d-none');
+                if (fl.file) {
+                    editorOpenFile(g_ctrlSideSrch.root + dirPath + fl.name, currentWebRootUrl, g_ctrlSideSrch.down + ctrlEncodeUrlPath(dirPath + fl.name));
+                }
+                else {
+                    ctrlSideFileGoTo(dirPath + fl.name + '/');
+                }
+            });
+            ctrlSideFileSearchResultsEl.appendChild(item);
+            if (++found >= 100)
+                break outer;
+        }
+    }
+    ctrlSideFileSearchResultsEl.classList.toggle('d-none', found === 0);
+}
+ctrlSideFileSearchInputEl.addEventListener('focus', () => { void ctrlSideSrchIndex(); });
+ctrlSideFileSearchInputEl.addEventListener('input', () => {
+    ctrlSideSrchRenderResults(ctrlSideFileSearchInputEl.value.trim().toLowerCase());
+});
+ctrlSideFileSearchInputEl.addEventListener('keydown', (e) => {
+    if (ctrlSideFileSearchResultsEl.classList.contains('d-none'))
+        return;
+    const items = Array.from(ctrlSideFileSearchResultsEl.querySelectorAll('.list-group-item'));
+    if (items.length === 0)
+        return;
+    const curIdx = items.findIndex(el => el.classList.contains('ctrl-srch-kbd-active'));
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const dir = e.key === 'ArrowDown' ? 1 : -1;
+        const nxt = curIdx === -1 ? (dir === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+        if (curIdx >= 0)
+            items[curIdx].classList.remove('ctrl-srch-kbd-active');
+        items[nxt].classList.add('ctrl-srch-kbd-active');
+        items[nxt].scrollIntoView({ block: 'nearest' });
+    }
+    else if (e.key === 'Enter') {
+        if (curIdx >= 0) {
+            e.preventDefault();
+            items[curIdx].click();
+        }
+    }
+    else if (e.key === 'Escape') {
+        ctrlSideFileSearchResultsEl.classList.add('d-none');
+    }
+});
+document.addEventListener('click', (e) => {
+    if (ctrlSideFileSearchResultsEl.classList.contains('d-none'))
+        return;
+    const t = e.target;
+    if (t === ctrlSideFileSearchInputEl || ctrlSideFileSearchResultsEl.contains(t))
+        return;
+    ctrlSideFileSearchResultsEl.classList.add('d-none');
+});
+function ctrlOpenLeftSidebar() {
+    if (!appSidebar)
+        return;
+    if (sbSubTab === 'other') {
+        sbSubTab = 'agent';
+        localStorage.setItem(SB_TAB_LS, 'agent');
+        applySidebarSubTab();
+    }
+    if (!tmuxSidebarVisible('left'))
+        tmuxShowSidebar('left');
+    appSidebar.focus();
+}
+function ctrlOpenRightSidebarToggleFile() {
+    if (!tmuxSidebarVisible('right'))
+        tmuxShowSidebar('right');
+    const fileTab = CDOM.ID('right-file-tab');
+    const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
+    if (onFile) {
+        window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-info-tab')).show();
+    }
+    else {
+        ctrlShowFileTab();
+    }
+}
+function runControlHotkey(key, shift = false) {
+    switch (key) {
+        case 'F1':
+            if (shift)
+                tmuxHideSidebar('left');
+            else
+                ctrlOpenLeftSidebar();
+            return true;
         case 'F2':
-            ctrlFileSearch();
+            if (shift)
+                tmuxHideSidebar('right');
+            else
+                ctrlOpenRightSidebarToggleFile();
             return true;
         case 'F3':
             if (!ctrlRequireAuthed())
@@ -1745,81 +2597,21 @@ function runControlHotkey(key) {
     }
     return false;
 }
-function getActiveControlFrame() {
-    if (isPanelShown('term-panel'))
-        return { f: activeTermFrameKey ? termIframePool.get(activeTermFrameKey) ?? null : null, isTerm: true };
-    if (isPanelShown('chat-panel'))
-        return { f: activeChatFrameKey ? chatIframePool.get(activeChatFrameKey) ?? null : null, isTerm: false };
-    if (isPanelShown('rdp-panel'))
-        return { f: activeRdpFrameKey ? rdpIframePool.get(activeRdpFrameKey) ?? null : null, isTerm: false };
-    if (isPanelShown('browser-panel'))
-        return { f: activeBrowserFrameKey ? browserIframePool.get(activeBrowserFrameKey) ?? null : null, isTerm: false };
-    if (isPanelShown('editor-panel'))
-        return { f: activeEditorFrameKey ? editorIframePool.get(activeEditorFrameKey) ?? null : null, isTerm: false };
-    if (isPanelShown('file-panel'))
-        return { f: fileIframe, isTerm: false };
-    if (isPanelShown('memo-panel'))
-        return { f: memoIframe, isTerm: false };
-    return { f: null, isTerm: false };
-}
-function focusActiveControlFrame() {
-    const { f, isTerm } = getActiveControlFrame();
-    if (!f)
-        return;
-    if (isTerm) {
-        if (f.contentWindow)
-            CIframeMsg.Send(f.contentWindow, 'focus-input');
-        return;
-    }
-    try {
-        f.contentWindow?.focus();
-        const input = f.contentDocument?.querySelector('textarea, input');
-        if (input) {
-            input.focus();
-            return;
-        }
-    }
-    catch (_) { }
-    f.focus();
-}
-function runControlF4Key() {
-    if (!appSidebar)
-        return;
-    if (sbSubTab === 'other') {
-        sbSubTab = 'agent';
-        localStorage.setItem(SB_TAB_LS, 'agent');
-        applySidebarSubTab();
-    }
-    if (!appSidebar.classList.contains('sidebar-docked')) {
-        const wasShown = appSidebar.classList.contains('show');
-        window.bootstrap.Offcanvas.getOrCreateInstance(appSidebar).toggle();
-        if (wasShown)
-            focusActiveControlFrame();
-        else
-            setTimeout(() => appSidebar.focus(), 0);
-        return;
-    }
-    const focusInSidebar = document.activeElement instanceof Node && appSidebar.contains(document.activeElement);
-    if (focusInSidebar) {
-        focusActiveControlFrame();
-    }
-    else {
-        appSidebar.focus();
-    }
-}
-function isAppSidebarVisible() {
+function isSidebarFocused() {
     if (!appSidebar)
         return false;
-    return appSidebar.classList.contains('sidebar-docked') || appSidebar.classList.contains('show');
+    return document.activeElement instanceof Node && appSidebar.contains(document.activeElement);
 }
 function runControlArrowKey(dir) {
-    if (!isAppSidebarVisible())
+    if (!isSidebarFocused())
         return false;
     const listEl = sbSubTab === 'agent' ? agentSidebarList : otherSidebarList;
     const items = Array.from(listEl.querySelectorAll('.ai-session-item')).filter(el => el.offsetParent !== null);
     if (items.length === 0)
         return false;
-    const curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active'));
+    let curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-main') || el.classList.contains('ai-session-item-active-remote'));
+    if (curIdx < 0)
+        curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-sub') || el.classList.contains('ai-session-item-active'));
     const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
     if (nxt === curIdx)
         return false;
@@ -1827,108 +2619,65 @@ function runControlArrowKey(dir) {
     items[nxt].scrollIntoView({ block: 'nearest' });
     return true;
 }
-function wireCtrlDoubleTap(target, onTrigger) {
-    const THRESHOLD_MS = 400;
-    let otherKeyUsed = false;
-    let lastSoloUpTime = 0;
-    target.addEventListener('keydown', ((e) => {
-        if (e.key === 'Control')
-            return;
-        if (e.ctrlKey)
-            otherKeyUsed = true;
-    }), true);
-    target.addEventListener('keyup', ((e) => {
-        if (e.key !== 'Control')
-            return;
-        if (otherKeyUsed) {
-            otherKeyUsed = false;
-            lastSoloUpTime = 0;
-            return;
-        }
-        const now = performance.now();
-        if (now - lastSoloUpTime < THRESHOLD_MS) {
-            lastSoloUpTime = 0;
-            onTrigger();
-        }
-        else {
-            lastSoloUpTime = now;
-        }
-    }), true);
-}
-function wireIframeArrowKeys(f) {
-    f.addEventListener('load', () => {
-        try {
-            f.contentWindow?.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                    if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1))
-                        e.preventDefault();
-                }
-            }, true);
-            if (f.contentWindow)
-                wireCtrlDoubleTap(f.contentWindow, runControlF4Key);
-        }
-        catch (_) { }
-    });
+function runControlSubTabArrowKey(dir) {
+    if (!isSidebarFocused())
+        return false;
+    const next = dir === 1 ? 'other' : 'agent';
+    if (sbSubTab === next)
+        return false;
+    sbSubTab = next;
+    localStorage.setItem(SB_TAB_LS, next);
+    applySidebarSubTab();
+    return true;
 }
 function wirePooledFrameHotkeys(f, key) {
     const isTerm = key.startsWith('term:') || key.startsWith('term-new:');
     f.addEventListener('load', () => {
         try {
-            f.contentWindow?.addEventListener('keydown', (e) => {
-                if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
-                    e.preventDefault();
-                    runControlHotkey(e.key);
-                    return;
-                }
-                if (e.key === 'F4') {
-                    e.preventDefault();
-                    runControlF4Key();
-                    return;
-                }
-                if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-                    if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1))
+            if (!isTerm) {
+                f.contentWindow?.addEventListener('keydown', (e) => {
+                    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
                         e.preventDefault();
-                }
-            }, true);
-            if (f.contentWindow)
-                wireCtrlDoubleTap(f.contentWindow, runControlF4Key);
+                        runControlHotkey(e.key, e.shiftKey);
+                        return;
+                    }
+                }, true);
+            }
         }
         catch (_) { }
     });
 }
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
-        e.preventDefault();
-        runControlHotkey(e.key);
+    if (e.target === ctrlSideFileSearchInputEl && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         return;
     }
-    if (e.key === 'F4' || e.key === 'F6') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
         e.preventDefault();
-        runControlF4Key();
+        runControlHotkey(e.key, e.shiftKey);
         return;
     }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1))
             e.preventDefault();
     }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (runControlSubTabArrowKey(e.key === 'ArrowRight' ? 1 : -1))
+            e.preventDefault();
+    }
     if (e.key === 'F7') {
         e.preventDefault();
     }
 });
-wireCtrlDoubleTap(document, runControlF4Key);
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
-        const key = String(data.key ?? '');
-        if (key === 'F4')
-            runControlF4Key();
-        else
-            runControlHotkey(key);
+        runControlHotkey(String(data.key ?? ''), !!data.shift);
     },
 });
 CIframeMsg.Recv({
     'file-remote-changed': (data) => {
         currentWebRootUrl = String(data.baseUrl ?? '');
         memoSendRemoteInfo();
+        logOnServerChanged();
     },
     'file-opened': (data) => {
         promptSourceAction(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
@@ -1953,6 +2702,22 @@ CIframeMsg.Recv({
             }
             break;
         }
+    },
+    'editor-open-ref': (data, source) => {
+        const url = String(data.url ?? '');
+        if (!url)
+            return;
+        let baseUrl = '';
+        for (const [key, f] of editorIframePool) {
+            if (f.contentWindow !== source)
+                continue;
+            baseUrl = editorSessions.get(key)?.baseUrl ?? '';
+            break;
+        }
+        void ctrlUrlToPath(url, baseUrl).then(path => {
+            if (path)
+                promptSourceAction(path, baseUrl, url);
+        });
     },
     'terminal-handoff': (data) => {
         const newToken = String(data.newToken ?? '');
@@ -1988,6 +2753,7 @@ function logOnServerChanged() {
     logUpdateSource();
     if (isPanelShown('log-panel'))
         logLoadSessions(true);
+    loadAiProviderStatus();
 }
 function logRegexEscape(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -2269,7 +3035,6 @@ function memoEnsureLayout() {
     memoIframe.id = "memo-iframe";
     memoIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
     memoPanel.appendChild(memoIframe);
-    wireIframeArrowKeys(memoIframe);
 }
 function memoLoadFrame() {
     memoEnsureLayout();
@@ -2606,26 +3371,29 @@ function destroyAgentGroup(el) {
 function updateAgentGroupHeader(el, meta) {
     const head = el.querySelector('.agent-group-head');
     head.classList.toggle('agent-group-remote', !!meta.remoteLabel);
+    head.style.cssText = meta.remoteLabel ? rdpAccentStyle(meta.remoteId ?? meta.remoteLabel) : '';
     const addrEl = el.querySelector('.agent-group-addr');
     addrEl.style.display = meta.remoteLabel ? 'block' : 'none';
     addrEl.textContent = meta.remoteLabel ?? '';
     el.querySelector('.agent-group-path > span').textContent = meta.pathText;
 }
-let localRootOpts = [];
-const remoteRootsCache = new Map();
 async function refreshLocalRoots() {
     try {
         const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json");
         localRootOpts = (data.roots ?? []).map(r => r.name === './' ? { ...r, name: 'Artgine (WorkingPath)' } : r);
         renderSessionSidebar();
+        ctrlSyncSideFileRootSel();
     }
     catch { }
 }
 async function refreshRemoteRoots(r) {
     const webRootUrl = rdpRemoteWebRootUrl(r.entryUrl);
     if (!(await rdpEnsureRemoteAuth(r))) {
-        if (remoteRootsCache.delete(r.remoteId))
+        if (remoteRootsCache.delete(r.remoteId)) {
             renderSessionSidebar();
+            ctrlSyncSideFileRootSel();
+        }
+        rdpNoteFetchFailure(r);
         return;
     }
     try {
@@ -2633,10 +3401,104 @@ async function refreshRemoteRoots(r) {
         const data = await CFecth.Exe(webRootUrl + "File/Root", token ? { token } : {}, "json");
         remoteRootsCache.set(r.remoteId, data.roots ?? []);
         renderSessionSidebar();
+        ctrlSyncSideFileRootSel();
     }
-    catch { }
+    catch {
+        rdpNoteFetchFailure(r);
+    }
 }
 function refreshAllRemoteRoots() { refreshLocalRoots(); rdpRemotes.forEach(refreshRemoteRoots); }
+async function rdpHandleReconnect(remote) {
+    await refreshRemoteRoots(remote);
+    const webRootUrl = rdpRemoteWebRootUrl(remote.entryUrl);
+    if (currentWebRootUrl === webRootUrl)
+        await ctrlRefreshRootSelect();
+}
+const RDP_OFFLINE_POLL_MS = 15000;
+let rdpOfflinePollTimer = null;
+function rdpEnsureOfflinePolling() {
+    if (rdpOfflinePollTimer != null)
+        return;
+    rdpOfflinePollTimer = setInterval(async () => {
+        const offlineRemotes = rdpRemotes.filter(r => rdpStatus.get(r.remoteId) === 'offline');
+        if (!offlineRemotes.length) {
+            clearInterval(rdpOfflinePollTimer);
+            rdpOfflinePollTimer = null;
+            return;
+        }
+        for (const r of offlineRemotes) {
+            const st = await rdpProbeRemote(r.entryUrl);
+            if (!rdpRemotes.some(x => x.remoteId === r.remoteId))
+                continue;
+            if (st === 'offline')
+                continue;
+            rdpStatus.set(r.remoteId, st);
+            rdpRenderList();
+            rdpHandleReconnect(r);
+        }
+    }, RDP_OFFLINE_POLL_MS);
+}
+function rdpClearRemoteSessions(remoteId) {
+    remoteRootsCache.delete(remoteId);
+    for (const [key, f] of Array.from(termIframePool.entries())) {
+        if (!key.startsWith('term:') || keyRemoteId(key) !== remoteId)
+            continue;
+        f.remove();
+        termIframePool.delete(key);
+        tmuxAllFrames.delete(key);
+        tmuxClearIfShowing(key);
+        if (activeTermFrameKey === key) {
+            activeTermFrameKey = null;
+            updateTermFramePlaceholder();
+        }
+    }
+    if (lastTermSessions)
+        lastTermSessions = lastTermSessions.filter(s => s.remoteId !== remoteId);
+    for (const [key, f] of Array.from(chatIframePool.entries())) {
+        if (keyRemoteId(key) !== remoteId)
+            continue;
+        f.remove();
+        chatIframePool.delete(key);
+        tmuxAllFrames.delete(key);
+        tmuxClearIfShowing(key);
+        if (activeChatFrameKey === key) {
+            activeChatFrameKey = null;
+            updateChatFramePlaceholder();
+        }
+    }
+    if (lastChatSessions)
+        lastChatSessions = lastChatSessions.filter(s => s.remoteId !== remoteId);
+    for (const [key, s] of Array.from(browserSessions.entries())) {
+        if (s.remoteId !== remoteId)
+            continue;
+        browserSessions.delete(key);
+        destroyBrowserFrame(key);
+    }
+    renderSessionSidebar();
+}
+async function rdpNoteFetchFailure(remote) {
+    const prev = rdpStatus.get(remote.remoteId);
+    const st = await rdpProbeRemote(remote.entryUrl);
+    if (!rdpRemotes.some(x => x.remoteId === remote.remoteId))
+        return;
+    if (st === prev)
+        return;
+    rdpStatus.set(remote.remoteId, st);
+    rdpRenderList();
+    if (st === 'offline') {
+        rdpClearRemoteSessions(remote.remoteId);
+        rdpEnsureOfflinePolling();
+    }
+    else
+        rdpHandleReconnect(remote);
+}
+function noteSessionFetchFailure(remoteId) {
+    if (!remoteId)
+        return;
+    const remote = rdpRemotes.find(r => r.remoteId === remoteId);
+    if (remote)
+        rdpNoteFetchFailure(remote);
+}
 function localServerCtx() {
     return { remoteId: '', apiUrl: CPath.WebRootUrl(), artgineUrl: CPath.WebRootArtgineUrl(), authToken: '' };
 }
@@ -2758,16 +3620,38 @@ let termAuthState = 'unknown';
 let browserAuthState = 'unknown';
 let lastChatSessions = null;
 let lastTermSessions = null;
-function activeSessionKey() {
-    if (isPanelShown('chat-panel'))
-        return activeChatFrameKey;
-    if (isPanelShown('term-panel'))
-        return activeTermFrameKey;
-    if (isPanelShown('browser-panel'))
-        return activeBrowserFrameKey;
-    if (isPanelShown('editor-panel'))
-        return activeEditorFrameKey;
-    return null;
+function tmuxPaneRole(key) {
+    if (!tmuxTreeReady)
+        return null;
+    const mainId = tmuxFirstPaneId();
+    let role = null;
+    (function walk(p) {
+        if (role === 'main')
+            return;
+        if (p.split && p.children) {
+            walk(p.children[0]);
+            walk(p.children[1]);
+            return;
+        }
+        if (p.contentKey !== key)
+            return;
+        role = p.id === mainId ? 'main' : 'sub';
+    })(tmuxRoot);
+    return role;
+}
+function sessActiveFromKey(key) {
+    const role = tmuxPaneRole(key);
+    return {
+        activeClass: role === 'main' ? 'ai-session-item-active-main' : 'ai-session-item-active-sub',
+        isActive: role != null,
+    };
+}
+function refreshRdpHighlights() {
+    for (const el of Array.from(rdpSidebarList.querySelectorAll('.ai-session-item'))) {
+        const key = el.dataset.key || (el.dataset.id ? `rdp:remote:${el.dataset.id}` : '');
+        if (key)
+            applySessActiveClasses(el, sessActiveFromKey(key));
+    }
 }
 let sessionRenderQueued = false;
 function renderSessionSidebar() {
@@ -2801,26 +3685,27 @@ function flushSessionSidebar() {
         agentSidebarList.innerHTML = '';
         otherSidebarList.innerHTML = '';
     }
-    const activeKey = activeSessionKey();
     const agentEntries = [];
     if (lastChatSessions)
         for (const s of lastChatSessions)
-            agentEntries.push({ key: sessKey('chat', s.remoteId, s.sessionId), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s, activeKey) });
+            agentEntries.push({ key: sessKey('chat', s.remoteId, s.sessionId), groupKey: sessionGroupKey(s.remoteId, s.workingDir), sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s) });
     const hiddenByGroup = new Map();
     if (lastTermSessions)
         for (const s of lastTermSessions) {
             const groupKey = sessionGroupKey(s.remoteId, s.workingDir);
-            if (hideSubAgentSessions && s.key) {
+            if (hideSubAgentSessions && s.hidden) {
                 hiddenByGroup.set(groupKey, (hiddenByGroup.get(groupKey) ?? 0) + 1);
                 continue;
             }
-            agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+            agentEntries.push({ key: sessKey('term', s.remoteId, s.token), groupKey, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s) });
         }
     const otherEntries = [];
     for (const s of browserSessions.values())
-        otherEntries.push({ key: `browser:${s.sessionId}`, sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s, activeKey) });
+        otherEntries.push({ key: sessKey('browser', s.remoteId, s.sessionId), sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s) });
     for (const s of editorSessions.values())
-        otherEntries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s, activeKey) });
+        otherEntries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s) });
+    for (const s of webSessions.values())
+        otherEntries.push({ key: s.key, sortKey: s.openedAt, spec: webItemSpec(s) });
     otherEntries.sort((a, b) => b.sortKey - a.sortKey);
     const live = new Set();
     for (const e of agentEntries)
@@ -2870,7 +3755,7 @@ function renderAgentGroups(entries, frozen, hiddenByGroup) {
             if (!regSet.has(k)) {
                 regSet.add(k);
                 registered.push(k);
-                groupMeta.set(k, { pathText: agentGroupPathText(base), remoteLabel: remote.entryUrl });
+                groupMeta.set(k, { pathText: agentGroupPathText(base), remoteLabel: remote.entryUrl, remoteId: remote.remoteId });
             }
         }
     }
@@ -2913,7 +3798,7 @@ function renderAgentGroups(entries, frozen, hiddenByGroup) {
         let meta = groupMeta.get(k);
         if (!meta) {
             const pg = parseGroupKey(k);
-            meta = { pathText: pg.pathText, remoteLabel: pg.remoteId ? remoteEntryUrl(pg.remoteId) : undefined };
+            meta = { pathText: pg.pathText, remoteLabel: pg.remoteId ? remoteEntryUrl(pg.remoteId) : undefined, remoteId: pg.remoteId };
         }
         updateAgentGroupHeader(g, meta);
         const items = byGroup.get(k) ?? [];
@@ -3073,8 +3958,9 @@ async function termOpenTappedPath(tappedPath, token) {
         CAlert.E(LF('ctrl.msg.cannotOpenUnknownWd', 'Cannot open path — working directory is unknown: {0}', tappedPath));
         return;
     }
+    const ctx = serverCtxOf(sess?.remoteId || '') ?? localServerCtx();
     try {
-        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json");
+        const data = await CFecth.Exe(ctx.apiUrl + "File/Root", ctx.authToken ? { token: ctx.authToken } : {}, "json");
         const normFull = termNormAbsPath(fullPath);
         const normFullLower = normFull.toLowerCase();
         const root = (data.roots || []).find(r => {
@@ -3086,9 +3972,9 @@ async function termOpenTappedPath(tappedPath, token) {
             return;
         }
         const relPath = normFull.slice(termNormAbsPath(root.path).length);
-        const downBase = new URL(root.url, CPath.WebRootUrl()).href.replace(/\/+$/, '');
+        const downBase = new URL(root.url, ctx.apiUrl).href.replace(/\/+$/, '');
         const url = downBase + relPath.split('/').map(encodeURIComponent).join('/');
-        promptSourceAction(fullPath, '', url);
+        promptSourceAction(fullPath, ctx.remoteId ? ctx.apiUrl : '', url);
     }
     catch (e) {
         console.error('termOpenTappedPath error:', e);
@@ -3102,8 +3988,33 @@ function fileExtOf(path) {
 function executeOpenedSource(fullPath, url) {
     window.open(url, "_blank");
 }
+async function ctrlSaveOpenedSheet(filePath, base64, baseUrl) {
+    const fileName = filePath.split('/').pop() ?? filePath;
+    const dir = filePath.slice(0, filePath.length - fileName.length);
+    const webRootUrl = baseUrl || CPath.WebRootUrl();
+    const token = baseUrl ? getAuthToken(baseUrl) : '';
+    const up = { path: dir, name: [fileName], data: [base64] };
+    if (token)
+        up.token = token;
+    try {
+        await CFecth.Exe(webRootUrl + 'File/Upload', up, 'json');
+        CAlert.Info('저장 완료');
+    }
+    catch (e) {
+        CAlert.E('저장 실패: ' + e.message);
+    }
+}
 function promptSourceAction(fullPath, baseUrl, url) {
     const ext = fileExtOf(fullPath);
+    if (ext === 'sqlite' || ext === 'db') {
+        const token = baseUrl ? getAuthToken(baseUrl) : '';
+        new CORMViewer(undefined, 'sqlite', fullPath, baseUrl, token).Open(CModal.ePos.Center);
+        return;
+    }
+    if (ext === 'csv' || ext === 'xlsx' || ext === 'xls') {
+        new CSheetViewer([url], async (filePath, base64) => ctrlSaveOpenedSheet(filePath, base64, baseUrl)).Open();
+        return;
+    }
     const canExecute = ext === 'html' || ext === 'htm';
     if (!canExecute) {
         editorOpenFile(fullPath, baseUrl, url);
@@ -3116,22 +4027,22 @@ function promptSourceAction(fullPath, baseUrl, url) {
     confirm.SetConfirm(CConfirm.eConfirm.List, actions, labels);
     confirm.Open();
 }
-function editorItemSpec(s, activeKey) {
+function editorItemSpec(s) {
     const name = s.path.split('/').pop() || s.path;
     const dir = s.path.slice(0, s.path.length - name.length);
     const dot = s.dirty
         ? `<span class="text-warning small" title="${L('ctrl.st.modified', 'Modified (unsaved)')}">●</span>`
         : `<span class="text-success small" title="${L('ctrl.st.saved', 'Saved')}">●</span>`;
     const isRemote = !!s.baseUrl;
+    const remoteId = isRemote ? (rdpRemotes.find(r => rdpRemoteWebRootUrl(r.entryUrl) === s.baseUrl)?.remoteId ?? s.baseUrl) : '';
     return {
-        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
-        isActive: activeKey === s.key,
+        ...sessActiveFromKey(s.key),
         dataAttr: { name: 'key', value: s.key },
         leftHtml: `${dot}`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.path)}">
             <span class="text-truncate small"><i class="bi bi-file-earmark-code"></i> ${aiEscapeHtml(name)}</span>
-            ${isRemote ? `<span class="text-secondary" style="font-size:0.68rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${aiEscapeHtml(s.baseUrl)}</span>` : ''}
+            ${isRemote ? `<span class="${rdpTextColor(remoteId)}" style="font-size:0.68rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${aiEscapeHtml(s.baseUrl)}</span>` : ''}
             ${dir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(dir)}</span>` : ''}
         </span>`,
         deleteAct: 'delete',
@@ -3147,6 +4058,8 @@ function editorItemSpec(s, activeKey) {
             if (f) {
                 f.remove();
                 editorIframePool.delete(s.key);
+                tmuxAllFrames.delete(s.key);
+                tmuxClearIfShowing(s.key);
             }
             if (activeEditorFrameKey === s.key) {
                 activeEditorFrameKey = null;
@@ -3167,6 +4080,120 @@ function genUuid() {
         return v.toString(16);
     });
 }
+const webIframePool = new Map();
+let activeWebFrameKey = null;
+const webFrameCtx = {
+    pool: webIframePool,
+    container: tmuxIdlePool,
+    getActiveKey: () => activeWebFrameKey,
+    setActiveKey: (key) => { activeWebFrameKey = key; },
+    updatePlaceholder: () => { },
+};
+function showWebFrame(key, src) {
+    return showPooledFrame(webFrameCtx, key, src);
+}
+function webActivatePane() {
+    activatePaneUnlessMultiplexer('web-panel-tab', 'Web');
+}
+const webSessions = new Map();
+function webNormalizeUrl(url) {
+    try {
+        const u = new URL(url);
+        const host = u.hostname.replace(/^www\./, '');
+        let id = '';
+        let start = '';
+        if (host === 'youtube.com' && u.pathname === '/watch') {
+            id = u.searchParams.get('v') || '';
+            start = u.searchParams.get('t') || '';
+        }
+        else if (host === 'youtu.be') {
+            id = u.pathname.slice(1);
+            start = u.searchParams.get('t') || '';
+        }
+        if (!id)
+            return url;
+        const startSec = start ? start.replace(/s$/, '') : '';
+        return `https://www.youtube.com/embed/${id}${startSec ? `?start=${encodeURIComponent(startSec)}` : ''}`;
+    }
+    catch (_) {
+        return url;
+    }
+}
+function webOpenUrl(rawUrl) {
+    const url = webNormalizeUrl(rawUrl);
+    const key = `web:${genUuid()}`;
+    webSessions.set(key, { key, url, openedAt: Date.now() });
+    webActivatePane();
+    showWebFrame(key, url);
+    renderSessionSidebar();
+}
+function webItemSpec(s) {
+    return {
+        ...sessActiveFromKey(s.key),
+        dataAttr: { name: 'key', value: s.key },
+        leftHtml: `<i class="bi bi-globe"></i>`,
+        bodyHtml: `
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.url)}">
+            <span class="text-truncate small">${aiEscapeHtml(s.url)}</span>
+        </span>`,
+        deleteAct: 'delete',
+        deleteLabel: L('ctrl.deleteIcon', '🗑️ Delete'),
+        onClick: () => {
+            webActivatePane();
+            showWebFrame(s.key, s.url);
+            renderSessionSidebar();
+        },
+        onShare: () => showShareLinkModal(L('ctrl.share.webTitle', 'Web Link'), LF('ctrl.share.web', 'Anyone with this link can view: <strong>{0}</strong>', aiEscapeHtml(s.url)), s.url),
+        onDelete: () => {
+            const f = webIframePool.get(s.key);
+            if (f) {
+                f.remove();
+                webIframePool.delete(s.key);
+                tmuxAllFrames.delete(s.key);
+                tmuxClearIfShowing(s.key);
+            }
+            if (activeWebFrameKey === s.key)
+                activeWebFrameKey = null;
+            webSessions.delete(s.key);
+            renderSessionSidebar();
+        },
+        popup: { url: () => s.url, title: s.url, winName: `web_${s.key}` },
+    };
+}
+CDOM.ID('web-new-btn').addEventListener('click', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">${L('ctrl.hdr.newWeb', 'Open Web Page')}</p>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.url', 'URL')}</label>
+            <input id="web-url" type="text" class="form-control form-control-sm" placeholder="https://..." autocomplete="off">
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="web-open" class="btn btn-primary">${L('ctrl.open', 'Open')}</button>
+            <button id="web-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const urlInput = container.querySelector('#web-url');
+        const doOpen = () => {
+            let url = urlInput.value.trim();
+            if (!url)
+                return;
+            if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url))
+                url = 'https://' + url;
+            modal.Close();
+            webOpenUrl(url);
+        };
+        container.querySelector('#web-open').addEventListener('click', doOpen);
+        container.querySelector('#web-cancel').addEventListener('click', () => modal.Close());
+        urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            doOpen(); });
+        setTimeout(() => urlInput.focus(), 50);
+    }, 0);
+});
 function chatStartNew(initialWorkingDir, remoteId = '') {
     const container = document.createElement('div');
     container.innerHTML = `
@@ -3240,11 +4267,7 @@ function chatLoadSession(s) {
     showChatFrame(sessKey('chat', s.remoteId, s.sessionId), `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`);
     renderSessionSidebar();
 }
-function chatShowShareLink(ctx, sid, title) {
-    const shareUrl = `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`;
-    showShareLinkModal('Chat Share Link', `Anyone with this link can access the chat: <strong>${aiEscapeHtml(title)}</strong>`, shareUrl);
-}
-function chatItemSpec(s, activeKey) {
+function chatItemSpec(s) {
     const ctx = serverCtxOf(s.remoteId);
     const key = sessKey('chat', s.remoteId, s.sessionId);
     const isRemote = !!s.remoteId;
@@ -3256,8 +4279,7 @@ function chatItemSpec(s, activeKey) {
         : st === 'busy' ? `<span class="ai-busy-dot text-warning small" title="${L('ctrl.st.busy', 'Busy')}">●</span>`
             : `<span class="text-success small" title="${L('ctrl.st.idle', 'Idle')}">●</span>`;
     return {
-        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
-        isActive: activeKey === key,
+        ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -3266,15 +4288,13 @@ function chatItemSpec(s, activeKey) {
         </span>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
-            ${isRemote && addr ? `<span class="text-truncate text-danger" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
+            ${isRemote && addr ? `<span class="text-truncate ${rdpTextColor(s.remoteId)}" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
             <span class="text-truncate text-secondary" style="font-size:0.65rem;font-family:monospace;">${aiEscapeHtml(s.sessionId)}</span>
             <span class="text-truncate small">${aiEscapeHtml(s.lastMsg || s.title)}</span>
         </span>`,
         deleteAct: 'delete',
         deleteLabel: '🗑️ Delete',
         onClick: () => chatLoadSession(s),
-        onShare: () => { if (ctx)
-            chatShowShareLink(ctx, s.sessionId, s.title); },
         onDelete: async () => {
             if (ctx)
                 await fetch(ctxApiUrl(ctx, `AIChat/session?id=${s.sessionId}`), { method: 'DELETE' });
@@ -3282,6 +4302,8 @@ function chatItemSpec(s, activeKey) {
             if (f) {
                 f.remove();
                 chatIframePool.delete(key);
+                tmuxAllFrames.delete(key);
+                tmuxClearIfShowing(key);
             }
             if (activeChatFrameKey === key) {
                 activeChatFrameKey = null;
@@ -3320,7 +4342,9 @@ async function chatRenderList() {
                     sessions = j.ok ? j.sessions : null;
                 }
             }
-            catch { }
+            catch {
+                noteSessionFetchFailure(remoteId);
+            }
             if (unauthed && !remoteId) {
                 removeAuthToken(CPath.WebRootUrl());
                 markLocalAuthLost();
@@ -3409,6 +4433,8 @@ async function termKillSession(s) {
         if (f) {
             f.remove();
             termIframePool.delete(key);
+            tmuxAllFrames.delete(key);
+            tmuxClearIfShowing(key);
         }
         if (activeTermFrameKey === key) {
             activeTermFrameKey = null;
@@ -3423,12 +4449,11 @@ async function termKillSession(s) {
 function termShowShareLink(ctx, token) {
     showShareLinkModal(L('ctrl.share.termTitle', 'Terminal Share Link'), L('ctrl.share.term', 'Anyone with this link can view the terminal in read-only mode.'), `${ctx.apiUrl}cmd/terminal-proxy?token=${token}`);
 }
-function termItemSpec(s, activeKey) {
+function termItemSpec(s) {
     const ctx = serverCtxOf(s.remoteId);
     const key = sessKey('term', s.remoteId, s.token);
     const isRemote = !!s.remoteId;
     const addr = remoteEntryUrl(s.remoteId);
-    const isActive = activeKey === key;
     const isLoaded = termIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     const preview = aiEscapeHtml(s.lastMsg || '(empty)');
@@ -3444,8 +4469,7 @@ function termItemSpec(s, activeKey) {
             : st === 'busy' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
                 : `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
     return {
-        activeClass: isRemote ? 'ai-session-item-active-remote' : 'ai-session-item-active',
-        isActive,
+        ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -3454,7 +4478,7 @@ function termItemSpec(s, activeKey) {
         </span>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
-            ${isRemote && addr ? `<span class="text-truncate text-danger" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
+            ${isRemote && addr ? `<span class="text-truncate ${rdpTextColor(s.remoteId)}" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
             <span class="text-truncate text-secondary" style="font-size:0.65rem;font-family:monospace;">${aiEscapeHtml(s.token)}</span>
             ${s.key ? `<span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.key)}</span>` : ''}
             <span class="text-truncate small">${preview}</span>
@@ -3499,7 +4523,9 @@ async function termRenderList() {
                     sessions = j.ok ? j.sessions : null;
                 }
             }
-            catch { }
+            catch {
+                noteSessionFetchFailure(remoteId);
+            }
             if (unauthed && !remoteId) {
                 removeAuthToken(CPath.WebRootUrl());
                 markLocalAuthLost();
@@ -3525,8 +4551,26 @@ async function termRenderList() {
                 const f = termIframePool.get(newKey);
                 termIframePool.delete(newKey);
                 termIframePool.set(key, f);
+                tmuxAllFrames.delete(newKey);
+                tmuxAllFrames.set(key, f);
                 if (activeTermFrameKey === newKey)
                     activeTermFrameKey = key;
+                let promoted = false;
+                (function walk(p) {
+                    if (p.split && p.children) {
+                        walk(p.children[0]);
+                        walk(p.children[1]);
+                        return;
+                    }
+                    if (p.contentKey === newKey) {
+                        p.contentKey = key;
+                        promoted = true;
+                    }
+                })(tmuxRoot);
+                if (promoted) {
+                    tmuxSyncPanePositions();
+                    tmuxSaveLayout();
+                }
             }
             for (const s of withRemote) {
                 const key = sessKey('term', remoteId, s.token);
@@ -3554,6 +4598,8 @@ async function termRenderList() {
                     if (f) {
                         f.remove();
                         termIframePool.delete(key);
+                        tmuxAllFrames.delete(key);
+                        tmuxClearIfShowing(key);
                     }
                     if (activeTermFrameKey === key) {
                         activeTermFrameKey = null;
@@ -3751,7 +4797,9 @@ let activeBrowserFrameKey = null;
 function updateBrowserFramePlaceholder() {
     browserFramePlaceholder.classList.toggle('browser-frame-placeholder-hidden', !!activeBrowserFrameKey);
 }
-function isBrowserPaneActive() { return CDOM.ID('browser-panel').classList.contains('active'); }
+function isBrowserPaneActive() {
+    return CDOM.ID('tmux-panel').classList.contains('active') && !!activeBrowserFrameKey && tmuxFindPaneIdByKey(activeBrowserFrameKey) !== null;
+}
 function updateBrowserFrameVisibility() {
     if (!activeBrowserFrameKey)
         return;
@@ -3779,6 +4827,8 @@ function destroyBrowserFrame(key) {
         return;
     f.remove();
     browserIframePool.delete(key);
+    tmuxAllFrames.delete(key);
+    tmuxClearIfShowing(key);
     if (activeBrowserFrameKey === key)
         activeBrowserFrameKey = null;
     updateBrowserFramePlaceholder();
@@ -3787,9 +4837,12 @@ function browserActivatePane() {
     activatePaneUnlessMultiplexer('browser-panel-tab', 'Browser');
 }
 const browserSessions = new Map();
-function browserLoadSession(sessionId) {
+function browserLoadSession(remoteId, sessionId) {
+    const ctx = serverCtxOf(remoteId);
+    if (!ctx)
+        return;
     browserActivatePane();
-    showBrowserFrame(`browser:${sessionId}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`);
+    showBrowserFrame(sessKey('browser', remoteId, sessionId), `${ctx.artgineUrl}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`);
     renderSessionSidebar();
 }
 function browserFmtTtl(expiresAt) {
@@ -3800,14 +4853,15 @@ function browserFmtTtl(expiresAt) {
     const s = rem % 60;
     return m > 0 ? `−${m}m${s}s` : `−${s}s`;
 }
-function browserItemSpec(s, activeKey) {
-    const key = `browser:${s.sessionId}`;
-    const isActive = activeKey === key;
+function browserItemSpec(s) {
+    const ctx = serverCtxOf(s.remoteId);
+    const key = sessKey('browser', s.remoteId, s.sessionId);
+    const isRemote = !!s.remoteId;
+    const addr = remoteEntryUrl(s.remoteId);
     const isLoaded = browserIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     return {
-        activeClass: 'ai-session-item-active',
-        isActive,
+        ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -3816,6 +4870,7 @@ function browserItemSpec(s, activeKey) {
         </span>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            ${isRemote && addr ? `<span class="text-truncate ${rdpTextColor(s.remoteId)}" style="font-size:0.65rem;">${aiEscapeHtml(addr)}</span>` : ''}
             <span class="text-truncate small" title="${aiEscapeHtml(s.url)}">${aiEscapeHtml(s.url)}</span>
             <span class="d-flex gap-2 text-secondary" style="font-size:0.7rem;">
                 <span>${aiEscapeHtml(s.browserName || 'auto')}</span>
@@ -3824,28 +4879,33 @@ function browserItemSpec(s, activeKey) {
         </span>`,
         deleteAct: 'delete',
         deleteLabel: '🗑️ Delete',
-        onClick: () => browserLoadSession(s.sessionId),
-        onShare: () => browserShowShareLink(s.sessionId, s.url),
-        onDelete: () => browserRemoveSession(s.sessionId),
-        popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.sessionId}` },
+        onClick: () => browserLoadSession(s.remoteId, s.sessionId),
+        onShare: () => browserShowShareLink(ctx, s.sessionId, s.url),
+        onDelete: () => browserRemoveSession(s.remoteId, s.sessionId),
+        popup: { url: () => `${ctx?.artgineUrl ?? CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.remoteId}_${s.sessionId}` },
     };
 }
-function browserAddSession(sessionId, url, browserName = '', expiresAt = 0, navigate = true, createdAt = Date.now()) {
-    if (browserSessions.has(sessionId))
+function browserAddSession(sessionId, url, browserName = '', expiresAt = 0, navigate = true, createdAt = Date.now(), remoteId = '') {
+    const key = sessKey('browser', remoteId, sessionId);
+    if (browserSessions.has(key))
         return;
-    browserSessions.set(sessionId, { sessionId, url, browserName, expiresAt, createdAt, updatedAt: createdAt });
+    browserSessions.set(key, { sessionId, remoteId, url, browserName, expiresAt, createdAt, updatedAt: createdAt });
     renderSessionSidebar();
     if (navigate)
-        browserLoadSession(sessionId);
+        browserLoadSession(remoteId, sessionId);
 }
-async function browserRemoveSession(sessionId) {
-    if (!browserSessions.has(sessionId))
+async function browserRemoveSession(remoteId, sessionId) {
+    const key = sessKey('browser', remoteId, sessionId);
+    if (!browserSessions.has(key))
         return;
-    browserSessions.delete(sessionId);
-    destroyBrowserFrame(`browser:${sessionId}`);
+    browserSessions.delete(key);
+    destroyBrowserFrame(key);
     renderSessionSidebar();
+    const ctx = serverCtxOf(remoteId);
+    if (!ctx)
+        return;
     try {
-        await authedFetch(`${CPath.WebRootUrl()}PlayWright/remove`, {
+        await fetch(ctxApiUrl(ctx, 'PlayWright/remove'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId })
@@ -3866,44 +4926,64 @@ async function browserRefreshList() {
         return;
     browserListInFlight = true;
     try {
-        const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/list`);
-        if (r.status === 401) {
-            removeAuthToken(CPath.WebRootUrl());
-            markLocalAuthLost();
-            browserAuthState = 'signin';
-            browserSessions.clear();
+        const ctxs = sessionServerCtxs();
+        await Promise.all(ctxs.map(async (ctx) => {
+            const remoteId = ctx.remoteId;
+            let sessions = null;
+            let unauthed = false;
+            try {
+                const r = await ctxFetch(ctx, 'PlayWright/list');
+                if (r.status === 401)
+                    unauthed = true;
+                else if (r.ok) {
+                    const j = await r.json();
+                    sessions = j.ok ? j.sessions : null;
+                }
+            }
+            catch {
+                noteSessionFetchFailure(remoteId);
+            }
+            if (unauthed && !remoteId) {
+                removeAuthToken(CPath.WebRootUrl());
+                markLocalAuthLost();
+                browserAuthState = 'signin';
+                browserSessions.clear();
+                renderSessionSidebar();
+                return;
+            }
+            if (!sessions)
+                return;
+            browserAuthState = 'ok';
+            const serverIds = new Set(sessions.map(s => s.sessionId));
+            for (const [key, s] of Array.from(browserSessions.entries())) {
+                if (s.remoteId !== remoteId)
+                    continue;
+                if (!serverIds.has(s.sessionId)) {
+                    browserSessions.delete(key);
+                    destroyBrowserFrame(key);
+                }
+            }
+            for (const s of sessions) {
+                const key = sessKey('browser', remoteId, s.sessionId);
+                const existing = browserSessions.get(key);
+                if (existing) {
+                    existing.expiresAt = s.expiresAt;
+                    existing.updatedAt = s.updatedAt;
+                }
+                else
+                    browserSessions.set(key, { sessionId: s.sessionId, remoteId, url: s.currentUrl, browserName: s.browserName, expiresAt: s.expiresAt, createdAt: s.createdAt, updatedAt: s.updatedAt });
+            }
             renderSessionSidebar();
-            return;
-        }
-        const j = await r.json();
-        if (!j.ok)
-            return;
-        browserAuthState = 'ok';
-        const serverIds = new Set(j.sessions.map(s => s.sessionId));
-        for (const sid of Array.from(browserSessions.keys())) {
-            if (!serverIds.has(sid)) {
-                browserSessions.delete(sid);
-                destroyBrowserFrame(`browser:${sid}`);
-            }
-        }
-        for (const s of j.sessions) {
-            const existing = browserSessions.get(s.sessionId);
-            if (existing) {
-                existing.expiresAt = s.expiresAt;
-                existing.updatedAt = s.updatedAt;
-            }
-            else
-                browserSessions.set(s.sessionId, { sessionId: s.sessionId, url: s.currentUrl, browserName: s.browserName, expiresAt: s.expiresAt, createdAt: s.createdAt, updatedAt: s.updatedAt });
-        }
-        renderSessionSidebar();
+        }));
     }
     catch (_) { }
     finally {
         browserListInFlight = false;
     }
 }
-function browserShowShareLink(sessionId, url) {
-    showShareLinkModal(L('ctrl.share.browserTitle', 'Browser Share Link'), LF('ctrl.share.browser', 'Anyone with this link can view the session in read-only mode: <strong>{0}</strong>', aiEscapeHtml(url)), `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`);
+function browserShowShareLink(ctx, sessionId, url) {
+    const base = ctx?.artgineUrl ?? CPath.WebRootArtgineUrl();
+    showShareLinkModal(L('ctrl.share.browserTitle', 'Browser Share Link'), LF('ctrl.share.browser', 'Anyone with this link can view the session in read-only mode: <strong>{0}</strong>', aiEscapeHtml(url)), `${base}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`);
 }
 CDOM.ID('search-open-btn').addEventListener('click', () => ctrlFileSearch());
 CDOM.ID('browser-new-btn').addEventListener('click', () => {
@@ -3996,8 +5076,7 @@ CDOM.ID('browser-panel-tab').addEventListener('shown.bs.tab', () => updateBrowse
 CDOM.ID('browser-panel-tab').addEventListener('hidden.bs.tab', () => updateBrowserFrameVisibility());
 setInterval(() => {
     otherSidebarList.querySelectorAll('[data-key^="browser:"]').forEach(el => {
-        const sid = el.dataset.key.slice('browser:'.length);
-        const s = browserSessions.get(sid);
+        const s = browserSessions.get(el.dataset.key);
         const ttlEl = el.querySelector('.browser-ttl-label');
         if (s && ttlEl)
             ttlEl.textContent = s.expiresAt ? browserFmtTtl(s.expiresAt) : '';
@@ -4014,17 +5093,11 @@ async function sessionPollOnce() {
 })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden)
     renderSessionSidebar(); });
-['chat-panel-tab', 'term-tab', 'browser-panel-tab', 'editor-panel-tab'].forEach((tabId) => {
-    const tabEl = CDOM.ID(tabId);
-    tabEl.addEventListener('shown.bs.tab', () => renderSessionSidebar());
-    tabEl.addEventListener('hidden.bs.tab', () => renderSessionSidebar());
-});
 const TMUX_LS_KEY = 'ctrl-tmux-layout-v1';
-const TMUX_MODE_LS_KEY = 'ctrl-tmux-mode-v1';
 const tmuxPaneEls = new Map();
 const tmuxTreeRoot = CDOM.ID('tmux-tree-root');
-const tmuxModeWorkBtn = CDOM.ID('tmux-mode-work-btn');
-const tmuxModeConfigBtn = CDOM.ID('tmux-mode-config-btn');
+const tmuxTreeStruct = CDOM.ID('tmux-tree-struct');
+const tmuxAllFrames = new Map();
 function tmuxLoadLayout() {
     try {
         const raw = localStorage.getItem(TMUX_LS_KEY);
@@ -4044,9 +5117,12 @@ function tmuxSaveLayout() {
         localStorage.setItem(TMUX_LS_KEY, JSON.stringify(tmuxStrip(tmuxRoot)));
     }
     catch (_) { }
+    tmuxRenderMenu();
+    renderSessionSidebar();
+    refreshRdpHighlights();
 }
 let tmuxRoot = tmuxLoadLayout();
-let tmuxMode = localStorage.getItem(TMUX_MODE_LS_KEY) || 'config';
+tmuxTreeReady = true;
 function tmuxFind(node, id) {
     if (node.id === id)
         return node;
@@ -4071,6 +5147,158 @@ function tmuxFindParent(node, id, parent = null) {
     }
     return null;
 }
+function tmuxFirstPaneId() {
+    let p = tmuxRoot;
+    while (p.split && p.children)
+        p = p.children[0];
+    return p.id;
+}
+function tmuxPoolForKey(key) {
+    if (key.startsWith('term:') || key.startsWith('term-new:'))
+        return { pool: termIframePool, onCreate: wirePooledFrameHotkeys };
+    if (key.startsWith('chat:'))
+        return { pool: chatIframePool, onCreate: wirePooledFrameHotkeys };
+    if (key.startsWith('browser:'))
+        return { pool: browserIframePool, onCreate: wirePooledFrameHotkeys };
+    if (key.startsWith('editor:'))
+        return { pool: editorIframePool };
+    if (key.startsWith('web:'))
+        return { pool: webIframePool };
+    if (key.startsWith('rdp:'))
+        return { pool: rdpIframePool };
+    return null;
+}
+function tmuxEnsurePooledFrame(key) {
+    const spec = tmuxPoolForKey(key);
+    if (!spec)
+        return null;
+    const existing = spec.pool.get(key);
+    if (existing)
+        return existing;
+    const src = tmuxKeyToSrc(key);
+    if (!src)
+        return null;
+    const f = document.createElement('iframe');
+    f.src = src;
+    f.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;border:0;display:none;';
+    spec.onCreate?.(f, key);
+    spec.pool.set(key, f);
+    tmuxAllFrames.set(key, f);
+    tmuxTreeRoot.appendChild(f);
+    return f;
+}
+function tmuxAssignPaneContent(paneId, key) {
+    const affected = new Set([paneId]);
+    (function walk(p) {
+        if (p.split && p.children) {
+            walk(p.children[0]);
+            walk(p.children[1]);
+            return;
+        }
+        if (key && p.contentKey === key && p.id !== paneId) {
+            p.contentKey = null;
+            affected.add(p.id);
+        }
+    })(tmuxRoot);
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (pane && !pane.split)
+        pane.contentKey = key;
+    affected.forEach(tmuxRefreshEmptyState);
+}
+function tmuxRefreshEmptyState(paneId) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split)
+        return;
+    const content = tmuxPaneEls.get(paneId)?.querySelector('.tmux-leaf-content');
+    if (!content)
+        return;
+    content.querySelectorAll('.tmux-leaf-empty').forEach(e => e.remove());
+    if (!pane.contentKey) {
+        const empty = document.createElement('div');
+        empty.className = 'tmux-leaf-empty';
+        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — pick content from the Multiplexer menu');
+        content.appendChild(empty);
+    }
+}
+function tmuxSyncPanePositions() {
+    const rootRect = tmuxTreeRoot.getBoundingClientRect();
+    const assignedKeys = new Set();
+    (function walk(p) {
+        if (p.split && p.children) {
+            walk(p.children[0]);
+            walk(p.children[1]);
+            return;
+        }
+        if (!p.contentKey)
+            return;
+        const f = tmuxEnsurePooledFrame(p.contentKey);
+        if (!f)
+            return;
+        assignedKeys.add(p.contentKey);
+        const leafContent = tmuxPaneEls.get(p.id)?.querySelector('.tmux-leaf-content');
+        if (!leafContent)
+            return;
+        const r = leafContent.getBoundingClientRect();
+        f.style.left = `${r.left - rootRect.left}px`;
+        f.style.top = `${r.top - rootRect.top}px`;
+        f.style.width = `${r.width}px`;
+        f.style.height = `${r.height}px`;
+        if (f.style.display !== 'block') {
+            f.style.display = 'block';
+            postFrameVisible(f, true);
+        }
+    })(tmuxRoot);
+    tmuxAllFrames.forEach((f, key) => {
+        if (!assignedKeys.has(key) && f.style.display !== 'none') {
+            postFrameVisible(f, false);
+            f.style.display = 'none';
+        }
+    });
+}
+new ResizeObserver(() => tmuxSyncPanePositions()).observe(tmuxTreeRoot);
+function tmuxPlaceInPane(paneId, key) {
+    tmuxAssignPaneContent(paneId, key);
+    tmuxSyncPanePositions();
+}
+function tmuxFindPaneIdByKey(key) {
+    let found = null;
+    (function walk(p) {
+        if (found)
+            return;
+        if (p.split && p.children) {
+            walk(p.children[0]);
+            walk(p.children[1]);
+            return;
+        }
+        if (p.contentKey === key)
+            found = p.id;
+    })(tmuxRoot);
+    return found;
+}
+function tmuxPlaceFrame(key, _f) {
+    tmuxPlaceInPane(tmuxFindPaneIdByKey(key) ?? tmuxFirstPaneId(), key);
+    tmuxSaveLayout();
+    tmuxShowPanel();
+}
+function tmuxClearIfShowing(key) {
+    let changed = false;
+    (function walk(p) {
+        if (p.split && p.children) {
+            walk(p.children[0]);
+            walk(p.children[1]);
+            return;
+        }
+        if (p.contentKey !== key)
+            return;
+        p.contentKey = null;
+        tmuxRefreshEmptyState(p.id);
+        changed = true;
+    })(tmuxRoot);
+    if (changed) {
+        tmuxSyncPanePositions();
+        tmuxSaveLayout();
+    }
+}
 function tmuxCollectIds(p, out = []) {
     out.push(p.id);
     if (p.children) {
@@ -4091,7 +5319,9 @@ function tmuxKeyToSrc(key) {
         return ctx ? ctxApiUrl(ctx, `cmd/terminal-proxy?token=${encodeURIComponent(p.id)}`) : null;
     }
     if (key.startsWith('browser:')) {
-        return `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(key.slice(8))}`;
+        const p = parseSessKey(key);
+        const ctx = serverCtxOf(p.remoteId);
+        return ctx ? `${ctx.artgineUrl}artgine/server/html/Browser.html?session=${encodeURIComponent(p.id)}` : null;
     }
     if (key === 'rdp:local') {
         return `${CPath.WebRootArtgineUrl()}artgine/server/html/RemoteDesktop.html`;
@@ -4104,36 +5334,11 @@ function tmuxKeyToSrc(key) {
         const s = editorSessions.get(key);
         return s ? editorFrameSrc(s) : null;
     }
+    if (key.startsWith('web:')) {
+        const s = webSessions.get(key);
+        return s ? s.url : null;
+    }
     return null;
-}
-function tmuxRenderLeafContent(el, key) {
-    const content = el.querySelector('.tmux-leaf-content');
-    content.innerHTML = '';
-    if (!key)
-        return;
-    const src = tmuxKeyToSrc(key);
-    if (!src)
-        return;
-    const f = document.createElement('iframe');
-    f.src = src;
-    content.appendChild(f);
-}
-function tmuxBuildLeafToolbar(paneId) {
-    const toolbar = document.createElement('div');
-    toolbar.className = 'tmux-leaf-toolbar';
-    const canMerge = !!tmuxFindParent(tmuxRoot, paneId)?.parent;
-    toolbar.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-h" data-CLan-title="ctrl.tmux.splitH" title="Split horizontal"><i class="bi bi-layout-split"></i></button>
-        <button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-split-v" data-CLan-title="ctrl.tmux.splitV" title="Split vertical"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
-        ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary tmux-pane-merge" data-CLan-title="ctrl.tmux.merge" title="Merge"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
-        <button type="button" class="btn btn-sm btn-outline-primary tmux-pane-select" data-CLan-title="ctrl.tmux.select" title="Select content"><i class="bi bi-card-list"></i></button>
-    `;
-    toolbar.querySelector('.tmux-pane-split-h').addEventListener('click', () => tmuxSplitPane(paneId, 'row'));
-    toolbar.querySelector('.tmux-pane-split-v').addEventListener('click', () => tmuxSplitPane(paneId, 'col'));
-    toolbar.querySelector('.tmux-pane-merge')?.addEventListener('click', () => tmuxMergePane(paneId));
-    toolbar.querySelector('.tmux-pane-select').addEventListener('click', () => tmuxOpenSelectModal(paneId));
-    applyLanIn(toolbar);
-    return toolbar;
 }
 function tmuxBuildEl(pane) {
     if (pane.split && pane.children) {
@@ -4154,35 +5359,35 @@ function tmuxBuildEl(pane) {
     if (!pane.contentKey) {
         const empty = document.createElement('div');
         empty.className = 'tmux-leaf-empty';
-        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — Select content in Config mode');
+        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — pick content from the Multiplexer menu');
         content.appendChild(empty);
     }
-    else {
-        tmuxRenderLeafContent(el, pane.contentKey);
-    }
-    const overlay = document.createElement('div');
-    overlay.className = 'tmux-leaf-overlay';
-    overlay.appendChild(tmuxBuildLeafToolbar(pane.id));
-    el.appendChild(overlay);
+    const dropzone = document.createElement('div');
+    dropzone.className = 'tmux-leaf-dropzone';
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('tmux-leaf-dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('tmux-leaf-dragover'));
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('tmux-leaf-dragover');
+        const key = e.dataTransfer?.getData('text/plain');
+        if (key)
+            tmuxSetPaneContent(pane.id, key);
+    });
+    el.appendChild(dropzone);
     tmuxPaneEls.set(pane.id, el);
     return el;
 }
 function tmuxRenderAll() {
     tmuxPaneEls.clear();
-    tmuxTreeRoot.innerHTML = '';
-    tmuxTreeRoot.appendChild(tmuxBuildEl(tmuxRoot));
-}
-function tmuxApplyMode() {
-    tmuxTreeRoot.classList.toggle('tmux-config-mode', tmuxMode === 'config');
-    tmuxModeWorkBtn.classList.toggle('active', tmuxMode === 'work');
-    tmuxModeConfigBtn.classList.toggle('active', tmuxMode === 'config');
+    tmuxTreeStruct.innerHTML = '';
+    tmuxTreeStruct.appendChild(tmuxBuildEl(tmuxRoot));
+    tmuxSyncPanePositions();
 }
 function tmuxSplitPane(paneId, dir) {
     const pane = tmuxFind(tmuxRoot, paneId);
     if (!pane || pane.split)
         return;
     const oldEl = tmuxPaneEls.get(pane.id);
-    const existingIframe = oldEl?.querySelector('.tmux-leaf-content iframe');
     const child1 = { id: genUuid(), contentKey: pane.contentKey ?? null };
     const child2 = { id: genUuid(), contentKey: null };
     pane.split = dir;
@@ -4191,17 +5396,11 @@ function tmuxSplitPane(paneId, dir) {
     const splitEl = document.createElement('div');
     splitEl.className = `tmux-split tmux-split-${dir}`;
     splitEl.dataset.paneId = pane.id;
-    const child1El = tmuxBuildEl(child1);
-    if (existingIframe) {
-        const c1content = child1El.querySelector('.tmux-leaf-content');
-        c1content.innerHTML = '';
-        c1content.appendChild(existingIframe);
-    }
-    const child2El = tmuxBuildEl(child2);
-    splitEl.appendChild(child1El);
-    splitEl.appendChild(child2El);
+    splitEl.appendChild(tmuxBuildEl(child1));
+    splitEl.appendChild(tmuxBuildEl(child2));
     oldEl?.replaceWith(splitEl);
     tmuxPaneEls.set(pane.id, splitEl);
+    tmuxSyncPanePositions();
     tmuxSaveLayout();
 }
 function tmuxMergePane(paneId) {
@@ -4209,24 +5408,18 @@ function tmuxMergePane(paneId) {
     if (!found || !found.parent)
         return;
     const { pane, parent } = found;
-    const paneEl = tmuxPaneEls.get(pane.id);
-    const keptIframe = paneEl?.querySelector('.tmux-leaf-content iframe');
     const keptContentKey = pane.contentKey ?? null;
     const staleIds = tmuxCollectIds(parent);
     const parentEl = tmuxPaneEls.get(parent.id);
     parent.split = undefined;
     parent.children = undefined;
     parent.contentKey = keptContentKey;
-    const newLeafEl = tmuxBuildEl({ id: parent.id, contentKey: null });
-    if (keptIframe) {
-        const c = newLeafEl.querySelector('.tmux-leaf-content');
-        c.innerHTML = '';
-        c.appendChild(keptIframe);
-    }
+    const newLeafEl = tmuxBuildEl(parent);
     parentEl?.replaceWith(newLeafEl);
     staleIds.forEach(id => { if (id !== parent.id)
         tmuxPaneEls.delete(id); });
     tmuxPaneEls.set(parent.id, newLeafEl);
+    tmuxSyncPanePositions();
     tmuxSaveLayout();
 }
 function tmuxOpenSelectModal(paneId) {
@@ -4239,9 +5432,10 @@ function tmuxOpenSelectModal(paneId) {
     const groups = [
         { label: 'Chat', items: chatItems },
         { label: 'Terminal', items: (lastTermSessions ?? []).map(s => ({ key: sessKey('term', s.remoteId, s.token), label: s.key || s.lastMsg || `(${s.mode})`, sub: s.workingDir || s.token })) },
-        { label: 'Browser', items: Array.from(browserSessions.values()).map(s => ({ key: `browser:${s.sessionId}`, label: s.url, sub: s.browserName })) },
+        { label: 'Browser', items: Array.from(browserSessions.values()).map(s => ({ key: sessKey('browser', s.remoteId, s.sessionId), label: s.url, sub: s.browserName })) },
         { label: 'RDP', items: [{ key: 'rdp:local', label: 'Local' }, ...rdpRemotes.map(r => ({ key: `rdp:remote:${r.remoteId}`, label: r.entryUrl }))] },
         { label: 'Editor', items: Array.from(editorSessions.values()).map(s => ({ key: s.key, label: s.path.split('/').pop() || s.path, sub: s.path })) },
+        { label: 'Web', items: Array.from(webSessions.values()).map(s => ({ key: s.key, label: s.url })) },
     ];
     const bodyHtml = groups.map(g => `
         <div class="mb-2">
@@ -4276,304 +5470,151 @@ function tmuxSetPaneContent(paneId, key) {
     const pane = tmuxFind(tmuxRoot, paneId);
     if (!pane || pane.split)
         return;
-    pane.contentKey = key;
-    const el = tmuxPaneEls.get(paneId);
-    if (el) {
-        el.querySelector('.tmux-leaf-content').innerHTML = '';
-        if (!key) {
-            const empty = document.createElement('div');
-            empty.className = 'tmux-leaf-empty';
-            empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — Select content in Config mode');
-            el.querySelector('.tmux-leaf-content').appendChild(empty);
-        }
-        else {
-            tmuxRenderLeafContent(el, key);
-        }
-    }
-    tmuxSaveLayout();
-}
-tmuxRenderAll();
-tmuxApplyMode();
-tmuxModeWorkBtn.addEventListener('click', () => { tmuxMode = 'work'; localStorage.setItem(TMUX_MODE_LS_KEY, tmuxMode); tmuxApplyMode(); });
-tmuxModeConfigBtn.addEventListener('click', () => { tmuxMode = 'config'; localStorage.setItem(TMUX_MODE_LS_KEY, tmuxMode); tmuxApplyMode(); });
-function tmuxClose() {
-    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('help-panel-tab')).show();
-}
-CDOM.ID('tmux-close-btn').addEventListener('click', () => tmuxClose());
-const tmuxTabEl = CDOM.ID('tmux-tab');
-let tmuxTabWasActiveOnPointer = false;
-tmuxTabEl.addEventListener('pointerdown', () => {
-    tmuxTabWasActiveOnPointer = tmuxTabEl.classList.contains('active');
-}, true);
-tmuxTabEl.addEventListener('click', (e) => {
-    if (!tmuxTabWasActiveOnPointer)
-        return;
-    e.preventDefault();
-    e.stopPropagation();
-    tmuxClose();
-}, true);
-const tmuxMaximizeBtn = CDOM.ID('tmux-maximize-btn');
-const TMUX_MAX_LS_KEY = 'ctrl-tmux-maximized-v1';
-let tmuxMaximized = localStorage.getItem(TMUX_MAX_LS_KEY) !== '0';
-function tmuxApplyMaximize() {
-    document.body.classList.toggle('tmux-fullscreen', tmuxMaximized);
-    if (tmuxMaximized) {
-        if (appSidebar?.classList.contains('show'))
-            window.bootstrap.Offcanvas.getOrCreateInstance(appSidebar).hide();
-        if (appSidebarRight?.classList.contains('show'))
-            window.bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).hide();
+    if (key)
+        tmuxEnsurePooledFrame(key);
+    const sourcePaneId = key ? tmuxFindPaneIdByKey(key) : null;
+    if (sourcePaneId && sourcePaneId !== paneId) {
+        const sourcePane = tmuxFind(tmuxRoot, sourcePaneId);
+        const displaced = pane.contentKey ?? null;
+        sourcePane.contentKey = displaced;
+        pane.contentKey = key;
+        tmuxRefreshEmptyState(sourcePaneId);
+        tmuxRefreshEmptyState(paneId);
     }
     else {
-        updateSidebarMode();
+        tmuxAssignPaneContent(paneId, key);
     }
-    tmuxMaximizeBtn.innerHTML = tmuxMaximized
-        ? `<i class="bi bi-fullscreen-exit"></i> <span data-CLan="ctrl.tmux.minimize">Minimize</span>`
-        : `<i class="bi bi-arrows-fullscreen"></i> <span data-CLan="ctrl.tmux.maximize">Maximize</span>`;
-    applyLanIn(tmuxMaximizeBtn);
+    tmuxSyncPanePositions();
+    tmuxSaveLayout();
 }
-tmuxMaximizeBtn.addEventListener('click', () => {
-    tmuxMaximized = !tmuxMaximized;
-    localStorage.setItem(TMUX_MAX_LS_KEY, tmuxMaximized ? '1' : '0');
-    tmuxApplyMaximize();
-});
-CDOM.ID('tmux-tab').addEventListener('shown.bs.tab', () => {
-    tmuxApplyMaximize();
-});
-CDOM.ID('tmux-tab').addEventListener('hidden.bs.tab', () => {
-    document.body.classList.remove('tmux-fullscreen');
+function tmuxPaneLabel(pane) {
+    const key = pane.contentKey;
+    if (!key)
+        return L('ctrl.tmux.emptyPane2', 'Empty');
+    if (key === 'rdp:local')
+        return 'RDP · Local';
+    if (key.startsWith('rdp:remote:')) {
+        const remote = rdpRemotes.find(r => r.remoteId === key.slice(11));
+        return remote ? `RDP · ${remote.entryUrl}` : 'RDP';
+    }
+    if (key.startsWith('editor:')) {
+        const s = editorSessions.get(key);
+        return s ? `Editor · ${s.path.split('/').pop() || s.path}` : 'Editor';
+    }
+    if (key.startsWith('chat:'))
+        return 'Chat';
+    if (key.startsWith('term:'))
+        return 'Terminal';
+    if (key.startsWith('browser:'))
+        return 'Browser';
+    if (key.startsWith('web:')) {
+        const s = webSessions.get(key);
+        return s ? `Web · ${s.url}` : 'Web';
+    }
+    return key;
+}
+function tmuxShowPanel() {
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('tmux-panel-tab')).show();
+}
+function tmuxSidebarVisible(side) {
+    if (document.body.classList.contains(side === 'left' ? 'hide-left-sidebar' : 'hide-right-sidebar'))
+        return false;
+    const el = side === 'left' ? appSidebar : appSidebarRight;
+    if (!el)
+        return false;
+    if (el.classList.contains('sidebar-docked'))
+        return true;
+    return el.classList.contains('show');
+}
+function tmuxHideSidebar(side) {
+    const el = side === 'left' ? appSidebar : appSidebarRight;
+    const wrap = side === 'left' ? sidebarToggleBtnWrap : sidebarToggleBtnWrapRight;
+    document.body.classList.add(side === 'left' ? 'hide-left-sidebar' : 'hide-right-sidebar');
+    if (wrap)
+        wrap.style.display = '';
+    if (el?.classList.contains('show'))
+        window.bootstrap.Offcanvas.getOrCreateInstance(el).hide();
+}
+function tmuxShowSidebar(side) {
+    const el = side === 'left' ? appSidebar : appSidebarRight;
+    document.body.classList.remove(side === 'left' ? 'hide-left-sidebar' : 'hide-right-sidebar');
     updateSidebarMode();
-});
-const schedSessionList = CDOM.ID("schedSessionList");
-function schedIntervalStr(s) {
-    if (s.mode === 'time') {
-        const hh = String(s.option.hour ?? 0).padStart(2, '0');
-        const mm = String(s.option.minute ?? 0).padStart(2, '0');
-        return `${hh}:${mm}`;
+    if (el && !el.classList.contains('sidebar-docked') && !el.classList.contains('show')) {
+        window.bootstrap.Offcanvas.getOrCreateInstance(el).show();
     }
-    const parts = [`${s.option.delay ?? 0}s`];
-    if ((s.option.count ?? 0) > 0)
-        parts.push(`×${s.option.count}`);
-    if ((s.option.start ?? 0) > 0)
-        parts.push(`+${s.option.start}s`);
-    if ((s.option.end ?? 0) > 0)
-        parts.push(`~${s.option.end}s`);
-    return parts.join(' ');
 }
-async function schedRefresh() {
-    try {
-        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/schedules');
-        const j = await r.json();
-        if (!j.ok)
-            return;
-        schedSessionList.innerHTML = '';
-        const schedules = j.schedules;
-        if (schedules.length === 0)
-            return;
-        for (const s of schedules) {
-            const item = document.createElement('div');
-            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-1 rounded';
-            item.style.cursor = 'pointer';
-            item.innerHTML = `
-                <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
-                    <span class="badge rounded-pill ${s.mode === 'time' ? 'bg-primary' : 'bg-info'}" style="font-size:0.65rem;">${s.mode}</span>
-                    <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
-                </span>
-                <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
-                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.name)}</span>
-                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.subAgentKey)}</span>
-                    <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
-                </span>
-                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="${L('ctrl.delete', 'Delete')}"><i class="bi bi-trash"></i></button>
-            `;
-            item.addEventListener('click', () => schedOpenModal(s));
-            item.querySelector('.sched-del-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                const dlg = new CConfirm();
-                dlg.SetBody(LF('ctrl.msg.deleteSchedule', 'Delete schedule "{0}"?', aiEscapeHtml(s.name)));
-                dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
-                    async () => {
-                        await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
-                        schedRefresh();
-                    },
-                    () => { },
-                ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
-                dlg.Open();
-            });
-            item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
-            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
-            schedSessionList.appendChild(item);
+function tmuxToggleSidebar(side) {
+    if (tmuxSidebarVisible(side))
+        tmuxHideSidebar(side);
+    else
+        tmuxShowSidebar(side);
+}
+appSidebar?.addEventListener('show.bs.offcanvas', () => { document.body.classList.remove('hide-left-sidebar'); updateSidebarMode(); });
+appSidebarRight?.addEventListener('show.bs.offcanvas', () => { document.body.classList.remove('hide-right-sidebar'); updateSidebarMode(); });
+function tmuxCollectLeavesGrouped() {
+    const out = [];
+    let groupSeq = 0;
+    (function walk(p, group) {
+        if (p.split && p.children) {
+            const g = ++groupSeq;
+            walk(p.children[0], g);
+            walk(p.children[1], g);
         }
-    }
-    catch (e) {
-        console.error('schedRefresh error:', e);
-    }
+        else {
+            out.push({ pane: p, group });
+        }
+    })(tmuxRoot, 0);
+    return out;
 }
-async function schedOpenModal(existing) {
-    const isEdit = !!existing;
-    let agents = [];
-    try {
-        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/agents');
-        const j = await r.json();
-        if (j.ok)
-            agents = j.agents;
-    }
-    catch (e) {
-        console.error('schedOpenModal agents fetch error:', e);
-    }
-    const container = document.createElement('div');
-    container.innerHTML = `
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.schedName', 'Name (schedule key)')}</label>
-            <input id="sched-name" type="text" class="form-control form-control-sm" placeholder="e.g. daily-backup" autocomplete="off" value="${aiEscapeHtml(existing?.name || '')}">
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.subAgent', 'Sub Agent')}</label>
-            <select id="sched-agent" class="form-select form-select-sm">
-                ${agents.map(a => `<option value="${aiEscapeHtml(a.key)}" ${existing?.subAgentKey === a.key ? 'selected' : ''}>${aiEscapeHtml(a.key)}</option>`).join('') || `<option value="">${L('ctrl.msg.noSubAgents', '(No sub agents registered)')}</option>`}
-            </select>
-        </div>
-        <div class="mb-2">
-            <div class="d-flex gap-1 mb-2">
-                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${existing?.mode !== 'time' ? 'btn-primary' : 'btn-outline-secondary'}">${L('ctrl.lbl.interval', 'Interval')}</button>
-                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.mode === 'time' ? 'btn-primary' : 'btn-outline-secondary'}">${L('ctrl.lbl.time', 'Time')}</button>
-            </div>
-            <div id="sched-panel-interval" style="display:${existing?.mode !== 'time' ? '' : 'none'}">
-                <div class="d-flex gap-2 mb-2">
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.delaySec', 'Delay (sec)')}</label>
-                        <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.option.delay ?? 60}">
-                    </div>
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.countInf', 'Count (0=infinite)')}</label>
-                        <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.count ?? 0}">
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.startOffset', 'Start offset (sec, 0=now)')}</label>
-                        <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.start ?? 0}">
-                    </div>
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.endOffset', 'End offset (sec, 0=never)')}</label>
-                        <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.end ?? 0}">
-                    </div>
-                </div>
-                <div class="form-check mt-2">
-                    <input id="sched-autoend-interval" type="checkbox" class="form-check-input" ${(existing?.option.autoEnd ?? true) ? 'checked' : ''}>
-                    <label for="sched-autoend-interval" class="form-check-label small text-secondary">${L('ctrl.lbl.autoEndInterval', 'Auto-delete when count is exhausted')}</label>
+function tmuxRenderMenu() {
+    const menu = CDOM.ID('tmux-dropdown-menu');
+    if (!menu)
+        return;
+    const entries = tmuxCollectLeavesGrouped();
+    let rowsHtml = '';
+    entries.forEach((entry, i) => {
+        if (i > 0 && entry.group !== entries[i - 1].group)
+            rowsHtml += `<li><hr class="dropdown-divider"></li>`;
+        const { pane } = entry;
+        const canMerge = !!tmuxFindParent(tmuxRoot, pane.id)?.parent;
+        const numPrefix = entry.group > 0 ? `${aiEscapeHtml(String(entry.group))}. ` : '';
+        rowsHtml += `<li>
+            <div class="tmux-menu-pane" data-pane-id="${pane.id}">
+                <span class="tmux-menu-pane-label" data-act="show">${numPrefix}${aiEscapeHtml(tmuxPaneLabel(pane))}</span>
+                <div class="tmux-menu-pane-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-act="split-h" data-CLan-title="ctrl.tmux.splitH" title="Split horizontal"><i class="bi bi-layout-split"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-act="split-v" data-CLan-title="ctrl.tmux.splitV" title="Split vertical"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
+                    ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-act="merge" data-CLan-title="ctrl.tmux.merge" title="Merge"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-act="select" data-CLan-title="ctrl.tmux.select" title="Select content"><i class="bi bi-card-list"></i></button>
                 </div>
             </div>
-            <div id="sched-panel-time" style="display:${existing?.mode === 'time' ? '' : 'none'}">
-                <div class="mb-2">
-                    <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.daysOfWeek', 'Days of Week')}</label>
-                    <div class="d-flex gap-1 flex-wrap">
-                        ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((lbl, i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.option.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
-                    </div>
-                </div>
-                <div class="d-flex gap-2 align-items-end">
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.hour', 'Hour (0–23)')}</label>
-                        <select id="sched-hour" class="form-select form-select-sm">
-                            ${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${(existing?.option.hour ?? 9) === h ? 'selected' : ''}>${String(h).padStart(2, '0')}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.minute', 'Minute')}</label>
-                        <select id="sched-minute" class="form-select form-select-sm">
-                            ${Array.from({ length: 12 }, (_, i) => i * 5).map(m => `<option value="${m}" ${(existing?.option.minute ?? 0) === m ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-check mt-2">
-                    <input id="sched-autoend-time" type="checkbox" class="form-check-input" ${(existing?.option.autoEnd ?? false) ? 'checked' : ''}>
-                    <label for="sched-autoend-time" class="form-check-label small text-secondary">${L('ctrl.lbl.autoEndTime', 'Run once then delete')}</label>
-                </div>
-            </div>
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.command', 'Command')}</label>
-            <textarea id="sched-cmd" class="form-control form-control-sm" rows="3" placeholder="e.g. node backup.js">${aiEscapeHtml(existing?.command || '')}</textarea>
-        </div>
-        <div class="d-flex justify-content-between">
-            <button id="sched-modal-save" class="btn btn-primary">${isEdit ? L('ctrl.save', 'Save') : L('ctrl.create', 'Create')}</button>
-            <button id="sched-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
-        </div>`;
-    const modal = new CModal();
-    modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetHeader(isEdit ? L('ctrl.hdr.editSchedule', 'Edit Schedule') : L('ctrl.hdr.newSchedule', 'New Schedule'));
-    modal.SetBody(container);
-    modal.SetZIndex(CModal.eSort.Top);
-    modal.Open(CModal.ePos.Center);
-    setTimeout(() => {
-        let isTimeMode = existing?.mode === 'time';
-        const tabInterval = container.querySelector('#sched-tab-interval');
-        const tabTime = container.querySelector('#sched-tab-time');
-        const panelInterval = container.querySelector('#sched-panel-interval');
-        const panelTime = container.querySelector('#sched-panel-time');
-        const switchTab = (toTime) => {
-            isTimeMode = toTime;
-            tabInterval.className = `btn btn-sm flex-fill ${!toTime ? 'btn-primary' : 'btn-outline-secondary'}`;
-            tabTime.className = `btn btn-sm flex-fill ${toTime ? 'btn-primary' : 'btn-outline-secondary'}`;
-            panelInterval.style.display = toTime ? 'none' : '';
-            panelTime.style.display = toTime ? '' : 'none';
-        };
-        tabInterval.addEventListener('click', () => switchTab(false));
-        tabTime.addEventListener('click', () => switchTab(true));
-        const dayBtns = container.querySelectorAll('.sched-day-btn');
-        dayBtns.forEach(b => b.addEventListener('click', () => {
-            const active = b.classList.contains('btn-primary');
-            b.classList.toggle('btn-primary', !active);
-            b.classList.toggle('btn-outline-secondary', active);
-        }));
-        const doSave = async () => {
-            const name = (container.querySelector('#sched-name')).value.trim();
-            const subAgentKey = (container.querySelector('#sched-agent')).value.trim();
-            const command = (container.querySelector('#sched-cmd')).value.trim();
-            if (!name || !subAgentKey || !command) {
-                CAlert.E(L('ctrl.msg.nameAgentCmdRequired', 'Name, sub agent, and command are required'));
-                return;
-            }
-            const option = {};
-            if (isTimeMode) {
-                const selectedDays = Array.from(dayBtns).filter(b => b.classList.contains('btn-primary')).map(b => Number(b.dataset.day));
-                if (selectedDays.length === 0) {
-                    CAlert.E(L('ctrl.msg.selectOneDay', 'Select at least one day'));
-                    return;
-                }
-                option.days = selectedDays;
-                option.hour = parseInt((container.querySelector('#sched-hour')).value) || 0;
-                option.minute = parseInt((container.querySelector('#sched-minute')).value) || 0;
-                option.autoEnd = (container.querySelector('#sched-autoend-time')).checked;
-            }
-            else {
-                const delay = Math.max(0, parseInt((container.querySelector('#sched-delay')).value) || 0);
-                if (delay === 0) {
-                    CAlert.E(L('ctrl.msg.delayMin1', 'Delay must be at least 1 second'));
-                    return;
-                }
-                option.delay = delay;
-                option.count = Math.max(0, parseInt((container.querySelector('#sched-count')).value) || 0);
-                option.start = Math.max(0, parseInt((container.querySelector('#sched-start')).value) || 0);
-                option.end = Math.max(0, parseInt((container.querySelector('#sched-end')).value) || 0);
-                option.autoEnd = (container.querySelector('#sched-autoend-interval')).checked;
-            }
-            const params = new URLSearchParams({ name, subAgentKey, mode: isTimeMode ? 'time' : 'interval', command, option: JSON.stringify(option) });
-            const r = await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
-            const j = await r.json();
-            if (!j.ok) {
-                CAlert.E(j.msg || 'Failed');
-                return;
-            }
-            modal.Close();
-            schedRefresh();
-        };
-        container.querySelector('#sched-modal-save').addEventListener('click', doSave);
-        container.querySelector('#sched-modal-cancel').addEventListener('click', () => modal.Close());
-    }, MODAL_DOM_DELAY);
+        </li>`;
+    });
+    const rightVisible = tmuxSidebarVisible('right');
+    const leftVisible = tmuxSidebarVisible('left');
+    menu.innerHTML =
+        `<li><button type="button" class="dropdown-item" id="tmux-toggle-left-btn"><i class="bi bi-layout-sidebar-inset"></i> ${aiEscapeHtml(leftVisible ? L('ctrl.tmux.hideLeft', 'Turn off left side') : L('ctrl.tmux.showLeft', 'Turn on left side'))}</button></li>
+        <li><button type="button" class="dropdown-item" id="tmux-toggle-right-btn"><i class="bi bi-layout-sidebar-inset-reverse"></i> ${aiEscapeHtml(rightVisible ? L('ctrl.tmux.hideRight', 'Turn off right side') : L('ctrl.tmux.showRight', 'Turn on right side'))}</button></li>
+        <li><hr class="dropdown-divider"></li>` +
+            rowsHtml;
+    CDOM.ID('tmux-toggle-left-btn')?.addEventListener('click', () => tmuxToggleSidebar('left'));
+    CDOM.ID('tmux-toggle-right-btn')?.addEventListener('click', () => tmuxToggleSidebar('right'));
+    menu.querySelectorAll('.tmux-menu-pane').forEach(row => {
+        const paneId = row.dataset.paneId;
+        row.querySelector('[data-act="show"]')?.addEventListener('click', () => tmuxShowPanel());
+        row.querySelector('[data-act="split-h"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxSplitPane(paneId, 'row'); tmuxShowPanel(); });
+        row.querySelector('[data-act="split-v"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxSplitPane(paneId, 'col'); tmuxShowPanel(); });
+        row.querySelector('[data-act="merge"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxMergePane(paneId); tmuxShowPanel(); });
+        row.querySelector('[data-act="select"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxOpenSelectModal(paneId); });
+    });
+    applyLanIn(menu);
 }
-CDOM.ID('sched-new-btn').addEventListener('click', () => schedOpenModal());
-schedRefresh();
-setInterval(schedRefresh, 5000);
+CDOM.ID('tmux-tab').addEventListener('show.bs.dropdown', () => tmuxRenderMenu());
+tmuxRenderAll();
+tmuxRenderMenu();
+refreshRdpHighlights();
+renderSessionSidebar();
+MountScheduleTab();
 function agentRuleToLine(r) {
     const parts = [];
     if (r.type)
@@ -4635,7 +5676,7 @@ async function agentRefresh() {
             item.style.cursor = 'pointer';
             item.innerHTML = `
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
-                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(a.key)}${a.super ? ' <span class="badge bg-warning text-dark" style="font-size:0.6rem;">SUPER</span>' : ''}${a.retryCount > 0 ? ` <span class="badge bg-info text-dark" style="font-size:0.6rem;">RETRY x${a.retryCount}</span>` : ''}</span>
+                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(a.key)}${a.super ? ' <span class="badge bg-warning text-dark" style="font-size:0.6rem;">SUPER</span>' : ''}${a.retryCount > 0 ? ` <span class="badge bg-info text-dark" style="font-size:0.6rem;">RETRY x${a.retryCount}</span>` : ''}${a.hidden ? ' <span class="badge bg-secondary" style="font-size:0.6rem;">HIDDEN</span>' : ''}</span>
                     <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.provider)} / ${aiEscapeHtml(a.model)} · ${a.score}</span>
                     <span class="text-truncate small text-body-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.workingDir || './')}</span>
                     <span class="text-truncate small text-body-secondary">${aiEscapeHtml(a.traits.join(', '))}</span>
@@ -4665,6 +5706,7 @@ async function agentRefresh() {
         console.error('agentRefresh error:', e);
     }
 }
+const TEAM_AUTO_MAX = 20;
 const AGENT_PROVIDER_IDS = ['claude', 'codex', 'antigravity', 'opencode', 'grok'];
 const AGENT_PROVIDER_LABELS = { claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode', grok: 'Grok' };
 const LS_PROVIDER = 'ai.provider';
@@ -4774,6 +5816,10 @@ async function agentOpenModal(existing) {
                             <input class="form-check-input" type="checkbox" id="agent-super" ${existing?.super ? 'checked' : ''}>
                             <label class="form-check-label small text-secondary" for="agent-super">Super</label>
                         </div>
+                        <div class="mb-2 form-check">
+                            <input class="form-check-input" type="checkbox" id="agent-hidden" ${existing?.hidden ? 'checked' : ''}>
+                            <label class="form-check-label small text-secondary" for="agent-hidden">${L('ctrl.lbl.hideInSidebar', 'Hide in sidebar (when the hide toggle is on)')}</label>
+                        </div>
                         <div class="mb-2">
                             <label class="form-label small text-secondary mb-1">Retry Text (auto-repeat instruction while idle)</label>
                             <textarea id="agent-retry-text" class="form-control form-control-sm" rows="2" placeholder="e.g. Review the result once more and improve quality">${aiEscapeHtml(existing?.retryText || '')}</textarea>
@@ -4825,6 +5871,7 @@ async function agentOpenModal(existing) {
             }
             const workingDir = (container.querySelector('#agent-working-dir')).value.trim() || './';
             const superChecked = (container.querySelector('#agent-super')).checked;
+            const hiddenChecked = (container.querySelector('#agent-hidden')).checked;
             const permissions = {
                 allow: agentTextToRules((container.querySelector('#agent-perm-allow')).value),
                 deny: agentTextToRules((container.querySelector('#agent-perm-deny')).value),
@@ -4841,6 +5888,7 @@ async function agentOpenModal(existing) {
                 retryText: (container.querySelector('#agent-retry-text')).value.trim(),
                 retryCount: String(Math.max(0, Number((container.querySelector('#agent-retry-count')).value) || 0)),
                 permissions: JSON.stringify(permissions),
+                hidden: hiddenChecked ? '1' : '0',
             });
             const r = await authedFetch(`${CPath.WebRootUrl()}cmd/agent-set?${params.toString()}`);
             const j = await r.json();
@@ -4898,13 +5946,26 @@ async function teamOpenModal() {
             <textarea id="team-goal" class="form-control form-control-sm" rows="3" placeholder="e.g. Analyze the text files in the xx folder and summarize them into an md file"></textarea>
         </div>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Sub Agents</label>
+            <label class="form-label small text-secondary mb-1">Auto Staff (provider / model / count)</label>
+            <div class="d-flex gap-1 mb-1">
+                <select id="team-auto-provider" class="form-select form-select-sm" style="flex:0 0 8rem;">
+                    ${AGENT_PROVIDER_IDS.map(id => `<option value="${id}" ${id === defaultProvider ? 'selected' : ''}>${AGENT_PROVIDER_LABELS[id]}</option>`).join('')}
+                </select>
+                <select id="team-auto-model" class="form-select form-select-sm">${buildModelOptions(defaultProvider, defaultModel)}</select>
+                <input id="team-auto-count" type="number" min="1" max="${TEAM_AUTO_MAX}" step="1" value="1" class="form-control form-control-sm" style="flex:0 0 4.5rem;">
+                <button id="team-auto-add" class="btn btn-sm btn-outline-primary" style="white-space:nowrap;">Add</button>
+            </div>
+            <div id="team-auto-list" class="border rounded p-2" style="max-height:120px;overflow-y:auto;"></div>
+            <div class="form-text" style="font-size:0.7rem;">Added staff are created fresh for this team, run in the team leader's working folder with approvals auto-granted, and are deleted when the team ends.</div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Manual Staff (already-registered sub agents)</label>
             <div id="team-agents" class="border rounded p-2" style="max-height:140px;overflow-y:auto;">
                 ${agents.length === 0
         ? `<div class="text-secondary small">${L('ctrl.msg.noSubAgentsHint', 'No sub agents registered. Register one first in the right sidebar → Sub Agent.')}</div>`
         : agents.map(a => `
                         <div class="form-check">
-                            <input class="form-check-input team-agent-check" type="checkbox" value="${aiEscapeHtml(a.key)}" id="team-agent-${aiEscapeHtml(a.key)}" checked>
+                            <input class="form-check-input team-agent-check" type="checkbox" value="${aiEscapeHtml(a.key)}" id="team-agent-${aiEscapeHtml(a.key)}">
                             <label class="form-check-label small" for="team-agent-${aiEscapeHtml(a.key)}">
                                 ${aiEscapeHtml(a.key)}
                                 <span class="text-secondary">${aiEscapeHtml(a.provider)} / ${aiEscapeHtml(a.model)} · ${a.score}</span>
@@ -4939,6 +6000,52 @@ async function teamOpenModal() {
             const prefer = getLastModel() || '';
             modelSelect.innerHTML = buildModelOptions(providerSelect.value, prefer);
         });
+        const autoProvider = container.querySelector('#team-auto-provider');
+        const autoModel = container.querySelector('#team-auto-model');
+        const autoCount = container.querySelector('#team-auto-count');
+        const autoAddBtn = container.querySelector('#team-auto-add');
+        const autoListBox = container.querySelector('#team-auto-list');
+        const autoRows = [];
+        const autoTotal = () => autoRows.reduce((sum, r) => sum + r.count, 0);
+        const renderAutoList = () => {
+            if (autoRows.length === 0) {
+                autoListBox.innerHTML = `<div class="text-secondary small">No auto staff yet. Pick provider/model/count and press Add.</div>`;
+                return;
+            }
+            autoListBox.innerHTML = autoRows.map((r, i) => `
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="small">${aiEscapeHtml(AGENT_PROVIDER_LABELS[r.provider] || r.provider)}
+                        <span class="text-secondary">${aiEscapeHtml(r.model || '(default)')}</span>
+                        × ${r.count}</span>
+                    <button class="btn btn-sm btn-link text-danger p-0 team-auto-del" data-idx="${i}">✕</button>
+                </div>`).join('');
+            autoListBox.querySelectorAll('.team-auto-del').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    autoRows.splice(Number(btn.dataset.idx), 1);
+                    renderAutoList();
+                });
+            });
+        };
+        renderAutoList();
+        autoProvider.addEventListener('change', () => {
+            autoModel.innerHTML = buildModelOptions(autoProvider.value, '');
+        });
+        autoAddBtn.addEventListener('click', () => {
+            const provider = autoProvider.value;
+            const model = autoModel.value;
+            const room = TEAM_AUTO_MAX - autoTotal();
+            if (room <= 0) {
+                CAlert.E(`You can add at most ${TEAM_AUTO_MAX} auto staff.`);
+                return;
+            }
+            const count = Math.min(Math.max(1, Math.floor(Number(autoCount.value) || 1)), room);
+            const same = autoRows.find(r => r.provider === provider && r.model === model);
+            if (same)
+                same.count += count;
+            else
+                autoRows.push({ provider, model, count });
+            renderAutoList();
+        });
         let creating = false;
         const doCreate = async () => {
             if (creating)
@@ -4950,8 +6057,8 @@ async function teamOpenModal() {
             }
             const subAgents = Array.from(container.querySelectorAll('.team-agent-check'))
                 .filter(c => c.checked).map(c => c.value);
-            if (subAgents.length === 0) {
-                CAlert.E(L('ctrl.msg.selectOneSubAgent', 'Select at least one sub agent'));
+            if (subAgents.length === 0 && autoRows.length === 0) {
+                CAlert.E('Add at least one staff member (auto or manual)');
                 return;
             }
             creating = true;
@@ -4966,6 +6073,7 @@ async function teamOpenModal() {
                     model: modelSelect.value,
                     goal,
                     subAgents: subAgents.join(','),
+                    autoAgents: JSON.stringify(autoRows),
                     limitMin: String(Number((container.querySelector('#team-limit-min')).value) || 0),
                 });
                 const r = await authedFetch(`${CPath.WebRootUrl()}cmd/start-team?${params.toString()}`);

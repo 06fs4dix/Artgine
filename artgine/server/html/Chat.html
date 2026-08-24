@@ -10,21 +10,6 @@
 </head>
 <body class="d-flex overflow-hidden m-0" style="height:100vh;height:100dvh;">
 
-<!-- Login overlay -->
-<div id="loginOverlay" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-body" style="z-index: 9999;">
-    <div class="card shadow" style="min-width: 320px;">
-        <div class="card-body">
-            <h5 class="card-title mb-3"><i class="bi bi-shield-lock me-2"></i>AI Chat</h5>
-            <div class="mb-2">
-                <input id="loginPw" type="password" class="form-control" placeholder="Password" autocomplete="current-password">
-            </div>
-            <div id="loginMsg" class="small text-danger mb-2" style="min-height: 1.2em;"></div>
-            <button id="loginBtn" class="btn btn-primary w-100">Sign in</button>
-        </div>
-    </div>
-</div>
-
-
 <!-- Main -->
 <main class="flex-grow-1 d-flex flex-column overflow-hidden" style="position:relative;">
     <!-- Topbar -->
@@ -76,8 +61,6 @@
 .attachment-img { max-width: 200px; max-height: 200px; cursor: pointer; }
 .msg-bubble pre { background: var(--bs-tertiary-bg); padding: .5rem; border-radius: .25rem; overflow-x: auto; }
 .msg-bubble code { font-family: var(--bs-font-monospace); font-size: .875em; }
-body.share-mode #topbar,
-body.share-mode #loginOverlay { display: none !important; }
 </style>
 
 <script type="module" src="./Chat.js"></script>

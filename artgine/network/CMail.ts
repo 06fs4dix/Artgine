@@ -11,12 +11,19 @@ let imapflowLoad: Promise<any> | null = null;
 let mailparserModule: any = null;
 let mailparserLoad: Promise<any> | null = null;
 
+export type CMailAttachment = {
+    filename: string;
+    contentType: string;
+    content: Buffer;
+};
+
 export type CMailMessage = {
     uid: number;     // IMAP UID. 다음 Receive 호출 시 sinceUid로 넘길 커서.
     from: string;
     subject: string;
     date: number;     // 유닉스 초
     text: string;
+    attachments: CMailAttachment[];
 };
 
 export type CMailReceiveResult = {
@@ -142,12 +149,20 @@ export class CMail {
                 for await (const msg of client.fetch(range, { uid: true, envelope: true, source: true }, { uid: true })) {
                     if (msg.uid <= _sinceUid) continue;
                     const parsed = msg.source ? await simpleParser(msg.source) : null;
+                    const attachments: CMailAttachment[] = Array.isArray(parsed?.attachments)
+                        ? parsed.attachments.map((a: any) => ({
+                            filename: String(a?.filename ?? ''),
+                            contentType: String(a?.contentType ?? ''),
+                            content: a?.content as Buffer,
+                        }))
+                        : [];
                     messages.push({
                         uid: msg.uid,
                         from: msg.envelope?.from?.[0]?.address ?? '',
                         subject: msg.envelope?.subject ?? '',
                         date: msg.envelope?.date ? Math.floor(new Date(msg.envelope.date).getTime() / 1000) : Math.floor(Date.now() / 1000),
                         text: parsed?.text ?? '',
+                        attachments,
                     });
                     if (msg.uid > nextUid) nextUid = msg.uid;
                 }

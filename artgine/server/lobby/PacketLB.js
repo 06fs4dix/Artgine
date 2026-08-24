@@ -1,1 +1,18 @@
-import{CStream as e}from"../../basic/CStream.js";export class PacketLB{static U2LLobbyConnect=e.DefinePacket({privateKey:"",nick:"",project:""});static L2ULobbyConnectError=e.DefinePacket({code:"",msg:""});static L2RRoomConnect=e.DefinePacket({userKey:"",nick:"",privateKey:""});static R2LUserConnect=e.DefinePacket({userKey:"",state:0});static R2URoomInfo=e.DefinePacket({userKey:"",data:""});static R2URoomPushUser=e.DefinePacket({userKey:"",data:""});static L2RURoomRemoveUser=e.DefinePacket({userKey:""});static R2LRoomReady=e.DefinePacket({key:""});static R2UListSend=e.DefinePacket({userKeyList:new Array,data:""});static R2UAllSend=e.DefinePacket({data:""});static R2RSend=e.DefinePacket({data:""});static R2USave=e.DefinePacket({userKey:"",data:""});static{e.RegisterPacketNames(PacketLB)}}
+import { CStream } from "../../basic/CStream.js";
+export class PacketLB {
+    static U2LLobbyConnect = CStream.DefinePacket({ privateKey: "", nick: "", project: "" });
+    static L2ULobbyConnectError = CStream.DefinePacket({ code: "", msg: "" });
+    static L2RRoomConnect = CStream.DefinePacket({ userKey: "", nick: "", privateKey: "" });
+    static R2LUserConnect = CStream.DefinePacket({ userKey: "", state: 0 });
+    static R2URoomInfo = CStream.DefinePacket({ userKey: "", data: "" });
+    static R2URoomPushUser = CStream.DefinePacket({ userKey: "", data: "" });
+    static L2RURoomRemoveUser = CStream.DefinePacket({ userKey: "" });
+    static R2LRoomReady = CStream.DefinePacket({ key: "" });
+    static R2UListSend = CStream.DefinePacket({ userKeyList: new Array(), data: "" });
+    static R2UAllSend = CStream.DefinePacket({ data: "" });
+    static R2RSend = CStream.DefinePacket({ data: "" });
+    static R2USave = CStream.DefinePacket({ userKey: "", data: "" });
+    static {
+        CStream.RegisterPacketNames(PacketLB);
+    }
+}

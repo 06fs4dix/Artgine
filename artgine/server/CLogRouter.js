@@ -1,1 +1,24 @@
-var e=this&&this.__decorate||function(e,t,o,r){var n,s=arguments.length,c=s<3?t:null===r?r=Object.getOwnPropertyDescriptor(t,o):r;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)c=Reflect.decorate(e,t,o,r);else for(var i=e.length-1;i>=0;i--)(n=e[i])&&(c=(s<3?n(c):s>3?n(t,o,c):n(t,o))||c);return s>3&&c&&Object.defineProperty(t,o,c),c};import{URLPatterns as t}from"../network/CServerMain.js";import{CServerRouter as o}from"../network/CServerRouter.js";import{CConsol as r}from"../basic/CConsol.js";let n=class extends o{constructor(){super(),this.On("/log",this.onLog.bind(this))}async onLog(e,t,o){return r.Log(e.ToStr()),o.send("ok"),null}};n=e([t(["/log"])],n);export{n as CLogRouter};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { URLPatterns } from '../network/CServerMain.js';
+import { CServerRouter } from '../network/CServerRouter.js';
+import { CConsol } from '../basic/CConsol.js';
+let CLogRouter = class CLogRouter extends CServerRouter {
+    constructor() {
+        super();
+        this.On("/log", this.onLog.bind(this));
+    }
+    async onLog(_json, _req, _res) {
+        CConsol.Log(_json.ToStr());
+        _res.send("ok");
+        return null;
+    }
+};
+CLogRouter = __decorate([
+    URLPatterns(["/log"])
+], CLogRouter);
+export { CLogRouter };

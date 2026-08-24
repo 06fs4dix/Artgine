@@ -1,0 +1,753 @@
+{
+  "fileInfo": {
+    "fileName": "Ha Na's Lullaby - Andrew Kozar.mp3",
+    "absolutePath": "E:/music/포크/Ha Na's Lullaby - Andrew Kozar.mp3",
+    "folderPath": "E:/music/포크"
+  },
+  "id3": {
+    "title": "Ha Na's Lullaby",
+    "artist": "Andrew Kozar",
+    "albumArtist": null,
+    "album": "Puking In Omaha OMW 2 a Tribute 2 Mr. Shwamp",
+    "year": 2022,
+    "genre": "Alternative",
+    "track": null,
+    "composer": null,
+    "comment": null,
+    "hasPicture": false,
+    "format": {
+      "container": "MPEG",
+      "codec": "MPEG 1 Layer 3",
+      "bitrate": 169371.9334744928,
+      "sampleRate": 44100
+    }
+  },
+  "musical": {
+    "file": "Ha Na's Lullaby - Andrew Kozar.mp3",
+    "durationSec": 132.57238095238094,
+    "overall": {
+      "rhythm": {
+        "bpm": 112.27741241455078,
+        "confidence": 1.5622920989990234,
+        "beatCount": 250
+      },
+      "tonal": {
+        "key": "G",
+        "scale": "major",
+        "strength": 0.9048999547958374
+      },
+      "loudness": {
+        "dynamicComplexity": 5.279802322387695,
+        "loudnessDb": -16.250558853149414
+      }
+    },
+    "segments": [
+      {
+        "barIndex": 0,
+        "startSec": 0,
+        "endSec": 2.2639455795288086,
+        "beatCount": 3,
+        "bpm": 104.40341252943057,
+        "key": "E",
+        "scale": "major",
+        "keyStrength": 0.768446147441864,
+        "loudnessDb": -51.872336560129504
+      },
+      {
+        "barIndex": 1,
+        "startSec": 2.2639455795288086,
+        "endSec": 4.4117913246154785,
+        "beatCount": 4,
+        "bpm": 113.16720031909723,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.7722858786582947,
+        "loudnessDb": -23.032756179369322
+      },
+      {
+        "barIndex": 2,
+        "startSec": 4.4117913246154785,
+        "endSec": 6.559637069702148,
+        "beatCount": 4,
+        "bpm": 112.3471610781879,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.7932066917419434,
+        "loudnessDb": -20.682052842674373
+      },
+      {
+        "barIndex": 3,
+        "startSec": 6.559637069702148,
+        "endSec": 8.695873260498047,
+        "beatCount": 4,
+        "bpm": 113.16721728233692,
+        "key": "D",
+        "scale": "major",
+        "keyStrength": 0.8095654249191284,
+        "loudnessDb": -14.190585408468014
+      },
+      {
+        "barIndex": 4,
+        "startSec": 8.695873260498047,
+        "endSec": 10.77405834197998,
+        "beatCount": 4,
+        "bpm": 114.84377681045487,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8950091600418091,
+        "loudnessDb": -15.463140219294125
+      },
+      {
+        "barIndex": 5,
+        "startSec": 10.77405834197998,
+        "endSec": 12.910294532775879,
+        "beatCount": 4,
+        "bpm": 112.34709420507677,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8893203735351562,
+        "loudnessDb": -17.09968078656206
+      },
+      {
+        "barIndex": 6,
+        "startSec": 12.910294532775879,
+        "endSec": 15.000090599060059,
+        "beatCount": 4,
+        "bpm": 113.99933319481823,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8672561645507812,
+        "loudnessDb": -11.761700461767838
+      },
+      {
+        "barIndex": 7,
+        "startSec": 15.000090599060059,
+        "endSec": 17.11310577392578,
+        "beatCount": 4,
+        "bpm": 113.99926434037968,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.9145446419715881,
+        "loudnessDb": -12.302466358181485
+      },
+      {
+        "barIndex": 8,
+        "startSec": 17.11310577392578,
+        "endSec": 19.19129180908203,
+        "beatCount": 4,
+        "bpm": 115.70082412395452,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.5982548594474792,
+        "loudnessDb": -11.95136689704845
+      },
+      {
+        "barIndex": 9,
+        "startSec": 19.19129180908203,
+        "endSec": 21.36235809326172,
+        "beatCount": 4,
+        "bpm": 109.95678480838623,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8008599281311035,
+        "loudnessDb": -15.904057031053158
+      },
+      {
+        "barIndex": 10,
+        "startSec": 21.36235809326172,
+        "endSec": 23.545034408569336,
+        "beatCount": 4,
+        "bpm": 110.74219410074913,
+        "key": "D",
+        "scale": "major",
+        "keyStrength": 0.772428035736084,
+        "loudnessDb": -16.133067466135913
+      },
+      {
+        "barIndex": 11,
+        "startSec": 23.545034408569336,
+        "endSec": 25.6812686920166,
+        "beatCount": 4,
+        "bpm": 112.3471610781879,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8286738395690918,
+        "loudnessDb": -18.141948036531062
+      },
+      {
+        "barIndex": 12,
+        "startSec": 25.6812686920166,
+        "endSec": 27.78267478942871,
+        "beatCount": 4,
+        "bpm": 114.84363705396585,
+        "key": "D",
+        "scale": "major",
+        "keyStrength": 0.8087266683578491,
+        "loudnessDb": -14.836267912732994
+      },
+      {
+        "barIndex": 13,
+        "startSec": 27.78267478942871,
+        "endSec": 29.90730094909668,
+        "beatCount": 4,
+        "bpm": 113.16721728233692,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.7403987050056458,
+        "loudnessDb": -16.1330775127474
+      },
+      {
+        "barIndex": 14,
+        "startSec": 29.90730094909668,
+        "endSec": 32.04353713989258,
+        "beatCount": 4,
+        "bpm": 113.16721728233692,
+        "key": "D",
+        "scale": "major",
+        "keyStrength": 0.6766320466995239,
+        "loudnessDb": -14.49238196756951
+      },
+      {
+        "barIndex": 15,
+        "startSec": 32.04353713989258,
+        "endSec": 34.191383361816406,
+        "beatCount": 4,
+        "bpm": 112.3471610781879,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8001154661178589,
+        "loudnessDb": -16.06921380550441
+      },
+      {
+        "barIndex": 16,
+        "startSec": 34.191383361816406,
+        "endSec": 36.292789459228516,
+        "beatCount": 4,
+        "bpm": 113.16735298843767,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.7874204516410828,
+        "loudnessDb": -19.639366417381552
+      },
+      {
+        "barIndex": 17,
+        "startSec": 36.292789459228516,
+        "endSec": 38.40580368041992,
+        "beatCount": 4,
+        "bpm": 112.3471610781879,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8223198652267456,
+        "loudnessDb": -19.317558025131977
+      },
+      {
+        "barIndex": 18,
+        "startSec": 38.40580368041992,
+        "endSec": 40.50720977783203,
+        "beatCount": 4,
+        "bpm": 113.99933319481823,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.7926811575889587,
+        "loudnessDb": -11.967088631021653
+      },
+      {
+        "barIndex": 19,
+        "startSec": 40.50720977783203,
+        "endSec": 42.60861587524414,
+        "beatCount": 4,
+        "bpm": 114.84363705396585,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.83674156665802,
+        "loudnessDb": -13.236664737990413
+      },
+      {
+        "barIndex": 20,
+        "startSec": 42.60861587524414,
+        "endSec": 44.69841003417969,
+        "beatCount": 4,
+        "bpm": 115.70082412395452,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8647698163986206,
+        "loudnessDb": -12.814134929576184
+      },
+      {
+        "barIndex": 21,
+        "startSec": 44.69841003417969,
+        "endSec": 46.7998161315918,
+        "beatCount": 4,
+        "bpm": 113.99905777756304,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8797401785850525,
+        "loudnessDb": -16.82549338575829
+      },
+      {
+        "barIndex": 22,
+        "startSec": 46.7998161315918,
+        "endSec": 48.85478210449219,
+        "beatCount": 4,
+        "bpm": 116.57061543934543,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.7768130302429199,
+        "loudnessDb": -10.44353359633822
+      },
+      {
+        "barIndex": 23,
+        "startSec": 48.85478210449219,
+        "endSec": 50.944580078125,
+        "beatCount": 4,
+        "bpm": 115.7005404239042,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.8266892433166504,
+        "loudnessDb": -13.774608399231115
+      },
+      {
+        "barIndex": 24,
+        "startSec": 50.944580078125,
+        "endSec": 53.080814361572266,
+        "beatCount": 4,
+        "bpm": 112.3471610781879,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.8833734393119812,
+        "loudnessDb": -12.98819752019558
+      },
+      {
+        "barIndex": 25,
+        "startSec": 53.080814361572266,
+        "endSec": 55.25188064575195,
+        "beatCount": 4,
+        "bpm": 109.9566566930455,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.816537082195282,
+        "loudnessDb": -17.210483906944624
+      },
+      {
+        "barIndex": 26,
+        "startSec": 55.25188064575195,
+        "endSec": 57.42294692993164,
+        "beatCount": 4,
+        "bpm": 111.53877247101371,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8952723145484924,
+        "loudnessDb": -15.059492203977442
+      },
+      {
+        "barIndex": 27,
+        "startSec": 57.42294692993164,
+        "endSec": 59.52435302734375,
+        "beatCount": 4,
+        "bpm": 113.99933319481823,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8627654314041138,
+        "loudnessDb": -17.205363998560436
+      },
+      {
+        "barIndex": 28,
+        "startSec": 59.52435302734375,
+        "endSec": 61.57931900024414,
+        "beatCount": 4,
+        "bpm": 116.57061543934543,
+        "key": "B",
+        "scale": "minor",
+        "keyStrength": 0.7028244733810425,
+        "loudnessDb": -11.699873018471134
+      },
+      {
+        "barIndex": 29,
+        "startSec": 61.57931900024414,
+        "endSec": 63.59945297241211,
+        "beatCount": 4,
+        "bpm": 119.26086747730966,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.8204135298728943,
+        "loudnessDb": -11.60912663307429
+      },
+      {
+        "barIndex": 30,
+        "startSec": 63.59945297241211,
+        "endSec": 65.64280700683594,
+        "beatCount": 4,
+        "bpm": 116.57032745778622,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.7668309211730957,
+        "loudnessDb": -16.476169320255337
+      },
+      {
+        "barIndex": 31,
+        "startSec": 65.64280700683594,
+        "endSec": 67.73260498046875,
+        "beatCount": 4,
+        "bpm": 113.99878236163859,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8887667655944824,
+        "loudnessDb": -17.23619056219559
+      },
+      {
+        "barIndex": 32,
+        "startSec": 67.73260498046875,
+        "endSec": 69.77596282958984,
+        "beatCount": 4,
+        "bpm": 116.57061543934543,
+        "key": "B",
+        "scale": "minor",
+        "keyStrength": 0.7924100756645203,
+        "loudnessDb": -11.569676058676011
+      },
+      {
+        "barIndex": 33,
+        "startSec": 69.77596282958984,
+        "endSec": 71.88897705078125,
+        "beatCount": 4,
+        "bpm": 112.34742857142857,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.7635009288787842,
+        "loudnessDb": -11.316196869874627
+      },
+      {
+        "barIndex": 34,
+        "startSec": 71.88897705078125,
+        "endSec": 74.00199127197266,
+        "beatCount": 4,
+        "bpm": 113.16708157656167,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.7801969647407532,
+        "loudnessDb": -18.61972623338079
+      },
+      {
+        "barIndex": 35,
+        "startSec": 74.00199127197266,
+        "endSec": 76.09178924560547,
+        "beatCount": 4,
+        "bpm": 113.16708157656167,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.9081310629844666,
+        "loudnessDb": -17.3940433957178
+      },
+      {
+        "barIndex": 36,
+        "startSec": 76.09178924560547,
+        "endSec": 78.15836334228516,
+        "beatCount": 4,
+        "bpm": 115.7005404239042,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.9010000228881836,
+        "loudnessDb": -10.229179374750457
+      },
+      {
+        "barIndex": 37,
+        "startSec": 78.15836334228516,
+        "endSec": 80.29460144042969,
+        "beatCount": 4,
+        "bpm": 112.34689358622103,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.8152922987937927,
+        "loudnessDb": -10.849999592757605
+      },
+      {
+        "barIndex": 38,
+        "startSec": 80.29460144042969,
+        "endSec": 82.4076156616211,
+        "beatCount": 4,
+        "bpm": 113.99933319481823,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.8361888527870178,
+        "loudnessDb": -12.030220442549705
+      },
+      {
+        "barIndex": 39,
+        "startSec": 82.4076156616211,
+        "endSec": 84.56707000732422,
+        "beatCount": 4,
+        "bpm": 109.9566566930455,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.8159136772155762,
+        "loudnessDb": -11.757698673963661
+      },
+      {
+        "barIndex": 40,
+        "startSec": 84.56707000732422,
+        "endSec": 86.68009185791016,
+        "beatCount": 4,
+        "bpm": 113.16708157656167,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8915811777114868,
+        "loudnessDb": -14.012147007915596
+      },
+      {
+        "barIndex": 41,
+        "startSec": 86.68009185791016,
+        "endSec": 88.81632232666016,
+        "beatCount": 4,
+        "bpm": 112.34742857142857,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8562800288200378,
+        "loudnessDb": -14.08125247156826
+      },
+      {
+        "barIndex": 42,
+        "startSec": 88.81632232666016,
+        "endSec": 90.90612030029297,
+        "beatCount": 4,
+        "bpm": 115.7005404239042,
+        "key": "D",
+        "scale": "major",
+        "keyStrength": 0.812613844871521,
+        "loudnessDb": -11.870227458871145
+      },
+      {
+        "barIndex": 43,
+        "startSec": 90.90612030029297,
+        "endSec": 92.99591827392578,
+        "beatCount": 4,
+        "bpm": 113.99933319481823,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8433769345283508,
+        "loudnessDb": -14.057354703057126
+      },
+      {
+        "barIndex": 44,
+        "startSec": 92.99591827392578,
+        "endSec": 95.0508804321289,
+        "beatCount": 4,
+        "bpm": 117.45387564096181,
+        "key": "D",
+        "scale": "major",
+        "keyStrength": 0.7133570313453674,
+        "loudnessDb": -11.294201032065638
+      },
+      {
+        "barIndex": 45,
+        "startSec": 95.0508804321289,
+        "endSec": 97.17550659179688,
+        "beatCount": 4,
+        "bpm": 113.16708157656167,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8381824493408203,
+        "loudnessDb": -11.43848638710027
+      },
+      {
+        "barIndex": 46,
+        "startSec": 97.17550659179688,
+        "endSec": 99.3117446899414,
+        "beatCount": 4,
+        "bpm": 113.99933319481823,
+        "key": "D",
+        "scale": "major",
+        "keyStrength": 0.6969723701477051,
+        "loudnessDb": -12.750781182390554
+      },
+      {
+        "barIndex": 47,
+        "startSec": 99.3117446899414,
+        "endSec": 101.45958709716797,
+        "beatCount": 4,
+        "bpm": 110.74219410074913,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8930945992469788,
+        "loudnessDb": -14.788635241467084
+      },
+      {
+        "barIndex": 48,
+        "startSec": 101.45958709716797,
+        "endSec": 103.56099700927734,
+        "beatCount": 4,
+        "bpm": 113.16708157656167,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8255642056465149,
+        "loudnessDb": -14.738557037234054
+      },
+      {
+        "barIndex": 49,
+        "startSec": 103.56099700927734,
+        "endSec": 105.66239929199219,
+        "beatCount": 4,
+        "bpm": 115.70110782539612,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8001279830932617,
+        "loudnessDb": -15.953799275506917
+      },
+      {
+        "barIndex": 50,
+        "startSec": 105.66239929199219,
+        "endSec": 107.78702545166016,
+        "beatCount": 4,
+        "bpm": 112.34689358622103,
+        "key": "E",
+        "scale": "major",
+        "keyStrength": 0.7700111865997314,
+        "loudnessDb": -14.606172515994512
+      },
+      {
+        "barIndex": 51,
+        "startSec": 107.78702545166016,
+        "endSec": 109.92326354980469,
+        "beatCount": 4,
+        "bpm": 113.16708157656167,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8695537447929382,
+        "loudnessDb": -11.021274331249806
+      },
+      {
+        "barIndex": 52,
+        "startSec": 109.92326354980469,
+        "endSec": 111.98983764648438,
+        "beatCount": 4,
+        "bpm": 115.7005404239042,
+        "key": "B",
+        "scale": "minor",
+        "keyStrength": 0.557309627532959,
+        "loudnessDb": -10.785279013638466
+      },
+      {
+        "barIndex": 53,
+        "startSec": 111.98983764648438,
+        "endSec": 114.00997161865234,
+        "beatCount": 4,
+        "bpm": 119.26056605013473,
+        "key": "C",
+        "scale": "minor",
+        "keyStrength": 0.7052997946739197,
+        "loudnessDb": -12.090859777703745
+      },
+      {
+        "barIndex": 54,
+        "startSec": 114.00997161865234,
+        "endSec": 116.04171752929688,
+        "beatCount": 4,
+        "bpm": 117.45329091805188,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8112888336181641,
+        "loudnessDb": -15.35342049615197
+      },
+      {
+        "barIndex": 55,
+        "startSec": 116.04171752929688,
+        "endSec": 118.16634368896484,
+        "beatCount": 4,
+        "bpm": 111.53850881464426,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8261634111404419,
+        "loudnessDb": -14.981658555753421
+      },
+      {
+        "barIndex": 56,
+        "startSec": 118.16634368896484,
+        "endSec": 120.25614166259766,
+        "beatCount": 4,
+        "bpm": 114.8433575420082,
+        "key": "F#",
+        "scale": "major",
+        "keyStrength": 0.8228964805603027,
+        "loudnessDb": -11.343944352373988
+      },
+      {
+        "barIndex": 57,
+        "startSec": 120.25614166259766,
+        "endSec": 122.34593963623047,
+        "beatCount": 4,
+        "bpm": 113.99933319481823,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.8592385053634644,
+        "loudnessDb": -12.280333989663736
+      },
+      {
+        "barIndex": 58,
+        "startSec": 122.34593963623047,
+        "endSec": 124.42412567138672,
+        "beatCount": 4,
+        "bpm": 116.57061543934543,
+        "key": "E",
+        "scale": "minor",
+        "keyStrength": 0.8469998836517334,
+        "loudnessDb": -16.371124929392835
+      },
+      {
+        "barIndex": 59,
+        "startSec": 124.42412567138672,
+        "endSec": 126.50231170654297,
+        "beatCount": 4,
+        "bpm": 116.57061543934543,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.8002308011054993,
+        "loudnessDb": -16.53168725505673
+      },
+      {
+        "barIndex": 60,
+        "startSec": 126.50231170654297,
+        "endSec": 128.66177368164062,
+        "beatCount": 4,
+        "bpm": 110.74271391221491,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.6538774967193604,
+        "loudnessDb": -11.680175484575638
+      },
+      {
+        "barIndex": 61,
+        "startSec": 128.66177368164062,
+        "endSec": 130.83282470703125,
+        "beatCount": 4,
+        "bpm": 110.74219410074913,
+        "key": "C",
+        "scale": "major",
+        "keyStrength": 0.8930461406707764,
+        "loudnessDb": -12.850167884544799
+      },
+      {
+        "barIndex": 62,
+        "startSec": 130.83282470703125,
+        "endSec": 132.57238095238094,
+        "beatCount": 3,
+        "bpm": 108.7990260503853,
+        "key": "G",
+        "scale": "major",
+        "keyStrength": 0.91653972864151,
+        "loudnessDb": -18.930886220442297
+      }
+    ]
+  },
+  "fingerprint": null,
+  "external": {
+    "title": "Ha Na's Lullaby",
+    "composer": "Andrew Kozar",
+    "performedBy": "Andrew Kozar",
+    "album": "Puking In Omaha OMW 2 A Tribute 2 Mr. Shwamp",
+    "releaseYear": 2022,
+    "usedIn": [],
+    "genre": "Folk",
+    "source": "https://open.spotify.com/track/2SLmv3GdSwKcJDd2F6u1R6",
+    "confidence": "medium",
+    "notes": "'Puking In Omaha OMW 2 A Tribute 2 Mr. Shwamp' is a various-artists tribute compilation (released 2022-06-24) featuring Andrew Kozar among other contributors (e.g. Art Paul Schlosser). Composer is presumed to be Andrew Kozar as no separate original songwriter/artist credit for the tribute's namesake track was found; not independently confirmed."
+  }
+}

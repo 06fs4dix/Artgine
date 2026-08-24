@@ -44,6 +44,19 @@ export class CRigidBody extends CGeometryComp
 
 	mFall = false;
 	mJump = false;
+	//접지 상태. 충돌(Collider)이 세우고, 다음 스텝 Fixed가 읽은 뒤 끈다.
+	mGround = false;
+	//밟고 있는 면의 마찰. mGround와 같은 수명으로 충돌이 전달한다.
+	mGroundFriction = 0;
+	//걸을 수 있는 최대 경사각(도). 이 각도를 넘는 면은 접지로 보지 않아 미끄러진다.
+	//캐릭터마다 다르다. 사람은 45 전후, 차량이나 거미형은 더 크게 준다.
+	mSlopeLimit = CPhysics.GroundSlopeAngle;
+	//위 각도의 코사인 캐시. 값이 바뀌면 스스로 다시 계산한다.
+	private mSlopeLimitLast = -1;
+	private mSlopeLimitDot = 0;
+	//질량. 부딪힌 두 물체가 각각 얼마나 밀려날지를 나누는 데 쓴다.
+	//0 이하는 무한 질량으로 보아 밀려나지 않는다.
+	mMass = 1;
 	//mAutoDetrude=true;
 	//mElevatorPos : CVec3= null;
 	//mElevator : CSubject= null;
@@ -70,7 +83,8 @@ export class CRigidBody extends CGeometryComp
 	constructor()
 	{
 		super();
-		this.mSysc=CComponent.eSysn.Wind;
+		//충돌 보정이 스텝의 마지막 위치 쓰기가 되도록 Collider보다 앞에서 이동한다.
+		this.mSysc=CComponent.eSysn.Move;
 		
 	}
 	override Start(): void {
@@ -92,6 +106,27 @@ export class CRigidBody extends CGeometryComp
 	IsFall()
 	{
 		return this.mFall;
+	}
+	IsGround()
+	{
+		return this.mGround;
+	}
+	//역질량. 무한 질량(0 이하)은 0을 돌려준다.
+	//밀어내기 분배는 질량이 아니라 역질량 비율로 나눈다.
+	InvMass()
+	{
+		if(this.mMass<=0)	return 0;
+		return 1/this.mMass;
+	}
+	//접지 판정용 임계 dot. 에디터/JSON/네트워크 어느 경로로 값이 바뀌어도 자동 반영된다.
+	SlopeLimitDot()
+	{
+		if(this.mSlopeLimit!=this.mSlopeLimitLast)
+		{
+			this.mSlopeLimitLast=this.mSlopeLimit;
+			this.mSlopeLimitDot=Math.cos(this.mSlopeLimit*CMath.PI()/180);
+		}
+		return this.mSlopeLimitDot;
 	}
 	override Provider(_type: string, _state : Array<string>): void 
 	{
@@ -157,6 +192,17 @@ export class CRigidBody extends CGeometryComp
 			return true;
 
 		if(_member=="mLastDir")
+			return false;
+
+		if(_member=="mGround")
+			return false;
+
+		//파생 캐시라 저장/동기화 대상이 아니다. mSlopeLimit만 저장하면 된다.
+		if(_member=="mSlopeLimitLast" || _member=="mSlopeLimitDot")
+			return false;
+
+		//매 스텝 충돌이 전달하는 임시값이라 저장 대상이 아니다.
+		if(_member=="mGroundFriction")
 			return false;
 			
 		return super.IsShould(_member,_type);

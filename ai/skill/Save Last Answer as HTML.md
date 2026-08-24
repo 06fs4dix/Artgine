@@ -1,0 +1,1 @@
+Save the last response as a self-contained HTML file in the ai/ folder at the project root (e.g. ai/summary-YYYYMMDD-HHMMSS.html). After saving, check your project guidelines/instructions for the correct local server URL format, then provide the full browser link.

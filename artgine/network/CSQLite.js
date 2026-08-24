@@ -1,1 +1,155 @@
-import{CRDBMS as t}from"./CORM.js";import{CCMDMgr as e}from"../system/CCMDMgr.js";import*as n from"fs";import*as r from"path";let i=null,a=null,s=null;export class CSQLite extends t{mConn;static EnsureModule(){return i&&a?Promise.resolve({sqlite3:i,open:a}):(s||(s=(async()=>{await e.NPMInstall(["sqlite3","sqlite"]);const t=await import("sqlite3");i=t.default??t;const n=await import("sqlite");return a=n.open??n.default?.open,{sqlite3:i,open:a}})()),s)}async Init(){const{sqlite3:t,open:e}=await CSQLite.EnsureModule(),i=this.mDatabase||"./db/artgine.sqlite";n.mkdirSync(r.dirname(i),{recursive:!0}),this.mConn=await e({filename:i,driver:t.Database})}async Send(t,e=null){if(!this.mConn)throw new Error("Connection not initialized");e&&e.length>0?await this.mConn.run(t,e):await this.mConn.run(t)}async Recv(t,e=null){if(!this.mConn)throw new Error("Connection not initialized");try{let n;n=e&&e.length>0?await this.mConn.all(t,e):await this.mConn.all(t);const r=[];for(const t of n)r.push(Object.values(t));return r}catch(t){if(t?.message?.includes("no such table"))return null;throw t}}async IsCollection(t){return(await this.Recv("SELECT name FROM sqlite_master WHERE type='table' AND name = ?",[t])).length>0}async Close(){await(this.mConn?.close())}async GetProjection(t){return(await this.Recv(`PRAGMA table_info(${t})`)).map(t=>t[1])}async GetCollection(){return(await this.Recv("SELECT name FROM sqlite_master WHERE type='table'")).map(t=>t[0])}async CreateCollection(t,e,n=null){if(!Array.isArray(e)||0===e.length)throw new Error("컬럼을 하나 이상 제공해야 합니다.");if("string"!=typeof t||""===t.trim())throw new Error("테이블명을 제공하세요.");const r=t=>{if("string"!=typeof t||!/^[A-Za-z0-9_]+$/.test(t))throw new Error(`잘못된 식별자: ${t}`);return`\`${t}\``},i=e.find(t=>"number"==typeof t.mValue&&Number.isInteger(t.mValue)&&t.mValue>0),a=i?String(i.mKey):null,s=e.map(t=>{const e=String(t.mKey),n=r(e);if(a&&e===a)return`${n} INTEGER PRIMARY KEY AUTOINCREMENT`;const i=(t=>{if(t instanceof Date)return"DATETIME";if(t instanceof ArrayBuffer||ArrayBuffer.isView(t))return"BLOB";if("number"==typeof t)return Number.isInteger(t)?"INTEGER":"REAL";if("string"==typeof t){const e=t.length;return e<=255?"CHAR(255)":e<=65535?"VARCHAR(65535)":"TEXT"}return"TEXT"})(t.mValue);return t.mValue instanceof Date?`${n} ${i} NOT NULL DEFAULT CURRENT_TIMESTAMP`:`${n} ${i} NOT NULL`}).join(",\n    "),o=e.map(t=>String(t.mKey));let l="",m="";if(n&&String(n).trim()){const t=String(n).split(",").map(t=>t.trim()).filter(t=>t),e=t.filter(t=>!o.includes(t));if(e.length>0)throw new Error(`PRIMARY KEY에 존재하지 않는 컬럼: ${e.join(", ")}`);a?1===t.length&&t[0]===a||(m=`, UNIQUE (${t.map(t=>r(t)).join(", ")})`):l=`, PRIMARY KEY (${t.map(t=>r(t)).join(", ")})`}const u=`CREATE TABLE IF NOT EXISTS ${r(t)} (\n    ${s}${l}${m}\n);`;return await this.Send(u)}}
+import { CRDBMS } from "./CORM.js";
+import { CCMDMgr } from "../system/CCMDMgr.js";
+import { CPath } from "../basic/CPath.js";
+import * as fs from 'fs';
+import * as path from 'path';
+let sqlite3Module = null;
+let sqliteOpen = null;
+let sqliteLoad = null;
+export class CSQLite extends CRDBMS {
+    mConn;
+    static EnsureModule() {
+        if (sqlite3Module && sqliteOpen) {
+            return Promise.resolve({ sqlite3: sqlite3Module, open: sqliteOpen });
+        }
+        if (!sqliteLoad) {
+            sqliteLoad = (async () => {
+                await CCMDMgr.NPMInstall(["sqlite3", "sqlite"]);
+                const sqlite3Mod = await import("sqlite3");
+                sqlite3Module = sqlite3Mod.default ?? sqlite3Mod;
+                const sqliteMod = await import("sqlite");
+                sqliteOpen = sqliteMod.open ?? sqliteMod.default?.open;
+                return { sqlite3: sqlite3Module, open: sqliteOpen };
+            })();
+        }
+        return sqliteLoad;
+    }
+    async Init() {
+        const { sqlite3, open } = await CSQLite.EnsureModule();
+        const filename = this.mDatabase || (CPath.WorkingPath() + 'db/artgine.sqlite');
+        fs.mkdirSync(path.dirname(filename), { recursive: true });
+        this.mConn = await open({
+            filename,
+            driver: sqlite3.Database
+        });
+    }
+    async Send(_qurry, _objVec = null) {
+        if (!this.mConn)
+            throw new Error('Connection not initialized');
+        if (_objVec && _objVec.length > 0) {
+            await this.mConn.run(_qurry, _objVec);
+        }
+        else {
+            await this.mConn.run(_qurry);
+        }
+    }
+    async Recv(_qurry, _objVec = null) {
+        if (!this.mConn)
+            throw new Error('Connection not initialized');
+        try {
+            let rows;
+            if (_objVec && _objVec.length > 0) {
+                rows = await this.mConn.all(_qurry, _objVec);
+            }
+            else {
+                rows = await this.mConn.all(_qurry);
+            }
+            const result = [];
+            for (const row of rows) {
+                result.push(Object.values(row));
+            }
+            return result;
+        }
+        catch (err) {
+            if (err?.message?.includes("no such table")) {
+                return null;
+            }
+            else {
+                throw err;
+            }
+        }
+    }
+    async IsCollection(_name) {
+        let rows = await this.Recv("SELECT name FROM sqlite_master WHERE type='table' AND name = ?", [_name]);
+        return rows.length > 0;
+    }
+    async Close() {
+        await this.mConn?.close();
+    }
+    async GetProjection(_table) {
+        let columnRows = await this.Recv(`PRAGMA table_info(${_table})`);
+        return columnRows.map(row => row[1]);
+        ;
+    }
+    async GetCollection() {
+        let rows = await this.Recv("SELECT name FROM sqlite_master WHERE type='table'");
+        return rows.map(row => row[0]);
+    }
+    async CreateCollection(_name, _data, _primaryKey = null) {
+        if (!Array.isArray(_data) || _data.length === 0)
+            throw new Error('컬럼을 하나 이상 제공해야 합니다.');
+        if (typeof _name !== 'string' || _name.trim() === '')
+            throw new Error('테이블명을 제공하세요.');
+        const escapeIdent = (ident) => {
+            if (typeof ident !== 'string' || !/^[A-Za-z0-9_]+$/.test(ident)) {
+                throw new Error(`잘못된 식별자: ${ident}`);
+            }
+            return `\`${ident}\``;
+        };
+        const autoIncField = _data.find(f => typeof f.mValue === "number" && Number.isInteger(f.mValue) && f.mValue > 0);
+        const autoIncKey = autoIncField ? String(autoIncField.mKey) : null;
+        const mapType = (value) => {
+            if (value instanceof Date)
+                return 'DATETIME';
+            if (value instanceof ArrayBuffer || ArrayBuffer.isView(value))
+                return 'BLOB';
+            if (typeof value === 'number') {
+                return Number.isInteger(value) ? 'INTEGER' : 'REAL';
+            }
+            if (typeof value === 'string') {
+                const len = value.length;
+                if (len <= 255)
+                    return 'CHAR(255)';
+                else if (len <= 65535)
+                    return 'VARCHAR(65535)';
+                else
+                    return 'TEXT';
+            }
+            return 'TEXT';
+        };
+        const colsSql = _data.map(f => {
+            const colName = String(f.mKey);
+            const col = escapeIdent(colName);
+            if (autoIncKey && colName === autoIncKey) {
+                return `${col} INTEGER PRIMARY KEY AUTOINCREMENT`;
+            }
+            const sqlType = mapType(f.mValue);
+            if (f.mValue instanceof Date) {
+                return `${col} ${sqlType} NOT NULL DEFAULT CURRENT_TIMESTAMP`;
+            }
+            return `${col} ${sqlType} NOT NULL`;
+        }).join(',\n    ');
+        const colNames = _data.map(x => String(x.mKey));
+        const parseKeys = (s) => String(s).split(',').map(k => k.trim()).filter(k => k);
+        let pkClause = '';
+        let uniqueClause = '';
+        if (_primaryKey && String(_primaryKey).trim()) {
+            const keys = parseKeys(_primaryKey);
+            const invalid = keys.filter(k => !colNames.includes(k));
+            if (invalid.length > 0) {
+                throw new Error(`PRIMARY KEY에 존재하지 않는 컬럼: ${invalid.join(', ')}`);
+            }
+            if (autoIncKey) {
+                if (!(keys.length === 1 && keys[0] === autoIncKey)) {
+                    uniqueClause = `, UNIQUE (${keys.map(k => escapeIdent(k)).join(', ')})`;
+                }
+            }
+            else {
+                pkClause = `, PRIMARY KEY (${keys.map(k => escapeIdent(k)).join(', ')})`;
+            }
+        }
+        const table = escapeIdent(_name);
+        const sql = `CREATE TABLE IF NOT EXISTS ${table} (\n    ${colsSql}${pkClause}${uniqueClause}\n);`;
+        return await this.Send(sql);
+    }
+}

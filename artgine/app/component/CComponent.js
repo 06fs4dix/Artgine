@@ -1,1 +1,162 @@
-import{CObject as s}from"../../basic/CObject.js";import{CRouteMsg as t}from"../CRouteMsg.js";export class CComponent extends s{mEnable;mSave;mDestroy;mSysc=CComponent.eSysn.Event;mComMsg=null;mComMsgSwap=new Array;mComMsgLen=0;mOwner=null;mStartChk=!0;constructor(){super(),this.mDestroy=!1,this.mEnable=!0,this.mSave=!0,this.mComMsg=new Array}Provider(s,t){}GetSysc(){return this.mSysc}IsStart(){return 0==this.mStartChk}IsShould(t,e){return(e!=s.eShould.Proxy||"mEnable"!=t)&&"mComMsg"!=t&&"mComMsgLen"!=t&&"mComMsgSwap"!=t&&"mStartChk"!=t&&"mOwner"!=t&&"mDestroy"!=t&&"mSysc"!=t&&super.IsShould(t,e)}PushMsg(s){this.mDestroy||(this.mComMsg.length>this.mComMsgLen?this.mComMsg[this.mComMsgLen]=s:this.mComMsg.push(s),this.mComMsgLen++)}Fixed(s){}Update(s){}BuildGI(){}SubUpdate(){}ProductMsg(s){if(this.mDestroy)return new t(s);this.mComMsgLen++;var e=null;return this.mComMsg.length>this.mComMsgLen-1?((e=this.mComMsg[this.mComMsgLen-1]).mMsgName=s,e.mIntra=null,e.mInter=null,e.mChild=!1):(e=new t(s),this.mComMsg.push(e)),e}RemoveMsg(s){for(var t=0;t<this.mComMsg.length;++t)if(this.mComMsg[t].mMsgName==s){this.mComMsg.splice(t,1),this.mComMsgLen--;break}}ClearMsg(){if(0!=this.mComMsgLen){var s=this.mComMsg;this.mComMsg=this.mComMsgSwap,this.mComMsgSwap=s,this.mComMsgLen=0}}Reset(){this.mStartChk=!0,this.mComMsgLen=0,this.mOwner=null}Recycle(){null==this.GetRecycleType()||0!=this.IsRecycle()?(this.mStartChk=!0,this.mComMsgLen=0):super.Recycle()}IsEnable(){return!this.IsDestroy()&&this.mEnable}SetEnable(s){this.mEnable=s,null!=this.mOwner&&this.mOwner.UpdateComp()}IsDestroy(){return!!this.IsRecycle()||this.mDestroy}StartChk(){return 1==this.mStartChk&&(this.mStartChk=!1,!0)}Start(){}SetOwner(s){this.mOwner=s}GetOwner(){return this.mOwner}Destroy(){this.mDestroy||(null==this.GetRecycleType()?(this.mDestroy=!0,this.mEnable=!1,this.mStartChk=!0,this.ClearMsg(),this.mComMsg=null):this.Recycle())}Prefab(s){}}!function(s){let t;!function(s){s[s.First=0]="First",s[s.Collider=100]="Collider",s[s.Light=201]="Light",s[s.CamComp=401]="CamComp",s[s.RigidBody=500]="RigidBody",s[s.Wind=501]="Wind",s[s.WorkFlow=600]="WorkFlow",s[s.Event=601]="Event",s[s.AniFlow=800]="AniFlow",s[s.IK=801]="IK",s[s.Paint=900]="Paint"}(t=s.eSysn||(s.eSysn={}))}(CComponent||(CComponent={}));
+import { CObject } from "../../basic/CObject.js";
+import { CRouteMsg } from "../CRouteMsg.js";
+export class CComponent extends CObject {
+    mEnable;
+    mSave;
+    mDestroy;
+    mSysc = CComponent.eSysn.Event;
+    mComMsg = null;
+    mComMsgSwap = new Array();
+    mComMsgLen = 0;
+    mOwner = null;
+    mStartChk = true;
+    constructor() {
+        super();
+        this.mDestroy = false;
+        this.mEnable = true;
+        this.mSave = true;
+        this.mComMsg = new Array();
+    }
+    Provider(_type, _state) { }
+    GetSysc() { return this.mSysc; }
+    IsStart() {
+        return this.mStartChk == false;
+    }
+    IsShould(_member, _type) {
+        if (_type == CObject.eShould.Proxy) {
+            if (_member == "mEnable")
+                return false;
+        }
+        if (_member == "mComMsg" || _member == "mComMsgLen" || _member == "mComMsgSwap" || _member == "mStartChk" ||
+            _member == "mOwner" || _member == "mDestroy" || _member == "mSysc")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    PushMsg(_msg) {
+        if (this.mDestroy)
+            return;
+        if (this.mComMsg.length > this.mComMsgLen)
+            this.mComMsg[this.mComMsgLen] = _msg;
+        else
+            this.mComMsg.push(_msg);
+        this.mComMsgLen++;
+    }
+    Fixed(_update) {
+    }
+    Update(_update) {
+    }
+    BuildGI() {
+    }
+    SubUpdate() {
+    }
+    ProductMsg(_name) {
+        if (this.mDestroy)
+            return new CRouteMsg(_name);
+        ;
+        this.mComMsgLen++;
+        var cm = null;
+        if (this.mComMsg.length > this.mComMsgLen - 1) {
+            cm = this.mComMsg[this.mComMsgLen - 1];
+            cm.mMsgName = _name;
+            cm.mIntra = null;
+            cm.mInter = null;
+            cm.mChild = false;
+        }
+        else {
+            cm = new CRouteMsg(_name);
+            this.mComMsg.push(cm);
+        }
+        return cm;
+    }
+    RemoveMsg(_name) {
+        for (var i = 0; i < this.mComMsg.length; ++i) {
+            if (this.mComMsg[i].mMsgName == _name) {
+                this.mComMsg.splice(i, 1);
+                this.mComMsgLen--;
+                break;
+            }
+        }
+    }
+    ClearMsg() {
+        if (this.mComMsgLen == 0)
+            return;
+        var dummy = this.mComMsg;
+        this.mComMsg = this.mComMsgSwap;
+        this.mComMsgSwap = dummy;
+        this.mComMsgLen = 0;
+    }
+    Reset() {
+        this.mStartChk = true;
+        this.mComMsgLen = 0;
+        this.mOwner = null;
+    }
+    Recycle() {
+        if (this.GetRecycleType() != null && this.IsRecycle() == false) {
+            super.Recycle();
+            return;
+        }
+        this.mStartChk = true;
+        this.mComMsgLen = 0;
+    }
+    IsEnable() {
+        if (this.IsDestroy())
+            return false;
+        return this.mEnable;
+    }
+    SetEnable(_val) {
+        this.mEnable = _val;
+        if (this.mOwner != null)
+            this.mOwner.UpdateComp();
+    }
+    IsDestroy() {
+        if (this.IsRecycle())
+            return true;
+        return this.mDestroy;
+    }
+    StartChk() {
+        if (this.mStartChk == true) {
+            this.mStartChk = false;
+            return true;
+        }
+        return false;
+    }
+    Start() { }
+    SetOwner(_obj) {
+        this.mOwner = _obj;
+    }
+    GetOwner() { return this.mOwner; }
+    Destroy() {
+        if (this.mDestroy)
+            return;
+        if (this.GetRecycleType() != null) {
+            this.Recycle();
+            return;
+        }
+        this.mDestroy = true;
+        this.mEnable = false;
+        this.mStartChk = true;
+        this.ClearMsg();
+        this.mComMsg = null;
+    }
+    Prefab(_owner) {
+    }
+}
+;
+(function (CComponent) {
+    let eSysn;
+    (function (eSysn) {
+        eSysn[eSysn["First"] = 0] = "First";
+        eSysn[eSysn["Move"] = 50] = "Move";
+        eSysn[eSysn["Collider"] = 100] = "Collider";
+        eSysn[eSysn["Light"] = 201] = "Light";
+        eSysn[eSysn["CamComp"] = 401] = "CamComp";
+        eSysn[eSysn["RigidBody"] = 500] = "RigidBody";
+        eSysn[eSysn["Wind"] = 501] = "Wind";
+        eSysn[eSysn["WorkFlow"] = 600] = "WorkFlow";
+        eSysn[eSysn["Event"] = 601] = "Event";
+        eSysn[eSysn["AniFlow"] = 800] = "AniFlow";
+        eSysn[eSysn["IK"] = 801] = "IK";
+        eSysn[eSysn["Paint"] = 900] = "Paint";
+    })(eSysn = CComponent.eSysn || (CComponent.eSysn = {}));
+    ;
+})(CComponent || (CComponent = {}));

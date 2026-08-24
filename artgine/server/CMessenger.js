@@ -1,1 +1,569 @@
-import{CORMField as e}from"../network/CORM.js";import{CSQLite as t}from"../network/CSQLite.js";import{marked as s,Renderer as n}from"../external/esnext/md/marked.esm.js";import{CMail as r}from"../network/CMail.js";import{CMailAccount as a}from"../network/CMailAccount.js";const i=Object.assign(Object.create(new n),{heading:e=>`<b>${e}</b>\n`,hr:()=>"\n",list:e=>e,listitem:e=>`• ${e}\n`,checkbox:e=>e?"☑ ":"☐ ",paragraph:e=>`${e}\n\n`,table:(e,t)=>`${e}${t}\n`,tablerow:e=>`${e}\n`,tablecell:e=>`${e} | `,image:(e,t,s)=>s});export class CMessenger{static sDB=null;static sSessionTable="messenger_session";static sQueueTable="messenger_queue";static ePlatform={Telegram:"telegram",Discord:"discord",Email:"email"};static sTextLimit={telegram:3800,discord:1900,email:1e6};static sFailMax=5;static sDiscordAPI="https://discord.com/api/v10";static sDiscordEpoch=14200704e5;static sDiscordPerm=68608;static sDiscordScanGuild=5;static sDiscordScanChannel=20;static sDiscordScanTerm=6e4;static sScan=new Map;static sFlushing=new Set;static async Init(){if(null!=CMessenger.sDB)return CMessenger.sDB;const s=new t;await s.Init();const n=await s.GetCollection();if(Array.isArray(n)&&n.includes(CMessenger.sSessionTable)){const e=await s.GetProjection(CMessenger.sSessionTable);Array.isArray(e)&&e.includes("chatKey")&&e.includes("platform")||(await s.Send(`DROP TABLE IF EXISTS ${CMessenger.sSessionTable}`),await s.Send(`DROP TABLE IF EXISTS ${CMessenger.sQueueTable}`))}return await s.CreateCollection(CMessenger.sSessionTable,[new e("id",1),new e("platform",""),new e("token",""),new e("botName",""),new e("chatKey",""),new e("cursor",""),new e("link",""),new e("state","pending"),new e("createdAt",0)]),await s.CreateCollection(CMessenger.sQueueTable,[new e("id",1),new e("sessionId",0),new e("dir",""),new e("who",""),new e("date",0),new e("msgKey",""),new e("text",""),new e("state",""),new e("fail",0)]),CMessenger.sDB=s,s}static Detect(e){const t=(e??"").trim();return/^\d{5,}:[\w-]{20,}$/.test(t)?CMessenger.ePlatform.Telegram:/^[\w-]{20,}\.[\w-]{4,}\.[\w-]{20,}$/.test(t)?CMessenger.ePlatform.Discord:/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)?CMessenger.ePlatform.Email:""}static async Create(e,t){const s=(t??"").trim();if(""===s)throw new Error("CMessenger: token is empty");let n=(e??"").trim().toLowerCase();if((""===n||"auto"===n)&&(n=CMessenger.Detect(s),""===n))throw new Error("CMessenger: cannot tell the platform from this token (expected a Telegram/Discord bot token or an email address)");if(n!==CMessenger.ePlatform.Telegram&&n!==CMessenger.ePlatform.Discord&&n!==CMessenger.ePlatform.Email)throw new Error(`CMessenger: unsupported platform '${e}'`);if(n===CMessenger.ePlatform.Email){const e=a.Load();if(!a.IsConfigured(e))throw new Error("CMessenger: mail account is not configured yet — set it up first (Email button)")}const r=n===CMessenger.ePlatform.Email?{name:s,link:""}:await CMessenger.GetMe(n,s),i=await CMessenger.Init();await i.Send(`UPDATE ${CMessenger.sSessionTable} SET state = 'dead' WHERE token = ?`,[s]);const o=n===CMessenger.ePlatform.Discord?CMessenger.DiscordNowKey():"0",c=n===CMessenger.ePlatform.Email?s:"",l=n===CMessenger.ePlatform.Email?"active":"pending",g=CMessenger.Now();await i.Send(`INSERT INTO ${CMessenger.sSessionTable} (platform, token, botName, chatKey, cursor, link, state, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[n,s,r.name,c,o,r.link,l,g]);const d=await i.Recv(`SELECT id FROM ${CMessenger.sSessionTable} WHERE token = ? AND state != 'dead' ORDER BY id DESC LIMIT 1`,[s]);if(null==d||0===d.length)throw new Error("CMessenger: failed to create session");const m=Number(d[0][0]);if(n===CMessenger.ePlatform.Telegram||n===CMessenger.ePlatform.Email){const e=await CMessenger.GetSession(m);try{await CMessenger.Poll(e,!1)}catch{}}return m}static async Send(e,t,s){const n=await CMessenger.GetSession(e),r=await CMessenger.Init(),a=Math.floor(Date.now()/1e3);for(const e of CMessenger.SplitText(s??"",CMessenger.sTextLimit[n.platform]??1900))await r.Send(`INSERT INTO ${CMessenger.sQueueTable} (sessionId, dir, who, date, msgKey, text, state, fail) VALUES (?, 'out', ?, ?, '', ?, 'pending', 0)`,[n.id,t??"",a,e]);await CMessenger.Flush(n)}static async Recv(e){const t=await CMessenger.GetSession(e),s=await CMessenger.Init();await CMessenger.Poll(t),await CMessenger.Flush(t);const n=await s.Recv(`SELECT id, who, date, text FROM ${CMessenger.sQueueTable} WHERE sessionId = ? AND dir = 'in' AND state = 'recv' ORDER BY id ASC`,[t.id]);if(null==n||0===n.length)return[];const r=[];for(const e of n)await s.Send(`UPDATE ${CMessenger.sQueueTable} SET state = 'read' WHERE id = ?`,[Number(e[0])]),r.push({who:String(e[1]),date:Number(e[2]),text:String(e[3])});return r}static async GetAllSessions(){const e=await CMessenger.Init(),t=await e.Recv(`SELECT id, platform, token, botName, chatKey, cursor, link, state, createdAt FROM ${CMessenger.sSessionTable} WHERE state != 'dead' ORDER BY id DESC`,[]);return null==t||0===t.length?[]:t.map(e=>{const t=CMessenger.RowToSession(e);return{id:t.id,platform:t.platform,botName:t.botName,chatKey:t.chatKey,cursor:t.cursor,link:t.link,state:t.state,createdAt:t.createdAt}})}static async GetLog(e,t=50){const s=await CMessenger.Init(),n=await s.Recv(`SELECT dir, who, date, text FROM ${CMessenger.sQueueTable} WHERE sessionId = ? ORDER BY id DESC LIMIT ?`,[e,Math.min(t,200)]);return null==n||0===n.length?[]:n.reverse().map(e=>({dir:String(e[0]),who:String(e[1]),date:Number(e[2]),text:String(e[3])}))}static async ResetCursor(e){const t=await CMessenger.GetSession(e);if(t.platform!==CMessenger.ePlatform.Discord)try{await CMessenger.Poll(t,!1)}catch{}else await CMessenger.SetCursor(t,CMessenger.DiscordNowKey())}static async GetInfo(e){const t=await CMessenger.GetSession(e);return{id:t.id,platform:t.platform,botName:t.botName,chatKey:t.chatKey,cursor:t.cursor,link:t.link,state:t.state,createdAt:t.createdAt}}static async GetSession(e){const t=await CMessenger.Init(),s=await t.Recv(`SELECT id, platform, token, botName, chatKey, cursor, link, state, createdAt FROM ${CMessenger.sSessionTable} WHERE id = ?`,[e]);if(null==s||0===s.length)throw new Error(`CMessenger: session ${e} not found`);const n=CMessenger.RowToSession(s[0]);if("dead"===n.state)throw new Error(`CMessenger: session ${e} is dead`);return n}static async GetMe(e,t){if(e===CMessenger.ePlatform.Telegram){const e=await CMessenger.CallTelegram(t,"getMe",null),s=e?.result?.username;if("string"!=typeof s||""===s)throw new Error("CMessenger: getMe returned no username");return{name:s,link:`https://t.me/${encodeURIComponent(s)}`}}const s=await CMessenger.CallDiscord(t,"/users/@me"),n=s?.username,r=s?.id;if("string"!=typeof n||""===n)throw new Error("CMessenger: /users/@me returned no username");return{name:n,link:`https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(String(r))}&scope=bot&permissions=${CMessenger.sDiscordPerm}&integration_type=0`}}static async Poll(e,t=!0){return e.platform===CMessenger.ePlatform.Discord?await CMessenger.PollDiscord(e,t):e.platform===CMessenger.ePlatform.Email?await CMessenger.PollEmail(e,t):await CMessenger.PollTelegram(e,t)}static async Flush(e){if(""!==e.chatKey&&!CMessenger.sFlushing.has(e.id)){CMessenger.sFlushing.add(e.id);try{const t=await CMessenger.Init(),s=await t.Recv(`SELECT id, text, fail FROM ${CMessenger.sQueueTable} WHERE sessionId = ? AND dir = 'out' AND state = 'pending' ORDER BY id ASC`,[e.id]);if(null==s||0===s.length)return;for(const n of s){const s=Number(n[0]),r=String(n[1]),a=Number(n[2]);try{await CMessenger.Post(e,r),await t.Send(`UPDATE ${CMessenger.sQueueTable} SET state = 'sent' WHERE id = ?`,[s])}catch(e){const n=a+1,r=n>=CMessenger.sFailMax?"failed":"pending";await t.Send(`UPDATE ${CMessenger.sQueueTable} SET fail = ?, state = ? WHERE id = ?`,[n,r,s]);break}}}finally{CMessenger.sFlushing.delete(e.id)}}}static async Post(e,t){if(e.platform===CMessenger.ePlatform.Discord)return void await CMessenger.CallDiscord(e.token,`/channels/${e.chatKey}/messages`,"POST",{content:t});if(e.platform===CMessenger.ePlatform.Email){const s=a.Load(),n=CMessenger.ToEmailHtml(t);if(!await r.Send(a.ToAuthInfo(s.smtp),e.chatKey,"Messenger",n))throw new Error("CMessenger: email send failed");return}const s=CMessenger.ToTelegramHtml(t);await CMessenger.CallTelegram(e.token,"sendMessage",{chat_id:Number(e.chatKey),text:s,parse_mode:"HTML"})}static ToTelegramHtml(e){const t=e.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");return s.parse(t,{renderer:i}).trim()}static ToEmailHtml(e){const t=e.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");return s.parse(t).trim()}static async Bind(e,t){const s=await CMessenger.Init();e.chatKey=t,await s.Send(`UPDATE ${CMessenger.sSessionTable} SET chatKey = ?, state = 'active' WHERE id = ?`,[t,e.id])}static async SetCursor(e,t){const s=await CMessenger.Init();e.cursor=t,await s.Send(`UPDATE ${CMessenger.sSessionTable} SET cursor = ? WHERE id = ?`,[t,e.id])}static async Store(e,t,s,n,r){const a=await CMessenger.Init();await a.Send(`INSERT INTO ${CMessenger.sQueueTable} (sessionId, dir, who, date, msgKey, text, state, fail) VALUES (?, 'in', ?, ?, ?, ?, 'recv', 0)`,[e.id,t,s,n,r])}static async PollTelegram(e,t){const s=Number(e.cursor)||0,n=await CMessenger.CallTelegram(e.token,"getUpdates",{offset:s,timeout:0}),r=Array.isArray(n?.result)?n.result:[];if(0===r.length)return;let a=s-1;for(const s of r){const n=Number(s?.update_id??0);n>a&&(a=n);const r=s?.message??s?.channel_post,i=String(r?.chat?.id??""),o="string"==typeof r?.text?r.text:"";if(""===i||""===o)continue;if(""===e.chatKey)await CMessenger.Bind(e,i);else if(e.chatKey!==i)continue;if("/start"===o||o.startsWith("/start "))continue;if(!t)continue;const c=String(r?.from?.username??r?.from?.first_name??i),l=Number(r?.date??Math.floor(Date.now()/1e3));await CMessenger.Store(e,c,l,String(n),o)}const i=a+1;i>s&&await CMessenger.SetCursor(e,String(i))}static async CallTelegram(e,t,s){const n=`https://api.telegram.org/bot${e}/${t}`,r={signal:AbortSignal.timeout(2e4)};null!=s&&(r.method="POST",r.headers={"Content-Type":"application/json"},r.body=JSON.stringify(s));const a=await fetch(n,r),i=await a.json().catch(()=>null);if(!a.ok||!0!==i?.ok){const e=i?.description??`HTTP ${a.status}`;throw new Error(`CMessenger: ${t} failed - ${e}`)}return i}static async PollDiscord(e,t){if(""===e.chatKey&&(await CMessenger.DiscoverDiscord(e),""===e.chatKey))return;const s=await CMessenger.CallDiscord(e.token,`/channels/${e.chatKey}/messages?after=${encodeURIComponent(e.cursor)}&limit=100`),n=Array.isArray(s)?s:[];if(0===n.length)return;n.sort((e,t)=>BigInt(e?.id??0)<BigInt(t?.id??0)?-1:1);let r=e.cursor;for(const s of n){const n=String(s?.id??"");if(""!==n&&BigInt(n)>BigInt(r)&&(r=n),!0===s?.author?.bot)continue;const a="string"==typeof s?.content?s.content:"";if(""===a)continue;if(!t)continue;const i=String(s?.author?.username??s?.author?.id??""),o=s?.timestamp?Math.floor(new Date(s.timestamp).getTime()/1e3):Math.floor(Date.now()/1e3);await CMessenger.Store(e,i,o,n,a)}BigInt(r)>BigInt(e.cursor)&&await CMessenger.SetCursor(e,r)}static async DiscoverDiscord(e){const t=Date.now();let s=CMessenger.sScan.get(e.id);if(null==s||t-s.at>CMessenger.sDiscordScanTerm){const n=[],r=await CMessenger.CallDiscord(e.token,"/users/@me/guilds").catch(()=>[]);for(const t of(Array.isArray(r)?r:[]).slice(0,CMessenger.sDiscordScanGuild)){if(n.length>=CMessenger.sDiscordScanChannel)break;const s=await CMessenger.CallDiscord(e.token,`/guilds/${t?.id}/channels`).catch(()=>[]);for(const e of Array.isArray(s)?s:[])if(0===Number(e?.type)&&(n.push(String(e.id)),n.length>=CMessenger.sDiscordScanChannel))break}s={at:t,chans:n},CMessenger.sScan.set(e.id,s)}for(const t of s.chans){const s=await CMessenger.CallDiscord(e.token,`/channels/${t}/messages?after=${encodeURIComponent(e.cursor)}&limit=5`).catch(()=>null);if((Array.isArray(s)?s:[]).some(e=>!0!==e?.author?.bot&&"string"==typeof e?.content&&""!==e.content))return await CMessenger.Bind(e,t),void CMessenger.sScan.delete(e.id)}}static DiscordNowKey(){return String(BigInt(Date.now()-CMessenger.sDiscordEpoch)<<22n)}static async CallDiscord(e,t,s="GET",n=null){const r={method:s,headers:{Authorization:`Bot ${e}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(2e4)};null!=n&&(r.body=JSON.stringify(n));let a=await fetch(`${CMessenger.sDiscordAPI}${t}`,r);if(429===a.status){const e=await a.json().catch(()=>null),s=Math.min(1e3*Number(e?.retry_after??1),5e3);await new Promise(e=>setTimeout(e,s)),a=await fetch(`${CMessenger.sDiscordAPI}${t}`,r)}if(!a.ok){const e=await a.json().catch(()=>null);throw new Error(`CMessenger: ${s} ${t} failed - ${e?.message??`HTTP ${a.status}`}`)}return 204===a.status?null:await a.json().catch(()=>null)}static async PollEmail(e,t){const s=a.Load(),n=Number(e.cursor)||0,i=await r.Receive(a.ToAuthInfo(s.imap),n);if(0===i.messages.length)return;const o=e.chatKey.toLowerCase();for(const s of i.messages)if(t&&s.from.toLowerCase()===o){const t=s.subject?`[${s.subject}]\n${s.text}`:s.text;await CMessenger.Store(e,s.from,s.date,String(s.uid),t)}i.nextUid>n&&await CMessenger.SetCursor(e,String(i.nextUid))}static SplitText(e,t){const s=""===e?"(empty)":e,n=Array.from(s);if(n.length<=t)return[s];const r=[];for(let e=0;e<n.length;e+=t)r.push(n.slice(e,e+t).join(""));return r}static RowToSession(e){return{id:Number(e[0]),platform:String(e[1]),token:String(e[2]),botName:String(e[3]),chatKey:String(e[4]??""),cursor:String(e[5]??"0"),link:String(e[6]??""),state:String(e[7]),createdAt:Number(e[8])}}static Now(){const e=new Date,t=e=>e<10?`0${e}`:`${e}`;return Number(`${e.getFullYear()}${t(e.getMonth()+1)}${t(e.getDate())}${t(e.getHours())}${t(e.getMinutes())}${t(e.getSeconds())}`)}}
+import { CORMField } from '../network/CORM.js';
+import { CSQLite } from '../network/CSQLite.js';
+import { marked, Renderer } from '../external/esnext/md/marked.esm.js';
+import { CMail } from '../network/CMail.js';
+import { CMailAccount } from '../network/CMailAccount.js';
+import * as fs from 'fs';
+import * as path from 'path';
+const sTelegramRenderer = Object.assign(Object.create(new Renderer()), {
+    heading: (text) => `<b>${text}</b>\n`,
+    hr: () => '\n',
+    list: (body) => body,
+    listitem: (text) => `• ${text}\n`,
+    checkbox: (checked) => (checked ? '☑ ' : '☐ '),
+    paragraph: (text) => `${text}\n\n`,
+    table: (header, body) => `${header}${body}\n`,
+    tablerow: (content) => `${content}\n`,
+    tablecell: (content) => `${content} | `,
+    image: (_href, _title, text) => text,
+});
+export class CMessenger {
+    static sDB = null;
+    static sSessionTable = 'messenger_session';
+    static sQueueTable = 'messenger_queue';
+    static ePlatform = { Telegram: 'telegram', Discord: 'discord', Email: 'email' };
+    static sTextLimit = { telegram: 3800, discord: 1900, email: 1000000 };
+    static sFailMax = 5;
+    static sDiscordAPI = 'https://discord.com/api/v10';
+    static sDiscordEpoch = 1420070400000;
+    static sDiscordPerm = 68608;
+    static sDiscordScanGuild = 5;
+    static sDiscordScanChannel = 20;
+    static sDiscordScanTerm = 60000;
+    static sDefaultMediaDir = './db/messenger_media';
+    static sScan = new Map();
+    static sFlushing = new Set();
+    static async Init() {
+        if (CMessenger.sDB != null)
+            return CMessenger.sDB;
+        const db = new CSQLite();
+        await db.Init();
+        const tables = await db.GetCollection();
+        if (Array.isArray(tables) && tables.includes(CMessenger.sSessionTable)) {
+            const cols = await db.GetProjection(CMessenger.sSessionTable);
+            if (!Array.isArray(cols) || !cols.includes('chatKey') || !cols.includes('platform')) {
+                await db.Send(`DROP TABLE IF EXISTS ${CMessenger.sSessionTable}`);
+                await db.Send(`DROP TABLE IF EXISTS ${CMessenger.sQueueTable}`);
+            }
+        }
+        await db.CreateCollection(CMessenger.sSessionTable, [
+            new CORMField('id', 1),
+            new CORMField('platform', ''),
+            new CORMField('token', ''),
+            new CORMField('botName', ''),
+            new CORMField('chatKey', ''),
+            new CORMField('cursor', ''),
+            new CORMField('link', ''),
+            new CORMField('state', 'pending'),
+            new CORMField('createdAt', 0),
+        ]);
+        await db.CreateCollection(CMessenger.sQueueTable, [
+            new CORMField('id', 1),
+            new CORMField('sessionId', 0),
+            new CORMField('dir', ''),
+            new CORMField('who', ''),
+            new CORMField('date', 0),
+            new CORMField('msgKey', ''),
+            new CORMField('text', ''),
+            new CORMField('state', ''),
+            new CORMField('fail', 0),
+        ]);
+        CMessenger.sDB = db;
+        return db;
+    }
+    static Detect(_token) {
+        const token = (_token ?? '').trim();
+        if (/^\d{5,}:[\w-]{20,}$/.test(token))
+            return CMessenger.ePlatform.Telegram;
+        if (/^[\w-]{20,}\.[\w-]{4,}\.[\w-]{20,}$/.test(token))
+            return CMessenger.ePlatform.Discord;
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(token))
+            return CMessenger.ePlatform.Email;
+        return '';
+    }
+    static async Create(_platform, _token) {
+        const token = (_token ?? '').trim();
+        if (token === '')
+            throw new Error('CMessenger: token is empty');
+        let platform = (_platform ?? '').trim().toLowerCase();
+        if (platform === '' || platform === 'auto') {
+            platform = CMessenger.Detect(token);
+            if (platform === '')
+                throw new Error('CMessenger: cannot tell the platform from this token (expected a Telegram/Discord bot token or an email address)');
+        }
+        if (platform !== CMessenger.ePlatform.Telegram && platform !== CMessenger.ePlatform.Discord && platform !== CMessenger.ePlatform.Email) {
+            throw new Error(`CMessenger: unsupported platform '${_platform}'`);
+        }
+        if (platform === CMessenger.ePlatform.Email) {
+            const account = CMailAccount.Load();
+            if (!CMailAccount.IsConfigured(account)) {
+                throw new Error('CMessenger: mail account is not configured yet — set it up first (Email button)');
+            }
+        }
+        const me = platform === CMessenger.ePlatform.Email
+            ? { name: token, link: '' }
+            : await CMessenger.GetMe(platform, token);
+        const db = await CMessenger.Init();
+        await db.Send(`UPDATE ${CMessenger.sSessionTable} SET state = 'dead' WHERE token = ?`, [token]);
+        const cursor = platform === CMessenger.ePlatform.Discord ? CMessenger.DiscordNowKey() : '0';
+        const initialChatKey = platform === CMessenger.ePlatform.Email ? token : '';
+        const initialState = platform === CMessenger.ePlatform.Email ? 'active' : 'pending';
+        const createdAt = CMessenger.Now();
+        await db.Send(`INSERT INTO ${CMessenger.sSessionTable} (platform, token, botName, chatKey, cursor, link, state, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [platform, token, me.name, initialChatKey, cursor, me.link, initialState, createdAt]);
+        const rows = await db.Recv(`SELECT id FROM ${CMessenger.sSessionTable} WHERE token = ? AND state != 'dead' ORDER BY id DESC LIMIT 1`, [token]);
+        if (rows == null || rows.length === 0)
+            throw new Error('CMessenger: failed to create session');
+        const id = Number(rows[0][0]);
+        if (platform === CMessenger.ePlatform.Telegram || platform === CMessenger.ePlatform.Email) {
+            const ses = await CMessenger.GetSession(id);
+            try {
+                await CMessenger.Poll(ses, false);
+            }
+            catch { }
+        }
+        return id;
+    }
+    static async Send(_sessionId, _from, _message) {
+        const ses = await CMessenger.GetSession(_sessionId);
+        const db = await CMessenger.Init();
+        const date = Math.floor(Date.now() / 1000);
+        for (const part of CMessenger.SplitText(_message ?? '', CMessenger.sTextLimit[ses.platform] ?? 1900)) {
+            await db.Send(`INSERT INTO ${CMessenger.sQueueTable} (sessionId, dir, who, date, msgKey, text, state, fail) VALUES (?, 'out', ?, ?, '', ?, 'pending', 0)`, [ses.id, _from ?? '', date, part]);
+        }
+        await CMessenger.Flush(ses);
+    }
+    static async Recv(_sessionId, _mediaDir) {
+        const ses = await CMessenger.GetSession(_sessionId);
+        const db = await CMessenger.Init();
+        await CMessenger.Poll(ses, true, _mediaDir);
+        await CMessenger.Flush(ses);
+        const rows = await db.Recv(`SELECT id, who, date, text FROM ${CMessenger.sQueueTable} WHERE sessionId = ? AND dir = 'in' AND state = 'recv' ORDER BY id ASC`, [ses.id]);
+        if (rows == null || rows.length === 0)
+            return [];
+        const out = [];
+        for (const row of rows) {
+            await db.Send(`UPDATE ${CMessenger.sQueueTable} SET state = 'read' WHERE id = ?`, [Number(row[0])]);
+            out.push({ who: String(row[1]), date: Number(row[2]), text: String(row[3]) });
+        }
+        return out;
+    }
+    static async GetAllSessions() {
+        const db = await CMessenger.Init();
+        const rows = await db.Recv(`SELECT id, platform, token, botName, chatKey, cursor, link, state, createdAt FROM ${CMessenger.sSessionTable} WHERE state != 'dead' ORDER BY id DESC`, []);
+        if (rows == null || rows.length === 0)
+            return [];
+        return rows.map(r => {
+            const s = CMessenger.RowToSession(r);
+            return { id: s.id, platform: s.platform, botName: s.botName, chatKey: s.chatKey, cursor: s.cursor, link: s.link, state: s.state, createdAt: s.createdAt };
+        });
+    }
+    static async GetLog(_sessionId, _limit = 50) {
+        const db = await CMessenger.Init();
+        const rows = await db.Recv(`SELECT dir, who, date, text FROM ${CMessenger.sQueueTable} WHERE sessionId = ? ORDER BY id DESC LIMIT ?`, [_sessionId, Math.min(_limit, 200)]);
+        if (rows == null || rows.length === 0)
+            return [];
+        return rows.reverse().map(r => ({
+            dir: String(r[0]),
+            who: String(r[1]),
+            date: Number(r[2]),
+            text: String(r[3]),
+        }));
+    }
+    static async ResetCursor(_sessionId) {
+        const ses = await CMessenger.GetSession(_sessionId);
+        if (ses.platform === CMessenger.ePlatform.Discord) {
+            await CMessenger.SetCursor(ses, CMessenger.DiscordNowKey());
+            return;
+        }
+        try {
+            await CMessenger.Poll(ses, false);
+        }
+        catch { }
+    }
+    static async GetInfo(_sessionId) {
+        const ses = await CMessenger.GetSession(_sessionId);
+        return {
+            id: ses.id, platform: ses.platform, botName: ses.botName, chatKey: ses.chatKey,
+            cursor: ses.cursor, link: ses.link, state: ses.state, createdAt: ses.createdAt,
+        };
+    }
+    static async GetSession(_sessionId) {
+        const db = await CMessenger.Init();
+        const rows = await db.Recv(`SELECT id, platform, token, botName, chatKey, cursor, link, state, createdAt FROM ${CMessenger.sSessionTable} WHERE id = ?`, [_sessionId]);
+        if (rows == null || rows.length === 0)
+            throw new Error(`CMessenger: session ${_sessionId} not found`);
+        const ses = CMessenger.RowToSession(rows[0]);
+        if (ses.state === 'dead')
+            throw new Error(`CMessenger: session ${_sessionId} is dead`);
+        return ses;
+    }
+    static async GetMe(_platform, _token) {
+        if (_platform === CMessenger.ePlatform.Telegram) {
+            const res = await CMessenger.CallTelegram(_token, 'getMe', null);
+            const name = res?.result?.username;
+            if (typeof name !== 'string' || name === '')
+                throw new Error('CMessenger: getMe returned no username');
+            return { name, link: `https://t.me/${encodeURIComponent(name)}` };
+        }
+        const me = await CMessenger.CallDiscord(_token, '/users/@me');
+        const name = me?.username;
+        const appId = me?.id;
+        if (typeof name !== 'string' || name === '')
+            throw new Error('CMessenger: /users/@me returned no username');
+        return {
+            name,
+            link: `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(String(appId))}`
+                + `&scope=bot&permissions=${CMessenger.sDiscordPerm}&integration_type=0`,
+        };
+    }
+    static async Poll(_ses, _store = true, _mediaDir) {
+        if (_ses.platform === CMessenger.ePlatform.Discord)
+            return await CMessenger.PollDiscord(_ses, _store, _mediaDir);
+        if (_ses.platform === CMessenger.ePlatform.Email)
+            return await CMessenger.PollEmail(_ses, _store, _mediaDir);
+        return await CMessenger.PollTelegram(_ses, _store, _mediaDir);
+    }
+    static async Flush(_ses) {
+        if (_ses.chatKey === '')
+            return;
+        if (CMessenger.sFlushing.has(_ses.id))
+            return;
+        CMessenger.sFlushing.add(_ses.id);
+        try {
+            const db = await CMessenger.Init();
+            const rows = await db.Recv(`SELECT id, text, fail FROM ${CMessenger.sQueueTable} WHERE sessionId = ? AND dir = 'out' AND state = 'pending' ORDER BY id ASC`, [_ses.id]);
+            if (rows == null || rows.length === 0)
+                return;
+            for (const row of rows) {
+                const id = Number(row[0]);
+                const text = String(row[1]);
+                const fail = Number(row[2]);
+                try {
+                    await CMessenger.Post(_ses, text);
+                    await db.Send(`UPDATE ${CMessenger.sQueueTable} SET state = 'sent' WHERE id = ?`, [id]);
+                }
+                catch (e) {
+                    const next = fail + 1;
+                    const state = next >= CMessenger.sFailMax ? 'failed' : 'pending';
+                    await db.Send(`UPDATE ${CMessenger.sQueueTable} SET fail = ?, state = ? WHERE id = ?`, [next, state, id]);
+                    break;
+                }
+            }
+        }
+        finally {
+            CMessenger.sFlushing.delete(_ses.id);
+        }
+    }
+    static async Post(_ses, _text) {
+        if (_ses.platform === CMessenger.ePlatform.Discord) {
+            await CMessenger.CallDiscord(_ses.token, `/channels/${_ses.chatKey}/messages`, 'POST', { content: _text });
+            return;
+        }
+        if (_ses.platform === CMessenger.ePlatform.Email) {
+            const account = CMailAccount.Load();
+            const html = CMessenger.ToEmailHtml(_text);
+            const ok = await CMail.Send(CMailAccount.ToAuthInfo(account.smtp), _ses.chatKey, 'Messenger', html);
+            if (!ok)
+                throw new Error('CMessenger: email send failed');
+            return;
+        }
+        const html = CMessenger.ToTelegramHtml(_text);
+        await CMessenger.CallTelegram(_ses.token, 'sendMessage', {
+            chat_id: Number(_ses.chatKey), text: html, parse_mode: 'HTML',
+        });
+    }
+    static ToTelegramHtml(_raw) {
+        const escaped = _raw
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const html = marked.parse(escaped, { renderer: sTelegramRenderer });
+        return html.trim();
+    }
+    static ToEmailHtml(_raw) {
+        const escaped = _raw
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const html = marked.parse(escaped);
+        return html.trim();
+    }
+    static async Bind(_ses, _chatKey) {
+        const db = await CMessenger.Init();
+        _ses.chatKey = _chatKey;
+        await db.Send(`UPDATE ${CMessenger.sSessionTable} SET chatKey = ?, state = 'active' WHERE id = ?`, [_chatKey, _ses.id]);
+    }
+    static async SetCursor(_ses, _cursor) {
+        const db = await CMessenger.Init();
+        _ses.cursor = _cursor;
+        await db.Send(`UPDATE ${CMessenger.sSessionTable} SET cursor = ? WHERE id = ?`, [_cursor, _ses.id]);
+    }
+    static async Store(_ses, _who, _date, _key, _text) {
+        const db = await CMessenger.Init();
+        await db.Send(`INSERT INTO ${CMessenger.sQueueTable} (sessionId, dir, who, date, msgKey, text, state, fail) VALUES (?, 'in', ?, ?, ?, ?, 'recv', 0)`, [_ses.id, _who, _date, _key, _text]);
+    }
+    static async PollTelegram(_ses, _store, _mediaDir) {
+        const offset = Number(_ses.cursor) || 0;
+        const res = await CMessenger.CallTelegram(_ses.token, 'getUpdates', { offset, timeout: 0 });
+        const updates = Array.isArray(res?.result) ? res.result : [];
+        if (updates.length === 0)
+            return;
+        let maxId = offset - 1;
+        for (const up of updates) {
+            const updateId = Number(up?.update_id ?? 0);
+            if (updateId > maxId)
+                maxId = updateId;
+            const msg = up?.message ?? up?.channel_post;
+            const chatId = String(msg?.chat?.id ?? '');
+            if (chatId === '')
+                continue;
+            let text = typeof msg?.text === 'string' ? msg.text : (typeof msg?.caption === 'string' ? msg.caption : '');
+            const media = CMessenger.ExtractTelegramMedia(msg);
+            if (text === '' && media == null)
+                continue;
+            if (_ses.chatKey === '')
+                await CMessenger.Bind(_ses, chatId);
+            else if (_ses.chatKey !== chatId)
+                continue;
+            if (text === '/start' || text.startsWith('/start '))
+                continue;
+            if (!_store)
+                continue;
+            if (media != null) {
+                try {
+                    const savedPath = await CMessenger.DownloadTelegramMedia(_ses.token, media.fileId, media.fileName, _mediaDir);
+                    const tag = `"${savedPath}"`;
+                    text = text === '' ? tag : `${tag}\n${text}`;
+                }
+                catch {
+                    text = text === '' ? `[${media.kind} 다운로드 실패]` : text;
+                }
+            }
+            const who = String(msg?.from?.username ?? msg?.from?.first_name ?? chatId);
+            const date = Number(msg?.date ?? Math.floor(Date.now() / 1000));
+            await CMessenger.Store(_ses, who, date, String(updateId), text);
+        }
+        const next = maxId + 1;
+        if (next > offset)
+            await CMessenger.SetCursor(_ses, String(next));
+    }
+    static ExtractTelegramMedia(_msg) {
+        const photo = Array.isArray(_msg?.photo) ? _msg.photo : [];
+        if (photo.length > 0) {
+            const p = photo[photo.length - 1];
+            return { fileId: String(p.file_id), kind: '사진', fileName: `${p.file_unique_id}.jpg` };
+        }
+        if (_msg?.voice != null)
+            return { fileId: String(_msg.voice.file_id), kind: '음성', fileName: `${_msg.voice.file_unique_id}.ogg` };
+        if (_msg?.audio != null)
+            return { fileId: String(_msg.audio.file_id), kind: '오디오', fileName: String(_msg.audio.file_name ?? `${_msg.audio.file_unique_id}.mp3`) };
+        if (_msg?.video != null)
+            return { fileId: String(_msg.video.file_id), kind: '동영상', fileName: `${_msg.video.file_unique_id}.mp4` };
+        if (_msg?.video_note != null)
+            return { fileId: String(_msg.video_note.file_id), kind: '동영상', fileName: `${_msg.video_note.file_unique_id}.mp4` };
+        if (_msg?.document != null)
+            return { fileId: String(_msg.document.file_id), kind: '파일', fileName: String(_msg.document.file_name ?? `${_msg.document.file_unique_id}`) };
+        if (_msg?.sticker != null)
+            return { fileId: String(_msg.sticker.file_id), kind: '스티커', fileName: `${_msg.sticker.file_unique_id}.webp` };
+        return null;
+    }
+    static async DownloadTelegramMedia(_token, _fileId, _fileName, _mediaDir) {
+        const info = await CMessenger.CallTelegram(_token, 'getFile', { file_id: _fileId });
+        const filePath = info?.result?.file_path;
+        if (typeof filePath !== 'string' || filePath === '')
+            throw new Error('CMessenger: getFile returned no file_path');
+        const url = `https://api.telegram.org/file/bot${_token}/${filePath}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+        if (!res.ok)
+            throw new Error(`CMessenger: media download failed - HTTP ${res.status}`);
+        const buf = Buffer.from(await res.arrayBuffer());
+        return CMessenger.SaveMedia(buf, _fileName, _mediaDir);
+    }
+    static async CallTelegram(_token, _method, _body) {
+        const url = `https://api.telegram.org/bot${_token}/${_method}`;
+        const init = { signal: AbortSignal.timeout(20000) };
+        if (_body != null) {
+            init.method = 'POST';
+            init.headers = { 'Content-Type': 'application/json' };
+            init.body = JSON.stringify(_body);
+        }
+        const res = await fetch(url, init);
+        const json = await res.json().catch(() => null);
+        if (!res.ok || json?.ok !== true) {
+            const desc = json?.description ?? `HTTP ${res.status}`;
+            throw new Error(`CMessenger: ${_method} failed - ${desc}`);
+        }
+        return json;
+    }
+    static async PollDiscord(_ses, _store, _mediaDir) {
+        if (_ses.chatKey === '') {
+            await CMessenger.DiscoverDiscord(_ses);
+            if (_ses.chatKey === '')
+                return;
+        }
+        const res = await CMessenger.CallDiscord(_ses.token, `/channels/${_ses.chatKey}/messages?after=${encodeURIComponent(_ses.cursor)}&limit=100`);
+        const list = Array.isArray(res) ? res : [];
+        if (list.length === 0)
+            return;
+        list.sort((a, b) => (BigInt(a?.id ?? 0) < BigInt(b?.id ?? 0) ? -1 : 1));
+        let maxId = _ses.cursor;
+        for (const m of list) {
+            const id = String(m?.id ?? '');
+            if (id !== '' && BigInt(id) > BigInt(maxId))
+                maxId = id;
+            if (m?.author?.bot === true)
+                continue;
+            let text = typeof m?.content === 'string' ? m.content : '';
+            const attachments = Array.isArray(m?.attachments) ? m.attachments : [];
+            if (text === '' && attachments.length === 0)
+                continue;
+            if (!_store)
+                continue;
+            for (const att of attachments) {
+                try {
+                    const savedPath = await CMessenger.DownloadDiscordAttachment(att, _mediaDir);
+                    const tag = `"${savedPath}"`;
+                    text = text === '' ? tag : `${text}\n${tag}`;
+                }
+                catch {
+                    text = text === '' ? `[첨부 다운로드 실패: ${String(att?.filename ?? '')}]` : text;
+                }
+            }
+            const who = String(m?.author?.username ?? m?.author?.id ?? '');
+            const date = m?.timestamp ? Math.floor(new Date(m.timestamp).getTime() / 1000) : Math.floor(Date.now() / 1000);
+            await CMessenger.Store(_ses, who, date, id, text);
+        }
+        if (BigInt(maxId) > BigInt(_ses.cursor))
+            await CMessenger.SetCursor(_ses, maxId);
+    }
+    static async DownloadDiscordAttachment(_att, _mediaDir) {
+        const url = String(_att?.url ?? '');
+        if (url === '')
+            throw new Error('CMessenger: attachment has no url');
+        const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+        if (!res.ok)
+            throw new Error(`CMessenger: attachment download failed - HTTP ${res.status}`);
+        const buf = Buffer.from(await res.arrayBuffer());
+        return CMessenger.SaveMedia(buf, String(_att?.filename ?? 'file'), _mediaDir);
+    }
+    static async DiscoverDiscord(_ses) {
+        const now = Date.now();
+        let hit = CMessenger.sScan.get(_ses.id);
+        if (hit == null || now - hit.at > CMessenger.sDiscordScanTerm) {
+            const chans = [];
+            const guilds = await CMessenger.CallDiscord(_ses.token, '/users/@me/guilds').catch(() => []);
+            for (const g of (Array.isArray(guilds) ? guilds : []).slice(0, CMessenger.sDiscordScanGuild)) {
+                if (chans.length >= CMessenger.sDiscordScanChannel)
+                    break;
+                const list = await CMessenger.CallDiscord(_ses.token, `/guilds/${g?.id}/channels`).catch(() => []);
+                for (const c of (Array.isArray(list) ? list : [])) {
+                    if (Number(c?.type) !== 0)
+                        continue;
+                    chans.push(String(c.id));
+                    if (chans.length >= CMessenger.sDiscordScanChannel)
+                        break;
+                }
+            }
+            hit = { at: now, chans };
+            CMessenger.sScan.set(_ses.id, hit);
+        }
+        for (const cid of hit.chans) {
+            const res = await CMessenger.CallDiscord(_ses.token, `/channels/${cid}/messages?after=${encodeURIComponent(_ses.cursor)}&limit=5`).catch(() => null);
+            const list = Array.isArray(res) ? res : [];
+            if (!list.some(m => m?.author?.bot !== true && typeof m?.content === 'string' && m.content !== ''))
+                continue;
+            await CMessenger.Bind(_ses, cid);
+            CMessenger.sScan.delete(_ses.id);
+            return;
+        }
+    }
+    static DiscordNowKey() {
+        return String(BigInt(Date.now() - CMessenger.sDiscordEpoch) << 22n);
+    }
+    static async CallDiscord(_token, _path, _method = 'GET', _body = null) {
+        const init = {
+            method: _method,
+            headers: { 'Authorization': `Bot ${_token}`, 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(20000),
+        };
+        if (_body != null)
+            init.body = JSON.stringify(_body);
+        let res = await fetch(`${CMessenger.sDiscordAPI}${_path}`, init);
+        if (res.status === 429) {
+            const info = await res.json().catch(() => null);
+            const wait = Math.min(Number(info?.retry_after ?? 1) * 1000, 5000);
+            await new Promise(r => setTimeout(r, wait));
+            res = await fetch(`${CMessenger.sDiscordAPI}${_path}`, init);
+        }
+        if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            throw new Error(`CMessenger: ${_method} ${_path} failed - ${err?.message ?? `HTTP ${res.status}`}`);
+        }
+        if (res.status === 204)
+            return null;
+        return await res.json().catch(() => null);
+    }
+    static async PollEmail(_ses, _store, _mediaDir) {
+        const account = CMailAccount.Load();
+        const sinceUid = Number(_ses.cursor) || 0;
+        const result = await CMail.Receive(CMailAccount.ToAuthInfo(account.imap), sinceUid);
+        if (result.messages.length === 0)
+            return;
+        const peer = _ses.chatKey.toLowerCase();
+        for (const msg of result.messages) {
+            if (_store && msg.from.toLowerCase() === peer) {
+                let text = msg.subject ? `[${msg.subject}]\n${msg.text}` : msg.text;
+                for (const att of msg.attachments ?? []) {
+                    if (att.content == null)
+                        continue;
+                    try {
+                        const savedPath = CMessenger.SaveMedia(att.content, att.filename || 'attachment', _mediaDir);
+                        text = `"${savedPath}"\n${text}`;
+                    }
+                    catch { }
+                }
+                await CMessenger.Store(_ses, msg.from, msg.date, String(msg.uid), text);
+            }
+        }
+        if (result.nextUid > sinceUid)
+            await CMessenger.SetCursor(_ses, String(result.nextUid));
+    }
+    static SaveMedia(_buf, _fileName, _mediaDir) {
+        const dir = _mediaDir && _mediaDir !== '' ? _mediaDir : CMessenger.sDefaultMediaDir;
+        fs.mkdirSync(dir, { recursive: true });
+        const safeName = (_fileName || 'file').replace(/[\\/]/g, '_').replace(/[^\w.\-가-힣]+/g, '_');
+        let target = path.join(dir, safeName);
+        if (fs.existsSync(target)) {
+            const ext = path.extname(safeName);
+            const base = path.basename(safeName, ext);
+            target = path.join(dir, `${base}_${Date.now()}${ext}`);
+        }
+        fs.writeFileSync(target, _buf);
+        return target.replace(/\\/g, '/');
+    }
+    static SplitText(_text, _limit) {
+        const text = _text === '' ? '(empty)' : _text;
+        const chars = Array.from(text);
+        if (chars.length <= _limit)
+            return [text];
+        const out = [];
+        for (let i = 0; i < chars.length; i += _limit) {
+            out.push(chars.slice(i, i + _limit).join(''));
+        }
+        return out;
+    }
+    static RowToSession(_row) {
+        return {
+            id: Number(_row[0]),
+            platform: String(_row[1]),
+            token: String(_row[2]),
+            botName: String(_row[3]),
+            chatKey: String(_row[4] ?? ''),
+            cursor: String(_row[5] ?? '0'),
+            link: String(_row[6] ?? ''),
+            state: String(_row[7]),
+            createdAt: Number(_row[8]),
+        };
+    }
+    static Now() {
+        const d = new Date();
+        const pad2 = (v) => (v < 10 ? `0${v}` : `${v}`);
+        return Number(`${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`);
+    }
+}

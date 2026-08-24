@@ -4,7 +4,6 @@ import { CObject } from "../../basic/CObject.js";
 import { COctreeMgr } from "../../geometry/COctree.js";
 import { CPlane } from "../../geometry/CPlane.js";
 import { CFrame } from "../../util/CFrame.js";
-import { CNaviMgr } from "../canvas/CNavigationMgr.js";
 import { CRayMouse } from "../CRayMouse.js";
 import { CComponent } from "./CComponent.js";
 
@@ -15,7 +14,6 @@ export class CGeometryInfo implements IAutoFixed
     //public m_plane : CPlane= null;
     public mRay=new Map<string,Array<CRayMouse>>();
     public mPlane=new Map<string,CPlane>();
-    public mNavi : CNaviMgr=null;
     public mOctree:COctreeMgr=new COctreeMgr();
     public mFixedComp=new CArray<CComponent>();
     constructor(_frame : CFrame)
@@ -43,10 +41,7 @@ export class CGeometryInfo implements IAutoFixed
 
         
         this.mFixedComp.Clear();
-        if(this.mNavi!=null)
-		{
-			(this.mNavi as CNaviMgr).Reset(false);
-		}
+    
     }
    
 }

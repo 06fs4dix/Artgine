@@ -1,1 +1,617 @@
-import{NoiseGet as e,NoiseValue3 as n,SampleNoise as r,SampleNoiseVec2 as x}from"./Noise";import{SDF as o}from"./SDF";import{abs as a,clamp as w,max as l,min as t,mod as y,pow as v,sign as i,sin as f,CMat as u,CVec2 as z,CVec3 as B,CVec4 as d,Sam2DSize as p,Sam2DToColor as b,SaturateV4 as c,V2Abs as s,V2AddV2 as V,V2DivV2 as g,V2Floor as M,V2MulFloat as C,V2MulV2 as T,V2SubV2 as F,V3AddV3 as X,V3Clamp as U,V3Floor as G,V3MulFloat as D,V3MulV3 as L,V3SubV3 as m,V4AddV4 as k,V4MulFloat as N,V4MulV4 as S,step as R,V3Abs as P,V3Fract as H,V4Mix as A,V3Mix as h,SaturateV3 as O,floor as j,screenPos as q,V4DivV4 as E,FloatToInt as I,Null as J,Sam2DToV4 as K,sqrt as Q,V2Dot as W,V2Mod as Y,V4MulMatCoordi as Z,V3Nor as $,V3Cross as _,cos as ee,Sam2DArrV4 as ne,Sam2DArrToV4 as re,fract as xe,V3Sqrt as oe}from"./Shader";import{Tonemap as ae}from"./ToneMapping";export function GetTexCodiedUV(e,n){var r=new z(0,0);return r.x=e.x*n.x+n.z,r.y=e.y*n.y+n.w,s(r)}export function GetTexDecodedUV(e,n){var r=0==n.x?1:n.x,x=0==n.y?1:n.y,o=a(e.x),w=a(e.y),l=(o-n.z)/r,t=(w-n.w)/x;return new z(l,t)}export function PackGrayToRG(e){return e<=0?new z(0,0):e>=1?new z(1,1):(r=xe(n=256*e),new z(j(n)/255,r));var n,r}export function PackGrayToRGB(e){return e<=0?new B(0,0,0):e>=1?new B(1,1,1):(x=xe(r=256*e*256),n=j(r)/256,r=xe(n),new B(j(n)/255,256*r/255,x));var n,r,x}export function PackGrayToRGBA(e){return e<=0?new d(0,0,0,0):e>=1?new d(1,1,1,1):(o=xe(x=256*e*256*256),r=j(x)/256,x=xe(r),n=j(r)/256,r=xe(n),new d(j(n)/255,256*r/255,256*x/255,o));var n,r,x,o}export function UnpackRGToGray(e){return 255*e.x/256+1*e.y/256}export function UnpackRGBToGray(e){return 255*e.x/256+255*e.y/65536+1*e.z/65536}export function UnpackRGBAToGray(e){return 255*e.x/256+255*e.y/65536+255*e.z/16777216+1*e.w/16777216}export function HSVToRGB(e){var n=new d(1,2/3,1/3,3),r=P(m(D(H(X(new B(e.x,e.x,e.x),n.xyz)),6),new B(n.w,n.w,n.w)));return D(h(new B(n.x,n.x,n.x),U(m(r,new B(n.x,n.x,n.x)),0,1),e.y),e.z)}export function RGBToHSV(e){var n=new d(0,-1/3,2/3,-1),r=A(new d(new z(e.z,e.y),new z(n.w,n.z)),new d(new z(e.y,e.z),new z(n.x,n.y)),R(e.z,e.y)),x=A(new d(new B(r.x,r.y,r.w),e.x),new d(e.x,new B(r.y,r.z,r.x)),R(r.x,e.x)),o=x.x-t(x.w,x.y);return new B(a(x.z+(x.w-x.y)/(6*o+1e-10)),o/(x.x+1e-10),x.x)}export function HSLToRGB(e){var n=O(new B(a(6*e.x-3)-1,2-a(6*e.x-2),2-a(6*e.x-4))),r=(1-a(2*e.z-1))*e.y;return D(m(n,new B(.5,.5,.5)),r*e.z)}export function RGBToHSL(e){var n=e.y<e.z?new d(new z(e.z,e.y),-1,2/3):new d(new z(e.y,e.z),0,-1/3),r=e.x<n.x?new d(new B(n.x,n.y,n.w),e.x):new d(e.x,new B(n.y,n.z,n.x)),x=r.x-t(r.w,r.y),o=a((r.w-r.y)/(6*x+1e-10)+r.z),w=r.x-.5*x,l=x/(1-a(2*w-1)+1e-10);return new B(o,l,w)}export function ColorModalFun(e,n){var r;if(n.a<o.eColorModel.RGBAdd+.5)r=X(e,n.rgb);else if(n.a<o.eColorModel.RGBMul+.5)r=L(e,n.rgb);else if(n.a<o.eColorModel.HSVBaseHSPercent+.5){var x=RGBToHSV(e);x.y=n.y,x.x=n.x,(r=HSVToRGB(x)).x=e.x*(1-n.z)+r.x*n.z,r.y=e.y*(1-n.z)+r.y*n.z,r.z=e.z*(1-n.z)+r.z*n.z}else if(n.a<o.eColorModel.HSV+.5)r=HSVToRGB(n.rgb);else if(n.a<o.eColorModel.HSL+.5)r=HSLToRGB(n.rgb);else if(n.a<o.eColorModel.None+.5)r=e;else if(n.a<o.eColorModel.Unpack+.5){var a,w,l,t=new B(0,0,.5),y=new B(0,.5,1),v=new B(.94,.94,.25),i=new B(.13,.55,.13),f=new B(.55,.27,.07),u=new B(1,1,1),z=.25,d=.8,p=e.x;p<.2?(a=t,w=y,l=(p-0)/.2):p<z?(a=y,w=v,l=(p-.2)/(z-.2)):p<.5?(a=v,w=i,l=(p-z)/.25):p<d?(a=i,w=f,l=(p-.5)/(d-.5)):(a=f,w=u,l=(p-d)/(1-d)),r=h(a,w,l)}else r=e;return U(r,0,1)}export function AlphaModalFun(e,n){var r=e*n.x;return(r=w(r,0,1))<=n.y&&(r=0),r}function we(e,n,r){var x=l(0,f(3.8*e.y+1.4*r)*f(.6*e.y+2.3*r)),o=f(2*e.y+r)+.3*f(50*e.y+5.7*r)+.1*f(500*e.y+20*r);o*=n.x*x;var a=f(2.5*e.y+5.1+1.4*r)*i(f(3.6*e.y+2.4*r));return a*=n.y*x,V(e,new z(o,a))}function le(e,n,r){var x=g(n,e);return T(x,V(M(g(r,x)),new z(.5,.5)))}function te(e,n,r,x,o){var w=f(function(e){return(e=C(F(e,new z(.5,.5)),2)).x*=1+v(a(e.x)/3,2),e.y*=1+v(a(e.y)/3,2),e.x/=1.2,e.y/=1.2,V(C(e,.5),new z(.5,.5))}(n).y*x*3.14*2+r*o);w=v(w=.9*(.5*w+.5)+.1,.25);var l=new d(new B(w,w,w),1);return S(e,l)}function ye(e,n,r){e=U(e,0,.9999);var x=G(D(e,n)),o=x.x+x.y*n+x.z*n*n;return j(o/r.x)+y(o,r.y)*r.x}export var VFX=J();export var LUT0=new ne(1,o.eUni.V4LookUpTable0);export var LUT1=new ne(1,o.eUni.V4LookUpTable1);export var LUT2=new ne(1,o.eUni.V4LookUpTable2);export var LUT3=new ne(1,o.eUni.V4LookUpTable3);export var LUT4=new ne(1,o.eUni.V4LookUpTable4);export var LUT5=new ne(1,o.eUni.V4LookUpTable5);export var vfxMat0=J();export var vfxMat1=J();function ve(w,t,i,s){var F=new d(t[0].y,t[0].z,t[0].w,t[1].x),U=t[0].x,G=b(0,w);if(U<o.eVFX.Distort+.5){var S=we(w,new z(F.x,F.y),i);G=b(0,S)}else if(U<o.eVFX.Aberrate+.5){var R=(.1+l(0,f(3.8*w.y+1.4*i)*f(.6*w.y+2.3*i)))*F.y+F.x,P=b(0,new z(w.x-R,w.y)),H=b(0,w),A=b(0,new z(w.x+R,w.y));G=c(new d(P.r,H.g,A.b,l(P.a,l(H.a,A.a))))}else if(U<o.eVFX.Outline+.5){var O=b(0,w);if(O.a<=.99){var J=p(0);J.x=1/J.x,J.y=1/J.y;var ne=b(0,new z(w.x-J.x,w.y)),xe=b(0,new z(w.x+J.x,w.y)),oe=b(0,new z(w.x,w.y-J.y)),ae=b(0,new z(w.x,w.y+J.y));G=ne.a>0||xe.a>0||oe.a>0||ae.a>0?new d(F.xyz,1):O}else G=O}else if(U<o.eVFX.Pixel+.5){var ve=le(p(0),new z(F.x,F.y),w);G=b(0,ve)}else if(U<o.eVFX.Noise+.5){var ie=new B(0,0,0),fe=i*F.y/60;if(F.x>o.eNoise.Gaussian-.5){var ue=w.x*F.w*128,ze=w.y*F.w*128,Be=128*fe;ie.x=n(new B(ue,ze,Be)),ie.y=ie.x,ie.z=ie.x}else if(F.x>o.eNoise.Blue-.5){var de=M(Y(C(V(w,new z(fe,fe)),64*F.w),64)),pe=64*de.y+de.x,be=y(pe,2048),ce=K(new z(11,o.eNoise.Blue),be);ie.x=pe<2048?ce.x:ce.y,ie.y=ie.x,ie.z=ie.x}else if(F.x>o.eNoise.PerlinFBM3-.5)ie.x=r(new B(C(w,F.w),fe),o.eNoise.PerlinFBM3),ie.y=ie.x,ie.z=ie.x;else if(F.x>o.eNoise.PerlinNormal-.5){var se=x(new B(C(w,F.w),fe),o.eNoise.PerlinNormal);ie.xyz=new B(se.x,Q(1-W(se,se)),se.y)}else ie.x=r(new B(C(w,F.w),fe),o.eNoise.Perlin),ie.y=ie.x,ie.z=ie.x;G.rgb=L(G.rgb,h(ie,new B(1,1,1),1-F.z))}else if(U<o.eVFX.Scanline+.5)G=te(G,w,i,F.x,F.y);else if(U<o.eVFX.LookUpTable+.5){var Ve=new z(32,32),ge=j(v(Ve.x*Ve.y,1/3)),Me=(e(new B(q.xy,0),o.eNoise.Blue)-.5)/(ge-1)*F.y;G.rgb=X(G.rgb,new B(Me,Me,Me));var Ce=ye(G.rgb,ge,Ve);G=re(new B(1,F.x,0),Ce)}else if(U<o.eVFX.Blur+.5){G=new d(0,0,0,0);var Te,Fe,Xe=l(.5*-F.x,-2),Ue=l(.5*-F.y,-2),Ge=0;Te.dummy=I(F.x),Fe.dummy=I(F.y);for(var De=g(new z(1,1),p(0)),Le=0;Le<4&&Le<Fe.dummy;Le++){for(var me=0;me<4&&me<Te.dummy;me++){var ke=V(w,T(new z(Xe,Ue),De)),Ne=b(0,ke);G=k(G,Ne),Ge+=1,Xe+=1}Xe=.5*-t[2].x,Ue+=1}Ge>.01&&(G=E(G,new d(Ge,Ge,Ge,Ge)),G=c(G))}else if(U<o.eVFX.Decal+.5||U<o.eVFX.DecalTexture+.5){var Se=new B(vfxMat0[0][0],vfxMat0[0][1],vfxMat0[0][2]),Re=vfxMat0[0][3],Pe=new B(vfxMat0[1][0],vfxMat0[1][1],vfxMat0[1][2]),He=new B(vfxMat0[1][3],vfxMat0[2][0],vfxMat0[2][1]),Ae=$(Se),he=a(Ae.y)>1-1e-8?new B(0,0,-1):new B(0,1,0),Oe=_(he,Ae),je=_(Ae,Oe),qe=Oe,Ee=je;if(a(Re)>1e-8){var Ie=ee(Re),Je=f(Re);qe=$(X(D(Oe,Ie),D(je,Je))),Ee=$(m(D(je,Ie),D(Oe,Je)))}var Ke=new u(qe.x/Pe.x,qe.y/Pe.x,qe.z/Pe.x,0,Ee.x/Pe.y,Ee.y/Pe.y,Ee.z/Pe.y,0,Ae.x/Pe.z,Ae.y/Pe.z,Ae.z/Pe.z,0,0,0,0,1);Ke[3][0]=-(He.x*Ke[0][0]+He.y*Ke[0][1]+He.z*Ke[0][2]),Ke[3][1]=-(He.x*Ke[1][0]+He.y*Ke[1][1]+He.z*Ke[1][2]),Ke[3][2]=-(He.x*Ke[2][0]+He.y*Ke[2][1]+He.z*Ke[2][2]);var Qe=Z(s,Ke);if((Qe=N(Qe,1/Qe.w)).x>=-.5&&Qe.x<=.5&&Qe.y>=-.5&&Qe.y<=.5&&Qe.z>=-.5&&Qe.z<=.5)if(U<o.eVFX.Decal+.5){var We=F;G=new d(h(G.rgb,We.rgb,G.a*We.a),G.a)}else U<o.eVFX.DecalTexture+.5&&((We=b(F.x,new z(-1*Qe.x+.5,1*Qe.y+.5))).a*=F.y,G=new d(h(G.rgb,We.rgb,G.a*We.a),G.a),F.z>.5&&We.a>.001&&(G.r=1-G.r,G.g=1-G.g,G.b=1-G.b))}return G}export function VFXDown1(n,r,x,w){var l=new d(r[1].z,r[1].w,r[2].x,r[2].y),t=r[1].y,y=ve(n,r,x,w);if(t<o.eVFX.Distort+.5)y=ve(we(n,new z(l.x,l.y),x),r,x,w);else if(t<o.eVFX.Pixel+.5)y=ve(le(p(0),new z(l.x,l.y),n),r,x,w);else if(t<o.eVFX.Scanline+.5)y=te(y,n,x,l.x,l.y);else if(t<o.eVFX.LookUpTable+.5){var i=new z(32,32),c=j(v(i.x*i.y,1/3)),s=(e(new B(q.xy,0),o.eNoise.Blue)-.5)/(c-1)*l.y;y.rgb=X(y.rgb,new B(s,s,s));var V=ye(y.rgb,c,i);y=K(new z(11,l.x),V)}else if(t<o.eVFX.Decal+.5||t<o.eVFX.DecalTexture+.5){var g=new B(vfxMat0[2][2],vfxMat0[2][3],vfxMat0[3][0]),M=vfxMat0[3][1],C=new B(vfxMat0[3][2],vfxMat0[3][3],vfxMat1[0][0]),T=new B(vfxMat1[0][1],vfxMat1[0][2],vfxMat1[0][3]),F=$(g),U=a(F.y)>1-1e-8?new B(0,0,-1):new B(0,1,0),G=_(U,F),L=_(F,G),k=G,S=L;if(M>1e-8){var R=ee(M),P=f(M);k=$(X(D(G,R),D(L,P))),S=$(m(D(L,R),D(G,P)))}var H=new u(k.x/C.x,k.y/C.x,k.z/C.x,0,S.x/C.y,S.y/C.y,S.z/C.y,0,F.x/C.z,F.y/C.z,F.z/C.z,0,0,0,0,1);H[3][0]=-(T.x*H[0][0]+T.y*H[0][1]+T.z*H[0][2]),H[3][1]=-(T.x*H[1][0]+T.y*H[1][1]+T.z*H[1][2]),H[3][2]=-(T.x*H[2][0]+T.y*H[2][1]+T.z*H[2][2]);var A=Z(w,H);if((A=N(A,1/A.w)).x>=-.5&&A.x<=.5&&A.y>=-.5&&A.y<=.5&&A.z>=-.5&&A.z<=.5)if(t<o.eVFX.Decal+.5){var O=l;y=new d(h(y.rgb,O.rgb,y.a*O.a),y.a)}else t<o.eVFX.DecalTexture+.5&&((O=b(l.x,new z(-1*A.x+.5,1*A.y+.5))).a*=l.y,y=new d(h(y.rgb,O.rgb,y.a*O.a),y.a),l.z>.5&&O.a>.001&&(y.r=1-y.r,y.g=1-y.g,y.b=1-y.b))}return y}export function VFXDown2(n,r,x,w){var l=new d(r[2].w,r[3].x,r[3].y,r[3].z),t=r[2].z,y=VFXDown1(n,r,x,w);if(t<o.eVFX.Distort+.5)y=VFXDown1(we(n,new z(l.x,l.y),x),r,x,w);else if(t<o.eVFX.Pixel+.5)y=VFXDown1(le(p(0),new z(l.x,l.y),n),r,x,w);else if(t<o.eVFX.Scanline+.5)y=te(y,n,x,l.x,l.y);else if(t<o.eVFX.LookUpTable+.5){var i=new z(32,32),c=j(v(i.x*i.y,1/3)),s=(e(new B(q.xy,0),o.eNoise.Blue)-.5)/(c-1)*l.y;y.rgb=X(y.rgb,new B(s,s,s));var V=ye(y.rgb,c,i);y=K(new z(11,l.x),V)}else if(t<o.eVFX.Decal+.5||t<o.eVFX.DecalTexture+.5){var g=new B(vfxMat1[1][0],vfxMat1[1][1],vfxMat1[1][2]),M=vfxMat1[1][3],C=new B(vfxMat1[2][0],vfxMat1[2][1],vfxMat1[2][2]),T=new B(vfxMat1[2][3],vfxMat1[3][0],vfxMat1[3][1]),F=$(g),U=a(F.y)>1-1e-8?new B(0,0,-1):new B(0,1,0),G=_(U,F),L=_(F,G),k=G,S=L;if(M>1e-8){var R=ee(M),P=f(M);k=$(X(D(G,R),D(L,P))),S=$(m(D(L,R),D(G,P)))}var H=new u(k.x/C.x,k.y/C.x,k.z/C.x,0,S.x/C.y,S.y/C.y,S.z/C.y,0,F.x/C.z,F.y/C.z,F.z/C.z,0,0,0,0,1);H[3][0]=-(T.x*H[0][0]+T.y*H[0][1]+T.z*H[0][2]),H[3][1]=-(T.x*H[1][0]+T.y*H[1][1]+T.z*H[1][2]),H[3][2]=-(T.x*H[2][0]+T.y*H[2][1]+T.z*H[2][2]);var A=Z(w,H);if((A=N(A,1/A.w)).x>=-.5&&A.x<=.5&&A.y>=-.5&&A.y<=.5&&A.z>=-.5&&A.z<=.5)if(t<o.eVFX.Decal+.5){var O=l;y=new d(h(y.rgb,O.rgb,y.a*O.a),y.a)}else t<o.eVFX.DecalTexture+.5&&((O=b(l.x,new z(-1*A.x+.5,1*A.y+.5))).a*=l.y,y=new d(h(y.rgb,O.rgb,y.a*O.a),y.a),l.z>.5&&O.a>.001&&(y.r=1-y.r,y.g=1-y.g,y.b=1-y.b))}return y}export var BlendColor0=new d(0,0,0,0);export var BlendColor1=new d(0,0,0,0);export var BlendColor2=new d(0,0,0,0);export var BlendColor3=new d(0,0,0,0);export var BlendColor4=new d(0,0,0,0);export var BlendColor5=new d(0,0,0,0);export var BlendColor6=new d(0,0,0,0);export var BlendColor7=new d(0,0,0,0);export var BlendColor8=new d(0,0,0,0);export var BlendColor9=new d(0,0,0,0);export var BlendColor10=new d(0,0,0,0);export var BlendColor11=new d(0,0,0,0);export var BlendColor12=new d(0,0,0,0);export var BlendColor13=new d(0,0,0,0);export var BlendColor14=new d(0,0,0,0);export var BlendColor15=new d(0,0,0,0);function ie(e,n,r,x,o){return e<-.5?new d(0,0,0,0):e<3.5?n[I(y(e,4))]:e<7.5?r[I(y(e,4))]:e<11.5?x[I(y(e,4))]:e<15.5?o[I(y(e,4))]:new d(0,0,0,0)}function fe(e,n,r,x,a,w,l){var t=r[0]-.5,y=r[1],v=r[2],i=r[3],f=ie(y,x,a,w,l),u=ie(v,x,a,w,l);return t<o.eBlend.Null?ie(e-1,x,a,w,l):t<o.eBlend.LinearDodge?k(f,N(u,i)):t<o.eBlend.Multiply?A(f,S(f,u),i):t<o.eBlend.LerpPer?A(f,u,i):t<o.eBlend.LerpAlpha?new d(X(D(f.rgb,1-f.a),D(u.rgb,u.a)),1):t<o.eBlend.Darken?f.r+f.g+f.b<u.r+u.g+u.b?f:u:t<o.eBlend.Lighten?f.r+f.g+f.b>=u.r+u.g+u.b?f:u:t<o.eBlend.Org?f:t<o.eBlend.Tar?u:t<o.eBlend.DarkCut?f.r+f.g+f.b<2.5?new d(0,0,0,0):u:t<o.eBlend.Texture?b(y,n):t<o.eBlend.Tonemap?new d(ae(f.rgb,v,i),f.a):t<o.eBlend.GammaCorrect?new d(oe(f.rgb),f.a):f}export function TexOffBlendFactorFun(e){var n=new u(0),r=new u(0),x=new u(0),o=new u(0);return n[0]=fe(0,e,BlendColor0,n,r,x,o),n[1]=fe(1,e,BlendColor1,n,r,x,o),n[2]=fe(2,e,BlendColor2,n,r,x,o),n[3]=fe(3,e,BlendColor3,n,r,x,o),r[0]=fe(4,e,BlendColor4,n,r,x,o),r[1]=fe(5,e,BlendColor5,n,r,x,o),r[2]=fe(6,e,BlendColor6,n,r,x,o),r[3]=fe(7,e,BlendColor7,n,r,x,o),x[0]=fe(8,e,BlendColor8,n,r,x,o),x[1]=fe(9,e,BlendColor9,n,r,x,o),x[2]=fe(10,e,BlendColor10,n,r,x,o),x[3]=fe(11,e,BlendColor11,n,r,x,o),o[0]=fe(12,e,BlendColor12,n,r,x,o),o[1]=fe(13,e,BlendColor13,n,r,x,o),o[2]=fe(14,e,BlendColor14,n,r,x,o),o[3]=fe(15,e,BlendColor15,n,r,x,o),o[3]}
+import { NoiseGet, NoiseValue3, SampleNoise, SampleNoiseVec2 } from "./Noise";
+import { SDF } from "./SDF";
+import { abs, clamp, max, min, mod, pow, sign, sin, CMat, CVec2, CVec3, CVec4, Sam2DSize, Sam2DToColor, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3Clamp, V3Floor, V3MulFloat, V3MulV3, V3SubV3, V4AddV4, V4MulFloat, V4MulV4, step, V3Abs, V3Fract, V4Mix, V3Mix, SaturateV3, floor, screenPos, V4DivV4, FloatToInt, Null, Sam2DToV4, sqrt, V2Dot, V2Mod, V4MulMatCoordi, V3Nor, V3Cross, cos, Sam2DArrV4, Sam2DArrToV4, fract, V3Sqrt } from "./Shader";
+import { Tonemap } from "./ToneMapping";
+export function GetTexCodiedUV(_uv, _texCodi) {
+    var result = new CVec2(0.0, 0.0);
+    result.x = _uv.x * _texCodi.x + _texCodi.z;
+    result.y = _uv.y * _texCodi.y + _texCodi.w;
+    return V2Abs(result);
+}
+export function GetTexDecodedUV(_coded, _texCodi) {
+    var sx = (_texCodi.x == 0.0) ? 1.0 : _texCodi.x;
+    var sy = (_texCodi.y == 0.0) ? 1.0 : _texCodi.y;
+    var cx = abs(_coded.x);
+    var cy = abs(_coded.y);
+    var u = (cx - _texCodi.z) / sx;
+    var v = (cy - _texCodi.w) / sy;
+    return new CVec2(u, v);
+}
+export function PackGrayToRG(_v) {
+    if (_v <= 0.0)
+        return new CVec2(0.0, 0.0);
+    if (_v >= 1.0)
+        return new CVec2(1.0, 1.0);
+    var rf;
+    var gf;
+    rf = _v * 256.0;
+    gf = fract(rf);
+    return new CVec2(floor(rf) / 255.0, gf);
+}
+export function PackGrayToRGB(_v) {
+    if (_v <= 0.0)
+        return new CVec3(0.0, 0.0, 0.0);
+    if (_v >= 1.0)
+        return new CVec3(1.0, 1.0, 1.0);
+    var rf;
+    var gf;
+    var bf;
+    gf = _v * 256.0 * 256.0;
+    bf = fract(gf);
+    rf = floor(gf) / 256.0;
+    gf = fract(rf);
+    return new CVec3(floor(rf) / 255.0, gf * 256.0 / 255.0, bf);
+}
+export function PackGrayToRGBA(_v) {
+    if (_v <= 0.0)
+        return new CVec4(0.0, 0.0, 0.0, 0.0);
+    if (_v >= 1.0)
+        return new CVec4(1.0, 1.0, 1.0, 1.0);
+    var rf;
+    var gf;
+    var bf;
+    var af;
+    bf = _v * 256.0 * 256.0 * 256.0;
+    af = fract(bf);
+    gf = floor(bf) / 256.0;
+    bf = fract(gf);
+    rf = floor(gf) / 256.0;
+    gf = fract(rf);
+    return new CVec4(floor(rf) / 255.0, gf * 256.0 / 255.0, bf * 256.0 / 255.0, af);
+}
+export function UnpackRGToGray(_v) {
+    return _v.x * 255.0 / 256.0 + _v.y * 1.0 / 256.0;
+}
+export function UnpackRGBToGray(_v) {
+    return _v.x * 255.0 / 256.0 + _v.y * 255.0 / (256.0 * 256.0) + _v.z * 1.0 / (256.0 * 256.0);
+}
+export function UnpackRGBAToGray(_v) {
+    return _v.x * 255.0 / 256.0 + _v.y * 255.0 / (256.0 * 256.0) + _v.z * 255.0 / (256.0 * 256.0 * 256.0) + _v.w * 1.0 / (256.0 * 256.0 * 256.0);
+}
+export function HSVToRGB(_vec3) {
+    var K = new CVec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    var p = V3Abs(V3SubV3(V3MulFloat(V3Fract(V3AddV3(new CVec3(_vec3.x, _vec3.x, _vec3.x), K.xyz)), 6.0), new CVec3(K.w, K.w, K.w)));
+    return V3MulFloat(V3Mix(new CVec3(K.x, K.x, K.x), V3Clamp(V3SubV3(p, new CVec3(K.x, K.x, K.x)), 0.0, 1.0), _vec3.y), _vec3.z);
+}
+export function RGBToHSV(_vec3) {
+    var K = new CVec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    var p = V4Mix(new CVec4(new CVec2(_vec3.z, _vec3.y), new CVec2(K.w, K.z)), new CVec4(new CVec2(_vec3.y, _vec3.z), new CVec2(K.x, K.y)), step(_vec3.z, _vec3.y));
+    var q = V4Mix(new CVec4(new CVec3(p.x, p.y, p.w), _vec3.x), new CVec4(_vec3.x, new CVec3(p.y, p.z, p.x)), step(p.x, _vec3.x));
+    var d = q.x - min(q.w, q.y);
+    var e = 1.0e-10;
+    return new CVec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+export function HSLToRGB(_vec3) {
+    var RGB = SaturateV3(new CVec3(abs(_vec3.x * 6.0 - 3.0) - 1.0, 2.0 - abs(_vec3.x * 6.0 - 2.0), 2.0 - abs(_vec3.x * 6.0 - 4.0)));
+    var C = (1.0 - abs(2.0 * _vec3.z - 1.0)) * _vec3.y;
+    return V3MulFloat(V3SubV3(RGB, new CVec3(0.5, 0.5, 0.5)), C * _vec3.z);
+}
+export function RGBToHSL(_vec3) {
+    var P = (_vec3.y < _vec3.z) ? new CVec4(new CVec2(_vec3.z, _vec3.y), -1.0, 2.0 / 3.0) : new CVec4(new CVec2(_vec3.y, _vec3.z), 0.0, -1.0 / 3.0);
+    var Q = (_vec3.x < P.x) ? new CVec4(new CVec3(P.x, P.y, P.w), _vec3.x) : new CVec4(_vec3.x, new CVec3(P.y, P.z, P.x));
+    var C = Q.x - min(Q.w, Q.y);
+    var H = abs((Q.w - Q.y) / (6.0 * C + 1e-10) + Q.z);
+    var L = Q.x - C * 0.5;
+    var S = C / (1.0 - abs(L * 2.0 - 1.0) + 1e-10);
+    return new CVec3(H, S, L);
+}
+export function ColorModalFun(_rgb, _colorModel) {
+    var rgb;
+    if (_colorModel.a < SDF.eColorModel.RGBAdd + 0.5)
+        rgb = V3AddV3(_rgb, _colorModel.rgb);
+    else if (_colorModel.a < SDF.eColorModel.RGBMul + 0.5)
+        rgb = V3MulV3(_rgb, _colorModel.rgb);
+    else if (_colorModel.a < SDF.eColorModel.HSVBaseHSPercent + 0.5) {
+        var hsv = RGBToHSV(_rgb);
+        hsv.y = _colorModel.y;
+        hsv.x = _colorModel.x;
+        rgb = HSVToRGB(hsv);
+        rgb.x = _rgb.x * (1.0 - _colorModel.z) + rgb.x * _colorModel.z;
+        rgb.y = _rgb.y * (1.0 - _colorModel.z) + rgb.y * _colorModel.z;
+        rgb.z = _rgb.z * (1.0 - _colorModel.z) + rgb.z * _colorModel.z;
+    }
+    else if (_colorModel.a < SDF.eColorModel.HSV + 0.5)
+        rgb = HSVToRGB(_colorModel.rgb);
+    else if (_colorModel.a < SDF.eColorModel.HSL + 0.5)
+        rgb = HSLToRGB(_colorModel.rgb);
+    else if (_colorModel.a < SDF.eColorModel.None + 0.5)
+        rgb = _rgb;
+    else if (_colorModel.a < SDF.eColorModel.Unpack + 0.5) {
+        var stop0 = new CVec3(0.0, 0.0, 0.5);
+        var stop1 = new CVec3(0.0, 0.5, 1.0);
+        var stop2 = new CVec3(0.94, 0.94, 0.25);
+        var stop3 = new CVec3(0.13, 0.55, 0.13);
+        var stop4 = new CVec3(0.55, 0.27, 0.07);
+        var stop5 = new CVec3(1.0, 1.0, 1.0);
+        var stopT0 = 0.0;
+        var stopT1 = 0.2;
+        var stopT2 = 0.25;
+        var stopT3 = 0.5;
+        var stopT4 = 0.8;
+        var stopT5 = 1.0;
+        var gray = _rgb.x;
+        var col0;
+        var col1;
+        var range;
+        if (gray < stopT1) {
+            col0 = stop0;
+            col1 = stop1;
+            range = (gray - stopT0) / (stopT1 - stopT0);
+        }
+        else if (gray < stopT2) {
+            col0 = stop1;
+            col1 = stop2;
+            range = (gray - stopT1) / (stopT2 - stopT1);
+        }
+        else if (gray < stopT3) {
+            col0 = stop2;
+            col1 = stop3;
+            range = (gray - stopT2) / (stopT3 - stopT2);
+        }
+        else if (gray < stopT4) {
+            col0 = stop3;
+            col1 = stop4;
+            range = (gray - stopT3) / (stopT4 - stopT3);
+        }
+        else {
+            col0 = stop4;
+            col1 = stop5;
+            range = (gray - stopT4) / (stopT5 - stopT4);
+        }
+        rgb = V3Mix(col0, col1, range);
+    }
+    else
+        rgb = _rgb;
+    rgb = V3Clamp(rgb, 0.0, 1.0);
+    return rgb;
+}
+export function AlphaModalFun(_a, _alphaModel) {
+    var a = _a * _alphaModel.x;
+    a = clamp(a, 0.0, 1.0);
+    if (a <= _alphaModel.y)
+        a = 0.0;
+    return a;
+}
+function GetDistortedUV(_uv, _distance, _t) {
+    var line = max(0.0, sin(_uv.y * 3.8 + _t * 1.4) * sin(_uv.y * 0.6 + _t * 2.3));
+    var horDis = sin(_uv.y * 2.0 + _t) + sin(_uv.y * 50.0 + _t * 5.7) * 0.3 +
+        sin(_uv.y * 500.0 + _t * 20.0) * 0.1;
+    horDis *= _distance.x * line;
+    var verDis = sin(_uv.y * 2.5 + 5.1 + _t * 1.4) *
+        sign(sin(_uv.y * 3.6 + _t * 2.4));
+    verDis *= _distance.y * line;
+    return V2AddV2(_uv, new CVec2(horDis, verDis));
+}
+function GetPixelatedUV(_texSize, _pixelSize, _uv) {
+    var d = V2DivV2(_pixelSize, _texSize);
+    return V2MulV2(d, V2AddV2(V2Floor(V2DivV2(_uv, d)), new CVec2(0.5, 0.5)));
+}
+function UV_Curve(_uv) {
+    _uv = V2MulFloat(V2SubV2(_uv, new CVec2(0.5, 0.5)), 2.0);
+    _uv.x *= 1.0 + pow(abs(_uv.x) / 3.0, 2.0);
+    _uv.y *= 1.0 + pow(abs(_uv.y) / 3.0, 2.0);
+    _uv.x /= 1.2;
+    _uv.y /= 1.2;
+    _uv = V2AddV2(V2MulFloat(_uv, 0.5), new CVec2(0.5, 0.5));
+    return _uv;
+}
+function AddScanLine(_c, _uv, _time, _count, _lineSpeed) {
+    var scanline = sin(UV_Curve(_uv).y * _count * 3.14 * 2.0 + _time * _lineSpeed);
+    scanline = (scanline * 0.5 + 0.5) * 0.9 + 0.1;
+    scanline = pow(scanline, 0.25);
+    var sLine = new CVec4(new CVec3(scanline, scanline, scanline), 1.0);
+    _c = V4MulV4(_c, sLine);
+    return _c;
+}
+function MapToPaletteIndex(_color, _cellSize, _palSize) {
+    _color = V3Clamp(_color, 0.0, 0.9999);
+    var mappedColor = V3Floor(V3MulFloat(_color, _cellSize));
+    var mappedIndex = mappedColor.x + mappedColor.y * _cellSize + mappedColor.z * _cellSize * _cellSize;
+    return floor(mappedIndex / _palSize.x) + mod(mappedIndex, _palSize.y) * _palSize.x;
+}
+export var VFX = Null();
+export var LUT0 = new Sam2DArrV4(1, SDF.eUni.V4LookUpTable0);
+export var LUT1 = new Sam2DArrV4(1, SDF.eUni.V4LookUpTable1);
+export var LUT2 = new Sam2DArrV4(1, SDF.eUni.V4LookUpTable2);
+export var LUT3 = new Sam2DArrV4(1, SDF.eUni.V4LookUpTable3);
+export var LUT4 = new Sam2DArrV4(1, SDF.eUni.V4LookUpTable4);
+export var LUT5 = new Sam2DArrV4(1, SDF.eUni.V4LookUpTable5);
+export var vfxMat0 = Null();
+export var vfxMat1 = Null();
+function VFXDown0(_uv, _value, _time, _worldPos) {
+    var para = new CVec4(_value[0].y, _value[0].z, _value[0].w, _value[1].x);
+    var type = _value[0].x;
+    var outColor = Sam2DToColor(0.0, _uv);
+    if (type < SDF.eVFX.Distort + 0.5) {
+        var distortedUV = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
+        outColor = Sam2DToColor(0.0, distortedUV);
+    }
+    else if (type < SDF.eVFX.Aberrate + 0.5) {
+        var line = max(0.0, sin(_uv.y * 3.8 + _time * 1.4) * sin(_uv.y * 0.6 + _time * 2.3));
+        var aberration_strength = (0.1 + line) * para.y + para.x;
+        var r = Sam2DToColor(0.0, new CVec2(_uv.x - aberration_strength, _uv.y));
+        var g = Sam2DToColor(0.0, _uv);
+        var b = Sam2DToColor(0.0, new CVec2(_uv.x + aberration_strength, _uv.y));
+        outColor = SaturateV4(new CVec4(r.r, g.g, b.b, max(r.a, max(g.a, b.a))));
+    }
+    else if (type < SDF.eVFX.Outline + 0.5) {
+        var org = Sam2DToColor(0.0, _uv);
+        if (org.a <= 0.99) {
+            var size = Sam2DSize(0.0);
+            size.x = 1.0 / size.x;
+            size.y = 1.0 / size.y;
+            var lc = Sam2DToColor(0.0, new CVec2(_uv.x - size.x, _uv.y));
+            var rc = Sam2DToColor(0.0, new CVec2(_uv.x + size.x, _uv.y));
+            var tc = Sam2DToColor(0.0, new CVec2(_uv.x, _uv.y - size.y));
+            var bc = Sam2DToColor(0.0, new CVec2(_uv.x, _uv.y + size.y));
+            if (lc.a > 0.0 || rc.a > 0.0 || tc.a > 0.0 || bc.a > 0.0) {
+                outColor = new CVec4(para.xyz, 1.0);
+            }
+            else
+                outColor = org;
+        }
+        else
+            outColor = org;
+    }
+    else if (type < SDF.eVFX.Pixel + 0.5) {
+        var pixelatedUV = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
+        outColor = Sam2DToColor(0.0, pixelatedUV);
+    }
+    else if (type < SDF.eVFX.Noise + 0.5) {
+        var noiseColor = new CVec3(0.0, 0.0, 0.0);
+        var frame = _time * para.y / 60.0;
+        if (para.x > SDF.eNoise.Gaussian - 0.5) {
+            var xi = _uv.x * para.w * 128.0;
+            var yi = _uv.y * para.w * 128.0;
+            var zi = frame * 128.0;
+            noiseColor.x = NoiseValue3(new CVec3(xi, yi, zi));
+            noiseColor.y = noiseColor.x;
+            noiseColor.z = noiseColor.x;
+        }
+        else if (para.x > SDF.eNoise.Blue - 0.5) {
+            var coord = V2Floor(V2Mod(V2MulFloat(V2AddV2(_uv, new CVec2(frame, frame)), para.w * 64.0), 64.0));
+            var index = coord.y * 64.0 + coord.x;
+            var modIndex = mod(index, 2048.0);
+            var v4 = Sam2DToV4(new CVec2(11, SDF.eNoise.Blue), modIndex);
+            noiseColor.x = index < 2048.0 ? v4.x : v4.y;
+            noiseColor.y = noiseColor.x;
+            noiseColor.z = noiseColor.x;
+        }
+        else if (para.x > SDF.eNoise.PerlinFBM3 - 0.5) {
+            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinFBM3);
+            noiseColor.y = noiseColor.x;
+            noiseColor.z = noiseColor.x;
+        }
+        else if (para.x > SDF.eNoise.PerlinNormal - 0.5) {
+            var noise = SampleNoiseVec2(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinNormal);
+            noiseColor.xyz = new CVec3(noise.x, sqrt(1.0 - V2Dot(noise, noise)), noise.y);
+        }
+        else {
+            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.Perlin);
+            noiseColor.y = noiseColor.x;
+            noiseColor.z = noiseColor.x;
+        }
+        outColor.rgb = V3MulV3(outColor.rgb, V3Mix(noiseColor, new CVec3(1, 1, 1), 1.0 - para.z));
+    }
+    else if (type < SDF.eVFX.Scanline + 0.5) {
+        outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
+    }
+    else if (type < SDF.eVFX.LookUpTable + 0.5) {
+        var palSize = new CVec2(32.0, 32.0);
+        var cellSize = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
+        var ditherStrength = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * para.y;
+        outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
+        var palIndex = MapToPaletteIndex(outColor.rgb, cellSize, palSize);
+        outColor = Sam2DArrToV4(new CVec3(1.0, para.x, 0.0), palIndex);
+    }
+    else if (type < SDF.eVFX.Blur + 0.5) {
+        outColor = new CVec4(0.0, 0.0, 0.0, 0.0);
+        var fx = max(-para.x * 0.5, -2.0);
+        var fy = max(-para.y * 0.5, -2.0);
+        var count = 0.0;
+        var loopX;
+        var loopY;
+        loopX.dummy = FloatToInt(para.x);
+        loopY.dummy = FloatToInt(para.y);
+        var texScale = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
+        for (var y = 0; y < 4; y++) {
+            if (y < loopY.dummy) {
+                for (var x = 0; x < 4; x++) {
+                    if (x < loopX.dummy) {
+                        var uv = V2AddV2(_uv, V2MulV2(new CVec2(fx, fy), texScale));
+                        var bout = Sam2DToColor(0.0, uv);
+                        outColor = V4AddV4(outColor, bout);
+                        count += 1.0;
+                    }
+                    else
+                        break;
+                    fx += 1.0;
+                }
+                fx = -_value[2].x * 0.5;
+                fy += 1.0;
+            }
+            else
+                break;
+        }
+        if (count > 0.01) {
+            outColor = V4DivV4(outColor, new CVec4(count, count, count, count));
+            outColor = SaturateV4(outColor);
+        }
+    }
+    else if (type < SDF.eVFX.Decal + 0.5 || type < SDF.eVFX.DecalTexture + 0.5) {
+        var decalDir = new CVec3(vfxMat0[0][0], vfxMat0[0][1], vfxMat0[0][2]);
+        var decalRot = vfxMat0[0][3];
+        var decalSca = new CVec3(vfxMat0[1][0], vfxMat0[1][1], vfxMat0[1][2]);
+        var decalPos = new CVec3(vfxMat0[1][3], vfxMat0[2][0], vfxMat0[2][1]);
+        var zAxis = V3Nor(decalDir);
+        var up = abs(zAxis.y) > 1.0 - 1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
+        var xAxis = V3Cross(up, zAxis);
+        var yAxis = V3Cross(zAxis, xAxis);
+        var rx = xAxis;
+        var ry = yAxis;
+        if (abs(decalRot) > 1e-8) {
+            var cosT = cos(decalRot);
+            var sinT = sin(decalRot);
+            rx = V3Nor(V3AddV3(V3MulFloat(xAxis, cosT), V3MulFloat(yAxis, sinT)));
+            ry = V3Nor(V3SubV3(V3MulFloat(yAxis, cosT), V3MulFloat(xAxis, sinT)));
+        }
+        var decalMat = new CMat(rx.x / decalSca.x, rx.y / decalSca.x, rx.z / decalSca.x, 0.0, ry.x / decalSca.y, ry.y / decalSca.y, ry.z / decalSca.y, 0.0, zAxis.x / decalSca.z, zAxis.y / decalSca.z, zAxis.z / decalSca.z, 0.0, 0.0, 0.0, 0.0, 1.0);
+        decalMat[3][0] = -(decalPos.x * decalMat[0][0] + decalPos.y * decalMat[0][1] + decalPos.z * decalMat[0][2]);
+        decalMat[3][1] = -(decalPos.x * decalMat[1][0] + decalPos.y * decalMat[1][1] + decalPos.z * decalMat[1][2]);
+        decalMat[3][2] = -(decalPos.x * decalMat[2][0] + decalPos.y * decalMat[2][1] + decalPos.z * decalMat[2][2]);
+        var decalUV = V4MulMatCoordi(_worldPos, decalMat);
+        decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
+        if (decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5) {
+            if (type < SDF.eVFX.Decal + 0.5) {
+                var decalColor = para;
+                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
+            }
+            else if (type < SDF.eVFX.DecalTexture + 0.5) {
+                var decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
+                if (para.z > 0.5 && decalColor.a > 0.001) {
+                    outColor.r = 1.0 - outColor.r;
+                    outColor.g = 1.0 - outColor.g;
+                    outColor.b = 1.0 - outColor.b;
+                }
+            }
+        }
+    }
+    return outColor;
+}
+export function VFXDown1(_uv, _value, _time, _worldPos) {
+    var para = new CVec4(_value[1].z, _value[1].w, _value[2].x, _value[2].y);
+    var type = _value[1].y;
+    var outColor = VFXDown0(_uv, _value, _time, _worldPos);
+    if (type < SDF.eVFX.Distort + 0.5) {
+        var distortedUV = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
+        outColor = VFXDown0(distortedUV, _value, _time, _worldPos);
+    }
+    else if (type < SDF.eVFX.Pixel + 0.5) {
+        var pixelatedUV = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
+        outColor = VFXDown0(pixelatedUV, _value, _time, _worldPos);
+    }
+    else if (type < SDF.eVFX.Scanline + 0.5) {
+        outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
+    }
+    else if (type < SDF.eVFX.LookUpTable + 0.5) {
+        var palSize = new CVec2(32.0, 32.0);
+        var cellSize = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
+        var ditherStrength = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * para.y;
+        outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
+        var palIndex = MapToPaletteIndex(outColor.rgb, cellSize, palSize);
+        outColor = Sam2DToV4(new CVec2(11, para.x), palIndex);
+    }
+    else if (type < SDF.eVFX.Decal + 0.5 || type < SDF.eVFX.DecalTexture + 0.5) {
+        var decalDir = new CVec3(vfxMat0[2][2], vfxMat0[2][3], vfxMat0[3][0]);
+        var decalRot = vfxMat0[3][1];
+        var decalSca = new CVec3(vfxMat0[3][2], vfxMat0[3][3], vfxMat1[0][0]);
+        var decalPos = new CVec3(vfxMat1[0][1], vfxMat1[0][2], vfxMat1[0][3]);
+        var zAxis = V3Nor(decalDir);
+        var up = abs(zAxis.y) > 1.0 - 1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
+        var xAxis = V3Cross(up, zAxis);
+        var yAxis = V3Cross(zAxis, xAxis);
+        var rx = xAxis;
+        var ry = yAxis;
+        if (decalRot > 1e-8) {
+            var cosT = cos(decalRot);
+            var sinT = sin(decalRot);
+            rx = V3Nor(V3AddV3(V3MulFloat(xAxis, cosT), V3MulFloat(yAxis, sinT)));
+            ry = V3Nor(V3SubV3(V3MulFloat(yAxis, cosT), V3MulFloat(xAxis, sinT)));
+        }
+        var decalMat = new CMat(rx.x / decalSca.x, rx.y / decalSca.x, rx.z / decalSca.x, 0.0, ry.x / decalSca.y, ry.y / decalSca.y, ry.z / decalSca.y, 0.0, zAxis.x / decalSca.z, zAxis.y / decalSca.z, zAxis.z / decalSca.z, 0.0, 0.0, 0.0, 0.0, 1.0);
+        decalMat[3][0] = -(decalPos.x * decalMat[0][0] + decalPos.y * decalMat[0][1] + decalPos.z * decalMat[0][2]);
+        decalMat[3][1] = -(decalPos.x * decalMat[1][0] + decalPos.y * decalMat[1][1] + decalPos.z * decalMat[1][2]);
+        decalMat[3][2] = -(decalPos.x * decalMat[2][0] + decalPos.y * decalMat[2][1] + decalPos.z * decalMat[2][2]);
+        var decalUV = V4MulMatCoordi(_worldPos, decalMat);
+        decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
+        if (decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5) {
+            if (type < SDF.eVFX.Decal + 0.5) {
+                var decalColor = para;
+                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
+            }
+            else if (type < SDF.eVFX.DecalTexture + 0.5) {
+                var decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
+                if (para.z > 0.5 && decalColor.a > 0.001) {
+                    outColor.r = 1.0 - outColor.r;
+                    outColor.g = 1.0 - outColor.g;
+                    outColor.b = 1.0 - outColor.b;
+                }
+            }
+        }
+    }
+    return outColor;
+}
+export function VFXDown2(_uv, _value, _time, _worldPos) {
+    var para = new CVec4(_value[2].w, _value[3].x, _value[3].y, _value[3].z);
+    var type = _value[2].z;
+    var outColor = VFXDown1(_uv, _value, _time, _worldPos);
+    if (type < SDF.eVFX.Distort + 0.5) {
+        var distortedUV = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
+        outColor = VFXDown1(distortedUV, _value, _time, _worldPos);
+    }
+    else if (type < SDF.eVFX.Pixel + 0.5) {
+        var pixelatedUV = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
+        outColor = VFXDown1(pixelatedUV, _value, _time, _worldPos);
+    }
+    else if (type < SDF.eVFX.Scanline + 0.5) {
+        outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
+    }
+    else if (type < SDF.eVFX.LookUpTable + 0.5) {
+        var palSize = new CVec2(32.0, 32.0);
+        var cellSize = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
+        var ditherStrength = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * para.y;
+        outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
+        var palIndex = MapToPaletteIndex(outColor.rgb, cellSize, palSize);
+        outColor = Sam2DToV4(new CVec2(11, para.x), palIndex);
+    }
+    else if (type < SDF.eVFX.Decal + 0.5 || type < SDF.eVFX.DecalTexture + 0.5) {
+        var decalDir = new CVec3(vfxMat1[1][0], vfxMat1[1][1], vfxMat1[1][2]);
+        var decalRot = vfxMat1[1][3];
+        var decalSca = new CVec3(vfxMat1[2][0], vfxMat1[2][1], vfxMat1[2][2]);
+        var decalPos = new CVec3(vfxMat1[2][3], vfxMat1[3][0], vfxMat1[3][1]);
+        var zAxis = V3Nor(decalDir);
+        var up = abs(zAxis.y) > 1.0 - 1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
+        var xAxis = V3Cross(up, zAxis);
+        var yAxis = V3Cross(zAxis, xAxis);
+        var rx = xAxis;
+        var ry = yAxis;
+        if (decalRot > 1e-8) {
+            var cosT = cos(decalRot);
+            var sinT = sin(decalRot);
+            rx = V3Nor(V3AddV3(V3MulFloat(xAxis, cosT), V3MulFloat(yAxis, sinT)));
+            ry = V3Nor(V3SubV3(V3MulFloat(yAxis, cosT), V3MulFloat(xAxis, sinT)));
+        }
+        var decalMat = new CMat(rx.x / decalSca.x, rx.y / decalSca.x, rx.z / decalSca.x, 0.0, ry.x / decalSca.y, ry.y / decalSca.y, ry.z / decalSca.y, 0.0, zAxis.x / decalSca.z, zAxis.y / decalSca.z, zAxis.z / decalSca.z, 0.0, 0.0, 0.0, 0.0, 1.0);
+        decalMat[3][0] = -(decalPos.x * decalMat[0][0] + decalPos.y * decalMat[0][1] + decalPos.z * decalMat[0][2]);
+        decalMat[3][1] = -(decalPos.x * decalMat[1][0] + decalPos.y * decalMat[1][1] + decalPos.z * decalMat[1][2]);
+        decalMat[3][2] = -(decalPos.x * decalMat[2][0] + decalPos.y * decalMat[2][1] + decalPos.z * decalMat[2][2]);
+        var decalUV = V4MulMatCoordi(_worldPos, decalMat);
+        decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
+        if (decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5) {
+            if (type < SDF.eVFX.Decal + 0.5) {
+                var decalColor = para;
+                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
+            }
+            else if (type < SDF.eVFX.DecalTexture + 0.5) {
+                var decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
+                if (para.z > 0.5 && decalColor.a > 0.001) {
+                    outColor.r = 1.0 - outColor.r;
+                    outColor.g = 1.0 - outColor.g;
+                    outColor.b = 1.0 - outColor.b;
+                }
+            }
+        }
+    }
+    return outColor;
+}
+export var BlendColor0 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor1 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor2 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor3 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor4 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor5 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor6 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor7 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor8 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor9 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor10 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor11 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor12 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor13 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor14 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var BlendColor15 = new CVec4(0.0, 0.0, 0.0, 0.0);
+function GetColorByIndex(_index, _tempMat0, _tempMat1, _tempMat2, _tempMat3) {
+    if (_index < -0.5)
+        return new CVec4(0.0, 0.0, 0.0, 0.0);
+    else if (_index < 4.0 - 0.5)
+        return _tempMat0[FloatToInt(mod(_index, 4.0))];
+    else if (_index < 8.0 - 0.5)
+        return _tempMat1[FloatToInt(mod(_index, 4.0))];
+    else if (_index < 12.0 - 0.5)
+        return _tempMat2[FloatToInt(mod(_index, 4.0))];
+    else if (_index < 16.0 - 0.5)
+        return _tempMat3[FloatToInt(mod(_index, 4.0))];
+    return new CVec4(0.0, 0.0, 0.0, 0.0);
+}
+function BlendFactorFun(_index, _uv, _obo, _tempMat0, _tempMat1, _tempMat2, _tempMat3) {
+    var type = _obo[0] - 0.5;
+    var orgIndex = _obo[1];
+    var value0 = _obo[2];
+    var value1 = _obo[3];
+    var org = GetColorByIndex(orgIndex, _tempMat0, _tempMat1, _tempMat2, _tempMat3);
+    var tar = GetColorByIndex(value0, _tempMat0, _tempMat1, _tempMat2, _tempMat3);
+    if (type < SDF.eBlend.Null) {
+        return GetColorByIndex(_index - 1.0, _tempMat0, _tempMat1, _tempMat2, _tempMat3);
+    }
+    else if (type < SDF.eBlend.LinearDodge) {
+        return V4AddV4(org, V4MulFloat(tar, value1));
+    }
+    else if (type < SDF.eBlend.Multiply) {
+        return V4Mix(org, V4MulV4(org, tar), value1);
+    }
+    else if (type < SDF.eBlend.LerpPer) {
+        return V4Mix(org, tar, value1);
+    }
+    else if (type < SDF.eBlend.LerpAlpha) {
+        return new CVec4(V3AddV3(V3MulFloat(org.rgb, 1.0 - org.a), V3MulFloat(tar.rgb, tar.a)), 1.0);
+    }
+    else if (type < SDF.eBlend.Darken) {
+        var so = org.r + org.g + org.b;
+        var st = tar.r + tar.g + tar.b;
+        return so < st ? org : tar;
+    }
+    else if (type < SDF.eBlend.Lighten) {
+        var so = org.r + org.g + org.b;
+        var st = tar.r + tar.g + tar.b;
+        return so >= st ? org : tar;
+    }
+    else if (type < SDF.eBlend.Org) {
+        return org;
+    }
+    else if (type < SDF.eBlend.Tar) {
+        return tar;
+    }
+    else if (type < SDF.eBlend.DarkCut) {
+        var so = org.r + org.g + org.b;
+        return so < 2.5 ? new CVec4(0.0, 0.0, 0.0, 0.0) : tar;
+    }
+    else if (type < SDF.eBlend.Texture) {
+        return Sam2DToColor(orgIndex, _uv);
+    }
+    else if (type < SDF.eBlend.Tonemap) {
+        return new CVec4(Tonemap(org.rgb, value0, value1), org.a);
+    }
+    else if (type < SDF.eBlend.GammaCorrect) {
+        return new CVec4(V3Sqrt(org.rgb), org.a);
+    }
+    return org;
+}
+export function TexOffBlendFactorFun(_uv) {
+    var tempColor0 = new CMat(0);
+    var tempColor1 = new CMat(0);
+    var tempColor2 = new CMat(0);
+    var tempColor3 = new CMat(0);
+    tempColor0[0] = BlendFactorFun(0.0, _uv, BlendColor0, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor0[1] = BlendFactorFun(1.0, _uv, BlendColor1, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor0[2] = BlendFactorFun(2.0, _uv, BlendColor2, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor0[3] = BlendFactorFun(3.0, _uv, BlendColor3, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor1[0] = BlendFactorFun(4.0, _uv, BlendColor4, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor1[1] = BlendFactorFun(5.0, _uv, BlendColor5, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor1[2] = BlendFactorFun(6.0, _uv, BlendColor6, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor1[3] = BlendFactorFun(7.0, _uv, BlendColor7, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor2[0] = BlendFactorFun(8.0, _uv, BlendColor8, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor2[1] = BlendFactorFun(9.0, _uv, BlendColor9, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor2[2] = BlendFactorFun(10.0, _uv, BlendColor10, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor2[3] = BlendFactorFun(11.0, _uv, BlendColor11, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor3[0] = BlendFactorFun(12.0, _uv, BlendColor12, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor3[1] = BlendFactorFun(13.0, _uv, BlendColor13, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor3[2] = BlendFactorFun(14.0, _uv, BlendColor14, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor3[3] = BlendFactorFun(15.0, _uv, BlendColor15, tempColor0, tempColor1, tempColor2, tempColor3);
+    return tempColor3[3];
+}

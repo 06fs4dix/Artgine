@@ -1,1 +1,44 @@
-import{CStorage as t}from"../system/CStorage.js";import{CAuthInfo as r}from"./CAuthInfo.js";const s="messengerMailAccount",i=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;export class CMailAccount{static IsEmail(t){return i.test(t)}static Empty(){return{address:"",port:"",id:"",pw:""}}static Sanitize(t){return{address:String(t?.address??"").trim(),port:String(t?.port??"").trim(),id:String(t?.id??"").trim(),pw:String(t?.pw??"")}}static Load(){try{const r=t.Get(s),i=r?JSON.parse(r):null;return{smtp:CMailAccount.Sanitize(i?.smtp),imap:CMailAccount.Sanitize(i?.imap)}}catch{return{smtp:CMailAccount.Empty(),imap:CMailAccount.Empty()}}}static Save(r){t.Set(s,JSON.stringify(r))}static IsConfigured(t){return""!==t.smtp.address&&""!==t.imap.address}static ToAuthInfo(t){const s=new r;return s.mAddres=t.address,s.mPort=t.port,s.mID=t.id,s.mPW=t.pw,s}}
+import { CStorage } from '../system/CStorage.js';
+import { CAuthInfo } from './CAuthInfo.js';
+const MAIL_ACCOUNT_KEY = 'messengerMailAccount';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export class CMailAccount {
+    static IsEmail(_value) {
+        return EMAIL_RE.test(_value);
+    }
+    static Empty() {
+        return { address: '', port: '', id: '', pw: '' };
+    }
+    static Sanitize(rec) {
+        return {
+            address: String(rec?.address ?? '').trim(),
+            port: String(rec?.port ?? '').trim(),
+            id: String(rec?.id ?? '').trim(),
+            pw: String(rec?.pw ?? ''),
+        };
+    }
+    static Load() {
+        try {
+            const raw = CStorage.Get(MAIL_ACCOUNT_KEY);
+            const parsed = raw ? JSON.parse(raw) : null;
+            return { smtp: CMailAccount.Sanitize(parsed?.smtp), imap: CMailAccount.Sanitize(parsed?.imap) };
+        }
+        catch {
+            return { smtp: CMailAccount.Empty(), imap: CMailAccount.Empty() };
+        }
+    }
+    static Save(_account) {
+        CStorage.Set(MAIL_ACCOUNT_KEY, JSON.stringify(_account));
+    }
+    static IsConfigured(_account) {
+        return _account.smtp.address !== '' && _account.imap.address !== '';
+    }
+    static ToAuthInfo(_rec) {
+        const auth = new CAuthInfo();
+        auth.mAddres = _rec.address;
+        auth.mPort = _rec.port;
+        auth.mID = _rec.id;
+        auth.mPW = _rec.pw;
+        return auth;
+    }
+}

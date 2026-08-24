@@ -1,1 +1,323 @@
-var t=this&&this.__decorate||function(t,e,n,o){var r,s=arguments.length,i=s<3?e:null===o?o=Object.getOwnPropertyDescriptor(e,n):o;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)i=Reflect.decorate(t,e,n,o);else for(var a=t.length-1;a>=0;a--)(r=t[a])&&(i=(s<3?r(i):s>3?r(e,n,i):r(e,n))||i);return s>3&&i&&Object.defineProperty(e,n,i),i};import{URLPatterns as e,gSessionParser as n}from"../network/CServerMain.js";import{CServerRouter as o}from"../network/CServerRouter.js";import{GetAppJSON as r}from"../../desktop/MainFunc.js";import{randomBytes as s}from"crypto";import{CHash as i}from"../basic/CHash.js";import{CStorage as a}from"../system/CStorage.js";import{CMessenger as c}from"./CMessenger.js";const u=3e5,l=144e5,d=new Map,p=new Map;let h=[],g=0;const f="auth.twoFactor.sessionId",k=3e5,m=new Map;function w(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}export function getPeerIP(t){return String(t.socket?.remoteAddress??t.connection?.remoteAddress??"unknown")}function A(t){if("::1"===t)return"127.0.0.1";const e=t.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);return e?e[1]:t}export function isLocalReq(t){const e=getPeerIP(t).replace(/^::ffff:/i,"");return"127.0.0.1"===e||"::1"===e}export function getTwoFactorSessionId(){const t=a.Get(f,0),e=Number(t);return Number.isFinite(e)?e:0}export function setTwoFactorSessionId(t){a.Set(f,String(0|t))}export function genToken(){return s(32).toString("base64url")}export function isValidToken(t){const e=d.get(t);return!e||e.exp<Date.now()?(d.delete(t),!1):!e.pending2FA&&(e.exp=Date.now()+l,!0)}export function isPending2FAToken(t){const e=d.get(t);return null!=e&&e.exp>=Date.now()&&e.pending2FA}export function revokeToken(t){d.delete(t)}export function getToken(t){return t.query?.token||""}export function getAuthIP(t){return t.ip||t.connection?.remoteAddress||"unknown"}export function isAuthedReq(t){return!0===t.session?.authed}export function isAuthedUpgrade(t){return new Promise(e=>{const o=n;if(o)try{o(t,{},()=>e(!0===t.session?.authed))}catch{e(!1)}else e(!1)})}export function getAuthLockMsg(t,e=Date.now()){if(g>e)return`All login locked. Retry in ${Math.ceil((g-e)/1e3)} seconds`;const n=p.get(t);return n&&n.until>e?`Retry in ${Math.ceil((n.until-e)/1e3)} seconds`:null}export function clearAuthFail(t){p.delete(t)}export function recordGlobalAuthFail(t=Date.now()){const e=t-6e4;return h=h.filter(t=>t>=e),h.push(t),h.length>=1e3?(g=t+u,h=[],"All login locked for 5 minutes"):null}export function recordAuthFail(t,e="Authentication required"){const n=Date.now(),o=recordGlobalAuthFail(n),r=p.get(t)||{count:0,until:0};return r.count++,r.until=r.count>=5?n+u:0,p.set(t,r),{ok:!1,msg:o??(r.count>=5?"Locked for 5 minutes":e)}}export function checkBrute(t,e,n){const o=getAuthLockMsg(getAuthIP(t));null==o?n():e.json({ok:!1,msg:o})}export function checkToken(t,e,n){const o=getAuthIP(t),r=getToken(t);if(!r)return void e.status(401).json({ok:!1,msg:"Authentication required"});const s=getAuthLockMsg(o);if(null==s){if(!isValidToken(r)){const t=recordAuthFail(o,"Authentication required");return void e.status(401).json(t)}clearAuthFail(o),n()}else e.status(401).json({ok:!1,msg:s})}export async function handleAuth(t,e){const n=getAuthLockMsg(t);if(null!=n)return{ok:!1,msg:n};const o=await r(),s=Date.now(),a=o.password??"";if(e===(a.length>=64?a:i.SHA256("artgine_"+a))){clearAuthFail(t);const e=genToken();return d.set(e,{exp:s+l,pending2FA:!1}),{ok:!0,token:e}}return recordAuthFail(t,"Wrong password")}let x=class extends o{constructor(){super(),this.On("/auth/login",async(t,e,n)=>{const o=getAuthIP(e),s=await handleAuth(o,t.GetStr("password"));if(!s.ok)return n.json(s),null;const i=getTwoFactorSessionId();if(i<=0||isLocalReq(e))return e.session.authed=!0,n.json(s),null;const a=await async function(){const t=await r();return String(t.url??"").trim().replace(/^(https?:)\/(?!\/)/i,"$1//").replace(/\/+$/,"")}();if(""===a)return n.json({ok:!1,msg:'2FA is on but this server has no url configured (settings.json "url")'}),null;!function(t=Date.now()){for(const[e,n]of m)t-n.createdAt>k&&m.delete(e)}();const u=genToken(),l=getPeerIP(e);var p;m.set(u,{createdAt:Date.now(),ip:l,fwdIp:o!==l?o:"",userAgent:String(e.headers["user-agent"]??"unknown"),token:s.token??""}),p=s.token??"",d.set(p,{exp:Date.now()+k,pending2FA:!0});try{const t=`${a}/auth/twoFactor?token=${u}`;await c.Send(i,"auth",`Two-factor authentication approval requested. Tap the link below within 5 minutes to approve.\n${t}`)}catch(t){return m.delete(u),revokeToken(s.token??""),n.json({ok:!1,msg:"2FA message send failed: "+t.message}),null}return n.json({...s,pending2FA:!0,waitMs:k,pollMs:1e3}),null}),this.On("/auth/twoFactor",async(t,e,n)=>{const o=String(t.GetStr("token")??"");if("POST"===e.method){const t=m.get(o);return null!=t&&(r=t.token,d.has(r)&&d.set(r,{exp:Date.now()+l,pending2FA:!1}),m.delete(o)),n.json({ok:null!=t}),null}var r;const s=m.get(o),i=`${this.mPath}/artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css`,a=`${this.mPath}/artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js`,c=`<meta name="viewport" content="width=device-width, initial-scale=1">\n                <link rel="stylesheet" href="${i}">`;return n.type("html").send(null!=s?`<html><head>${c}</head><body>\n                    <div class="container py-4" style="max-width:480px;">\n                        <h4 class="mb-3">Approve this login?</h4>\n                        <p class="mb-1"><strong>IP:</strong> ${w(A(s.ip))}</p>\n                        ${""===s.fwdIp?"":`<p class="mb-1 text-secondary small">Forwarded-For (client-reported, can be spoofed): ${w(A(s.fwdIp))}</p>`}\n                        <p class="mb-4" style="word-break:break-all;"><strong>Browser:</strong> ${w(s.userAgent)}</p>\n                        <button id="approveBtn" class="btn btn-primary btn-lg w-100">Approve</button>\n                        <p id="approveMsg" class="mt-3 fs-5"></p>\n                    </div>\n                    <script src="${a}"><\/script>\n                    <script>\n                        document.getElementById('approveBtn').onclick = async () => {\n                            const r = await fetch(location.pathname + location.search, { method: 'POST' });\n                            const j = await r.json().catch(() => ({ ok: false }));\n                            document.getElementById('approveMsg').textContent = j.ok ? 'Approved. You can close this page.' : 'This approval link is invalid or expired.';\n                            if (j.ok) window.close();\n                        };\n                    <\/script>\n                   </body></html>`:`<html><head>${c}</head><body>\n                    <div class="container py-4" style="max-width:480px;">\n                        <p class="fs-5">This approval link is invalid or expired.</p>\n                    </div>\n                   </body></html>`),null}),this.On("/auth/check",async(t,e,n)=>{const o=getAuthIP(e),r=t.GetStr("token")||getToken(e);if(r){const t=getAuthLockMsg(o);if(null!=t)return n.status(403).json({ok:!1,msg:t,authed:!1}),null;if(!isValidToken(r)){if(isPending2FAToken(r))return n.json({ok:!0,authed:!1}),null;{const t=recordAuthFail(o,"Authentication required");return n.status(403).json({...t,authed:!1}),null}}clearAuthFail(o),e.session.authed=!0}return n.json({ok:!0,authed:isAuthedReq(e)}),null}),this.On("/auth/twoFactorConfig",async(t,e,n)=>isAuthedReq(e)?(void 0!==t.GetVal("sessionId")&&setTwoFactorSessionId(Number(t.GetInt("sessionId"))||0),n.json({ok:!0,sessionId:getTwoFactorSessionId()}),null):(n.status(403).json({ok:!1,msg:"Authentication required"}),null))}};x=t([e(["/auth/login","/auth/check","/auth/twoFactor","/auth/twoFactorConfig"])],x);export{x as CAuthServer};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { URLPatterns, gSessionParser } from '../network/CServerMain.js';
+import { CServerRouter } from '../network/CServerRouter.js';
+import { GetAppJSON } from '../../desktop/MainFunc.js';
+import { randomBytes } from 'crypto';
+import { CHash } from '../basic/CHash.js';
+import { CStorage } from '../system/CStorage.js';
+import { CMessenger } from './CMessenger.js';
+const BRUTE_MAX = 5;
+const BRUTE_LOCK_MS = 5 * 60 * 1000;
+const GLOBAL_BRUTE_MAX = 1000;
+const GLOBAL_BRUTE_WINDOW_MS = 60 * 1000;
+const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;
+const gAuthedTokens = new Map();
+const gFailMap = new Map();
+let gGlobalFailTimeList = [];
+let gGlobalFailUntil = 0;
+const TWO_FACTOR_SESSION_KEY = 'auth.twoFactor.sessionId';
+const TWO_FACTOR_PENDING_MS = 5 * 60 * 1000;
+const TWO_FACTOR_POLL_MS = 1000;
+const gPending = new Map();
+function sweepPending(_now = Date.now()) {
+    for (const [approveToken, p] of gPending) {
+        if (_now - p.createdAt > TWO_FACTOR_PENDING_MS)
+            gPending.delete(approveToken);
+    }
+}
+function escapeHtml(_s) {
+    return _s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+export function getPeerIP(_req) {
+    return String(_req.socket?.remoteAddress ?? _req.connection?.remoteAddress ?? 'unknown');
+}
+function displayIp(_ip) {
+    if (_ip === '::1')
+        return '127.0.0.1';
+    const mapped = _ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+    return mapped ? mapped[1] : _ip;
+}
+export function isLocalReq(_req) {
+    const ip = getPeerIP(_req).replace(/^::ffff:/i, '');
+    return ip === '127.0.0.1' || ip === '::1';
+}
+async function getServerBaseUrl() {
+    const config = await GetAppJSON();
+    return String(config.url ?? '').trim().replace(/^(https?:)\/(?!\/)/i, '$1//').replace(/\/+$/, '');
+}
+export function getTwoFactorSessionId() {
+    const raw = CStorage.Get(TWO_FACTOR_SESSION_KEY, 0);
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+}
+export function setTwoFactorSessionId(_sessionId) {
+    CStorage.Set(TWO_FACTOR_SESSION_KEY, String(_sessionId | 0));
+}
+export function genToken() {
+    return randomBytes(32).toString('base64url');
+}
+export function isValidToken(token) {
+    const e = gAuthedTokens.get(token);
+    if (!e || e.exp < Date.now()) {
+        gAuthedTokens.delete(token);
+        return false;
+    }
+    if (e.pending2FA)
+        return false;
+    e.exp = Date.now() + TOKEN_TTL_MS;
+    return true;
+}
+export function isPending2FAToken(token) {
+    const e = gAuthedTokens.get(token);
+    return e != null && e.exp >= Date.now() && e.pending2FA;
+}
+function markTokenPending2FA(token) {
+    gAuthedTokens.set(token, { exp: Date.now() + TWO_FACTOR_PENDING_MS, pending2FA: true });
+}
+function approveToken2FA(token) {
+    if (!gAuthedTokens.has(token))
+        return;
+    gAuthedTokens.set(token, { exp: Date.now() + TOKEN_TTL_MS, pending2FA: false });
+}
+export function revokeToken(token) {
+    gAuthedTokens.delete(token);
+}
+export function getToken(req) {
+    return (req.query?.token || '');
+}
+export function getAuthIP(req) {
+    return req.ip || req.connection?.remoteAddress || 'unknown';
+}
+export function isAuthedReq(req) {
+    return req.session?.authed === true;
+}
+export function isAuthedUpgrade(req) {
+    return new Promise((resolve) => {
+        const parser = gSessionParser;
+        if (!parser) {
+            resolve(false);
+            return;
+        }
+        try {
+            parser(req, {}, () => resolve(req.session?.authed === true));
+        }
+        catch {
+            resolve(false);
+        }
+    });
+}
+export function getAuthLockMsg(ip, now = Date.now()) {
+    if (gGlobalFailUntil > now) {
+        const sec = Math.ceil((gGlobalFailUntil - now) / 1000);
+        return `All login locked. Retry in ${sec} seconds`;
+    }
+    const fail = gFailMap.get(ip);
+    if (fail && fail.until > now) {
+        const sec = Math.ceil((fail.until - now) / 1000);
+        return `Retry in ${sec} seconds`;
+    }
+    return null;
+}
+export function clearAuthFail(ip) {
+    gFailMap.delete(ip);
+}
+export function recordGlobalAuthFail(now = Date.now()) {
+    const minTime = now - GLOBAL_BRUTE_WINDOW_MS;
+    gGlobalFailTimeList = gGlobalFailTimeList.filter((time) => time >= minTime);
+    gGlobalFailTimeList.push(now);
+    if (gGlobalFailTimeList.length >= GLOBAL_BRUTE_MAX) {
+        gGlobalFailUntil = now + BRUTE_LOCK_MS;
+        gGlobalFailTimeList = [];
+        return 'All login locked for 5 minutes';
+    }
+    return null;
+}
+export function recordAuthFail(ip, msg = 'Authentication required') {
+    const now = Date.now();
+    const globalLockMsg = recordGlobalAuthFail(now);
+    const fail = gFailMap.get(ip) || { count: 0, until: 0 };
+    fail.count++;
+    fail.until = fail.count >= BRUTE_MAX ? now + BRUTE_LOCK_MS : 0;
+    gFailMap.set(ip, fail);
+    return { ok: false, msg: globalLockMsg ?? (fail.count >= BRUTE_MAX ? 'Locked for 5 minutes' : msg) };
+}
+export function checkBrute(req, res, next) {
+    const ip = getAuthIP(req);
+    const msg = getAuthLockMsg(ip);
+    if (msg != null) {
+        res.json({ ok: false, msg });
+        return;
+    }
+    next();
+}
+export function checkToken(req, res, next) {
+    const ip = getAuthIP(req);
+    const t = getToken(req);
+    if (!t) {
+        res.status(401).json({ ok: false, msg: 'Authentication required' });
+        return;
+    }
+    const lockMsg = getAuthLockMsg(ip);
+    if (lockMsg != null) {
+        res.status(401).json({ ok: false, msg: lockMsg });
+        return;
+    }
+    if (!isValidToken(t)) {
+        const result = recordAuthFail(ip, 'Authentication required');
+        res.status(401).json(result);
+        return;
+    }
+    clearAuthFail(ip);
+    next();
+}
+export async function handleAuth(ip, password) {
+    const lockMsg = getAuthLockMsg(ip);
+    if (lockMsg != null)
+        return { ok: false, msg: lockMsg };
+    const config = await GetAppJSON();
+    const now = Date.now();
+    const stored = config.password ?? '';
+    const storedHash = stored.length >= 64 ? stored : CHash.SHA256('artgine_' + stored);
+    if (password === storedHash) {
+        clearAuthFail(ip);
+        const token = genToken();
+        gAuthedTokens.set(token, { exp: now + TOKEN_TTL_MS, pending2FA: false });
+        return { ok: true, token };
+    }
+    return recordAuthFail(ip, 'Wrong password');
+}
+let CAuthServer = class CAuthServer extends CServerRouter {
+    constructor() {
+        super();
+        this.On("/auth/login", async (_json, _req, _res) => {
+            const ip = getAuthIP(_req);
+            const result = await handleAuth(ip, _json.GetStr("password"));
+            if (!result.ok) {
+                _res.json(result);
+                return null;
+            }
+            const sessionId = getTwoFactorSessionId();
+            if (sessionId <= 0 || isLocalReq(_req)) {
+                _req.session.authed = true;
+                _res.json(result);
+                return null;
+            }
+            const base = await getServerBaseUrl();
+            if (base === '') {
+                _res.json({ ok: false, msg: '2FA is on but this server has no url configured (settings.json "url")' });
+                return null;
+            }
+            sweepPending();
+            const approveToken = genToken();
+            const peerIp = getPeerIP(_req);
+            gPending.set(approveToken, {
+                createdAt: Date.now(),
+                ip: peerIp,
+                fwdIp: ip !== peerIp ? ip : '',
+                userAgent: String(_req.headers['user-agent'] ?? 'unknown'),
+                token: result.token ?? '',
+            });
+            markTokenPending2FA(result.token ?? '');
+            try {
+                const link = `${base}/auth/twoFactor?token=${approveToken}`;
+                await CMessenger.Send(sessionId, 'auth', `Two-factor authentication approval requested. Tap the link below within 5 minutes to approve.\n${link}`);
+            }
+            catch (e) {
+                gPending.delete(approveToken);
+                revokeToken(result.token ?? '');
+                _res.json({ ok: false, msg: '2FA message send failed: ' + e.message });
+                return null;
+            }
+            _res.json({ ...result, pending2FA: true, waitMs: TWO_FACTOR_PENDING_MS, pollMs: TWO_FACTOR_POLL_MS });
+            return null;
+        });
+        this.On("/auth/twoFactor", async (_json, _req, _res) => {
+            const approveToken = String(_json.GetStr("token") ?? '');
+            if (_req.method === 'POST') {
+                const target = gPending.get(approveToken);
+                if (target != null) {
+                    approveToken2FA(target.token);
+                    gPending.delete(approveToken);
+                }
+                _res.json({ ok: target != null });
+                return null;
+            }
+            const p = gPending.get(approveToken);
+            const bootstrapCss = `${this.mPath}/artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css`;
+            const bootstrapJs = `${this.mPath}/artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js`;
+            const head = `<meta name="viewport" content="width=device-width, initial-scale=1">
+                <link rel="stylesheet" href="${bootstrapCss}">`;
+            _res.type('html').send(p != null
+                ? `<html><head>${head}</head><body>
+                    <div class="container py-4" style="max-width:480px;">
+                        <h4 class="mb-3">Approve this login?</h4>
+                        <p class="mb-1"><strong>IP:</strong> ${escapeHtml(displayIp(p.ip))}</p>
+                        ${p.fwdIp === '' ? '' : `<p class="mb-1 text-secondary small">Forwarded-For (client-reported, can be spoofed): ${escapeHtml(displayIp(p.fwdIp))}</p>`}
+                        <p class="mb-4" style="word-break:break-all;"><strong>Browser:</strong> ${escapeHtml(p.userAgent)}</p>
+                        <button id="approveBtn" class="btn btn-primary btn-lg w-100">Approve</button>
+                        <p id="approveMsg" class="mt-3 fs-5"></p>
+                    </div>
+                    <script src="${bootstrapJs}"></script>
+                    <script>
+                        document.getElementById('approveBtn').onclick = async () => {
+                            const r = await fetch(location.pathname + location.search, { method: 'POST' });
+                            const j = await r.json().catch(() => ({ ok: false }));
+                            document.getElementById('approveMsg').textContent = j.ok ? 'Approved. You can close this page.' : 'This approval link is invalid or expired.';
+                            if (j.ok) window.close();
+                        };
+                    </script>
+                   </body></html>`
+                : `<html><head>${head}</head><body>
+                    <div class="container py-4" style="max-width:480px;">
+                        <p class="fs-5">This approval link is invalid or expired.</p>
+                    </div>
+                   </body></html>`);
+            return null;
+        });
+        this.On("/auth/check", async (_json, _req, _res) => {
+            const ip = getAuthIP(_req);
+            const t = _json.GetStr("token") || getToken(_req);
+            if (t) {
+                const lockMsg = getAuthLockMsg(ip);
+                if (lockMsg != null) {
+                    _res.status(403).json({ ok: false, msg: lockMsg, authed: false });
+                    return null;
+                }
+                if (isValidToken(t)) {
+                    clearAuthFail(ip);
+                    _req.session.authed = true;
+                }
+                else if (isPending2FAToken(t)) {
+                    _res.json({ ok: true, authed: false });
+                    return null;
+                }
+                else {
+                    const result = recordAuthFail(ip, 'Authentication required');
+                    _res.status(403).json({ ...result, authed: false });
+                    return null;
+                }
+            }
+            _res.json({ ok: true, authed: isAuthedReq(_req) });
+            return null;
+        });
+        this.On("/auth/twoFactorConfig", async (_json, _req, _res) => {
+            if (!isAuthedReq(_req)) {
+                _res.status(403).json({ ok: false, msg: 'Authentication required' });
+                return null;
+            }
+            if (_json.GetVal("sessionId") !== undefined)
+                setTwoFactorSessionId(Number(_json.GetInt("sessionId")) || 0);
+            _res.json({ ok: true, sessionId: getTwoFactorSessionId() });
+            return null;
+        });
+    }
+};
+CAuthServer = __decorate([
+    URLPatterns(["/auth/login", "/auth/check", "/auth/twoFactor", "/auth/twoFactorConfig"])
+], CAuthServer);
+export { CAuthServer };

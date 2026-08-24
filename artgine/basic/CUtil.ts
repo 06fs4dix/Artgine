@@ -78,7 +78,18 @@ export class CUtil
 	}
 	static ArrayToBase64(_arrayBuffer : ArrayBufferLike)
 	{
-		return btoa(new Uint8Array(_arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+		const bytes = new Uint8Array(_arrayBuffer);
+		if (typeof Buffer !== "undefined")
+			return Buffer.from(bytes).toString("base64");
+
+		const chunk = 0x8000;
+		let binary = "";
+		for (let i = 0; i < bytes.length; i += chunk)
+		{
+			const sub = bytes.subarray(i, i + chunk);
+			binary += String.fromCharCode.apply(null, sub as unknown as number[]);
+		}
+		return btoa(binary);
 	}
 	static ArrayToString(_arrayBuffer : ArrayBufferLike)
 	{
@@ -136,7 +147,17 @@ export class CUtil
 	{
 		const result = CUtil._lz4.decompress(_lz4, _originalSize);
 		if (result == null) throw new Error("압축 해제 실패");
-		return result.buffer;
+		return result.buffer.slice(result.byteOffset, result.byteOffset + result.byteLength);
+	}
+
+	static ArrayToLZ4Base64(_arrayBuffer: ArrayBufferLike, _level: number = 6): string
+	{
+		const lz4 = CUtil.ArrayToLZ4(_arrayBuffer, _level);
+		return CUtil.ArrayToBase64(lz4.buffer.slice(lz4.byteOffset, lz4.byteOffset + lz4.byteLength));
+	}
+	static LZ4Base64ToArray(_lz4Base64: string, _originalSize?: number): ArrayBufferLike
+	{
+		return CUtil.LZ4ToArray(new Uint8Array(CUtil.Base64ToArray(_lz4Base64)), _originalSize);
 	}
 }
 

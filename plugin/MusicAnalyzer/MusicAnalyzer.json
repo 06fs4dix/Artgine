@@ -1,0 +1,14 @@
+{
+    "dependencies": {
+		"artgine":1
+    },
+    "version":1,
+    "text":"MusicAnalyzer",
+    "include":true,
+    "client":[],
+    "server":[],
+    "tooltip":{
+        "Author":"Artgine",
+        "Comment":"오디오 파일(mp3 등)의 템포/조성/음량 등을 essentia.js로 분석하는 CMusicAnalyzer 클래스. HTTP 라우트는 아직 없음(직접 import해서 사용)."
+    }
+}

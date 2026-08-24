@@ -13,6 +13,7 @@ import { CConsol } from '../basic/CConsol.js';
 import { Request, Response } from 'express';
 import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
 import { CPath } from '../basic/CPath.js';
+import { isAuthedReq, isValidToken } from './CAuthServer.js';
 
 const BIN_DIR     = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external', 'bin');
 const YTDLP_PATH  = path.join(BIN_DIR, 'yt-dlp.exe');
@@ -172,7 +173,7 @@ function downloadDirectUrl(
     });
 }
 
-@URLPatterns(["/Download/Status", "/Download/Info", "/Download/Start", "/Download/Poll"])
+@URLPatterns(["/Download/Status", "/Download/Info", "/Download/Start", "/Download/Poll", "/Download/SaveEdit"])
 export class CDownloadServer extends CServerRouter {
     constructor() {
         super();
@@ -196,6 +197,8 @@ export class CDownloadServer extends CServerRouter {
                 dailyLimit: usage.limit,
                 dailyUsed : usage.used,
                 dailyRemain: usage.remain,
+                // 오늘 다운로드 저장 폴더(절대경로) — Media AI 정리 등의 workingDir로 사용
+                dir   : usage.dir,
             });
         });
 
@@ -328,5 +331,107 @@ export class CDownloadServer extends CServerRouter {
             if (job.status !== 'running') gJobs.delete(jobId);
             return result;
         });
+
+        // Media 탭 편집기(브라우저에서 자르기/붙이기/볼륨/노말라이즈/페이드로 편집한 오디오)를
+        // 저장한다. 편집 자체는 항상 WAV(base64)로 들어오고, mp3/mp4로 저장하고 싶으면 여기서
+        // ffmpeg로 변환한다. mp4는 편집 안 된 원본 영상(base64)도 같이 받아서 영상 트랙은 그대로,
+        // 오디오 트랙만 편집본으로 바꿔치기(mux)한다.
+        this.On("/Download/SaveEdit", async (_json: CJSON, _req: Request, _res: Response) => {
+            const nameRaw    = _json.GetStr("name") || 'edit';
+            const format     = (_json.GetStr("format") || 'wav') as 'wav' | 'mp3' | 'mp4';
+            const overwrite  = _json.GetStr("overwrite") === '1';
+            const targetPath = _json.GetStr("targetPath"); // 있으면 다운로드 폴더 대신 이 절대경로에 덮어쓴다
+            const audioB64   = _json.GetStr("audioData");
+            const videoB64   = _json.GetStr("videoData");
+
+            if (!audioB64) return JSON.stringify({ ok: false, msg: '저장할 오디오 데이터가 없습니다' });
+            if (format === 'mp4' && !videoB64) return JSON.stringify({ ok: false, msg: '원본 영상 데이터가 없습니다' });
+            if ((format === 'mp3' || format === 'mp4') && !fs.existsSync(FFMPEG_PATH))
+                return JSON.stringify({ ok: false, msg: 'ffmpeg가 아직 설치되지 않았습니다. 잠시 후 다시 시도하세요.' });
+
+            const audioBuf = Buffer.from(audioB64, 'base64');
+            const videoBuf = videoB64 ? Buffer.from(videoB64, 'base64') : null;
+            if (audioBuf.length === 0) return JSON.stringify({ ok: false, msg: '빈 파일입니다' });
+
+            let destDir: string;
+            let destPath: string;
+
+            if (targetPath) {
+                // 다운로드 폴더(하루 용량 제한이 걸린 격리 폴더) 밖의 임의 경로에 덮어쓰는 기능이라,
+                // File 탭과 동일하게 세션 인증(토큰 또는 쿠키)이 없으면 거부한다.
+                const token = _json.GetStr('token');
+                const authed = token ? isValidToken(token) : isAuthedReq(_req);
+                if (!authed) {
+                    _res.status(403);
+                    return JSON.stringify({ ok: false, msg: 'Authentication required' });
+                }
+
+                const resolved = resolveAbs(targetPath);
+                const roots = GetRootPaths(await GetAppJSON());
+                if (!roots.some(r => isInsideRoot(r, resolved))) {
+                    return JSON.stringify({ ok: false, msg: '등록된 File 루트 밖의 경로라 저장할 수 없습니다' });
+                }
+                destDir = path.dirname(resolved);
+                destPath = resolved;
+            } else {
+                const usage = await getTodayUsage();
+                const incoming = audioBuf.length + (videoBuf ? videoBuf.length : 0);
+                if (incoming > usage.remain) {
+                    return JSON.stringify({
+                        ok: false,
+                        msg: `Daily download limit (1GB) would be exceeded (file ${formatBytes(incoming)}, remain ${formatBytes(usage.remain)})`,
+                    });
+                }
+
+                const ext = format === 'mp4' ? '.mp4' : format === 'mp3' ? '.mp3' : '.wav';
+                const safeBase = path.basename(nameRaw).replace(/[\\/:*?"<>|]/g, '_').replace(/\.[^.]+$/, '') || 'edit';
+                destDir = usage.dir;
+                destPath = path.join(usage.dir, safeBase + ext);
+                if (!isInsideRoot(usage.dir, destPath)) return JSON.stringify({ ok: false, msg: '잘못된 파일명' });
+
+                if (!overwrite) {
+                    let n = 1;
+                    while (fs.existsSync(destPath)) {
+                        destPath = path.join(usage.dir, `${safeBase} (${n})${ext}`);
+                        n++;
+                    }
+                }
+            }
+
+            const stamp = Date.now();
+            const tmpAudio = path.join(destDir, `.tmp_audio_${stamp}.wav`);
+            const tmpVideo = path.join(destDir, `.tmp_video_${stamp}.mp4`);
+            fs.writeFileSync(tmpAudio, audioBuf);
+            if (videoBuf) fs.writeFileSync(tmpVideo, videoBuf);
+
+            try {
+                if (format === 'wav') {
+                    fs.renameSync(tmpAudio, destPath);
+                } else if (format === 'mp3') {
+                    await runFfmpeg(['-y', '-i', tmpAudio, destPath]);
+                    fs.unlinkSync(tmpAudio);
+                } else {
+                    await runFfmpeg(['-y', '-i', tmpVideo, '-i', tmpAudio, '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac', '-shortest', destPath]);
+                    fs.unlinkSync(tmpAudio);
+                    fs.unlinkSync(tmpVideo);
+                }
+            } catch (e: any) {
+                try { if (fs.existsSync(tmpAudio)) fs.unlinkSync(tmpAudio); } catch { /* ignore */ }
+                try { if (fs.existsSync(tmpVideo)) fs.unlinkSync(tmpVideo); } catch { /* ignore */ }
+                return JSON.stringify({ ok: false, msg: 'ffmpeg 처리 실패: ' + e.message });
+            }
+
+            return JSON.stringify({ ok: true, file: path.basename(destPath) });
+        });
     }
+}
+
+function runFfmpeg(args: string[]): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+        const proc = (await CUtilSystem.Spawn(FFMPEG_PATH, args))!;
+        let err = '';
+        proc.stderr.on('data', (d: Buffer) => err += d.toString());
+        proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(err.slice(-400) || `ffmpeg exit ${code}`)));
+        proc.on('error', (e) => reject(e));
+    });
 }

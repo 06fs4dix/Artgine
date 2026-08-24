@@ -5,18 +5,28 @@ import { CHash } from "../basic/CHash.js";
 import { CAtlas } from "../util/CAtlas.js";
 
 import { CMeshDrawNode } from "./CMeshDrawNode.js";
-import { CRenderer, CRendererGL } from "./CRenderer.js";
+import { CRenderer, CRendererGL, CTexUse } from "./CRenderer.js";
 import { CShader } from "./CShader.js";
 import { CShaderAttr } from "./CShaderAttr.js";
 import { CTexture, CTextureInfo } from "./CTexture.js";
 import { CUniform } from "./CUniform.js";
 import { CUtil } from "../basic/CUtil.js";
+import { CMat } from "../geometry/CMat.js";
+import { CVec4 } from "../geometry/CVec4.js";
 
 export class CTypeUni
 {
 	type :number;
 	uni :CUniform
 	last;
+	//아래는 GPU 배치 전용. 값 하나 쓰는 데 필요한 정보를 오브젝트마다 다시 구하지 않으려고
+	//분류 시점에 미리 뽑아둔다(키마다 고정값이다)
+	/** 유니폼 버퍼 안의 플로트 단위 오프셋 = uni.binding */
+	off :number=0;
+	/** 실제로 쓸 플로트 개수. 선언 크기로 이미 잘라둔 값이다 */
+	n :number=0;
+	/** 값이 Float32Array 그 자체인가(아니면 CFloat32 계열이라 mF32A 를 본다) */
+	raw :boolean=false;
 }
 
 export class CBatch
@@ -282,7 +292,32 @@ export class CBatchMgrGL extends CBatchMgr
 
     override BatchExcute(_vf : CShader)
 	{
-		
+
+	}
+}
+
+/**
+ * WebGPU 배치 실행.
+ *
+ * GL 판은 인스턴싱으로 묶어 한 번에 그리지만, 여기서는 아직 배치를 하나씩 그린다.
+ * WebGPU 는 유니폼/텍스처가 바인드그룹 단위라 묶는 방식이 달라서, 정확한 그림이
+ * 먼저 나오는 쪽을 택했다. 묶기는 그리기가 검증된 뒤에 얹는다.
+ */
+export class CBatchMgrGPU extends CBatchMgr
+{
+	constructor(_render : CRenderer)
+	{
+		super(_render);
+	}
+
+	/** 값 하나를 종류로 분류해 표에 넣는다 */
+	UniType(_vf : CShader,_v : CShaderAttr,_arr : CArray<CTypeUni>)
+	{
+
+	}
+	override BatchExcute(_vf : CShader)
+	{
+
 	}
 }
 import CBatchMgr_imple from "../render_imple/CBatchMgr.js";

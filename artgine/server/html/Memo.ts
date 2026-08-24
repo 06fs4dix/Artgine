@@ -90,7 +90,7 @@ function RegisterMemoLan(): void {
             <ul class="mb-3">
                 <li><b>Tab</b> - 좌측 카테고리/타임 사이드바 열고 닫기</li>
                 <li><b>Enter</b> - 입력창에서 전송 (줄바꿈은 <b>Shift+Enter</b>)</li>
-                <li><b>F1~F4, F7</b> - 상위 화면(Home)의 단축키로 전달됨</li>
+                <li><b>F1~F3, F7</b> - 상위 화면(Home)의 단축키로 전달됨</li>
             </ul>
             <h6>메시지 입력창 명령어</h6>
             <p class="mb-1">입력 맨 앞에 아래 접두어를 붙이면 상단 모드 선택과 무관하게 <b>이번 전송 한 번만</b> 해당 모드로 동작합니다.</p>
@@ -741,7 +741,7 @@ const sHelpBodyDefaultEn = `
             <ul class="mb-3">
                 <li><b>Tab</b> - Open/close the category/time sidebar</li>
                 <li><b>Enter</b> - Send in the input box (<b>Shift+Enter</b> for a newline)</li>
-                <li><b>F1~F4, F7</b> - Forwarded to the parent screen (Home)'s shortcuts</li>
+                <li><b>F1~F3, F7</b> - Forwarded to the parent screen (Home)'s shortcuts</li>
             </ul>
             <h6>Message box commands</h6>
             <p class="mb-1">Prefix the input with one of the following to force that mode for <b>this send only</b>, regardless of the mode dropdown above.</p>
@@ -1050,9 +1050,9 @@ document.addEventListener('keydown', (ev: KeyboardEvent) => {
         ToggleCatSidebar();
         return;
     }
-    if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F4' || ev.key === 'F7') {
+    if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F7') {
         ev.preventDefault();
-        if (window.top) CIframeMsg.Send(window.top, 'home-hotkey', { key: ev.key });
+        if (window.top) CIframeMsg.Send(window.top, 'home-hotkey', { key: ev.key, shift: ev.shiftKey });
         return;
     }
 });

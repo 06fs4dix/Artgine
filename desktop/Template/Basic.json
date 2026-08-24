@@ -10,8 +10,7 @@
 		"mXR": false,
 		"mDeveloper": true,
 		"mIAuto": true,
-		"mCanvas":"",
-		"mWASM": false
+		"mCanvas":""
 
 	},
 	"pluging": [
@@ -23,6 +22,7 @@
 		"popper": true,
 		"bootstrap": true,
 		"excel": false,
+		"pdfjs": false,
 		"lzstring": false,
 		"firebase": false,
 		"nosleep": false,

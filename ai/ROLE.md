@@ -61,12 +61,6 @@ node ai/tool/c_cpp_check.js [web|window|linux|mac] 파일A.cpp 파일B.cpp
 ## 프로젝트 명명 규칙 (Project Naming Convention)
 ** ai/CodeNamingGuide.md ** 먼저 읽기 필수. 
 
-## Serena MCP 사용 규칙 (Serena MCP Usage Rules)
-
-- 심볼 위치 찾기, 참조 추적, 구현 탐색  **Serena** 
-- 심볼 위치 찾기를 제외한건 **네이티브** 기능을 사용한다 
-
-
 
 ## 아티젠 엔진 사용 가이드 (Artgine Engine Usage Guide)
 수학/변환/충돌/렌더링/리소스 로딩/UI 등 로직 구현 전, **`ai/EngineUsageGuide.md`**에서 작업 패턴에 맞는 탐색 위치/키워드를 확인하고 먼저 코드를 검색해본다. 동일 기능이 있으면 직접 구현 금지.

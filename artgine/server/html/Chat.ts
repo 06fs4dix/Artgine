@@ -29,16 +29,13 @@ interface IHistory { meta: ISessionMeta; messages: IMessage[]; }
 // populated from GET /AIInfo/setting (ai/settings.json을 그대로 받아 models 필드만 사용)
 // cmd는 셸 실행 의사 프로바이더라 모델 개념이 없다 — 항상 빈 목록이고 모델 셀렉트는 비활성화된다.
 let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [], opencode: [], grok: [], cmd: [] };
-const LS_LAST_SID = 'ai.lastSessionId';
 const LS_PROVIDER = 'ai.provider';
 const LS_MODEL    = 'ai.model';
-// LS_SIDEBAR removed (sidebar moved to Home.ts)
 
 import { CPath } from "../../basic/CPath.js";
 import { CHash } from "../../basic/CHash.js";
 import { getAuthToken, setAuthToken, removeAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
 import { CLan } from "../../basic/CLan.js";
-import { CIframeMsg } from "./CIframeMsg.js";
 import { CStorage } from "../../system/CStorage.js";
 import { marked } from "../../external/esnext/md/marked.esm.js";
 
@@ -77,20 +74,11 @@ function authedFetch(input: string, init?: RequestInit): Promise<Response> {
 function clearAuth() {
     authToken = '';
     removeAuthToken(CPath.WebRootUrl());
-    showLoginOverlay('Session expired. Please sign in again.');
-}
-function showLoginOverlay(msg: string = '') {
-    hideLoginOverlay();
-    showComposerLogin(msg);
-}
-function hideLoginOverlay() {
-    const overlay = document.getElementById('loginOverlay');
-    if (overlay) { overlay.classList.add('d-none'); overlay.style.setProperty('display', 'none', 'important'); }
+    showComposerLogin('Session expired. Please sign in again.');
 }
 
 // ---- DOM ----
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-// sessionList and newChatBtn removed (moved to Home.ts)
 const elProviderSel  = $<HTMLSelectElement>('providerSel');
 const elModelSel     = $<HTMLSelectElement>('modelSel');
 let sessionMcp = true;
@@ -107,7 +95,6 @@ const elFileBtn      = $<HTMLButtonElement>('fileBtn');
 const elFileInput    = $<HTMLInputElement>('fileInput');
 const elEmpty        = $<HTMLDivElement>('emptyState');
 const elInitWarning  = $<HTMLDivElement>('initWarning');
-// sidebar/sidebarToggle removed (moved to Home.ts)
 const elComposerRow  = elInput.closest('.d-flex') as HTMLDivElement | null;
 let elComposerLogin: HTMLDivElement | null = null;
 
@@ -132,6 +119,7 @@ function showComposerLogin(msg: string = '') {
             if (e.key === 'Enter') tryLogin(pwEl.value);
         });
     }
+    elComposerLogin.classList.remove('d-none');
     const msgEl = document.getElementById('composerLoginMsg');
     const pwEl = document.getElementById('composerLoginPw') as HTMLInputElement | null;
     if (msgEl) msgEl.textContent = msg;
@@ -150,7 +138,6 @@ function hideComposerLogin() {
 function redirectToAuthedChat() {
     const url = new URL(location.href);
     if (!url.searchParams.get('session')) url.searchParams.set('session', uuid());
-    url.searchParams.delete('share');
     location.replace(url.toString());
 }
 
@@ -169,8 +156,6 @@ const _urlParams: URLSearchParams | null = (() => {
     try { return new URL(location.href).searchParams; } catch { return null; }
 })();
 const paramSid: string | null = _urlParams?.get('session') ?? null;
-// 공유 링크(?share=1): /AIChat/share 의 공개(무인증) 히스토리만 읽기, 전송 불가(읽기전용).
-let isShareMode: boolean = _urlParams?.get('share') === '1';
 
 function shortUA(ua: string): string {
     // pick OS + main engine in a compact form
@@ -199,22 +184,6 @@ function buildUserMeta(m: IMessage): string {
     let s = parts.join(' · ');
     if (s.length > MAX_USER_META_LEN) s = s.slice(0, MAX_USER_META_LEN - 1) + '…';
     return s;
-}
-function formatRelative(ts?: number): string {
-    if (!ts) return '';
-    const diff = Date.now() - ts;
-    if (diff < 0 || isNaN(diff)) return '';
-    const s = Math.floor(diff / 1000);
-    if (s < 60) return `${s}s`;
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}m`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h`;
-    const d = Math.floor(h / 24);
-    if (d < 30) return `${d}d`;
-    const mo = Math.floor(d / 30);
-    if (mo < 12) return `${mo}mo`;
-    return `${Math.floor(mo / 12)}y`;
 }
 function formatTime(ts?: number): string {
     if (!ts) return '';
@@ -245,10 +214,8 @@ function isImagePath(p: string): boolean {
 }
 function attachmentUrl(sid: string, relPath: string, bust?: number): string {
     const t = bust ?? Date.now();
-    // share 모드는 무인증 공개 엔드포인트를 써야 한다(workspace는 로그인 필요).
-    const ep = isShareMode ? 'AIChat/share/file' : 'AIChat/workspace';
     // 같은 출처 요청이라 세션 쿠키가 자동 전송된다(토큰 불필요).
-    return `${CPath.WebRootUrl()}${ep}?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
+    return `${CPath.WebRootUrl()}AIChat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
 }
 
 // ---- provider/model dropdowns ----
@@ -319,15 +286,6 @@ async function fetchHistory(sid: string): Promise<void> {
     }
     renderMessages();
 }
-
-// ---- session list ----
-async function refreshSessions() {
-    // session list is now managed by Home.ts — notify parent if in iframe
-    if (window.parent !== window) {
-        CIframeMsg.Send(window.parent, 'ai-sessions-changed');
-    }
-}
-
 
 // ---- messages ----
 function renderMessages() {
@@ -503,7 +461,6 @@ function handleWsMessage(ev: MessageEvent) {
     } else if (msg.type === 'start') {
         // AI 응답 시작 — 스트리밍 placeholder 생성 (이 시점에 세션이 디스크에 저장됨)
         elInitWarning.style.display = 'none';
-        refreshSessions();
         const placeholder: IMessage = { role: 'assistant', content: '', timestamp: Date.now(), provider: elProviderSel.value as Provider, model: elModelSel.value };
         streamingEl = appendMessage(placeholder);
         streamingEl.querySelector('.msg-bubble')?.classList.add('msg-streaming');
@@ -550,7 +507,6 @@ function handleWsMessage(ev: MessageEvent) {
         if (msg.code !== 0 && msg.stderr) console.warn('[stderr]', msg.stderr);
         isSending = false;
         elSendBtn.disabled = false;
-        refreshSessions();
     } else if (msg.type === 'busy') {
         isSending = false;
         elSendBtn.disabled = false;
@@ -604,19 +560,14 @@ function connectWs() {
 
 // ---- login handler ----
 async function tryLogin(pw: string) {
-    const msgEl = document.getElementById('composerLoginMsg') || document.getElementById('loginMsg');
+    const msgEl = document.getElementById('composerLoginMsg');
     try {
         const j = await authLogin(CPath.WebRootUrl(), CHash.SHA256('artgine_' + pw),
             () => { if (msgEl) msgEl.textContent = 'Waiting for messenger approval (up to 5 minutes)...'; });
         if (j.ok && j.token) {
             authToken = j.token;
             setAuthToken(CPath.WebRootUrl(), authToken);
-            hideLoginOverlay();
             hideComposerLogin();
-            if (isShareMode) {
-                isShareMode = false;
-                document.body.classList.remove('share-mode');
-            }
             if (isStandaloneChat()) {
                 redirectToAuthedChat();
             } else {
@@ -629,22 +580,13 @@ async function tryLogin(pw: string) {
         if (msgEl) msgEl.textContent = 'Network error: ' + e.message;
     }
 }
-function installLoginHandlers() {
-    const btn = document.getElementById('loginBtn');
-    const pw = document.getElementById('loginPw') as HTMLInputElement | null;
-    btn?.addEventListener('click', () => { if (pw) tryLogin(pw.value); });
-    pw?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') tryLogin(pw.value);
-    });
-}
 
 // ---- init ----
 async function bootChat() {
-    // 부모(Home.ts)가 항상 ?session=<uuid>로 전달. 없으면 직접 접근으로 간주해 생성.
+    // 부모(Control)가 항상 ?session=<uuid>로 전달. 없으면 직접 접근으로 간주해 생성.
     currentSid = paramSid || uuid();
-    localStorage.setItem(LS_LAST_SID, currentSid);
 
-    // URL 파라미터에서 config 읽기 (Home이 iframe src에 포함해서 전달)
+    // URL 파라미터에서 config 읽기 (Control이 iframe src에 포함해서 전달)
     const paramMcp = _urlParams?.get('mcp');
     if (paramMcp !== null && paramMcp !== undefined) sessionMcp = paramMcp !== '0';
     sessionWorkingDir = _urlParams?.get('workingDir') ?? null;
@@ -663,39 +605,16 @@ async function bootChat() {
     connectWs(); // WS 연결 (채팅 스트리밍용)
 }
 
-// ---- share mode (read-only, no auth) ----
-async function initShareMode() {
-    document.body.classList.add('share-mode');
-    currentSid = paramSid;
-    if (!currentSid) { showComposerLogin('Invalid share link'); return; }
-    try {
-        const r = await fetch(`${CPath.WebRootUrl()}AIChat/share?id=${encodeURIComponent(currentSid)}`);
-        const j = await r.json();
-        currentHistory = (j.ok && j.history) ? j.history as IHistory : null;
-    } catch {
-        currentHistory = null;
-    }
-    renderMessages();
-    // 입력란 자리에 패스워드 입력만 노출 (로그인하면 일반 채팅으로 전환됨)
-    showComposerLogin();
-}
-
 async function init() {
-    installLoginHandlers();
-    if (isShareMode) {
-        await initShareMode();
-        return;
-    }
     // verify cached token (or session cookie); if invalid, ask again
     const valid = await checkAuthed(CPath.WebRootUrl());
     if (valid) {
         authToken = getAuthToken(CPath.WebRootUrl());
-        hideLoginOverlay();
         hideComposerLogin();
         bootChat();
     } else {
         authToken = '';
-        showLoginOverlay();
+        showComposerLogin();
     }
 }
 // 모바일 키보드 대응: visual viewport 크기가 바뀔 때 body 높이를 실시간 맞춤

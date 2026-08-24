@@ -1,19 +1,26 @@
 import { ligDir } from "./Light";
 import { SDF } from "./SDF";
-import { abs, clamp, CMat, CMat3, CVec2, CVec3, CVec4, fract, max, min, mix, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, ShadowPosToUv, 
-    sin, sqrt, TransposeMat3, V2AddV2, V2DivFloat, V2Dot, V2MulFloat, V2MulV2, V3Abs, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4MulMatCoordi } from "./Shader";
+import { abs, acos, clamp, CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, fract, GridSamplingDisk, max, min, mix, mod, round, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, screenPos, ShadowPosToUv, 
+    sin, sqrt, step, tan, TransposeMat3, TransposeMat4, V2AddV2, V2DivFloat, V2Dot, V2Fract, V2MulFloat, V2MulV2, V3Abs, V3AddV3, V3Clamp, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4Dot, V4MulMatCoordi } from "./Shader";
 
-export var shadowNearCasV0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowNearCasV0);
-export var shadowFarCasP0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowFarCasP0);
-export var shadowTopCasV1: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowTopCasV1);
-export var shadowBottomCasP1: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowBottomCasP1);
-export var shadowLeftCasV2: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowLeftCasV2);
-export var shadowRightCasP2: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowRightCasP2);
-export var shadowPointProj: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowPointProj);
+export var shadowCas0VPMatWithZRow: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowCas0VPWithZRow);
+export var shadowCas1VPMatWithZRow: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowCas1VPWithZRow);
+export var shadowCas2VPMatWithZRow: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowCas2VPWithZRow);
+export var shadowCas3VPMatWithZRow: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowCas3VPWithZRow);
+
+export var shadowNear:   Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowNear);
+export var shadowFar:    Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowFar);
+export var shadowTop:    Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowTop);
+export var shadowBottom: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowBottom);
+export var shadowLeft:   Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowLeft);
+export var shadowRight:  Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowRight);
 
 //shadow uniform
 export var shadowOn : number = -1.0;
 export var shadowReadList: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4ShadowReadList);
+export var shadowInfoList: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4ShadowInfoList);
+export var shadowCascadeDataList: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4ShadowCascadeDataList);
+export var shadowDivideList: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4ShadowDivideList);
 
 //uniform
 export var texture16f : number =0;
@@ -25,12 +32,13 @@ export var shadowWrite : CVec3 = new CVec3(0,0,0);
 //최대 쉐도우 색상
 export var shadowRate : number = 0.3;
 //오차범위 : 이걸 높이면 더 많은 오차를 그림자 영역으로 만듬
-export var bias : number = 5.0;
+export var bias : number = 4.0;
 //노말값에서 보정받을 오차범위(빛에 방향으로 인해 오차가 생기는걸 보정받음)
-export var normalBias : number = 1.0;
+export var normalBias : number = 0.6;
 //percentage-closer filtering 
 //경계면을 샘플링 해서 다듬는다. 다듬는 횟수
 export var PCF : number = 2.0;
+export var PCFStep : number = 1.0;
 export var jitter : number = 0.0;
 
 // 2D 해시 → 2D 난수 (0~1) 생성
@@ -51,130 +59,116 @@ function randomJitter(fragCoord : CVec2,_strength : number) : CVec2
     var h : CVec2 = Hash22(fragCoord);
     return new CVec2((h.x - 0.5)*_strength, (h.y - 0.5)*_strength);
 }
-function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasConst : number, _biasSlope : number, _world : CVec4) : number
+function SampleShadowTexel(_uv: CVec2, _layer: number, _depth: number): number
 {
-    var f16Bias : number = SDF.FloatTex16 > 0 ? abs(_uvZ0.z) * (2.0 / 1024.0) : 0.0;
+    var sp0 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, new CVec3(_uv, _layer));
+    return (sp0.w == 0.0) ? 0.0 : step(_depth, sp0.z);
+}
+function ApplyPCF(_uvZ : CVec3, _texZ : number, _texScale : CVec2, _bias : number, _world : CVec4) : number
+{
+    var f16Bias : number = texture16f > 0.5 ? abs(_uvZ.z) * (1.0 / 1024.0) : 0.0;
+    var depth : number = _uvZ.z + _bias + f16Bias;
+    if(PCF < 0.5) return 1.0 - SampleShadowTexel(_uvZ.xy, _texZ, depth);
+    
+    var sVal : number = 0.0;
+    var jitterVal : CVec2 = jitter > 0.01 ? randomJitter(new CVec2(_world.x, _world.y), jitter) : new CVec2(0.0, 0.0);
+    var step : number = max(1.0, round(PCFStep));
+    var offset : CVec2 = new CVec2(
+        mod(screenPos.x, step),
+        mod(screenPos.y, step)
+    );
 
-    // 평지 공통 바이어스(캐스케이드 동일) + 경사 의존 바이어스(텍셀 크기 배율 1/4/16).
-    // 평지(경사0)에서는 _biasSlope=0 이라 세 캐스케이드 바이어스가 같아져 그림자 위치가 정렬된다.
-    var bias0 : number = _biasConst + _biasSlope * 1.0;
-    var bias1 : number = _biasConst + _biasSlope * 4.0;
-    var bias2 : number = _biasConst + _biasSlope * 16.0;
+    var count : number = 0.0;
+    var x : number = -PCF * 0.5;
+    for(; x <= PCF * 0.5; x += step)
+    {
+        var y : number = -PCF * 0.5;
+        for(; y <= PCF * 0.5; y += step)
+        {
+            sVal += SampleShadowTexel(V2AddV2(_uvZ.xy, V2MulV2(new CVec2(x + jitterVal.x + offset.x, y + jitterVal.y + offset.y), _texScale)), _texZ, depth);
+            count += 1.0;
+        }
+    }
+    return 1.0 - sVal / count;
+}
+function ProcessCascadeLevel(_casMatOff : Sam2DArrMat, _shadowIndex : number, _world : CVec4, _normal : CVec3, _normalBiasTileScale : number) : CVec3
+{
+    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, _normalBiasTileScale));
+    var shadowViewZRow : CVec4 = Sam2DArrToV4(_casMatOff,_shadowIndex*4.0+3.0);
+    var shadowVPMat : CMat = TransposeMat4(new CMat(
+        Sam2DArrToV4(_casMatOff,_shadowIndex*4.0+0.0),
+        Sam2DArrToV4(_casMatOff,_shadowIndex*4.0+1.0),
+        Sam2DArrToV4(_casMatOff,_shadowIndex*4.0+2.0),
+        new CVec4(0.0, 0.0, 0.0, 1.0)
+    ));
+    var shadowPos : CVec4 = V4MulMatCoordi(_world, shadowVPMat);
+    return new CVec3(ShadowPosToUv(shadowPos).xy, V4Dot(shadowViewZRow, _world));
+}
+function CalcShadowDirectional(_index : number, _world : CVec4, _normal : CVec3, _ligDir : CVec4, _viewPos: CVec3, _bias: number) : number
+{
+    var shadowInfo: CVec4 = Sam2DArrToV4(shadowInfoList, _index);
+    var shadowRead: CVec4 = Sam2DArrToV4(shadowReadList, _index);
+    var shadowCascadeData: CVec4 = Sam2DArrToV4(shadowCascadeDataList, _index);
+    var shadowDivide: CVec4 = Sam2DArrToV4(shadowDivideList, _index);
+
+    var linearDepth : number = -_viewPos.z / shadowInfo.z;
+    if(linearDepth > 1.0) return 1.0;   // 그림자 범위 바깥임
 
     var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
     var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
-    // ★ cascade 선택은 중심 UV로만 판정 (PCF 횟수 무관)
-    var cas0Valid : number = (_read.y > -0.5 && _uvZ0.x > 0.0 && _uvZ0.y > 0.0 && _uvZ0.x < 1.0 && _uvZ0.y < 1.0) ? 1.0 : 0.0;
-    var cas1Valid : number = (_read.z > -0.5 && _uvZ1.x > 0.0 && _uvZ1.y > 0.0 && _uvZ1.x < 1.0 && _uvZ1.y < 1.0) ? 1.0 : 0.0;
-    var cas2Valid : number = (_read.w > -0.5 && _uvZ2.x > 0.0 && _uvZ2.y > 0.0 && _uvZ2.x < 1.0 && _uvZ2.y < 1.0) ? 1.0 : 0.0;
+    // 루핑 위해서 생성
+    var shadowCasMat : CMat = new CMat(0);
+    shadowCasMat[0].xyz = shadowCas0VPMatWithZRow;
+    shadowCasMat[1].xyz = shadowCas1VPMatWithZRow;
+    shadowCasMat[2].xyz = shadowCas2VPMatWithZRow;
+    shadowCasMat[3].xyz = shadowCas3VPMatWithZRow;
+    var lastCascadeIndex : number = shadowRead[3] > -0.5 ? 3.0 : (shadowRead[2] > -0.5 ? 2.0 : (shadowRead[1] > -0.5 ? 1.0 : 0.0));
 
-    // 캐스케이드 전이 밴드 (각 캐스케이드 UV 기준, 독립 튜너블).
-    // 박스 최소거리(min) 대신 중심으로부터의 방사거리를 써서 사각 경계(각짐)를 완화한다.
-    // cas0 는 박스가 작아(2w) blendEdge0 가 0.5 에 닿으면 순수 영역이 사라지므로 0.4 로 둔다.
-    // cas1↔cas2 는 해상도 차가 커 더 넓게 섞어야 자연스러워서 따로 키운다.
-    var blendEdge0 : number = 0.4;  // cas0↔cas1 (cas0 UV) : world 0.8w
-    var blendEdge1 : number = 0.2;  // cas1↔cas2 (cas1 UV) : world 1.6w - 차이 크면 더 키울 것
-
-    var cen0 : CVec2 = new CVec2(_uvZ0.x - 0.5, _uvZ0.y - 0.5);
-    var r0 : number = sqrt(V2Dot(cen0, cen0));   // 0(중심) ~ 0.707(모서리)
-    var blend0 : number = (cas0Valid > 0.5) ? clamp((0.5 - r0) / blendEdge0, 0.0, 1.0) : 0.0;
-
-    var cen1 : CVec2 = new CVec2(_uvZ1.x - 0.5, _uvZ1.y - 0.5);
-    var r1 : number = sqrt(V2Dot(cen1, cen1));
-    var blend1 : number = (cas1Valid > 0.5) ? clamp((0.5 - r1) / blendEdge1, 0.0, 1.0) : 0.0;
-
-    var sVal0 : number = 0.0;
-    var sVal1 : number = 0.0;
-    var sVal2 : number = 0.0;
-
-    var x : number = -PCF;
-    for(; x <= PCF + 0.5; x += 1.0)
+    // ProcessCascadeLevel도 샘플링 코스트 있어서 루핑으로 최대한 생략함
+    var shadowSum : number = 0.0;
+    var weightSum : number = 0.0;
+    var nearDepth : number = 0.0;
+    for(let i = 0; i < 4; i++)
     {
-        var y : number = -PCF;
-        for(; y <= PCF + 0.5; y += 1.0)
+        if(shadowRead[i] < -0.5) continue;
+
+        var farDepth : number = nearDepth + shadowDivide[i];
+        
+        var centerDepth : number = (nearDepth + farDepth) * 0.5;
+        var closestEdge : number = linearDepth < centerDepth ? nearDepth : farDepth;
+        var margin : number = shadowInfo.w * closestEdge * closestEdge;
+        var csmx : number = nearDepth - margin * 0.5;
+        var csmy : number = farDepth + margin * 0.5;
+
+        // 현재 이 부분에서 한 픽셀에 최대 PCF가 두 번 적용되는데 디더링 또는 더 가까운 캐스케이드만 PCF를 적용하는 방식으로 최대 한번 적용되도록 수정할 수 있음
+        if(csmx <= linearDepth && (linearDepth < csmy || i == FloatToInt(lastCascadeIndex)))
         {
-            var uv0N : CVec3 = new CVec3(_uvZ0.x + x * texScale.x, _uvZ0.y + y * texScale.y, _read.y);
-            var uv1N : CVec3 = new CVec3(_uvZ1.x + x * texScale.x, _uvZ1.y + y * texScale.y, _read.z);
-            var uv2N : CVec3 = new CVec3(_uvZ2.x + x * texScale.x, _uvZ2.y + y * texScale.y, _read.w);
+            var dist : number = min(linearDepth - csmx, csmy - linearDepth);
+            var ratio : number = clamp(dist / margin, 0.0, 1.0);
 
-            if(jitter > 0.01)
-            {
-                var jitterVal : CVec2 = V2MulV2(randomJitter(new CVec2(x + _world.x, y + _world.y), jitter), texScale);
-                uv0N.xy = V2AddV2(uv0N.xy, jitterVal);
-            }
+            // 가장 멀리 있는 cascade이고, cascade의 절반 이상임
+            var shouldFadeLastCascade : number = (i == FloatToInt(lastCascadeIndex) && linearDepth > centerDepth) ? 1.0 : 0.0;
+            // 가장 멀리 있는 cascade가 아니거나 가장 멀리 있지만 cascade의 절반 이하임
+            var shouldBlend : number = (i != FloatToInt(lastCascadeIndex) || (i == FloatToInt(lastCascadeIndex) && linearDepth < centerDepth)) ? 1.0 : 0.0;
+            var blendRatio : number = (shouldFadeLastCascade > 0.5 || shouldBlend > 0.5) ? ratio : 1.0;
 
-            // ★ 개별 샘플 범위 벗어나면 1.0(빛)으로 처리 — cascade 선택엔 영향 없음
-            if(cas0Valid > 0.5)
-            {
-                if(uv0N.x > 0.0 && uv0N.y > 0.0 && uv0N.x < 1.0 && uv0N.y < 1.0)
-                {
-                    var sp0 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv0N);
-                    sVal0 += (sp0.w == 0.0) ? 0.0 : ((_uvZ0.z + bias0 + f16Bias) >= sp0.z ? 0.0 : 1.0);
-                }
-                // else: 범위 밖 샘플은 0.0(빛) 기여 — sVal0 증가 없음
-            }
+            var uvZ : CVec3 = ProcessCascadeLevel(shadowCasMat[i].xyz, _index, _world, _normal, shadowCascadeData[i]);
+            var curShadow : number = ApplyPCF(uvZ, shadowRead[i], texScale, _bias, _world);
 
-            if(cas1Valid > 0.5)
-            {
-                if(uv1N.x > 0.0 && uv1N.y > 0.0 && uv1N.x < 1.0 && uv1N.y < 1.0)
-                {
-                    var sp1 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
-                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + bias1 + f16Bias) >= sp1.z ? 0.0 : 1.0);
-                }
-            }
-
-            if(cas2Valid > 0.5)
-            {
-                if(uv2N.x > 0.0 && uv2N.y > 0.0 && uv2N.x < 1.0 && uv2N.y < 1.0)
-                {
-                    var sp2 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv2N);
-                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + bias2 + f16Bias) >= sp2.z ? 0.0 : 1.0);
-                }
-            }
+            shadowSum += curShadow * blendRatio;
+            weightSum += blendRatio;
         }
+
+        nearDepth = farDepth;
     }
 
-    var gridCount : number = (2.0 * PCF + 1.0) * (2.0 * PCF + 1.0);
-    var res0 : number = 1.0 - sVal0 / gridCount;
-    var res1 : number = 1.0 - sVal1 / gridCount;
-    var res2 : number = 1.0 - sVal2 / gridCount;
-
-
-    // 보수적 블렌딩: 미세 캐스케이드가 (occluder 가 박스 밖이라) 그림자를 잃는 경우
-    // 거친 캐스케이드의 그림자를 유지하도록 거친 쪽보다 밝아지지 않게 클램프(min).
-    // 미세 쪽이 더 어두우면(디테일 추가) 기존처럼 부드럽게 섞인다.
-    if(cas0Valid > 0.5 && cas1Valid > 0.5) return min(min(mix(res1, res0, blend0), res1), (cas2Valid > 0.5) ? res2 : 1.0);
-    if(cas0Valid > 0.5)                    return res0;
-    if(cas1Valid > 0.5 && cas2Valid > 0.5) return min(mix(res2, res1, blend1), res2);
-    if(cas1Valid > 0.5)                    return res1;
-    if(cas2Valid > 0.5)                    return res2;
-    return 1.0;
-}
-function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DArrMat, _projMatOff : Sam2DArrMat, _shadowIndex : number, _world : CVec4, _normal : CVec3, _normalBias : number) : CVec3
-{
-    if(_isActive < -0.5) return new CVec3(0.0, 0.0, 0.0);
-
-    var viewMat : CMat = Sam2DArrToMat(_viewMatOff, _shadowIndex);
-    var cascadeTexelSize : number = viewMat[0][3];
-    viewMat[0][3] = 0.0;
-
-    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, _normalBias * cascadeTexelSize));
-
-    var viewPos : CVec4 = V4MulMatCoordi(_world, viewMat);
-    var shadowPos : CVec4 = V4MulMatCoordi(viewPos, Sam2DArrToMat(_projMatOff, _shadowIndex));
-    return new CVec3(ShadowPosToUv(shadowPos).xy, viewPos.z);
-}
-function CalcShadowDirectional(_read : CVec4, _index : number, _world : CVec4, _normal : CVec3, _ligDir : CVec4, _bias: CVec3) : number
-{
-    var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, _index, _world, _normal, _bias.z);
-    var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, _index, _world, _normal, _bias.z);
-    var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, _index, _world, _normal, _bias.z);
-    return ApplyPCF(uvZ0, uvZ1, uvZ2, _read, _bias.x, _bias.y, _world);
+    return clamp(shadowSum + 1.0 - weightSum, 0.0, 1.0);    // fade
 }
 
 function CubeToUV(_cubeUVW : CVec3, _texelSize : CVec2, _nearTexOff : number) : CVec3
 {
+    _cubeUVW = V3Nor(_cubeUVW);
     var absDir : CVec3 = V3Abs(_cubeUVW);
 
     var scaleToCube : number = 1.0 / max(absDir.x, max(absDir.y, absDir.z));
@@ -199,82 +193,79 @@ function CubeToUV(_cubeUVW : CVec3, _texelSize : CVec2, _nearTexOff : number) : 
     _cubeUVW.z += _nearTexOff - SDF.eShadow.Near;
     return _cubeUVW;
 }
-function CalcShadowPoint(_read : CVec4, _index : number, _world : CVec4, _normal : CVec3, _ligDir : CVec4, _bias: CVec3) : number
+function CalcShadowPoint(_index : number, _world : CVec4, _normal : CVec3, _ligDir : CVec4, _camPos: CVec3, _info: CVec4, _bias: number) : number
 {
-    var shadowCamNear : number = _read.z;
-    var shadowCamFar : number = _read.w;
+    var shadowCascadeData: CVec4 = Sam2DArrToV4(shadowCascadeDataList, _index);
+    
+    var filterSize : number = shadowCascadeData.x * max(PCF + 1.0, 1.0);
+    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, filterSize));
 
     var ligToPos : CVec3 = V3SubV3(_world.xyz, _ligDir.xyz);
     var ligToPosLength : number = V3Len(ligToPos);
 
     var sVal : number = 1.0;
-    if(ligToPosLength <= shadowCamFar && ligToPosLength >= shadowCamNear)
+    if(ligToPosLength <= _info.w && ligToPosLength >= _info.z)
     {
-        var depth : number = (ligToPosLength - shadowCamNear) / (shadowCamFar - shadowCamNear);
-        var ligDir : CVec3 = V3Nor(ligToPos);
+        var depth : number = (ligToPosLength - _info.z) / (_info.w - _info.z);
 
         var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
         var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
-        var pcf: number = max(PCF + 1.0, 1.0);
-        var offset : number = 0.01;
+        var depthBias : number = _bias / 1024.0;    // viewPos => projPos로 바꾸기 위한 적절한 나누기
+
+        var viewDistance : number = V3Len(V3SubV3(_world.xyz, _camPos));
+        var diskRadius : number = (1.0 + (viewDistance - _info.z) / (_info.w - _info.z)) / 25.0 * 20.0;    // 0.04 - 0.08 * 20.0
+
+        var samples : number = clamp((PCF + 1.0) * (PCF + 1.0), 1.0, 20.0); // 샘플이 20개밖에 없음, 0번 샘플이 1,1,1
 
         sVal = 0.0;
-        var x: number = -offset;
-        for(; x < offset; x += offset / (pcf * 0.5)) {
-            var y: number = -offset;
-            for(; y < offset; y += offset / (pcf * 0.5)) {
-                var z: number = -offset;
-                for(; z < offset; z += offset / (pcf * 0.5)) {
-                    var uvw : CVec3 = CubeToUV(V3AddV3(ligDir, new CVec3(x, y, z)), texScale, _read.y);
-                    var sp : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uvw);
-                    sVal += (sp.w == 0.0) ? 1.0 : (depth >= sp.z ? 0.0 : 1.0);
-                }
-            }
+        var i : number = 0.0;
+        for(; i < samples; i++)
+        {
+            var uvw : CVec3 = CubeToUV(V3AddV3(ligToPos, V3MulFloat(GridSamplingDisk(i), diskRadius)), texScale, _info.y);
+            var sp : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uvw);
+            sVal += (sp.w == 0.0) ? 1.0 : ((depth - depthBias) >= sp.z ? 0.0 : 1.0);
         }
-        sVal /= (PCF + 1.0) * (PCF + 1.0);
-        
+        sVal /= samples;
     }
     return sVal;
 }
 
-export function CalcShadow(_shadowIndex: number, _normal: CVec3, _world: CVec4): number
+export function CalcShadow(_index: number, _normal: CVec3, _world: CVec4, _camPos: CVec3, _viewPos: CVec3): number
 {
     // shadowRead
-    var shadowRead: CVec4 = Sam2DArrToV4(shadowReadList, _shadowIndex);
-
+    var shadowInfo: CVec4 = Sam2DArrToV4(shadowInfoList, _index);
+    
     // light 정보
-    var lDir: CVec4 = Sam2DArrToV4(ligDir, shadowRead.x);
+    var lDir: CVec4 = Sam2DArrToV4(ligDir, shadowInfo.x);
     var isPointLight: number = lDir.w>1.1 ? 1.0 : 0.0;
 
-    var NdotL : number = max(V3Dot(_normal, V3Nor(lDir.xyz)), 0.05);
-    var tanTheta : number = sqrt(1.0 - NdotL * NdotL) / NdotL;
+    var NdotL : number = clamp(V3Dot(_normal, V3Nor(lDir.xyz)), 0.001, 1.0);
+    var tanTheta : number = tan(acos(NdotL));
 
     // 노말 바이어스 계산
-    var normalScale : number = normalBias * (1.0 + clamp(tanTheta, 0.0, 4.0));
+    var normalScale : number = normalBias * min(tanTheta, 5.0);
+    _normal = V3MulFloat(_normal, normalScale);
 
     // bias 계산
-    var biasConst : number = bias;                                   // 캐스케이드 공통
-    var biasSlope : number = bias * clamp(tanTheta * 0.5, 0.0, 2.0); // 텍셀 배율(1/4/16) 적용 대상
-
-    var biasAll: CVec3 = new CVec3(biasConst, biasSlope, normalScale);
+    var biasSlope : number = bias * min(tanTheta, 4.0);
     
     var sVal: number;
-    if(isPointLight > 0.5) sVal = CalcShadowPoint(shadowRead, _shadowIndex, _world, _normal, lDir, biasAll);
-    else sVal = CalcShadowDirectional(shadowRead, _shadowIndex, _world, _normal, lDir, biasAll);
+    if(isPointLight > 0.5) sVal = CalcShadowPoint(_index, _world, _normal, lDir, _camPos, shadowInfo, biasSlope);
+    else sVal = CalcShadowDirectional(_index, _world, _normal, lDir, _viewPos, biasSlope);
     return mix(shadowRate, 1.0, sVal);
 }
 
 export function CalcParallaxShadow(_shadowIndex: number, _world: CVec4, _uv: CVec2, _texOff: CVec3, _heightScale: number, _tan: CVec3, _bi: CVec3, _nor: CVec3): number
 {
     // shadowRead
-    var shadowRead: CVec4 = Sam2DArrToV4(shadowReadList, _shadowIndex);
+    var shadowInfo: CVec4 = Sam2DArrToV4(shadowInfoList, _shadowIndex);
 
     // light 정보
-    var lDir: CVec4 = Sam2DArrToV4(ligDir, shadowRead.x);
+    var lDir: CVec4 = Sam2DArrToV4(ligDir, shadowInfo.x);
     var isPointLight: number = lDir.w>1.1 ? 1.0 : 0.0;
     if(isPointLight > 0.5) {
-        var outRadius : number = shadowRead.w;
+        var outRadius : number = shadowInfo.w;
         lDir.xyz = V3SubV3(lDir.xyz, _world.xyz);
         var dist : number = V3Len(lDir.xyz);
         if(dist > outRadius) return shadowRate;

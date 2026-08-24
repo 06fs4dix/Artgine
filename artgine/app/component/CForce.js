@@ -1,1 +1,78 @@
-import{CVec3 as t}from"../../geometry/CVec3.js";import{CMath as i}from"../../geometry/CMath.js";import{CCurve as e}from"../../util/CCurve.js";import{CObject as m}from"../../basic/CObject.js";export class CForce extends m{mKey;mCurve=new e;mTime=0;mDelay=4294967295;mDMulVBegin;mDMulVEnd;mDirection=new t;mVelocity=0;mForce=new t;mRemove=!1;constructor(e="",m=new t,s=0){super(),this.mKey=e+"",this.mDMulVBegin=i.V3MulFloat(m,s),this.mDMulVEnd=null,this.mDirection.Import(m),this.mVelocity=s}IsRemove(){return!!(this.mTime>this.mDelay&&this.mRemove)}SetDirVel(t,e,m=null,s=0){"number"==typeof t?(this.mDMulVBegin.mF32A[0]=t*s,this.mDMulVBegin.mF32A[1]=e*s,this.mDMulVBegin.mF32A[2]=m*s):(this.mDMulVBegin=i.V3MulFloat(t,e),this.mDirection=t,this.mVelocity=e,this.mDMulVEnd=null==m?null:i.V3MulFloat(m,s))}SetDelay(t){this.mDelay=t,this.mTime=0}SetCurve(t){this.mCurve=t}SetRemove(t){this.mRemove=t}Cac(t){var e=t.FixedTime();if(this.mTime+=t.FixedTime(),null==this.mDMulVEnd)return i.V3MulFloat(this.mDirection,e*this.mVelocity,this.mForce),this.mForce;var m=0;if(0==this.mDelay)return this.mDirection.Zero(),this.mVelocity=0,this.mDirection;this.mTime>this.mDelay?m=1:this.mDelay<4294967295&&(m=this.mTime/this.mDelay);var s=this.mCurve.GetCurve(m);return this.mForce.mF32A[0]=i.FloatInterpolate(this.mDMulVBegin.mF32A[0],this.mDMulVEnd.mF32A[0],s),this.mForce.mF32A[1]=i.FloatInterpolate(this.mDMulVBegin.mF32A[1],this.mDMulVEnd.mF32A[1],s),this.mForce.mF32A[2]=i.FloatInterpolate(this.mDMulVBegin.mF32A[2],this.mDMulVEnd.mF32A[2],s),this.mVelocity=i.V3Len(this.mForce),0==this.mForce.IsZero()&&(this.mDirection.mF32A[0]=this.mForce.mF32A[0]/this.mVelocity,this.mDirection.mF32A[1]=this.mForce.mF32A[1]/this.mVelocity,this.mDirection.mF32A[2]=this.mForce.mF32A[2]/this.mVelocity),i.V3MulFloat(this.mForce,e,this.mForce),this.mForce}}
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CCurve } from "../../util/CCurve.js";
+import { CObject } from "../../basic/CObject.js";
+export class CForce extends CObject {
+    mKey;
+    mCurve = new CCurve();
+    mTime = 0;
+    mDelay = 0xffffffff;
+    mDMulVBegin;
+    mDMulVEnd;
+    mDirection = new CVec3();
+    mVelocity = 0;
+    mForce = new CVec3();
+    mRemove = false;
+    constructor(_key = "", _dir = new CVec3(), _velocity = 0) {
+        super();
+        this.mKey = _key + "";
+        this.mDMulVBegin = CMath.V3MulFloat(_dir, _velocity);
+        this.mDMulVEnd = null;
+        this.mDirection.Import(_dir);
+        this.mVelocity = _velocity;
+    }
+    IsRemove() {
+        if (this.mTime > this.mDelay && this.mRemove)
+            return true;
+        return false;
+    }
+    SetDirVel(_DirBegin, _VelBegin, _DirEnd = null, _VelEnd = 0) {
+        if (typeof _DirBegin == "number") {
+            this.mDMulVBegin.mF32A[0] = _DirBegin * _VelEnd;
+            this.mDMulVBegin.mF32A[1] = _VelBegin * _VelEnd;
+            this.mDMulVBegin.mF32A[2] = _DirEnd * _VelEnd;
+        }
+        else {
+            this.mDMulVBegin = CMath.V3MulFloat(_DirBegin, _VelBegin);
+            this.mDirection = _DirBegin;
+            this.mVelocity = _VelBegin;
+            if (_DirEnd == null)
+                this.mDMulVEnd = null;
+            else
+                this.mDMulVEnd = CMath.V3MulFloat(_DirEnd, _VelEnd);
+        }
+    }
+    SetDelay(_delay) { this.mDelay = _delay; this.mTime = 0; }
+    SetCurve(_curve) { this.mCurve = _curve; }
+    SetRemove(_enable) { this.mRemove = _enable; }
+    Cac(_update) {
+        var dtime = _update.FixedTime();
+        this.mTime += _update.FixedTime();
+        if (this.mDMulVEnd == null) {
+            CMath.V3MulFloat(this.mDirection, dtime * this.mVelocity, this.mForce);
+            return this.mForce;
+        }
+        var t = 0;
+        if (this.mDelay == 0) {
+            this.mDirection.Zero();
+            this.mVelocity = 0;
+            return this.mDirection;
+        }
+        if (this.mTime > this.mDelay)
+            t = 1;
+        else if (this.mDelay < 0xffffffff)
+            t = this.mTime / this.mDelay;
+        var v = this.mCurve.GetCurve(t);
+        this.mForce.mF32A[0] = CMath.FloatInterpolate(this.mDMulVBegin.mF32A[0], this.mDMulVEnd.mF32A[0], v);
+        this.mForce.mF32A[1] = CMath.FloatInterpolate(this.mDMulVBegin.mF32A[1], this.mDMulVEnd.mF32A[1], v);
+        this.mForce.mF32A[2] = CMath.FloatInterpolate(this.mDMulVBegin.mF32A[2], this.mDMulVEnd.mF32A[2], v);
+        this.mVelocity = CMath.V3Len(this.mForce);
+        if (this.mForce.IsZero() == false) {
+            this.mDirection.mF32A[0] = this.mForce.mF32A[0] / this.mVelocity;
+            this.mDirection.mF32A[1] = this.mForce.mF32A[1] / this.mVelocity;
+            this.mDirection.mF32A[2] = this.mForce.mF32A[2] / this.mVelocity;
+        }
+        CMath.V3MulFloat(this.mForce, dtime, this.mForce);
+        return this.mForce;
+    }
+}

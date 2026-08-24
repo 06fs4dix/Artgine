@@ -403,6 +403,21 @@ export class CFile
 		}
 	}
 
+	/** 파일/폴더 이름 변경 또는 같은 볼륨 내 이동 (fs.rename) */
+	static async Rename(_oldPath: string, _newPath: string): Promise<boolean> {
+		if (!CUtil.IsNode()) return false;
+		await EnsureNodeModules();
+
+		try {
+			await gFsPromises.rename(_oldPath, _newPath);
+			this.DeleteCache(_oldPath);
+			return true;
+		} catch (err) {
+			console.warn("Rename Error:", err);
+			return false;
+		}
+	}
+
 	// static async FolderList(_path: string): Promise<Array<{ file: boolean; name: string; ext: string }>> 
 	// {
 	// 	if (!CUtil.IsNode()) return [];

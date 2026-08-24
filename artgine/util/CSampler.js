@@ -1,1 +1,124 @@
-import{CClass as t}from"../basic/CClass.js";import{CObject as e}from"../basic/CObject.js";import{CMath as m}from"../geometry/CMath.js";import{CVec1 as s}from"../geometry/CVec1.js";import{CVec3 as i}from"../geometry/CVec3.js";import{CTimer as r}from"../system/CTimer.js";export class CSampler extends e{mDefault=null;constructor(t=null){super(),this.mDefault=t}Execute(t=null){return this.mDefault}}export class CSampMinMax extends CSampler{mLinear;mMin;mMax;constructor(t,e,m=!1){super(),"number"==typeof t&&"number"==typeof e?(this.mMin=new s(t),this.mMax=new s(e)):(this.mMin=t,this.mMax=e),this.mLinear=m}Execute(e=null){null!=e&&"number"!=typeof e||(e=t.New(this.mMin));let i=Math.random();for(let t=0;t<e.mF32A.length;++t)0==this.mLinear&&(i=Math.random()),e.mF32A[t]=m.FloatInterpolate(this.mMin.mF32A[t],this.mMax.mF32A[t],i);return e instanceof s?e.mF32A[0]:e}}export class CSampList extends CSampler{mCount=0;mRate=new Array;mList=new Array;constructor(t,e=null){if(super(),null!=t){if(null==e)for(var m of(e=new Array,t))e.push(1);else if(t.length>e.length)for(var s=0;s<t.length-e.length;++s)e.push(1);this.mList=t,this.mRate=e;for(let t of this.mRate)this.mCount+=t}}Execute(){if(null==this.mList||0===this.mRate.length)return null;let t=Math.random(),e=0;for(let m=0;m<this.mRate.length;++m)if(e+=this.mRate[m]/this.mCount,t<=e)return this.mList[m];return this.mList[this.mList.length-1]}}export class CSampCountDown extends CSampler{mTimes=new Array;mList=new Array;mTimer=new r;mTime=0;constructor(t,e){super(),this.mTimes=t,this.mList=e}Execute(){if(null==this.mTimes||null==this.mList)return null;this.mTime+=this.mTimer.Delay();for(let t=0;t<this.mTimes.length;++t)if(this.mTime<=this.mTimes[t])return this.mList[t];return null}}export class CSampDir extends CSampler{mDir;mPitch;mRoll;constructor(t,e,m){super(),this.mDir=t,this.mPitch=e,this.mRoll=m}Execute(){var t=2*this.mPitch*Math.random()-this.mPitch,e=2*this.mRoll*Math.random()-this.mRoll,s=m.MatRotation(new i(t,e,0));return m.V3MulMatNormal(this.mDir,s)}}
+import { CClass } from "../basic/CClass.js";
+import { CObject } from "../basic/CObject.js";
+import { CMath } from "../geometry/CMath.js";
+import { CVec1 } from "../geometry/CVec1.js";
+import { CVec3 } from "../geometry/CVec3.js";
+import { CTimer } from "../system/CTimer.js";
+export class CSampler extends CObject {
+    mDefault = null;
+    constructor(_default = null) {
+        super();
+        this.mDefault = _default;
+    }
+    Execute(_target = null) {
+        return this.mDefault;
+    }
+}
+export class CSampMinMax extends CSampler {
+    mLinear;
+    mMin;
+    mMax;
+    constructor(_min, _max, _linear = false) {
+        super();
+        if (typeof _min == "number" && typeof _max == "number") {
+            this.mMin = new CVec1(_min);
+            this.mMax = new CVec1(_max);
+        }
+        else {
+            this.mMin = _min;
+            this.mMax = _max;
+        }
+        this.mLinear = _linear;
+    }
+    Execute(_target = null) {
+        if (_target == null || typeof _target == "number")
+            _target = CClass.New(this.mMin);
+        let ran = Math.random();
+        for (let i = 0; i < _target.mF32A.length; ++i) {
+            if (this.mLinear == false)
+                ran = Math.random();
+            _target.mF32A[i] = CMath.FloatInterpolate(this.mMin.mF32A[i], this.mMax.mF32A[i], ran);
+        }
+        if (_target instanceof CVec1)
+            return _target.mF32A[0];
+        return _target;
+    }
+}
+export class CSampList extends CSampler {
+    mCount = 0;
+    mRate = new Array();
+    mList = new Array();
+    constructor(_list, _rate = null) {
+        super();
+        if (_list == null)
+            return;
+        if (_rate == null) {
+            _rate = new Array();
+            for (var each0 of _list) {
+                _rate.push(1);
+            }
+        }
+        else if (_list.length > _rate.length) {
+            for (var i = 0; i < _list.length - _rate.length; ++i) {
+                _rate.push(1);
+            }
+        }
+        this.mList = _list;
+        this.mRate = _rate;
+        for (let each0 of this.mRate) {
+            this.mCount += each0;
+        }
+    }
+    Execute() {
+        if (this.mList == null || this.mRate.length === 0)
+            return null;
+        let ran = Math.random();
+        let accum = 0;
+        for (let i = 0; i < this.mRate.length; ++i) {
+            accum += this.mRate[i] / this.mCount;
+            if (ran <= accum) {
+                return this.mList[i];
+            }
+        }
+        return this.mList[this.mList.length - 1];
+    }
+}
+export class CSampCountDown extends CSampler {
+    mTimes = new Array();
+    mList = new Array();
+    mTimer = new CTimer();
+    mTime = 0;
+    constructor(_times, _list) {
+        super();
+        this.mTimes = _times;
+        this.mList = _list;
+    }
+    Execute() {
+        if (this.mTimes == null || this.mList == null)
+            return null;
+        this.mTime += this.mTimer.Delay();
+        for (let i = 0; i < this.mTimes.length; ++i) {
+            if (this.mTime <= this.mTimes[i]) {
+                return this.mList[i];
+            }
+        }
+        return null;
+    }
+}
+export class CSampDir extends CSampler {
+    mDir;
+    mPitch;
+    mRoll;
+    constructor(_dir, _pitch, _roll) {
+        super();
+        this.mDir = _dir;
+        this.mPitch = _pitch;
+        this.mRoll = _roll;
+    }
+    Execute() {
+        var pran = this.mPitch * 2 * Math.random() - this.mPitch;
+        var rran = this.mRoll * 2 * Math.random() - this.mRoll;
+        var mat = CMath.MatRotation(new CVec3(pran, rran, 0));
+        return CMath.V3MulMatNormal(this.mDir, mat);
+    }
+}

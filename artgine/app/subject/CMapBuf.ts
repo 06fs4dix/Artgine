@@ -12,7 +12,7 @@ export class CMapBuf extends CObject
     mBuffer : Uint32Array=null;
     mSize : number=0;
     mCount : CVec3=new CVec3(1,1,1);
-        Reset(_count : CVec3,_size : number,_default:number=0x000000FF)
+    Reset(_count : CVec3,_size : number,_default:number=0x000000FF)
     {
         this.mSize=_size;
         this.mCount=_count;
@@ -102,8 +102,17 @@ export class CMapBuf extends CObject
         }
     }
     override ExportCJSON(): CJSON {
-        let cjson = super.ExportCJSON();
-        cjson.Set("mBuffer", CUtil.ArrayToLZBase64(this.GetBuf().buffer));
+        const buf = this.GetBuf();
+        const packed = CUtil.ArrayToLZ4Base64(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+        const keep = this.mBuffer;
+        this.mBuffer = null;
+        let cjson: CJSON;
+        try {
+            cjson = super.ExportCJSON();
+        } finally {
+            this.mBuffer = keep;
+        }
+        cjson.Set("mBuffer", packed);
         return cjson;
     }
 
@@ -117,7 +126,15 @@ export class CMapBuf extends CObject
     GetBuf() : Uint32Array
     {
         if(typeof this.mBuffer === "string")
-            this.mBuffer = new Uint32Array(CUtil.LZBase64ToArray(this.mBuffer as any));
+        {
+            const encoded = this.mBuffer;
+            const byteLen = this.mCount.x * this.mCount.y * this.mCount.z * 4;
+            try {
+                this.mBuffer = new Uint32Array(CUtil.LZ4Base64ToArray(encoded, byteLen));
+            } catch {
+                this.mBuffer = new Uint32Array(CUtil.LZBase64ToArray(encoded));
+            }
+        }
         return this.mBuffer;
     }
     GetTexture(): CTexture

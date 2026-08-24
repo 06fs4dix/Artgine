@@ -15,16 +15,16 @@ import { CModalChat, CModalFrameView, CFileViewer, CLoadingBack } from "./CModal
 import {CAlert} from "../basic/CAlert.js"
 import {CInput} from "../system/CInput.js"
 import {CWebView} from "../system/CWebView.js"
-import {CRenderer,  CRendererGL } from "../render/CRenderer.js"
-import {CDevice,  CDeviceGL } from "../render/CDevice.js"
-import {CShaderInterpret,  CShaderInterpretGL } from "../render/CShaderInterpret.js"
+import {CRenderer,  CRendererGL, CRendererGPU } from "../render/CRenderer.js"
+import {CDevice,  CDeviceGL, CDeviceGPU } from "../render/CDevice.js"
+import {CShaderInterpret,  CShaderInterpretGL, CShaderInterpretGPU } from "../render/CShaderInterpret.js"
 import {CSoundMgr} from "../system/CSoundMgr.js"
 import {CChecker} from "./CChecker.js"
 import { CWebXR } from "./CWebXR.js"
 import { CLoader } from "./CLoader.js"
 import { CVec2 } from "../geometry/CVec2.js"
 import { CTexture } from "../render/CTexture.js"
-import { CBatchMgr, CBatchMgrGL } from "../render/CBatchMgr.js"
+import { CBatchMgr, CBatchMgrGL, CBatchMgrGPU } from "../render/CBatchMgr.js"
 import { CPalette } from "./CPalette.js"
 import { CPlugin } from "./CPlugin.js"
 import { CPath } from "../basic/CPath.js"
@@ -300,6 +300,11 @@ export class CFrame
 				document.body.style.userSelect='none';
 				document.body.style.margin='0px';
 				document.body.style.backgroundColor="black";
+
+				//이게 없으면 모바이에서 화면이 커짐
+				document.documentElement.classList.add("overflow-hidden");                           
+            	document.body.classList.add("overflow-hidden");  
+				//document.body.style.overflow="hidden"
 				canDummy.style.backgroundColor='black';
 				
 				
@@ -483,10 +488,26 @@ export class CFrame
 			//GPU안되면 무조건 webgl
 			if(navigator.gpu && this.mPreferences.mRenderer==CPreferences.eRenderer.GPU)
 			{
-
+				//WebGPU 는 어댑터/디바이스 요청이 비동기다. Init 은 아래 Load 단계에서 await 된다
+				this.mDevice=new CDeviceGPU(this.mPreferences,canDummy);
+				this.mRenderer=new CRendererGPU(this.mDevice,new CShaderInterpretGPU(),this.mRes,this.mPreferences);
+				this.mBatchMgr=new CBatchMgrGPU(this.mRenderer);
 			}
-			else if(this.mPreferences.mRenderer==CPreferences.eRenderer.GL)
+			//GPU 설정이어도 WebGPU 를 못 쓰면(보안 컨텍스트가 아니거나 미지원 브라우저)
+			//여기로 떨어져 GL 로 돈다. Null 만 렌더러 없이 둔다
+			else if(this.mPreferences.mRenderer!=CPreferences.eRenderer.Null)
 			{
+				//조용히 내려가면 "GPU 로 설정했는데 왜 GL 이지?" 를 알 방법이 없다. 이유를 알린다
+				if(this.mPreferences.mRenderer==CPreferences.eRenderer.GPU)
+				{
+					const msg="WebGPU 를 쓸 수 없어 GL 로 실행합니다. navigator.gpu="+
+						(navigator.gpu?"있음":"없음")+" / 보안컨텍스트="+
+						(window.isSecureContext?"예":"아니오(https 또는 localhost 필요)")+
+						" / 주소="+location.origin;
+					//CAlert.W 는 엔진 콘솔로만 나간다. 브라우저 콘솔에도 남겨야 눈에 띈다
+					CAlert.W(msg);
+					console.warn(msg);
+				}
 				this.mDevice=new CDeviceGL(this.mPreferences,canDummy);
 				//this.mDevice.BenchmarkScore();
 				
@@ -807,11 +828,9 @@ export class CFrame
 
 
 		if(this.mDevice)	await this.mDevice.Init();
+		//WebGPU 렌더러는 디바이스가 열린 뒤에야 더미 텍스처/샘플러를 만들 수 있다
+		if(this.mRenderer!=null && (this.mRenderer as any).InitGPU!=null)	(this.mRenderer as any).InitGPU();
 		
-		let path=CPath.WebRootArtgineUrl();
-		if(this.mPreferences.mGitHub)
-			path="https://06fs4dix.github.io/Artgine/";
-		await CWASM.Init(this.mPreferences.mWASM,path);
 		if ('serviceWorker' in navigator && navigator.serviceWorker.controller) await CPWA.IsOnline();
 		//CConsol.Log(3);
 		
@@ -892,8 +911,8 @@ export class CFrame
 				await CFrame.EventCall(this.GetEvent(CEvent.eType.Render));
 			else
 				await this.mRenderProcess();
-			
-			
+
+
 			requestAnimationFrame(this.mMainProcess);
 			// if(subCall==false || subWDelay>1000*3)
 			// {
@@ -911,9 +930,8 @@ export class CFrame
 			subWDelay=0;
 			subCall=true;
 			CFrame.EventCall(this.GetEvent(CEvent.eType.SubUpdate),deadline);
-			if ('requestIdleCallback' in window) 
+			if ('requestIdleCallback' in window)
 				requestIdleCallback(this.mSubProcess);
-			CWASM.Checker(1);
 		};
 		
 		await CFrame.EventCall(this.GetEvent(CEvent.eType.Load));

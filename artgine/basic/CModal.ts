@@ -448,6 +448,10 @@ export class CModal implements IAutoUpdate , IListener
 
         let w=window.innerWidth;
         let h=window.innerHeight;
+        // 숨겨진 iframe(display:none) 등으로 레이아웃이 계산되지 않는 상태(w/h==0)에서는
+        // 클램프하면 카드 크기가 0으로 찌그러지므로 건너뛴다. 나중에 실제로 보여질 때
+        // (ResizeObserver 등으로) 다시 호출되면서 정상 크기로 맞춰진다.
+        if(w<=0 || h<=0)    return;
 
         // --- Width ---
         if(this.mAutoW)
@@ -526,7 +530,14 @@ export class CModal implements IAutoUpdate , IListener
     }
     static PushTitleBar(_tb : CModalTitleBar)
     {
-        
+
+    }
+    // _root 내부에서 열리는 부트스트랩 드롭다운 메뉴를 열려있는 동안만 body로 옮겨서
+    // (포탈) 조상의 overflow:hidden / overflow:auto 클리핑에 잘리지 않게 한다.
+    // 닫히면 원래 위치로 되돌린다. _zIndex는 메뉴에 적용할 z-index(null이면 건드리지 않음).
+    static DropdownPortal(_root : HTMLElement, _zIndex : number=null)
+    {
+
     }
 }
 export namespace CModal {

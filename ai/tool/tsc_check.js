@@ -13,6 +13,8 @@ const targetBases = normalizedTargets.map(t => path.basename(t));
 const result = spawnSync('npx', ['tsc', '--noEmit', '--pretty', 'false'], {
   encoding: 'utf8',
   shell: true,
+  // 전체 프로젝트 진단이 기본 버퍼(1MB)를 넘겨 ENOBUFS로 죽는다
+  maxBuffer: 256 * 1024 * 1024,
 });
 
 if (result.error) {

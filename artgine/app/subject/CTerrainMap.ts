@@ -1,6 +1,7 @@
 import { CUpdate } from "../../basic/Basic.js";
 import { CArray } from "../../basic/CArray.js";
 import { CClass } from "../../basic/CClass.js";
+import { CConsol } from "../../basic/CConsol.js";
 import { CEvent } from "../../basic/CEvent.js";
 import { CObject, CPointer } from "../../basic/CObject.js";
 import { CBound } from "../../geometry/CBound.js";
@@ -15,6 +16,7 @@ import { CRenderPass } from "../../render/CRenderPass.js";
 import { CTexture, CTextureInfo } from "../../render/CTexture.js";
 import { CCIndex } from "../canvas/CCIndex.js";
 import { CCollider } from "../component/CCollider.js";
+import { CComponent } from "../component/CComponent.js";
 import { CPhysics } from "../component/CPhysics.js";
 import { CPaintTerrain } from "../component/paint/CPaintTerrain.js";
 import { CMapBuf } from "./CMapBuf.js";
@@ -45,14 +47,10 @@ export class CTerrainMap extends CSubject
     // 페인트 태그
     mTag : Set<string> = new Set();
     
-    mCollider : CColliderTerrain;
-    
-    constructor(_collider: boolean = true) {
+    constructor() {
         super();
         this.mHeightBuf.Reset(new CVec3(1024,1024,1),10);
         this.mSplatBuf.Reset(new CVec3(1024,1024,1),10);
-        if(_collider)
-            this.mCollider = this.PushComp(new CColliderTerrain(this));
     }
 
     public ClearAll() {
@@ -69,6 +67,29 @@ export class CTerrainMap extends CSubject
     public SetSplat(_splatTexs : (CVec4|string)[], _splatTexCodi : CMat) {
         this.mTexture = [..._splatTexs];
         this.mTexCodi.Import(_splatTexCodi);
+    }
+    override PushComp<T extends CCollider>(_com: T): CColliderTerrain;
+    override PushComp<T extends CComponent>(_com: T): T;
+    override PushComp(_com: CComponent ): CComponent  {
+        if(_com instanceof CCollider) {
+            const colTerrain = new CColliderTerrain();
+            colTerrain.Import(_com);
+            colTerrain.SetEvent(CCollider.eEvent.Static);
+            return super.PushComp(colTerrain);
+        }
+        return super.PushComp(_com);
+    }
+
+    override ToStr(): string {
+        const detachedPaints = Array.from(this.FindComps(CPaintTerrain));
+        for(const comp of detachedPaints) {
+            this.DetachComp(comp.Key());
+        }
+        const result = super.ToStr();
+        for(const comp of detachedPaints) {
+            this.PushComp(comp);
+        }
+        return result;
     }
 
     // 디버깅
@@ -284,20 +305,20 @@ export class CTerrainMap extends CSubject
 
 export class CColliderTerrain extends CCollider
 {
-    mTerrain : CTerrainMap;
-
-    constructor(_terrain : CTerrainMap)
+    constructor()
     {
         super();
-
-        this.mTerrain = _terrain;
-        this.MatUpdate();
+        
         this.SetEvent(CCollider.eEvent.Static);
     }
     override IsShould(_member: string, _type: CObject.eShould): boolean {
         if(_member == "mTerrain")
             return false;
         return super.IsShould(_member, _type);
+    }
+    override Start(): void {
+        super.Start();
+        this.MatUpdate();
     }
     override Update(_update: CUpdate): void {
         if(this.GetOwner().mUpdateMat!=CUpdate.eType.Not)
@@ -306,14 +327,20 @@ export class CColliderTerrain extends CCollider
     }
     MatUpdate()
     {
+        const terrain = this.GetOwner();
+        if((terrain instanceof CTerrainMap) == false) {
+            console.error("CColliderTerrain이 Terrain 이외의 오브젝트에 추가되어 있습니다.");
+            return;
+        }
+
         this.mBound.Reset();
         this.mBound.mMin.x = 0;
         this.mBound.mMin.y = 0;
         this.mBound.mMin.z = 0;
 
-        this.mBound.mMax.x = this.mTerrain.mHeightBuf.mCount.x * this.mTerrain.mHeightBuf.mSize;
-        this.mBound.mMax.y = this.mTerrain.mTerrainHeight;
-        this.mBound.mMax.z = this.mTerrain.mHeightBuf.mCount.y * this.mTerrain.mHeightBuf.mSize;
+        this.mBound.mMax.x = terrain.mHeightBuf.mCount.x * terrain.mHeightBuf.mSize;
+        this.mBound.mMax.y = terrain.mTerrainHeight;
+        this.mBound.mMax.z = terrain.mHeightBuf.mCount.y * terrain.mHeightBuf.mSize;
         
         this.mBound.SetType(CBound.eType.Box);
     }
@@ -376,6 +403,12 @@ export class CColliderTerrain extends CCollider
     }
     override CollisionChk(_co: CCollider, _colTarget: CArray<CCollider>, _colPush: CArray<CVec3>): boolean 
     {
+        const terrain = this.GetOwner();
+        if((terrain instanceof CTerrainMap) == false) {
+            console.error("CColliderTerrain이 Terrain 이외의 오브젝트에 추가되어 있습니다.");
+            return;
+        }
+
         let push : CVec3=null;
 
         if(_co.GetBound().GetType() == CBound.eType.Sphere)
@@ -384,8 +417,8 @@ export class CColliderTerrain extends CCollider
             const radius = _co.mBW.mRadian;
             const center = _co.mBW.mCenter;
 
-            const N = this.mTerrain.mHeightBuf.mCount.x;
-            const cellSize = this.mTerrain.mHeightBuf.mSize;
+            const N = terrain.mHeightBuf.mCount.x;
+            const cellSize = terrain.mHeightBuf.mSize;
             const half = N * cellSize * 0.5;
 
             // 구 주변 셀만 순회
@@ -400,10 +433,10 @@ export class CColliderTerrain extends CCollider
                     const wz0 = -half + j * cellSize;
                     const wx1 = wx0 + cellSize, wz1 = wz0 + cellSize;
 
-                    const h00 = this.mTerrain.GetHeight(wx0, wz0);
-                    const h10 = this.mTerrain.GetHeight(wx1, wz0);
-                    const h01 = this.mTerrain.GetHeight(wx0, wz1);
-                    const h11 = this.mTerrain.GetHeight(wx1, wz1);
+                    const h00 = terrain.GetHeight(wx0, wz0);
+                    const h10 = terrain.GetHeight(wx1, wz0);
+                    const h01 = terrain.GetHeight(wx0, wz1);
+                    const h11 = terrain.GetHeight(wx1, wz1);
 
                     // 셀을 삼각형 2개로 분해
                     const tris = [
@@ -443,14 +476,14 @@ export class CColliderTerrain extends CCollider
             for(let k = 0; k <= steps; k++)
             {
                 const wx = x + hx * (i / steps);
-                const wz = z + hz * (i / steps);
+                const wz = z + hz * (k / steps);
                 
-                const terrainY = this.mTerrain.GetHeight(wx, wz);
+                const terrainY = terrain.GetHeight(wx, wz);
                 const penetration = terrainY - bottomY;
                 if(penetration > 0) {
                     if(penetration > maxPenetration) {
                         maxPenetration = penetration;
-                        const normal = this.mTerrain.GetNormal(wx, wz);
+                        const normal = terrain.GetNormal(wx, wz);
                         push = CMath.V3MulFloat(normal, penetration);
                     }
                 }

@@ -1,1 +1,53 @@
-import{CFloat32 as e}from"./CFloat32.js";export class CPlane extends e{static eDir={Near:0,Far:4,Top:8,Bottom:12,Left:16,Right:20,Count:24,Null:7};constructor(){super(),this.mF32A=new Float32Array(24)}set near(e){this.mF32A[CPlane.eDir.Near+0]=e.x,this.mF32A[CPlane.eDir.Near+1]=e.y,this.mF32A[CPlane.eDir.Near+2]=e.z,this.mF32A[CPlane.eDir.Near+3]=e.w}set far(e){this.mF32A[CPlane.eDir.Far+0]=e.x,this.mF32A[CPlane.eDir.Far+1]=e.y,this.mF32A[CPlane.eDir.Far+2]=e.z,this.mF32A[CPlane.eDir.Far+3]=e.w}set top(e){this.mF32A[CPlane.eDir.Top+0]=e.x,this.mF32A[CPlane.eDir.Top+1]=e.y,this.mF32A[CPlane.eDir.Top+2]=e.z,this.mF32A[CPlane.eDir.Top+3]=e.w}set bottom(e){this.mF32A[CPlane.eDir.Bottom+0]=e.x,this.mF32A[CPlane.eDir.Bottom+1]=e.y,this.mF32A[CPlane.eDir.Bottom+2]=e.z,this.mF32A[CPlane.eDir.Bottom+3]=e.w}set left(e){this.mF32A[CPlane.eDir.Left+0]=e.x,this.mF32A[CPlane.eDir.Left+1]=e.y,this.mF32A[CPlane.eDir.Left+2]=e.z,this.mF32A[CPlane.eDir.Left+3]=e.w}set right(e){this.mF32A[CPlane.eDir.Right+0]=e.x,this.mF32A[CPlane.eDir.Right+1]=e.y,this.mF32A[CPlane.eDir.Right+2]=e.z,this.mF32A[CPlane.eDir.Right+3]=e.w}}
+import { CFloat32 } from "./CFloat32.js";
+export class CPlane extends CFloat32 {
+    static eDir = {
+        Near: 0,
+        Far: 4,
+        Top: 8,
+        Bottom: 12,
+        Left: 16,
+        Right: 20,
+        Count: 24,
+        Null: 7,
+    };
+    constructor() {
+        super();
+        this.mF32A = new Float32Array(24);
+    }
+    set near(_val) {
+        this.mF32A[CPlane.eDir.Near + 0] = _val.x;
+        this.mF32A[CPlane.eDir.Near + 1] = _val.y;
+        this.mF32A[CPlane.eDir.Near + 2] = _val.z;
+        this.mF32A[CPlane.eDir.Near + 3] = _val.w;
+    }
+    set far(_val) {
+        this.mF32A[CPlane.eDir.Far + 0] = _val.x;
+        this.mF32A[CPlane.eDir.Far + 1] = _val.y;
+        this.mF32A[CPlane.eDir.Far + 2] = _val.z;
+        this.mF32A[CPlane.eDir.Far + 3] = _val.w;
+    }
+    set top(_val) {
+        this.mF32A[CPlane.eDir.Top + 0] = _val.x;
+        this.mF32A[CPlane.eDir.Top + 1] = _val.y;
+        this.mF32A[CPlane.eDir.Top + 2] = _val.z;
+        this.mF32A[CPlane.eDir.Top + 3] = _val.w;
+    }
+    set bottom(_val) {
+        this.mF32A[CPlane.eDir.Bottom + 0] = _val.x;
+        this.mF32A[CPlane.eDir.Bottom + 1] = _val.y;
+        this.mF32A[CPlane.eDir.Bottom + 2] = _val.z;
+        this.mF32A[CPlane.eDir.Bottom + 3] = _val.w;
+    }
+    set left(_val) {
+        this.mF32A[CPlane.eDir.Left + 0] = _val.x;
+        this.mF32A[CPlane.eDir.Left + 1] = _val.y;
+        this.mF32A[CPlane.eDir.Left + 2] = _val.z;
+        this.mF32A[CPlane.eDir.Left + 3] = _val.w;
+    }
+    set right(_val) {
+        this.mF32A[CPlane.eDir.Right + 0] = _val.x;
+        this.mF32A[CPlane.eDir.Right + 1] = _val.y;
+        this.mF32A[CPlane.eDir.Right + 2] = _val.z;
+        this.mF32A[CPlane.eDir.Right + 3] = _val.w;
+    }
+}

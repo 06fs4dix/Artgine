@@ -773,6 +773,15 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	{
 		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/excel/xlsx.mini.min.js'></script>\n";
 	}
+	if(_json.projetJSON.includes["pdfjs"])
+	{
+		const pdfBase=upFolder+"artgine/external/legacy/pdfjs/";
+		IStr+="<script type='module'>\n";
+		IStr+="import * as pdfjs from '"+pdfBase+"pdf.min.mjs';\n";
+		IStr+="pdfjs.GlobalWorkerOptions.workerSrc='"+pdfBase+"pdf.worker.min.mjs';\n";
+		IStr+="window.pdfjsLib=pdfjs;\n";
+		IStr+="</script>\n";
+	}
 	
 	if(_json.projetJSON.includes["firebase"])
 	{
@@ -1503,15 +1512,19 @@ ipcMain.handle("FileSave", async (_event,_json: {
 });
 var gPaths=[];
 ipcMain.handle("FileDropped", async (_event, _paths: string[]) => {
-    const basePath = (path.resolve(CPath.WorkingPath(), gAppJSON.projectPath) + path.sep).replace(/\\/g, "/");
+    const workingPath = path.resolve(CPath.WorkingPath());
+    const basePath = path.resolve(workingPath, gAppJSON.projectPath);
 	//CConsol.Log("FileDropped : "+_paths);
-	//CConsol.Log("basePath : "+basePath);
+    // CConsol.Log("workPath : "+CPath.WorkingPath());
+	// CConsol.Log("basePath : "+basePath);
     const resultPaths = _paths.map(fullPath => {
-        if (fullPath.startsWith(basePath)) {
-            return fullPath.slice(basePath.length).replace(/\\/g, "/");
-        } else {
+        const resolvedFullPath = path.resolve(fullPath);
+        const relativeToWorking = path.relative(workingPath, resolvedFullPath);
+        if (relativeToWorking.startsWith("..") || path.isAbsolute(relativeToWorking)) {
             return null;
         }
+        const relativeToBase = path.relative(basePath, resolvedFullPath);
+        return relativeToBase.replace(/\\/g, "/");
     });
 
     gPaths = resultPaths;

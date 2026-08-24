@@ -18,7 +18,7 @@ var gColliderMap = new Map();
 export class CRapierCollider extends CCollider {
     constructor(_paint, _rb = null) {
         super(null);
-        this.mRestitution = null;
+        this.mRestitutionInit = null;
         this.mEvent = null;
         this.mRB = _rb;
         if (_paint instanceof CBound)
@@ -35,14 +35,14 @@ export class CRapierCollider extends CCollider {
     }
     SetRestitution(_value = 1) {
         if (this.mCL == null) {
-            this.mRestitution = _value;
+            this.mRestitutionInit = _value;
             return;
         }
         this.mCL.setRestitution(_value);
     }
     SetFriction(_value) {
         if (this.mCL == null) {
-            this.mFriction = _value;
+            this.mFrictionInit = _value;
             return;
         }
         this.mCL.setFriction(_value);
@@ -73,7 +73,8 @@ export class CRapierCollider extends CCollider {
     mDensity = null;
     mColTargetSwap = new CArray();
     mColPushSwap = new CArray();
-    mFriction = null;
+    mRestitutionInit = null;
+    mFrictionInit = null;
     SetOwner(_obj) {
         this.mOwner = _obj;
     }
@@ -126,13 +127,13 @@ export class CRapierCollider extends CCollider {
             this.SetEvent(this.mEvent);
             this.mEvent = null;
         }
-        if (this.mRestitution != null) {
-            this.SetRestitution(this.mRestitution);
-            this.mRestitution = null;
+        if (this.mRestitutionInit != null) {
+            this.SetRestitution(this.mRestitutionInit);
+            this.mRestitutionInit = null;
         }
-        if (this.mFriction != null) {
-            this.SetFriction(this.mFriction);
-            this.mFriction = null;
+        if (this.mFrictionInit != null) {
+            this.SetFriction(this.mFrictionInit);
+            this.mFrictionInit = null;
         }
         if (this.mDensity != null) {
             this.SetDensity(this.mDensity);
