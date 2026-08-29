@@ -1,8 +1,8 @@
 import { AlphaModalFun, vfxMat0, vfxMat1, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, VFX, VFXDown2 } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, ligMask, cullMask, LightCac3D, material, ligStep0, ligStep1, ligStep2, ligStep3, envmapOn, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
-import { Build, CMat, CVec3, CVec4, CMat3, Sam2DToColor, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, BranchDefault, Attribute, Sam2DArrToV4, Sam2DArrToMat, min, max, V3Len, V3SubV3, V3Nor, V4Dot, TransposeMat4, } from "./Shader";
-import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, jitter, shadowReadList, CalcShadow, shadowInfoList, shadowCascadeDataList, shadowNear, shadowFar, shadowTop, shadowBottom, shadowLeft, shadowRight, shadowDivideList, PCFStep, } from "./Shadow";
+import { Build, CVec3, CVec4, CMat3, Sam2DToColor, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, BranchDefault, Attribute, Sam2DArrToV4, min, max, V3Len, V3SubV3, V3Nor, } from "./Shader";
+import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, jitter, shadowReadList, CalcShadow, shadowInfoList, shadowCascadeDataList, shadowDivideList, PCFStep, } from "./Shadow";
 var size = 100;
 var worldMat = Null();
 var viewMat = Null();
@@ -283,42 +283,13 @@ function vs_main_shadow_write(f4_ver, f4_uv, f2_color) {
     else
         to_uv.w = f2_color.x;
     P = V4MulMatCoordi(P, worldMat);
-    var zRow;
-    var spvm;
-    BranchBegin("PointLightShadowV", "PLSV", [shadowNear, shadowFar, shadowTop, shadowBottom, shadowLeft, shadowRight]);
-    if (shadowWrite.x < SDF.eShadow.Near + 0.5)
-        spvm = Sam2DArrToMat(shadowNear, shadowWrite.y);
-    else if (shadowWrite.x < SDF.eShadow.Far + 0.5)
-        spvm = Sam2DArrToMat(shadowFar, shadowWrite.y);
-    else if (shadowWrite.x < SDF.eShadow.Top + 0.5)
-        spvm = Sam2DArrToMat(shadowTop, shadowWrite.y);
-    else if (shadowWrite.x < SDF.eShadow.Bottom + 0.5)
-        spvm = Sam2DArrToMat(shadowBottom, shadowWrite.y);
-    else if (shadowWrite.x < SDF.eShadow.Left + 0.5)
-        spvm = Sam2DArrToMat(shadowLeft, shadowWrite.y);
-    else if (shadowWrite.x < SDF.eShadow.Right + 0.5)
-        spvm = Sam2DArrToMat(shadowRight, shadowWrite.y);
+    var viewPos = V4MulMatCoordi(P, viewMat);
+    out_position = V4MulMatCoordi(viewPos, projectMat);
+    BranchBegin("PointLightShadowV", "PLSV", []);
     to_viewPos = P;
     BranchDefault();
-    if (shadowWrite.x < SDF.eShadow.Cas0 + 0.5) {
-        zRow = Sam2DArrToV4(shadowCas0VPMatWithZRow, shadowWrite.y * 4.0 + 3.0);
-        spvm = TransposeMat4(new CMat(Sam2DArrToV4(shadowCas0VPMatWithZRow, shadowWrite.y * 4.0 + 0.0), Sam2DArrToV4(shadowCas0VPMatWithZRow, shadowWrite.y * 4.0 + 1.0), Sam2DArrToV4(shadowCas0VPMatWithZRow, shadowWrite.y * 4.0 + 2.0), new CVec4(0.0, 0.0, 0.0, 1.0)));
-    }
-    else if (shadowWrite.x < SDF.eShadow.Cas1 + 0.5) {
-        zRow = Sam2DArrToV4(shadowCas1VPMatWithZRow, shadowWrite.y * 4.0 + 3.0);
-        spvm = TransposeMat4(new CMat(Sam2DArrToV4(shadowCas1VPMatWithZRow, shadowWrite.y * 4.0 + 0.0), Sam2DArrToV4(shadowCas1VPMatWithZRow, shadowWrite.y * 4.0 + 1.0), Sam2DArrToV4(shadowCas1VPMatWithZRow, shadowWrite.y * 4.0 + 2.0), new CVec4(0.0, 0.0, 0.0, 1.0)));
-    }
-    else if (shadowWrite.x < SDF.eShadow.Cas2 + 0.5) {
-        zRow = Sam2DArrToV4(shadowCas2VPMatWithZRow, shadowWrite.y * 4.0 + 3.0);
-        spvm = TransposeMat4(new CMat(Sam2DArrToV4(shadowCas2VPMatWithZRow, shadowWrite.y * 4.0 + 0.0), Sam2DArrToV4(shadowCas2VPMatWithZRow, shadowWrite.y * 4.0 + 1.0), Sam2DArrToV4(shadowCas2VPMatWithZRow, shadowWrite.y * 4.0 + 2.0), new CVec4(0.0, 0.0, 0.0, 1.0)));
-    }
-    else if (shadowWrite.x < SDF.eShadow.Cas3 + 0.5) {
-        zRow = Sam2DArrToV4(shadowCas3VPMatWithZRow, shadowWrite.y * 4.0 + 3.0);
-        spvm = TransposeMat4(new CMat(Sam2DArrToV4(shadowCas3VPMatWithZRow, shadowWrite.y * 4.0 + 0.0), Sam2DArrToV4(shadowCas3VPMatWithZRow, shadowWrite.y * 4.0 + 1.0), Sam2DArrToV4(shadowCas3VPMatWithZRow, shadowWrite.y * 4.0 + 2.0), new CVec4(0.0, 0.0, 0.0, 1.0)));
-    }
-    to_viewPos = new CVec4(0.0, 0.0, V4Dot(zRow, P), 1.0);
+    to_viewPos = viewPos;
     BranchEnd();
-    out_position = V4MulMatCoordi(P, spvm);
     out_position.z = min(out_position.z, out_position.w);
 }
 function ps_main_shadow_write() {
@@ -344,6 +315,7 @@ function ps_main_shadow_write() {
     out_color.a = 1.0;
     BranchDefault();
     out_color = to_viewPos;
+    out_color.a = 1.0;
     BranchEnd();
 }
 function vs_main_shadow_read(f4_ver, f4_uv, f2_color) {

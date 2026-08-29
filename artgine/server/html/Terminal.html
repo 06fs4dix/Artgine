@@ -1002,11 +1002,11 @@
     window.addEventListener("keydown", function (e) {
       if (e.key === "F6") { e.preventDefault(); e.stopPropagation(); _toggleSuper(); showBar(); inp.focus(); }
       if (e.key === "F7") { e.preventDefault(); e.stopPropagation(); _autoSwitchedAway = false; _logToggle(); }
-      // F1~F3는 이 화면 자체 기능이 없으므로 상위(Control.ts)로 위임한다(File.ts/Memo.ts와 동일 패턴).
+      // F1~F4는 이 화면 자체 기능이 없으므로 상위(Control.ts)로 위임한다(File.ts/Memo.ts와 동일 패턴).
       // 원격 터미널은 부모와 오리진이 달라 부모가 이 iframe에 직접 keydown 리스너를 붙일 수 없어서
-      // (cross-origin 접근 제한) postMessage로 알려주는 이 방식이 유일한 전달 수단이다. F1/F2는 Shift
+      // (cross-origin 접근 제한) postMessage로 알려주는 이 방식이 유일한 전달 수단이다. F1/F2/F4는 Shift
       // 여부로 동작이 갈리므로(사이드바 보이기/강제 숨기기) shift도 함께 보낸다.
-      if (e.key === "F1" || e.key === "F2" || e.key === "F3") {
+      if (e.key === "F1" || e.key === "F2" || e.key === "F3" || e.key === "F4") {
         e.preventDefault(); e.stopPropagation();
         sendToParent("home-hotkey", { key: e.key, shift: e.shiftKey });
       }

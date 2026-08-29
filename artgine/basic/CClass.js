@@ -205,3 +205,4 @@ export class CClass {
         return keys.filter(k => isNaN(Number(k)));
     }
 }
+CClass.Push(CClass);

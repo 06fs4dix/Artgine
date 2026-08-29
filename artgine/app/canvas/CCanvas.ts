@@ -8,10 +8,9 @@ import { CStream } from "../../basic/CStream.js";
 import { CArray } from "../../basic/CArray.js";
 import { CSubject } from "../subject/CSubject.js";
 import { CRouteMsg } from "../CRouteMsg.js";
-import { CBrush, CRenInfo, CRenPriority } from "./CBrush.js";
-import { CPaint, CRenPaint } from "../component/paint/CPaint.js";
+import { CBrush } from "./CBrush.js";
+import { CPaint } from "../component/paint/CPaint.js";
 import { CCamera } from "../../render/CCamera.js";
-import { CRPAuto, CRPMgr } from "./CRPMgr.js";
 import { RenderQueTool } from "../../tool/RenderQueTool.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CClass } from "../../basic/CClass.js";
@@ -161,6 +160,9 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 			}
 		}
 	}
+	// gCanvas(모듈 스코프 전역)는 AS(big/artgine/wasm/app/canvas/ASMCanvas.ts)에서도 이 메서드를
+	// _this(CCanvas 인스턴스) 기준 일반 인스턴스 호출(CASM.OCall_O(_this, K_ListCanvas))로 그대로
+	// 부른다 — this.mFrame을 쓰는 평범한 인스턴스 메서드라 static 우회가 필요 없다.
 	ListCanvas()
 	{
 		return gCanvas.get(this.mFrame);
@@ -207,147 +209,11 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		return this.mPacketArr;
 	}
 	RenderOrder()	{	return new CArray();}
+	// 실제 구현은 app_imple/canvas/CCanvas.ts(CCanvas_imple)로 옮겼다 — Update()와 같은 관례
+	// (선언부는 여기 스텁, 구현부는 app_imple 쪽).
 	PTUpdate(_ptList : Array<CPaint>)
 	{
-		for (var i=0;i<_ptList.length;++i)
-		{
-			
-			let pt = _ptList[i];
-			if(pt.mStartChk==true || pt.IsEnable()==false)	continue;
-			if(this.mBrush.AutoRP().size>0 && (pt.mAutoRPUpdate==true || this.mBrush.mAutoRPUpdate!=CUpdate.eType.Not))
-			{
-				pt.ClearCRPAuto();
-				for(let each4 of this.mBrush.AutoRP().values())
-				{
-					let push=true;
-					for(let condi of each4.mAnd)
-					{
-						if(condi.Excute(pt)==false)
-						{
-							push=false;
-							break;
-						}
-					}
-					if(push==false)	continue;
 
-
-					
-					if(each4.mOr.length!=0)
-					{
-						push=false;
-						for(let condi of each4.mOr)
-						{
-							if(condi.Excute(pt)==true)
-							{
-								push=true;
-								break;
-							}
-						}
-					}
-					
-					if(push)	pt.PushCRPAuto(each4);
-					
-				}
-				pt.mAutoRPUpdate=false;
-				pt.mCamCullUpdate=true;
-			}
-
-
-			if(pt.mCamCullUpdate || pt.mRenPT.length==0)
-			{
-				pt.mCamCullUpdate=false;
-				pt.EmptyRPChk();
-				//pt.Update(1);
-				for(let k=0;k<pt.GetRenderPass().length;++k)
-				{
-					if(pt.mRenPT[k]!=null)	continue;
-
-					
-					
-					const rp=pt.GetRenderPass()[k];
-					let cam : CCamera=null;
-					let renPt=new CRenPaint();
-
-					if(rp.mCamera==null)	cam=this.GetCam();
-					
-						
-					else	cam=this.mBrush.GetCamera(rp.mCamera);
-					renPt.mCam=cam;
-					
-					var vfprKey = cam.IsOrthographic()+"/";//+this.mBrush.m_fw.Off();
-					let cpKey=vfprKey+rp.Key()+pt.GetTagKey();
-					var renInfo=this.mBrush.mRenInfoMap.get(cpKey) as CRenInfo;
-					renPt.mRenInfoKey=cpKey;
-					renPt.mTexHash=pt.GetTexHash();
-					renPt.mPaint=pt;
-					pt.mRenPT[k]=renPt;
-					// if(rp.m_cycle>0)
-					// 	renInfo.m_cycle=new CTimer();
-
-
-					let renPri=this.mBrush.mRenPriMap.get(rp.mPriority) as CRenPriority;
-					if(renPri==null)
-					{
-						renPri=new CRenPriority();
-						renPri.mPriority = rp.mPriority;
-						this.mBrush.mRenPriMap.set(rp.mPriority,renPri);
-					}
-						
-
-
-					if(pt.IsAlphaState()==true || (cam.IsOrthographic() && cam.mShadow==false))
-					{
-						if(rp.mPaintSort==CRenderPass.ePaintSort.Revers)
-							renPri.mRAlphaList.Push(renPt);
-						else
-							renPri.mAlphaList.Push(renPt);
-					}
-					else
-					{
-						renPri.mDistanceList.Push(renPt);
-					}
-					
-						
-					
-					
-					
-					
-					
-					
-					if(renInfo==null)
-					{
-						renInfo=new CRenInfo();
-						//cp.shaderKey = rp.m_shader;
-						renInfo.mRP = rp.Export();
-
-						//이것만 포인터 연산
-						if(rp instanceof CRPAuto)
-							renInfo.mRP.mShaderAttr=rp.mShaderAttr;
-
-
-						//renInfo.m_rp = rp;
-						for(let tag of pt.GetTag())
-							renInfo.mTag.add(tag);
-						
-						//if(rp.mTag!="")
-						for(let tag of rp.mTag)
-							renInfo.mTag.add(tag);
-						
-						
-						renInfo.mCam=cam;
-						
-			
-						this.mBrush.mRenInfoMap.set(cpKey,renInfo);
-						this.mBrush.mUpdateRenInfo=true;
-						
-					}
-					
-
-					
-				}
-			}//pt.m_camCull.length==0
-
-		}
 	}
 	
 
@@ -714,7 +580,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	{
 
 	}//update
-	
+
 	CComMsg(_delay)
 	{
 		
@@ -944,6 +810,5 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 
 import CCanvas_imple from "../../app_imple/canvas/CCanvas.js";
-import { CRenderPass } from "../../render/CRenderPass.js";
 import { CPaintTerrain } from "../component/paint/CPaintTerrain.js";
 CCanvas_imple();

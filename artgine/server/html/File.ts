@@ -21,10 +21,10 @@ function warnIfDefaultAuthPassword(pw: string) {
 // ==================================================================================================================
 // 부모(Home.ts)와의 메시지 브리지
 // ==================================================================================================================
-// F1~F3/F7 등 전역 단축키는 부모의 공용 리스너(runHomeHotkey)로 위임한다 (Memo.ts와 동일한 패턴).
-// F1/F2는 Shift 여부에 따라 동작이 갈리므로(사이드바 보이기/강제 숨기기) shift도 함께 실어 보낸다.
+// F1~F4/F7 등 전역 단축키는 부모의 공용 리스너(runHomeHotkey)로 위임한다 (Memo.ts와 동일한 패턴).
+// F1/F2/F4는 Shift 여부에 따라 동작이 갈리므로(사이드바 보이기/강제 숨기기) shift도 함께 실어 보낸다.
 document.addEventListener('keydown', (ev: KeyboardEvent) => {
-    if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F7') {
+    if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F4' || ev.key === 'F7') {
         ev.preventDefault();
         if (window.top) CIframeMsg.Send(window.top, 'home-hotkey', { key: ev.key, shift: ev.shiftKey });
     }
@@ -1019,7 +1019,7 @@ function openActionModal(
                 <input type="checkbox" class="form-check-input am-chk-${uid}" value="${i.value}" ${i.checked !== false ? 'checked' : ''}>
                 ${i.badge ? `<span class="badge bg-${i.badgeClass ?? 'secondary'}" style="font-size:0.65rem;min-width:1.4rem;">${i.badge}</span>` : ''}
                 ${i.icon  ? `<i class="bi ${i.icon}"></i>` : ''}
-                <span class="text-truncate mb-0 flex-fill" title="${i.label}">${i.label}</span>
+                <span class="text-truncate mb-0 flex-fill" style="direction:rtl;text-align:left;" title="${i.label}">${i.label}</span>
             </div>`).join('');
         if (onItemDblClick) {
             listEl.querySelectorAll<HTMLElement>('[data-action-idx]').forEach(row => {

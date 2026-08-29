@@ -227,7 +227,7 @@ export class CClass
             .filter(name => !!name)
             .sort();
     }
-    static EnumName(_target): string[] 
+    static EnumName(_target): string[]
     {
         if (!_target || typeof _target !== "object") return [];
 
@@ -236,3 +236,4 @@ export class CClass
         return keys.filter(k => isNaN(Number(k)));
     }
 }
+CClass.Push(CClass);

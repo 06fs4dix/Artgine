@@ -108,11 +108,11 @@
         "costRatioOutput": 3750
       },
       {
-        "value": "opencode-go/grok-4.5",
-        "label": "grok-4.5 (Go)",
+        "value": "opencode-go/grok-4.6",
+        "label": "grok-4.6 (Go)",
         "costInputPer1M": 2,
         "costOutputPer1M": 6,
-        "costCachedReadPer1M": 0.3,
+        "costCachedReadPer1M": 0.5,
         "costCachedWritePer1M": null,
         "costRatioInput": 2000,
         "costRatioOutput": 3000
@@ -208,6 +208,16 @@
         "costRatioOutput": 800
       },
       {
+        "value": "opencode-go/longcat-2.0",
+        "label": "longcat-2.0 (Go)",
+        "costInputPer1M": 0.3,
+        "costOutputPer1M": 1.2,
+        "costCachedReadPer1M": 0.006,
+        "costCachedWritePer1M": null,
+        "costRatioInput": 300,
+        "costRatioOutput": 600
+      },
+      {
         "value": "opencode-go/minimax-m2.7",
         "label": "minimax-m2.7 (Go)",
         "costInputPer1M": 0.3,
@@ -258,6 +268,16 @@
         "costRatioOutput": 330
       },
       {
+        "value": "opencode-go/deepseek-v4-flash-vision-exp",
+        "label": "deepseek-v4-flash-vision-exp (Go)",
+        "costInputPer1M": 0.22,
+        "costOutputPer1M": 0.66,
+        "costCachedReadPer1M": 0.007,
+        "costCachedWritePer1M": null,
+        "costRatioInput": 220,
+        "costRatioOutput": 330
+      },
+      {
         "value": "opencode-go/hy3",
         "label": "hy3 (Go)",
         "costInputPer1M": 0.14,
@@ -266,16 +286,6 @@
         "costCachedWritePer1M": null,
         "costRatioInput": 140,
         "costRatioOutput": 290
-      },
-      {
-        "value": "opencode/deepseek-v4-flash-free",
-        "label": "deepseek-v4-flash (Free)",
-        "costInputPer1M": 0.14,
-        "costOutputPer1M": 0.28,
-        "costCachedReadPer1M": 0.028,
-        "costCachedWritePer1M": null,
-        "costRatioInput": 140,
-        "costRatioOutput": 140
       },
       {
         "value": "opencode-go/mimo-v2.5",
@@ -350,6 +360,26 @@
       {
         "value": "opencode/nemotron-3.5-lightning-free",
         "label": "nemotron-3.5-lightning (Free)",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": null,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "opencode/x-preview-f-free",
+        "label": "x-preview-f (Free)",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": null,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "opencode-go/ox-alpha-free",
+        "label": "ox-alpha-free (Go)",
         "costInputPer1M": 0,
         "costOutputPer1M": 0,
         "costCachedReadPer1M": 0,

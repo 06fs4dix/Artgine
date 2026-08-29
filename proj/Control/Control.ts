@@ -947,6 +947,8 @@ interface SessionItemSpec {
     /** activeClass가 -remote 계열일 때 원격지별 강조색(--rdp-accent/-bg)을 싣는 인라인 스타일. rdpAccentStyle() 참고. */
     accentStyle?: string;
     dataAttr: { name: string; value: string };
+    /** 상단 탭 스트립(topTabStrip)의 짧은 한 줄 라벨. bodyHtml은 여러 줄이라 그대로 쓸 수 없어 별도로 둔다. */
+    shortLabel: string;
     leftHtml: string;
     bodyHtml: string;
     deleteAct: string;
@@ -973,7 +975,7 @@ function sessionItemDragKey(spec: SessionItemSpec): string | null {
 // 세션 아이템을 끄는 동안만 body.tmux-dragging을 켜서 Multiplexer pane들의 드롭존(.tmux-leaf-dropzone)이
 // 나타나게 한다(평소엔 숨겨서 iframe 조작을 방해하지 않는다).
 document.addEventListener('dragstart', (e: DragEvent) => {
-    if ((e.target as HTMLElement)?.closest?.('.ai-session-item')) document.body.classList.add('tmux-dragging');
+    if ((e.target as HTMLElement)?.closest?.('.ai-session-item, .top-tab-item')) document.body.classList.add('tmux-dragging');
 });
 document.addEventListener('dragend', () => document.body.classList.remove('tmux-dragging'));
 // leftHtml/bodyHtml은 갱신 대상이지만 드롭다운은 유지해야 한다(열려 있는 메뉴가 닫히고 Dropdown 인스턴스가
@@ -1123,20 +1125,19 @@ function showPooledFrame(ctx: FramePoolCtx, key: string, src: string): HTMLIFram
     ctx.updatePlaceholder();
     tmuxPlaceFrame(key, f);
     ctx.onActivate?.(key, prevKey);
-    // 센터에 보이는 프레임이 바뀌면(새 터미널/에디터 열림, 세션 전환 등) 좌측 사이드바 하위 탭과 active를
-    // 즉시 그 화면과 일치시킨다. chat/term→Agent, browser/editor→Other(RDP 등 그 외는 탭 전환 없음).
-    // renderSessionSidebar()는 rAF로 합류되므로 연속 호출해도 부담이 없다.
+    // 센터에 보이는 프레임이 바뀌면(새 터미널/에디터 열림, 세션 전환 등) 좌측 Agent 서브탭 또는 우측 Other
+    // 탭의 active를 즉시 그 화면과 일치시킨다. chat/term→좌측 Agent 서브탭, browser/editor→우측 Other 탭
+    // (RDP 등 그 외는 탭 전환 없음). renderSessionSidebar()는 rAF로 합류되므로 연속 호출해도 부담이 없다.
     syncSidebarTabToFrame(key);
     renderSessionSidebar();
     return f;
 }
-// 프레임 키 접두사로 소속 하위 탭을 판별해, 필요할 때만 그 탭으로 전환한다(폴링 렌더가 아니라 전환 시점에만).
+// 프레임 키 접두사로 소속 탭을 판별해, 필요할 때만 그 탭으로 전환한다(폴링 렌더가 아니라 전환 시점에만).
 function syncSidebarTabToFrame(key: string) {
-    const target: 'agent' | 'other' | null =
-        /^(chat:|term:|term-new:)/.test(key) ? 'agent'
-        : /^(browser:|editor:)/.test(key) ? 'other'
-        : null;
-    if (target && sbSubTab !== target) { sbSubTab = target; localStorage.setItem(SB_TAB_LS, target); applySidebarSubTab(); }
+    const isAgent = /^(chat:|term:|term-new:)/.test(key);
+    const isOther = /^(browser:|editor:)/.test(key);
+    if (isAgent && sbSubTab !== 'agent') { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); }
+    if (isOther) (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-other-tab')).show();
 }
 
 const rdpFrameCtx: FramePoolCtx = {
@@ -1322,6 +1323,7 @@ function rdpRenderList() {
         const item = createSessionItem({
             ...sessActiveFromKey(key),
             dataAttr: { name: 'id', value: r.remoteId },
+            shortLabel: r.entryUrl,
             leftHtml: `<span class="${stv.cls} small flex-shrink-0" title="${aiEscapeHtml(stv.title)}">●</span>`,
             // 연결 상태와 무관하게 원격지별로 다른 색을 준다(rdpTextColor).
             bodyHtml: `<span class="flex-grow-1 text-truncate small ${rdpTextColor(r.remoteId)}"`
@@ -1352,16 +1354,16 @@ function rdpRenderList() {
     refreshAllRemoteRoots();
 }
 
-// ---- 경로(Root) 목록 상태: 오른쪽 File 탭 최상단 셀렉트(#ctrlSideFileRootSel)로 선택한다.
+// ---- 경로(Root) 목록 상태: 좌측 File 서브탭 최상단 셀렉트(#ctrlSideFileRootSel)로 선택한다.
 // currentWebRootUrl(현재 활성 서버)의 File/Root를 조회해 채우는 ctrlRootOpts/ctrlSelectedRootPath는
-// Agent 그룹핑, 새 세션 기본 Working Directory, 우측 파일 목록 RootPath 파라미터에도 쓰인다.
+// Agent 그룹핑, 새 세션 기본 Working Directory, 좌측 파일 목록 RootPath 파라미터에도 쓰인다.
 // (File.ts로의 'set-file-root' 동기화 메시지는 더 이상 발생하지 않지만 File.ts는 자체 fetch/localStorage로
 // 독립 동작하므로 영향 없다).
 interface ICtrlRootOpt { path: string; name: string; url?: string; }
 let ctrlRootOpts: ICtrlRootOpt[] = [];
 let ctrlRootReqSeq = 0;
 // 로컬 + 등록된 모든 원격의 워킹 폴더 목록(어느 RDP 탭을 보고 있든 항상 둘 다 유지) - Agent 그룹 표시와
-// 우측 File 탭 셀렉트(#ctrlSideFileRootSel, optgroup으로 로컬/원격 구분)가 함께 이 캐시를 쓴다.
+// 좌측 File 서브탭 셀렉트(#ctrlSideFileRootSel, optgroup으로 로컬/원격 구분)가 함께 이 캐시를 쓴다.
 let localRootOpts: ICtrlRootOpt[] = [];
 const remoteRootsCache = new Map<string, ICtrlRootOpt[]>();
 // New Chat/New Terminal 모달의 기본 Working Directory로 쓰는 현재 선택된 경로.
@@ -1373,7 +1375,7 @@ let ctrlSelectedRootPath = '';
 let ctrlInitRootPathConsumed = false;
 const ctrlNormPath = (s: string) => s.replace(/\\/g, '/').replace(/\/+$/, '');
 
-// 오른쪽 File 탭 워킹폴더 셀렉트를 로컬(localRootOpts) + 등록된 모든 원격(remoteRootsCache)의 경로로
+// 좌측 File 서브탭 워킹폴더 셀렉트를 로컬(localRootOpts) + 등록된 모든 원격(remoteRootsCache)의 경로로
 // 채운다 - RDP에서 지금 보고 있는 서버와 무관하게 로컬/원격 워킹 폴더가 항상 함께 나열된다(optgroup으로 구분).
 // 현재 선택(ctrlSelectedRootPath + currentWebRootUrl에 대응하는 원격)과 일치하는 항목을 하이라이트한다.
 function ctrlSyncSideFileRootSel() {
@@ -1466,7 +1468,7 @@ async function ctrlRefreshRootSelect() {
     }
 }
 
-// 오른쪽 File 탭 워킹폴더 셀렉트 변경 → 로컬/원격 optgroup 중 어느 쪽을 골랐는지에 따라
+// 좌측 File 서브탭 워킹폴더 셀렉트 변경 → 로컬/원격 optgroup 중 어느 쪽을 골랐는지에 따라
 // currentWebRootUrl까지 전환한 뒤(ctrlSideFileOpenFromSearch와 동일한 패턴 - RDP 중앙 프레임은 그대로 두고
 // File 탭이 보는 서버만 바꾼다) 선택 루트를 갱신하고 목록을 루트(/)부터 다시 연다.
 CDOM.ID('ctrlSideFileRootSel')?.addEventListener('change', () => {
@@ -1789,15 +1791,15 @@ CDOM.ID('help-open-btn').addEventListener('click', () => helpActivatePane());
 if (ctrlInitRootPath) (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
 else helpActivatePane();
 
-// F1 핸들러와 동일한 로직(우측 사이드바 열기 + File 탭 활성화)을 F2 검색 모달의 폴더 클릭에서도 재사용한다.
+// 좌측 사이드바 열기 + File 서브탭 활성화. F2 검색 모달의 폴더 클릭에서 재사용한다.
 function ctrlShowFileTab() {
-    if (appSidebarRight && !appSidebarRight.classList.contains('sidebar-docked')) {
-        (window as any).bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
-    }
-    (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-file-tab')).show();
+    if (!appSidebar) return;
+    if (!tmuxSidebarVisible('left')) tmuxShowSidebar('left');
+    if (sbSubTab !== 'file') { sbSubTab = 'file'; localStorage.setItem(SB_TAB_LS, 'file'); applySidebarSubTab(); }
+    appSidebar.focus();
 }
 
-// 검색 결과 폴더 클릭: 우측 File 목록이 보고 있는 서버/루트를 결과 스코프에 맞춘 뒤 해당 경로로 이동한다.
+// 검색 결과 폴더 클릭: 좌측 File 목록이 보고 있는 서버/루트를 결과 스코프에 맞춘 뒤 해당 경로로 이동한다.
 // 다중 경로 검색에서는 현재 선택 루트와 다른 스코프 결과가 나오므로, 같음 여부와 무관하게 전환한다.
 function ctrlSideFileOpenFromSearch(scope: ICtrlSearchScope, pathVal: string) {
     // 로컬 스코프는 currentWebRootUrl='', 원격은 그 서버 apiUrl. File/List·토큰이 이 값을 본다.
@@ -2118,7 +2120,7 @@ async function ctrlFileSearch(onlyKey?: string) {
     input.focus();
 }
 
-// ---- 우측 사이드바: 빠른 파일 열람(목록만) ----
+// ---- 좌측 사이드바: 빠른 파일 열람(목록만) ----
 // File 탭(File.html 전체 매니저)과 별개로, 폴더 이동 + 파일 열기(Editor 탭)만 지원하는 가벼운 목록.
 // webRootUrl/RootPath는 File 탭과 동일한 단일 출처(currentWebRootUrl/ctrlSelectedRootPath)를 쓰므로,
 // RDP Local/Remote 전환 등으로 그 값들이 바뀌는 지점(ctrlRefreshRootSelect)에서
@@ -2248,7 +2250,7 @@ async function ctrlUrlToPath(url: string, baseUrl: string): Promise<string | nul
     return null;
 }
 
-// 오른쪽 File 탭 길게 누르기 복사 클립보드. 경로 바 아래에 표시, X=목록 제거, 복사=현재 경로에 붙여넣기.
+// 좌측 File 서브탭 길게 누르기 복사 클립보드. 경로 바 아래에 표시, X=목록 제거, 복사=현재 경로에 붙여넣기.
 // 파일·폴더 모두 지원. 폴더는 File/List + Mkdir + Upload로 재귀 복사.
 interface CtrlSideCopyItem {
     name: string;
@@ -2663,7 +2665,7 @@ CDOM.ID('ctrlSideFileRefreshBtn').addEventListener('click', () => ctrlSideFileGo
 
 ctrlSideFileGoTo('/');
 
-// ---- 우측 사이드바 File 탭: 검색(자동완성) ----
+// ---- 좌측 사이드바 File 서브탭: 검색(자동완성) ----
 // F2 검색 모달(ctrlFileSearch)과 같은 방식(BFS로 File/List를 재귀 스캔해 캐시)이지만, 상시 인덱싱은 느리므로
 // 여기서는 입력창을 처음 포커스하는 순간에만 현재 워킹 폴더(webRootUrl+RootPath) 하나를 인덱싱한다.
 // 인덱싱 중엔 입력을 비활성화하고 "인덱싱중..."을 보여주며, 끝나면 타이핑마다 그 캐시만 필터링(자동완성)한다 -
@@ -2769,6 +2771,13 @@ function ctrlSideSrchRenderResults(query: string) {
             item.innerHTML =
                 `<i class="bi ${icon} me-1"></i><strong>${aiEscapeHtml(fl.name)}</strong>` +
                 `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(dirPath)}</span>`;
+            // 좌측 File 목록 항목(ctrlSideFileRenderList)과 동일하게, 터미널 탭(iframe)에 드롭하면
+            // 전체 경로가 입력창에 삽입된다.
+            item.draggable = true;
+            item.addEventListener('dragstart', (e) => {
+                e.dataTransfer?.setData('text/plain', g_ctrlSideSrch.root + dirPath + fl.name);
+                if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+            });
             item.addEventListener('click', () => {
                 ctrlSideFileSearchInputEl.value = '';
                 ctrlSideFileSearchResultsEl.classList.add('d-none');
@@ -2818,29 +2827,23 @@ document.addEventListener('click', (e) => {
 });
 
 // ---- 전역 단축키 ----
-// F1: 왼쪽 사이드바(옛 F4 자리를 이어받음) - 꺼져 있으면(모바일 오버레이 기본 숨김이든, Multiplexer
-// 드롭다운에서 강제로 꺼놨든) 켜고, 이어서 방향키로 세션 목록을 탐색할 수 있도록 포커스까지 준다.
-// Shift+F1은 강제로 끔(Multiplexer 드롭다운의 "왼쪽 끄기"와 동일).
-// F2: 오른쪽 사이드바(옛 F1의 File↔Info 토글을 이어받음) - 마찬가지로 꺼져 있으면 켜고, File 탭이 이미
-// 활성이면 Info로, 아니면 File로 토글한다(방금 이걸로 처음 연 경우도 동일하게 토글). Shift+F2는 강제로 끔.
+// F1: 왼쪽 사이드바를 열고 Agent 서브탭으로 고정한다 - 꺼져 있으면(모바일 오버레이 기본 숨김이든,
+// Multiplexer 드롭다운에서 강제로 꺼놨든) 켜고, 이어서 방향키로 세션 목록을 탐색할 수 있도록 포커스까지 준다.
+// Shift+F1은 왼쪽 사이드바를 강제로 끔(Multiplexer 드롭다운의 "왼쪽 끄기"와 동일).
+// F2: 왼쪽 사이드바를 열고 File 서브탭으로 고정한다(토글 아님 - 항상 File). Shift+F2도 왼쪽 사이드바를 강제로 끔
+// (F1/F2 모두 왼쪽 사이드바가 대상이라 Shift 쪽은 같은 동작).
 // F3는 그대로 More > Terminal 버튼과 동일하게 New Terminal 모달만 띄운다.
+// F4: 오른쪽 사이드바를 연다(탭 고정 없이 마지막에 보던 탭 그대로). Shift+F4는 오른쪽 사이드바를 강제로 끔.
 function ctrlOpenLeftSidebar() {
     if (!appSidebar) return;
-    // Other 탭을 보고 있으면 Agent 탭으로 전환한다(F1은 에이전트 작업 흐름용, 옛 F4와 동일).
-    if (sbSubTab === 'other') { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); }
+    if (sbSubTab !== 'agent') { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); }
     if (!tmuxSidebarVisible('left')) tmuxShowSidebar('left');
     appSidebar.focus();
 }
-function ctrlOpenRightSidebarToggleFile() {
+function ctrlOpenRightSidebar() {
+    if (!appSidebarRight) return;
     if (!tmuxSidebarVisible('right')) tmuxShowSidebar('right');
-    const fileTab = CDOM.ID('right-file-tab');
-    // File 탭이 이미 활성(aria-selected 또는 active 클래스)이면 Info로 되돌린다.
-    const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
-    if (onFile) {
-        (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-info-tab')).show();
-    } else {
-        ctrlShowFileTab();
-    }
+    appSidebarRight.focus();
 }
 function runControlHotkey(key: string, shift: boolean = false): boolean {
     switch (key) {
@@ -2848,11 +2851,18 @@ function runControlHotkey(key: string, shift: boolean = false): boolean {
             if (shift) tmuxHideSidebar('left'); else ctrlOpenLeftSidebar();
             return true;
         case 'F2':
-            if (shift) tmuxHideSidebar('right'); else ctrlOpenRightSidebarToggleFile();
+            if (shift) tmuxHideSidebar('left'); else {
+                ctrlShowFileTab();
+                // 이미 인덱싱된 루트면 검색창으로 바로 포커스를 옮겨 즉시 타이핑할 수 있게 한다.
+                if (g_ctrlSideSrch.indexed && g_ctrlSideSrch.rootKey === ctrlSideSrchKey()) ctrlSideFileSearchInputEl.focus();
+            }
             return true;
         case 'F3':
             if (!ctrlRequireAuthed()) return true;
             termStartNew('cmd');
+            return true;
+        case 'F4':
+            if (shift) tmuxHideSidebar('right'); else ctrlOpenRightSidebar();
             return true;
     }
     return false;
@@ -2865,13 +2875,13 @@ function isSidebarFocused(): boolean {
     if (!appSidebar) return false;
     return document.activeElement instanceof Node && appSidebar.contains(document.activeElement);
 }
-// 위/아래 화살표: 현재 보고 있는 하위 탭(Agent=agent-sidebar-list / Other=other-sidebar-list)의 세션 목록에서만
-// 선택을 이동한다. RDP 목록(rdp-sidebar-list, 위쪽)은 대상에서 제외.
+// 위/아래 화살표: Agent 서브탭(agent-sidebar-list)의 세션 목록에서만 선택을 이동한다. File 서브탭은
+// 세션 목록이 아니라 탐색 대상이 아니다. RDP 목록(rdp-sidebar-list, 위쪽)도 대상에서 제외.
 function runControlArrowKey(dir: 1 | -1): boolean {
     if (!isSidebarFocused()) return false;
-    // 현재 보고 있는 하위 탭(Agent/Other)의 목록에서, 접힌 그룹에 가려지지 않은(보이는) 항목만 대상으로 한다.
-    const listEl = sbSubTab === 'agent' ? agentSidebarList : otherSidebarList;
-    const items = Array.from(listEl.querySelectorAll<HTMLElement>('.ai-session-item')).filter(el => el.offsetParent !== null);
+    if (sbSubTab !== 'agent') return false;
+    // 접힌 그룹에 가려지지 않은(보이는) 항목만 대상으로 한다.
+    const items = Array.from(agentSidebarList.querySelectorAll<HTMLElement>('.ai-session-item')).filter(el => el.offsetParent !== null);
     if (items.length === 0) return false;
     // 메인(빨강)을 현재 선택으로 보고, 없으면 서브(파랑) 중 첫 항목. 예전 클래스명도 함께 본다.
     let curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-main') || el.classList.contains('ai-session-item-active-remote'));
@@ -2882,11 +2892,11 @@ function runControlArrowKey(dir: 1 | -1): boolean {
     items[nxt].scrollIntoView({ block: 'nearest' });
     return true;
 }
-// 좌/우 화살표: 사이드바가 포커스된 상태에서 Agent ↔ Other 서브탭을 전환한다(sb-agent-tab/sb-other-tab
+// 좌/우 화살표: 사이드바가 포커스된 상태에서 Agent ↔ File 서브탭을 전환한다(sb-agent-tab/sb-file-tab
 // 클릭과 동일 효과). 이미 그 탭이면 아무 것도 하지 않는다.
 function runControlSubTabArrowKey(dir: 1 | -1): boolean {
     if (!isSidebarFocused()) return false;
-    const next: 'agent' | 'other' = dir === 1 ? 'other' : 'agent';
+    const next: 'agent' | 'file' = dir === 1 ? 'file' : 'agent';
     if (sbSubTab === next) return false;
     sbSubTab = next;
     localStorage.setItem(SB_TAB_LS, next);
@@ -2894,13 +2904,13 @@ function runControlSubTabArrowKey(dir: 1 | -1): boolean {
     return true;
 }
 // File/Memo iframe 안에서 벌어지는 keydown은 부모까지 안 올라오므로, File.ts/Memo.ts가 자체적으로
-// F1~F3/F7을 잡아 'home-hotkey' postMessage로 위임한다(아래 CIframeMsg.Recv). 여기서 따로 더 걸 게 없다.
+// F1~F4/F7을 잡아 'home-hotkey' postMessage로 위임한다(아래 CIframeMsg.Recv). 여기서 따로 더 걸 게 없다.
 // Chat/Terminal/Browser 프레임 풀(showPooledFrame의 onCreate)에서 공용으로 쓰는 단축키 브리지.
 // RDP(원격 데스크탑 제어)와 Editor(Monaco - F1은 커맨드 팔레트, 방향키는 커서 이동)는 이 키들을 가로채면
 // 본래 기능이 깨지므로 일부러 연결하지 않는다.
-// Terminal(같은 출처든 원격 cross-origin이든)은 Terminal.html 자체가 F1~F3를 잡아 'home-hotkey'
+// Terminal(같은 출처든 원격 cross-origin이든)은 Terminal.html 자체가 F1~F4를 잡아 'home-hotkey'
 // postMessage로 위임하므로(File.ts/Memo.ts와 동일 패턴) 여기서 직접 가로채지 않는다 - 그대로 두면
-// 같은 출처(로컬) 터미널에서 F1~F3가 두 경로로 겹쳐 들어와 두 번 실행된다. Chat/Browser는 아직 이
+// 같은 출처(로컬) 터미널에서 F1~F4가 두 경로로 겹쳐 들어와 두 번 실행된다. Chat/Browser는 아직 이
 // 위임 로직이 없어서(같은 출처일 때만 동작) 직접 가로채기가 여전히 필요하다.
 function wirePooledFrameHotkeys(f: HTMLIFrameElement, key: string) {
     const isTerm = key.startsWith('term:') || key.startsWith('term-new:');
@@ -2908,7 +2918,7 @@ function wirePooledFrameHotkeys(f: HTMLIFrameElement, key: string) {
         try {
             if (!isTerm) {
                 f.contentWindow?.addEventListener('keydown', (e: KeyboardEvent) => {
-                    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
+                    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
                         e.preventDefault();
                         runControlHotkey(e.key, e.shiftKey);
                         return;
@@ -2922,11 +2932,11 @@ function wirePooledFrameHotkeys(f: HTMLIFrameElement, key: string) {
 }
 document.addEventListener('keydown', (e) => {
     // 사이드바 File 탭 검색창(자동완성)에 포커스가 있을 땐 위/아래 화살표가 좌측 사이드바 세션 이동으로
-    // 새지 않도록 여기서 먼저 걸러낸다. F1~F3/F7 단축키는 검색 중에도 그대로 유지.
+    // 새지 않도록 여기서 먼저 걸러낸다. F1~F4/F7 단축키는 검색 중에도 그대로 유지.
     if (e.target === ctrlSideFileSearchInputEl && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         return;
     }
-    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
         e.preventDefault();
         runControlHotkey(e.key, e.shiftKey);
         return;
@@ -2934,7 +2944,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
     }
-    // 좌/우 화살표: 사이드바 포커스 시 Agent ↔ Other 서브탭 전환.
+    // 좌/우 화살표: 사이드바 포커스 시 Agent ↔ File 서브탭 전환.
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         if (runControlSubTabArrowKey(e.key === 'ArrowRight' ? 1 : -1)) e.preventDefault();
     }
@@ -2946,9 +2956,9 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
 });
-// File.ts/Memo.ts/Terminal.html은 자체 keydown에서 F1~F3/F7을 잡아 'home-hotkey'로 부모에 위임한다
-// (shift도 함께 실어 보낸다 - F1/F2는 Shift 여부로 동작이 갈린다). F7은 무시되므로(runControlHotkey가
-// 모르는 키는 그냥 false를 반환) 실질적으로 F1~F3만 처리된다.
+// File.ts/Memo.ts/Terminal.html은 자체 keydown에서 F1~F4/F7을 잡아 'home-hotkey'로 부모에 위임한다
+// (shift도 함께 실어 보낸다 - F1/F2/F4는 Shift 여부로 동작이 갈린다). F7은 무시되므로(runControlHotkey가
+// 모르는 키는 그냥 false를 반환) 실질적으로 F1~F4만 처리된다.
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
         runControlHotkey(String(data.key ?? ''), !!data.shift);
@@ -3600,28 +3610,121 @@ if (memoTab.classList.contains("active")) memoTryInit();
 // 하나의 사이드바 목록에 함께 정렬되어야 한다(안 그러면 유형별로 나뉜 목록끼리는 서로 최신순 비교가
 // 안 되어 "이게 왜 맨 위에 있냐"는 혼란이 생긴다). 그래서 각 유형은 자기 데이터만 캐시에 갱신하고,
 // 실제 DOM 렌더링은 이 공용 renderSessionSidebar()가 세 캐시를 합쳐서 한 번에 그린다.
-// 좌측 사이드바 하위 목록: Agent(Chat/Terminal, 경로 그룹) / Other(Browser/Editor, 평면 최신순).
+// 좌측 사이드바 하위 목록: Agent(Chat/Terminal, 경로 그룹) / File(빠른 파일 열람 패널).
+// Other(Browser/Editor, 평면 최신순)는 우측 사이드바의 Other 탭(#other-sidebar-list)으로 옮겨갔다.
 const agentSidebarList = CDOM.ID("agent-sidebar-list") as HTMLDivElement;
 const otherSidebarList = CDOM.ID("other-sidebar-list") as HTMLDivElement;
 const agentAddFolderBtn = CDOM.ID("agentAddFolderBtn") as HTMLButtonElement;
+const leftFilePanel = CDOM.ID("left-file-panel") as HTMLDivElement;
 
-// ---- 하위 탭(Agent/Other) 선택 + 그룹 접힘 상태 persist ----
+// ---- 하위 탭(Agent/File) 선택 + 그룹 접힘 상태 persist ----
 const SB_TAB_LS = 'ctrl.sidebar.subtab';
 const SB_COLLAPSE_LS = 'ctrl.sidebar.collapsed';
 function sbSafeArr(s: string | null): string[] { try { const a = JSON.parse(s || '[]'); return Array.isArray(a) ? a.map(String) : []; } catch { return []; } }
-let sbSubTab: 'agent' | 'other' = localStorage.getItem(SB_TAB_LS) === 'other' ? 'other' : 'agent';
+let sbSubTab: 'agent' | 'file' = localStorage.getItem(SB_TAB_LS) === 'file' ? 'file' : 'agent';
 const collapsedGroups = new Set<string>(sbSafeArr(localStorage.getItem(SB_COLLAPSE_LS)));
 function saveCollapsedGroups() { localStorage.setItem(SB_COLLAPSE_LS, JSON.stringify(Array.from(collapsedGroups))); }
 function applySidebarSubTab() {
     agentSidebarList.classList.toggle('d-none', sbSubTab !== 'agent');
     agentAddFolderBtn.classList.toggle('d-none', sbSubTab !== 'agent');
-    otherSidebarList.classList.toggle('d-none', sbSubTab !== 'other');
+    leftFilePanel.classList.toggle('d-none', sbSubTab !== 'file');
     CDOM.ID('sb-agent-tab').classList.toggle('active', sbSubTab === 'agent');
-    CDOM.ID('sb-other-tab').classList.toggle('active', sbSubTab === 'other');
+    CDOM.ID('sb-file-tab').classList.toggle('active', sbSubTab === 'file');
 }
 CDOM.ID('sb-agent-tab').addEventListener('click', () => { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); });
-CDOM.ID('sb-other-tab').addEventListener('click', () => { sbSubTab = 'other'; localStorage.setItem(SB_TAB_LS, 'other'); applySidebarSubTab(); });
+CDOM.ID('sb-file-tab').addEventListener('click', () => { sbSubTab = 'file'; localStorage.setItem(SB_TAB_LS, 'file'); applySidebarSubTab(); });
 applySidebarSubTab();
+
+// ---- 상단 탭 스트립: 현재 열려 있는(서버에 존재하는) Chat/Terminal/Browser/Editor/Web 세션을 전부
+// More 버튼 뒤에 한 줄로 나열한다. Agent/Other 사이드바 목록과 완전히 같은 소스(spec+sortKey)를 쓰고,
+// 짧은 한 줄 라벨(shortLabel)을 쓴다. RDP는 별도 목록(rdp-sidebar-list)이라 대상에서 제외.
+// 표시 순서(topTabOrder)는 기본은 sortKey(최근 활동/오픈 시각) 내림차순이지만, 탭끼리 드래그해서
+// 자유롭게 재배치할 수 있다 - 한 번 순서가 정해지면 재활동으로 다시 섞이지 않도록 topTabOrder 자체가
+// 그 순서의 기준이 되고, 새로 나타난 세션만 recency 규칙대로 앞쪽에 끼워 넣는다.
+const topTabStripEl = CDOM.ID("top-tab-strip") as HTMLDivElement;
+const TOP_TAB_ICON: Record<string, string> = { chat: 'bi-chat-dots', term: 'bi-terminal', 'term-new': 'bi-terminal', browser: 'bi-browser-chrome', editor: 'bi-file-earmark-code', web: 'bi-globe' };
+const TOP_TAB_DRAG_MIME = 'application/x-control-top-tab-key';
+let topTabOrder: string[] = [];
+let topTabLastEntries: { key: string; sortKey: number; spec: SessionItemSpec }[] = [];
+// draggedKey를 beforeKey 바로 앞으로 옮긴다(beforeKey가 null이면 맨 뒤로).
+function topTabMoveTo(draggedKey: string, beforeKey: string | null) {
+    const from = topTabOrder.indexOf(draggedKey);
+    if (from < 0) return;
+    topTabOrder.splice(from, 1);
+    if (beforeKey) {
+        const to = topTabOrder.indexOf(beforeKey);
+        topTabOrder.splice(to < 0 ? topTabOrder.length : to, 0, draggedKey);
+    } else {
+        topTabOrder.push(draggedKey);
+    }
+    // drop 핸들러 안에서 곧바로 다시 그리면(innerHTML 초기화) 드래그 중이던 원본 탭 엘리먼트가 그 드래그
+    // 시퀀스가 끝나기(dragend) 전에 DOM에서 사라져 dragend가 영영 발화하지 않는다 - 그러면
+    // body.tmux-dragging이 안 풀려 Multiplexer 드롭존 오버레이가 화면 전체를 덮은 채 남아 클릭이 다 막힌다.
+    // 그래서 이번 이벤트 루프가 끝나 dragend까지 처리된 뒤(setTimeout 0)로 렌더를 미룬다.
+    setTimeout(() => renderTopTabStrip(topTabLastEntries), 0);
+}
+if (topTabStripEl) {
+    // 탭 사이 빈 공간(마지막 탭 뒤 등)에 놓으면 맨 뒤로 보낸다.
+    topTabStripEl.addEventListener('dragover', (ev) => {
+        if (ev.dataTransfer?.types.includes(TOP_TAB_DRAG_MIME)) ev.preventDefault();
+    });
+    topTabStripEl.addEventListener('drop', (ev) => {
+        const draggedKey = ev.dataTransfer?.getData(TOP_TAB_DRAG_MIME);
+        if (!draggedKey) return;
+        ev.preventDefault();
+        topTabMoveTo(draggedKey, null);
+    });
+}
+function renderTopTabStrip(entries: { key: string; sortKey: number; spec: SessionItemSpec }[]) {
+    if (!topTabStripEl) return;
+    topTabLastEntries = entries;
+    const specByKey = new Map(entries.map(e => [e.key, e.spec] as const));
+    topTabOrder = topTabOrder.filter(k => specByKey.has(k));
+    const newKeys = entries.filter(e => !topTabOrder.includes(e.key)).sort((a, b) => b.sortKey - a.sortKey).map(e => e.key);
+    topTabOrder = [...newKeys, ...topTabOrder];
+
+    topTabStripEl.innerHTML = '';
+    for (const key of topTabOrder) {
+        const spec = specByKey.get(key);
+        if (!spec) continue;
+        const prefix = key.slice(0, key.indexOf(':'));
+        const tab = document.createElement('div');
+        // 사이드바 세션 항목과 동일하게 Multiplexer 메인 pane=빨강/서브 pane=파랑으로 표시한다.
+        tab.className = 'top-tab-item d-flex align-items-center gap-1' + (spec.isActive ? ' ' + spec.activeClass : '');
+        tab.title = spec.shortLabel;
+        tab.innerHTML = `<i class="bi ${TOP_TAB_ICON[prefix] ?? 'bi-app'}"></i>`
+            + `<span class="text-truncate">${aiEscapeHtml(spec.shortLabel)}</span>`
+            + `<button type="button" class="btn-close" aria-label="Close"></button>`;
+        tab.addEventListener('click', (ev) => {
+            if ((ev.target as HTMLElement).closest('.btn-close')) return;
+            spec.onClick();
+        });
+        // 사이드바 세션 항목(createSessionItem)과 동일하게, Multiplexer pane에 드래그해 놓으면 그 pane
+        // 콘텐츠가 이 세션으로 바뀐다(sessionItemDragKey 참고). 동시에 탭 스트립 안의 다른 탭 위에 놓으면
+        // 그 자리로 순서를 옮긴다(topTabMoveTo) - 같은 드래그가 두 목적 모두를 겸한다.
+        tab.draggable = true;
+        tab.addEventListener('dragstart', (ev: DragEvent) => {
+            const dragKey = sessionItemDragKey(spec);
+            if (dragKey) ev.dataTransfer?.setData('text/plain', dragKey);
+            ev.dataTransfer?.setData(TOP_TAB_DRAG_MIME, key);
+            if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copyMove';
+        });
+        tab.addEventListener('dragover', (ev) => {
+            if (!ev.dataTransfer?.types.includes(TOP_TAB_DRAG_MIME)) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+        });
+        tab.addEventListener('drop', (ev) => {
+            const draggedKey = ev.dataTransfer?.getData(TOP_TAB_DRAG_MIME);
+            if (!draggedKey || draggedKey === key) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            topTabMoveTo(draggedKey, key);
+        });
+        tab.querySelector('.btn-close')?.addEventListener('click', (ev) => { ev.stopPropagation(); spec.onDelete(); });
+        topTabStripEl.appendChild(tab);
+    }
+}
 
 // 재정렬만 얼린다. 예전에는 "호버 중에는 렌더 자체를 통째로 스킵"했는데, 그러면 마우스를 올려둔 동안
 // 점 색/시간/active까지 전부 멈추고(터치는 mouseleave가 안 와서 영구 정지) 그걸 메우려고 예외 패치를
@@ -3764,7 +3867,7 @@ function refreshAllRemoteRoots() { refreshLocalRoots(); rdpRemotes.forEach(refre
 // 불러오므로, 이미 열어 둔 원격이 "죽었다가 다시 살아나는" 동안에는 아무도 다시 불러주지 않아
 // 페이지를 새로고침해야만 했다. 그래서 "연결이 끊긴 원격"이 있을 때만 낮은 빈도로 재확인하다가
 // 다시 응답하면(재시작으로 토큰이 죽어 있어도 rdpEnsureRemoteAuth가 저장된 비밀번호로 재로그인한다)
-// 좌측 Agent 그룹 + (지금 보고 있는 원격이면) 우측 File 패널까지 자동으로 다시 불러온다.
+// 좌측 Agent 그룹 + (지금 보고 있는 원격이면) 좌측 File 패널까지 자동으로 다시 불러온다.
 // 끊긴 원격이 하나도 없으면 폴링 자체가 없다 - 상시로 도는 타이머를 두지 않기 위함.
 async function rdpHandleReconnect(remote: IRdpRemote) {
     await refreshRemoteRoots(remote);
@@ -4052,6 +4155,8 @@ function flushSessionSidebar() {
             clearSessionItems();
             clearAgentGroups();
             otherSidebarList.innerHTML = '';
+            topTabOrder = [];
+            topTabStripEl.innerHTML = '';
             renderSignInPrompt(agentSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
         }
         return;
@@ -4098,6 +4203,7 @@ function flushSessionSidebar() {
 
     renderAgentGroups(agentEntries, frozen, hiddenByGroup);
     renderOtherList(otherEntries, frozen);
+    renderTopTabStrip([...agentEntries, ...otherEntries]);
 }
 
 // Agent: 경로별 그룹으로 렌더. 그룹 소스 = 등록된 경로(ctrlRootOpts) ∪ 실제 세션의 workingDir.
@@ -4417,6 +4523,7 @@ function editorItemSpec(s: IEditorSession): SessionItemSpec {
     return {
         ...sessActiveFromKey(s.key),
         dataAttr: { name: 'key', value: s.key },
+        shortLabel: name,
         leftHtml: `${dot}`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.path)}">
@@ -4512,6 +4619,7 @@ function webItemSpec(s: IWebSession): SessionItemSpec {
     return {
         ...sessActiveFromKey(s.key),
         dataAttr: { name: 'key', value: s.key },
+        shortLabel: s.url,
         leftHtml: `<i class="bi bi-globe"></i>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.url)}">
@@ -4663,6 +4771,7 @@ function chatItemSpec(s: IChatSess): SessionItemSpec {
     return {
         ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
+        shortLabel: s.title || s.lastMsg || s.sessionId,
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
             ${dot}
@@ -4846,6 +4955,7 @@ function termItemSpec(s: ITermSess): SessionItemSpec {
     return {
         ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
+        shortLabel: s.key || s.mode || s.token,
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
             ${dot}
@@ -5257,6 +5367,7 @@ function browserItemSpec(s: IBrowserSessionData): SessionItemSpec {
     return {
         ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
+        shortLabel: s.url,
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
             <span class="browser-dot ${isLoaded ? 'text-success' : 'text-danger'} small flex-shrink-0">●</span>
@@ -5533,6 +5644,7 @@ function tmuxSaveLayout() {
     // pane 콘텐츠가 바뀌면 사이드바 강조(메인=빨강/서브=파랑)를 바로 맞춘다.
     renderSessionSidebar();
     refreshRdpHighlights();
+    tmuxUpdateWideMode();
 }
 
 let tmuxRoot: ITmuxPane = tmuxLoadLayout();
@@ -5764,6 +5876,14 @@ function tmuxRenderAll() {
     tmuxTreeStruct.innerHTML = '';
     tmuxTreeStruct.appendChild(tmuxBuildEl(tmuxRoot));
     tmuxSyncPanePositions();
+    tmuxUpdateWideMode();
+}
+// Multiplexer가 실제로 분할된 상태(pane 2개 이상)로 화면에 보이는 동안만 센터 컨테이너를 풀폭으로 넓힌다.
+// 분할 안 된 단일 pane이거나 다른 탭을 보는 중이면 기존 폭(both 모드 1200px 캡)을 그대로 유지한다.
+function tmuxUpdateWideMode() {
+    const isSplit = !!(tmuxRoot.split && tmuxRoot.children);
+    const isShown = CDOM.ID('tmux-panel-tab').classList.contains('active');
+    document.body.classList.toggle('tmux-split-wide', isSplit && isShown);
 }
 
 // 해당 leaf를 좌우(row)/상하(col)로 분할한다. iframe은 옮기지 않는다(애초에 leaf의 DOM 자식이
@@ -5912,6 +6032,8 @@ function tmuxPaneLabel(pane: ITmuxPane): string {
 function tmuxShowPanel() {
     (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('tmux-panel-tab')).show();
 }
+CDOM.ID('tmux-panel-tab').addEventListener('shown.bs.tab', () => tmuxUpdateWideMode());
+CDOM.ID('tmux-panel-tab').addEventListener('hidden.bs.tab', () => tmuxUpdateWideMode());
 // 지금 그 사이드바가 실제로 보이는 상태인지(도킹 모드는 hide-* 클래스만 안 걸려 있으면 항상 보임,
 // 오버레이 모드는 offcanvas의 show 클래스로 판단).
 function tmuxSidebarVisible(side: 'left' | 'right'): boolean {
@@ -5922,7 +6044,7 @@ function tmuxSidebarVisible(side: 'left' | 'right'): boolean {
     return el.classList.contains('show');
 }
 // 사이드바 강제로 끄기(도킹/오버레이 모드 무관). 도킹 모드라 평소엔 숨겨진 햄버거 버튼을 강제로 보여줘서
-// 다시 열 수단을 남긴다 - 그 버튼(또는 F4)으로 다시 열리는 순간 'show.bs.offcanvas'에서 원복된다.
+// 다시 열 수단을 남긴다 - 그 버튼(왼쪽은 F1/F2, 오른쪽은 F4)으로 다시 열리는 순간 'show.bs.offcanvas'에서 원복된다.
 function tmuxHideSidebar(side: 'left' | 'right') {
     const el = side === 'left' ? appSidebar : appSidebarRight;
     const wrap = side === 'left' ? sidebarToggleBtnWrap : sidebarToggleBtnWrapRight;

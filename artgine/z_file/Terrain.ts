@@ -553,64 +553,15 @@ function vs_main_shadow_write(f3_ver : Vertex3)
     worldPos.x = clamp(worldPos.x, terrainMin.x, terrainMax.x);
     worldPos.z = clamp(worldPos.z, terrainMin.z, terrainMax.z);
 
-    var zRow : CVec4;
-    var spvm : CMat;
-    BranchBegin("PointLightShadowV","PLSV",[shadowNear,shadowFar,shadowTop,shadowBottom,shadowLeft,shadowRight]);
-    if(shadowWrite.x<SDF.eShadow.Near + 0.5)
-        spvm = Sam2DArrToMat(shadowNear,shadowWrite.y);
-    else if(shadowWrite.x<SDF.eShadow.Far + 0.5)
-        spvm = Sam2DArrToMat(shadowFar,shadowWrite.y);
-    else if(shadowWrite.x<SDF.eShadow.Top + 0.5)
-        spvm = Sam2DArrToMat(shadowTop,shadowWrite.y);
-    else if(shadowWrite.x<SDF.eShadow.Bottom + 0.5)
-        spvm = Sam2DArrToMat(shadowBottom,shadowWrite.y);
-    else if(shadowWrite.x<SDF.eShadow.Left + 0.5)
-        spvm = Sam2DArrToMat(shadowLeft,shadowWrite.y);
-    else if(shadowWrite.x<SDF.eShadow.Right + 0.5)
-        spvm = Sam2DArrToMat(shadowRight,shadowWrite.y);
+    var viewPos : CVec4=V4MulMatCoordi(worldPos,viewMat);
+    out_position=V4MulMatCoordi(viewPos, projectMat);
+
+    BranchBegin("PointLightShadowV","PLSV",[]);
     to_viewPos = worldPos;
     BranchDefault();
-    if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5) {
-        zRow=Sam2DArrToV4(shadowCas0VPMatWithZRow,shadowWrite.y*4.0+3.0);
-        spvm = TransposeMat4(new CMat(
-            Sam2DArrToV4(shadowCas0VPMatWithZRow,shadowWrite.y*4.0+0.0),
-            Sam2DArrToV4(shadowCas0VPMatWithZRow,shadowWrite.y*4.0+1.0),
-            Sam2DArrToV4(shadowCas0VPMatWithZRow,shadowWrite.y*4.0+2.0),
-            new CVec4(0.0, 0.0, 0.0, 1.0)
-        ));
-    }
-    else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5) {
-        zRow=Sam2DArrToV4(shadowCas1VPMatWithZRow,shadowWrite.y*4.0+3.0);
-        spvm = TransposeMat4(new CMat(
-            Sam2DArrToV4(shadowCas1VPMatWithZRow,shadowWrite.y*4.0+0.0),
-            Sam2DArrToV4(shadowCas1VPMatWithZRow,shadowWrite.y*4.0+1.0),
-            Sam2DArrToV4(shadowCas1VPMatWithZRow,shadowWrite.y*4.0+2.0),
-            new CVec4(0.0, 0.0, 0.0, 1.0)
-        ));
-    }
-    else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5) {
-        zRow=Sam2DArrToV4(shadowCas2VPMatWithZRow,shadowWrite.y*4.0+3.0);
-        spvm = TransposeMat4(new CMat(
-            Sam2DArrToV4(shadowCas2VPMatWithZRow,shadowWrite.y*4.0+0.0),
-            Sam2DArrToV4(shadowCas2VPMatWithZRow,shadowWrite.y*4.0+1.0),
-            Sam2DArrToV4(shadowCas2VPMatWithZRow,shadowWrite.y*4.0+2.0),
-            new CVec4(0.0, 0.0, 0.0, 1.0)
-        ));
-    }
-    else if(shadowWrite.x<SDF.eShadow.Cas3 + 0.5) {
-        zRow=Sam2DArrToV4(shadowCas3VPMatWithZRow,shadowWrite.y*4.0+3.0);
-        spvm = TransposeMat4(new CMat(
-            Sam2DArrToV4(shadowCas3VPMatWithZRow,shadowWrite.y*4.0+0.0),
-            Sam2DArrToV4(shadowCas3VPMatWithZRow,shadowWrite.y*4.0+1.0),
-            Sam2DArrToV4(shadowCas3VPMatWithZRow,shadowWrite.y*4.0+2.0),
-            new CVec4(0.0, 0.0, 0.0, 1.0)
-        ));
-    }
-    to_viewPos = new CVec4(0.0, 0.0, V4Dot(zRow, worldPos), 1.0);
+    to_viewPos = viewPos;
     BranchEnd();
 
-    // pancacking
-    out_position = V4MulMatCoordi(worldPos, spvm);
     out_position.z = min(out_position.z, out_position.w);
 }
 
@@ -625,6 +576,7 @@ function ps_main_shadow_write()
     out_color.a = 1.0;
     BranchDefault();
     out_color = to_viewPos;
+    out_color.a = 1.0;
     BranchEnd();
 }
 

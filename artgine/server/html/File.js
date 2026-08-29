@@ -17,7 +17,7 @@ function warnIfDefaultAuthPassword(pw) {
         CAlert.E("Please change the default password.");
 }
 document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F7') {
+    if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F4' || ev.key === 'F7') {
         ev.preventDefault();
         if (window.top)
             CIframeMsg.Send(window.top, 'home-hotkey', { key: ev.key, shift: ev.shiftKey });
@@ -923,7 +923,7 @@ function openActionModal(title, runLabel, runClass, onRun, hasMessage = false, f
                 <input type="checkbox" class="form-check-input am-chk-${uid}" value="${i.value}" ${i.checked !== false ? 'checked' : ''}>
                 ${i.badge ? `<span class="badge bg-${i.badgeClass ?? 'secondary'}" style="font-size:0.65rem;min-width:1.4rem;">${i.badge}</span>` : ''}
                 ${i.icon ? `<i class="bi ${i.icon}"></i>` : ''}
-                <span class="text-truncate mb-0 flex-fill" title="${i.label}">${i.label}</span>
+                <span class="text-truncate mb-0 flex-fill" style="direction:rtl;text-align:left;" title="${i.label}">${i.label}</span>
             </div>`).join('');
         if (onItemDblClick) {
             listEl.querySelectorAll('[data-action-idx]').forEach(row => {

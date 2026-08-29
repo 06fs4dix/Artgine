@@ -1,7 +1,7 @@
 import { ligDir } from "./Light";
 import { SDF } from "./SDF";
-import { abs, acos, clamp, CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, fract, GridSamplingDisk, max, min, mix, mod, round, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, screenPos, ShadowPosToUv, 
-    sin, sqrt, step, tan, TransposeMat3, TransposeMat4, V2AddV2, V2DivFloat, V2Dot, V2Fract, V2MulFloat, V2MulV2, V3Abs, V3AddV3, V3Clamp, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4Dot, V4MulMatCoordi } from "./Shader";
+import { abs, acos, clamp, CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, fract, GridSamplingDisk, max, min, mix, mod, round, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, screenPos, ShadowPosToUv, 
+    sin, step, tan, TransposeMat3, TransposeMat4, V2AddV2, V2DivFloat, V2Dot, V2MulFloat, V2MulV2, V3Abs, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4Dot, V4MulMatCoordi } from "./Shader";
 
 export var shadowCas0VPMatWithZRow: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowCas0VPWithZRow);
 export var shadowCas1VPMatWithZRow: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowCas1VPWithZRow);
@@ -37,7 +37,7 @@ export var bias : number = 4.0;
 export var normalBias : number = 0.6;
 //percentage-closer filtering 
 //경계면을 샘플링 해서 다듬는다. 다듬는 횟수
-export var PCF : number = 2.0;
+export var PCF : number = 3.0;
 export var PCFStep : number = 1.0;
 export var jitter : number = 0.0;
 
@@ -62,7 +62,7 @@ function randomJitter(fragCoord : CVec2,_strength : number) : CVec2
 function SampleShadowTexel(_uv: CVec2, _layer: number, _depth: number): number
 {
     var sp0 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, new CVec3(_uv, _layer));
-    return (sp0.w == 0.0) ? 0.0 : step(_depth, sp0.z);
+    return sp0.w < 1.0 ? 0.0 : step(_depth, sp0.z);
 }
 function ApplyPCF(_uvZ : CVec3, _texZ : number, _texScale : CVec2, _bias : number, _world : CVec4) : number
 {
@@ -93,7 +93,7 @@ function ApplyPCF(_uvZ : CVec3, _texZ : number, _texScale : CVec2, _bias : numbe
 }
 function ProcessCascadeLevel(_casMatOff : Sam2DArrMat, _shadowIndex : number, _world : CVec4, _normal : CVec3, _normalBiasTileScale : number) : CVec3
 {
-    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, _normalBiasTileScale));
+    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, _normalBiasTileScale * max(PCF * 0.5, 1.0)));
     var shadowViewZRow : CVec4 = Sam2DArrToV4(_casMatOff,_shadowIndex*4.0+3.0);
     var shadowVPMat : CMat = TransposeMat4(new CMat(
         Sam2DArrToV4(_casMatOff,_shadowIndex*4.0+0.0),
@@ -240,7 +240,7 @@ export function CalcShadow(_index: number, _normal: CVec3, _world: CVec4, _camPo
     var lDir: CVec4 = Sam2DArrToV4(ligDir, shadowInfo.x);
     var isPointLight: number = lDir.w>1.1 ? 1.0 : 0.0;
 
-    var NdotL : number = clamp(V3Dot(_normal, V3Nor(lDir.xyz)), 0.001, 1.0);
+    var NdotL : number = clamp(V3Dot(_normal, V3Nor(lDir.xyz)), 0.001, 0.999);  // tan이 무한으로 발산하지 않게 0과 1은 제외
     var tanTheta : number = tan(acos(NdotL));
 
     // 노말 바이어스 계산

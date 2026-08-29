@@ -93,6 +93,17 @@ if (location.protocol == 'file:' && isElectron==false){
 <!--EntryPoint-->
 <style>
 #myTab{font-size:0.8rem;} #myTab .nav-link, #myTab .btn{padding:0.25rem 0.5rem; font-size:0.8rem;}
+/* 상단 탭 스트립(#top-tab-strip)이 늘어나도 #myTab이 두 줄로 밀리지 않게, 고정 항목들은 줄어들지 않고
+   탭 스트립을 담은 li만 남는 폭을 먹고 넘치면 자체적으로 가로 스크롤한다. */
+#myTab{flex-wrap:nowrap;}
+#myTab > li{flex-shrink:0;}
+#myTab > li.flex-grow-1{flex-shrink:1;overflow:hidden;}
+#top-tab-strip{overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;scrollbar-width:thin;}
+.top-tab-item{cursor:pointer;flex-shrink:0;max-width:160px;padding:0.3rem 0.4rem;margin:0.25rem 0.15rem;
+    font-size:0.75rem;line-height:1;border-radius:0.25rem;background-color:var(--bs-tertiary-bg);white-space:nowrap;}
+.top-tab-item.ai-session-item-active-main{background-color:var(--bs-danger-bg-subtle);box-shadow:inset 0 -2px 0 var(--bs-danger);font-weight:600;}
+.top-tab-item.ai-session-item-active-sub{background-color:var(--bs-primary-bg-subtle);box-shadow:inset 0 -2px 0 var(--bs-primary);font-weight:600;}
+.top-tab-item .btn-close{width:0.5em;height:0.5em;padding:0;flex-shrink:0;}
 #rightSidebarTab{font-size:0.8rem;} #rightSidebarTab .nav-link{padding:0.25rem 0.5rem; font-size:0.8rem;}
 /* 사이드바 단계 레이아웃(Control.ts updateSidebarMode):
    both(≥1850): 좌·우 도킹(flex 자리 차지) + 컨테이너 max 1200
@@ -103,6 +114,10 @@ if (location.protocol == 'file:' && isElectron==false){
 /* Bootstrap .container 기본 margin:auto 는 flex 도킹과 충돌하므로 기본은 0, both 모드만 중앙 정렬. */
 .container{max-width:100%;flex:1 1 auto;min-width:0;margin-left:0;margin-right:0;}
 body.sidebar-layout-both .container{max-width:1200px;margin-left:auto;margin-right:auto;}
+/* Multiplexer가 실제로 분할(pane 2개 이상)된 화면을 보고 있는 동안만(body.tmux-split-wide, Control.ts
+   tmuxUpdateWideMode) 센터 컨테이너를 폭 제한 없이 남은 flex 폭 전부로 넓힌다. 분할 안 된 단일
+   pane이거나 다른 탭을 보는 중에는 위 both 모드의 1200px 캡이 그대로 적용된다. */
+body.tmux-split-wide .container{max-width:100% !important;margin-left:0 !important;margin-right:0 !important;}
 /* 사이드바(offcanvas 기본 z-index:1045)가 CModal 모달(기본 z-index 1000부터 시작)보다 위에 뜨는 문제 방지 -
    모달이 항상 사이드바 위에 오도록 사이드바 z-index를 모달 최소값보다 낮게 고정한다. */
 #app-sidebar, #app-sidebar-right{z-index:900 !important;}
@@ -238,19 +253,17 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
 </style>
 <!-- 앱 전체 레이아웃: 좌측 통합 사이드바(여백에 고정 또는 열고닫는 오버레이) + 우측(탭 네비 + 탭 콘텐츠) -->
 <div class="d-flex" style="height: 100vh; height: 100svh; height: 100dvh;">
-    <!-- 통합 사이드바 (RDP/터미널/브라우저/파일/다운로드 공용, 메모 탭 제외) -->
+    <!-- 좌측 통합 사이드바 (Agent: Chat/Terminal, File: 빠른 파일 열람) -->
     <div class="offcanvas offcanvas-start d-flex flex-column bg-body-tertiary" tabindex="-1" id="app-sidebar" data-bs-backdrop="false" data-bs-scroll="true" aria-labelledby="app-sidebar-label">
         <div class="offcanvas-header border-bottom">
             <h6 class="offcanvas-title" id="app-sidebar-label" data-CLan="ctrl.menu">Menu</h6>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar" aria-label="Close" data-CLan-title="ctrl.close" title="Close"></button>
         </div>
         <div class="offcanvas-body p-2 flex-grow-1 overflow-auto d-flex flex-column" id="app-sidebar-body">
-            <!-- RDP 세션 목록(Local + Remote). Control.ts의 rdpRenderList()가 채운다. -->
-            <div id="rdp-sidebar-list" class="d-flex flex-column gap-1"></div>
-            <!-- 하위 탭: Agent(Chat/Terminal) ↔ Other(Browser/Editor). 선택 탭은 localStorage에 기억된다. -->
-            <ul class="nav nav-tabs nav-fill my-2 flex-shrink-0" id="sidebarSubTab" role="tablist">
+            <!-- 하위 탭: Agent(Chat/Terminal) ↔ File(빠른 파일 열람, 우측 사이드바에서 이동해옴). 선택 탭은 localStorage에 기억된다. -->
+            <ul class="nav nav-tabs nav-fill mb-2 flex-shrink-0" id="sidebarSubTab" role="tablist">
                 <li class="nav-item"><button class="nav-link active py-1 px-2" id="sb-agent-tab" type="button">Agent</button></li>
-                <li class="nav-item"><button class="nav-link py-1 px-2" id="sb-other-tab" type="button">Other</button></li>
+                <li class="nav-item"><button class="nav-link py-1 px-2" id="sb-file-tab" type="button"><span data-CLan="ctrl.file">File</span></button></li>
             </ul>
             <!-- Agent: Chat/Terminal 세션을 workingDir 경로별 그룹으로 묶어 표시. 등록된 경로는 세션이 없어도 빈 그룹으로 남는다.
                  Control.ts의 renderSessionSidebar() → renderAgentGroups()가 채운다.
@@ -262,8 +275,28 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                 <i class="bi bi-plus-lg"></i> <span data-CLan="ctrl.addWorkingFolder">Add Working Folder</span>
             </button>
             <div id="agent-sidebar-list" class="d-flex flex-column gap-1"></div>
-            <!-- Other: Browser/Editor 세션을 최신순 평면 목록으로 표시. renderOtherList()가 채운다. -->
-            <div id="other-sidebar-list" class="d-flex flex-column gap-1 d-none"></div>
+            <!-- File: 빠른 파일 열람 패널(작업폴더 선택 + 검색 + 목록). 예전에는 우측 사이드바의 File 탭이었으나
+                 이제 Other(Browser/Editor 세션 목록)와 자리를 맞바꿔 여기로 옮겨왔다. 클릭 시 폴더는 하위로 이동,
+                 파일은 상단 File 탭의 File.html과 별개로 Editor 탭(editorOpenFile)에서 연다. -->
+            <div id="left-file-panel" class="d-flex flex-column d-none">
+                <select id="ctrlSideFileRootSel" class="form-select form-select-sm mb-2" data-CLan-title="ctrl.workingFolder" title="Working Folder"></select>
+                <div class="d-flex align-items-center gap-1 mb-2">
+                    <span id="ctrlSideFilePath" class="small text-secondary text-truncate flex-grow-1">/</span>
+                    <button id="ctrlSideFileRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-CLan-title="ctrl.refresh" title="Refresh">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+                <!-- 검색(자동완성). 처음 포커스할 때만 현재 워킹 폴더를 인덱싱(BFS 스캔)한다 - F2 검색 모달과
+                     동일한 스캔+캐시 로직을 재사용하되, 여기서는 입력에 따른 캐시 필터(자동완성)만 제공한다.
+                     인덱싱 중에는 비활성화 + placeholder로 "인덱싱중..." 표시. -->
+                <div class="mb-2 position-relative">
+                    <input id="ctrlSideFileSearchInput" type="text" class="form-control form-control-sm" data-CLan="ctrl.ph.sideSearch" placeholder="Search (click to index)" autocomplete="off">
+                    <div id="ctrlSideFileSearchResults" class="list-group ctrl-srch-results d-none" style="max-height:240px;overflow-y:auto;font-size:12px;position:absolute;left:0;right:0;top:100%;z-index:1000;"></div>
+                </div>
+                <!-- 길게 눌러 복사한 파일 목록. 경로 바 아래에 X(목록 제거)/복사(현재 경로에 붙여넣기) 아이콘만 표시. -->
+                <div id="ctrlSideFileCopyList" class="d-none flex-column gap-1 mb-2"></div>
+                <div id="ctrlSideFileList" class="list-group"></div>
+            </div>
         </div>
     </div>
 
@@ -312,6 +345,10 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
             <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-panel" type="button" role="tab"
                 aria-controls="file-panel" aria-selected="false"><i class="bi bi-folder-fill"></i> <span data-CLan="ctrl.file">File</span></button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="memo-tab" data-bs-toggle="tab" data-bs-target="#memo-panel" type="button" role="tab"
+                aria-controls="memo-panel" aria-selected="false"><i class="bi bi-journal-text"></i> <span data-CLan="ctrl.memo">Memo</span></button>
+        </li>
         <!-- 상단 Search 탭은 제거됨. 파일 검색 모달: 등록 루트 체크박스 목록.
              F2 = 전부 체크, 좌측 경로 그룹 '...' > Search = 그 경로만 미리 체크(나머지는 토글 가능). -->
         <!-- Multiplexer: More와 동일한 드롭다운 토글. 메뉴 내용(사이드바 끄기 + pane 목록/분할 버튼)은
@@ -327,8 +364,6 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                 <i class="bi bi-three-dots"></i>
             </button>
             <ul class="dropdown-menu" aria-labelledby="more-tab">
-                <li><button class="dropdown-item" id="memo-tab" data-bs-toggle="tab" data-bs-target="#memo-panel" type="button" role="tab"
-                    aria-controls="memo-panel" aria-selected="false"><i class="bi bi-journal-text"></i> <span data-CLan="ctrl.memo">Memo</span></button></li>
                 <li><button class="dropdown-item" id="rdp-add-btn" type="button"><i class="bi bi-display"></i> <span data-CLan="ctrl.rdp">RDP</span></button></li>
                 <li><button class="dropdown-item" id="chat-new-btn" type="button"><i class="bi bi-chat-dots"></i> <span data-CLan="ctrl.chat">Chat</span></button></li>
                 <li><button class="dropdown-item" id="term-new-btn" type="button"><i class="bi bi-terminal"></i> <span data-CLan="ctrl.terminal">Terminal</span></button></li>
@@ -343,6 +378,11 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                     role="tab" aria-controls="messenger-panel" aria-selected="false"><i class="bi bi-chat-dots-fill"></i> Messenger</button></li>
                 <li><button class="dropdown-item" id="help-open-btn" type="button"><i class="bi bi-question-circle"></i> <span data-CLan="ctrl.help">Help</span></button></li>
             </ul>
+        </li>
+        <!-- 열려 있는 Chat/Terminal/Browser/Editor/Web 프레임 탭 스트립(More 바로 뒤). 폭이 모자라면 한 줄을
+             유지한 채 가로 스크롤한다(2줄로 밀리면 안 됨) - Control.ts의 renderTopTabStrip()이 채운다. -->
+        <li class="nav-item flex-grow-1 flex-shrink-1" role="presentation" style="min-width:0;">
+            <div id="top-tab-strip" class="d-flex align-items-center h-100"></div>
         </li>
         <li class="nav-item ms-auto" role="presentation" style="display:none;" id="sidebarToggleBtnWrap">
             <button class="btn btn-outline-secondary mt-1" id="sidebarToggleBtn" type="button"
@@ -447,8 +487,8 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                         role="tab" aria-controls="right-info-panel" aria-selected="true"><i class="bi bi-info-circle"></i> <span data-CLan="ctrl.info">Info</span></button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="right-file-tab" data-bs-toggle="tab" data-bs-target="#right-file-panel" type="button"
-                        role="tab" aria-controls="right-file-panel" aria-selected="false"><i class="bi bi-folder"></i> <span data-CLan="ctrl.file">File</span></button>
+                    <button class="nav-link" id="right-other-tab" data-bs-toggle="tab" data-bs-target="#right-other-panel" type="button"
+                        role="tab" aria-controls="right-other-panel" aria-selected="false"><i class="bi bi-window-stack"></i> Other</button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="right-option-tab" data-bs-toggle="tab" data-bs-target="#right-option-panel" type="button"
@@ -476,27 +516,14 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                     <!-- 채팅/터미널 완료 알림 로그. Control.ts의 _showDoneNotification()이 최신순으로 쌓고 7개 초과 시 오래된 것부터 제거한다. -->
                     <div id="aiNotifLog" class="d-flex flex-column gap-1"></div>
                 </div>
-                <!-- 빠른 파일 열람 전용(목록만). 최상단 워킹폴더 셀렉트(#ctrlSideFileRootSel)와 RDP Local/Remote 전환에
-                     따라 Control.ts의 ctrlSideFileGoTo('/')로 자동 새로고침된다. 클릭 시 폴더는 하위로 이동,
-                     파일은 File 탭의 File.html과 별개로 Editor 탭(editorOpenFile)에서 연다. -->
-                <div class="tab-pane fade" id="right-file-panel" role="tabpanel" aria-labelledby="right-file-tab">
-                    <select id="ctrlSideFileRootSel" class="form-select form-select-sm mb-2" data-CLan-title="ctrl.workingFolder" title="Working Folder"></select>
-                    <div class="d-flex align-items-center gap-1 mb-2">
-                        <span id="ctrlSideFilePath" class="small text-secondary text-truncate flex-grow-1">/</span>
-                        <button id="ctrlSideFileRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-CLan-title="ctrl.refresh" title="Refresh">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                    </div>
-                    <!-- 검색(자동완성). 처음 포커스할 때만 현재 워킹 폴더를 인덱싱(BFS 스캔)한다 - F2 검색 모달과
-                         동일한 스캔+캐시 로직을 재사용하되, 여기서는 입력에 따른 캐시 필터(자동완성)만 제공한다.
-                         인덱싱 중에는 비활성화 + placeholder로 "인덱싱중..." 표시. -->
-                    <div class="mb-2 position-relative">
-                        <input id="ctrlSideFileSearchInput" type="text" class="form-control form-control-sm" data-CLan="ctrl.ph.sideSearch" placeholder="Search (click to index)" autocomplete="off">
-                        <div id="ctrlSideFileSearchResults" class="list-group ctrl-srch-results d-none" style="max-height:240px;overflow-y:auto;font-size:12px;position:absolute;left:0;right:0;top:100%;z-index:1000;"></div>
-                    </div>
-                    <!-- 길게 눌러 복사한 파일 목록. 경로 바 아래에 X(목록 제거)/복사(현재 경로에 붙여넣기) 아이콘만 표시. -->
-                    <div id="ctrlSideFileCopyList" class="d-none flex-column gap-1 mb-2"></div>
-                    <div id="ctrlSideFileList" class="list-group"></div>
+                <!-- Other: Browser/Editor 세션을 최신순 평면 목록으로 표시. renderOtherList()가 채운다.
+                     예전에는 좌측 사이드바의 Other 서브탭이었으나 File(빠른 파일 열람 패널)과 자리를 맞바꿔
+                     여기로 옮겨왔다. -->
+                <div class="tab-pane fade" id="right-other-panel" role="tabpanel" aria-labelledby="right-other-tab">
+                    <!-- RDP 세션 목록(Local + Remote). Control.ts의 rdpRenderList()가 채운다.
+                         예전에는 좌측 사이드바 맨 위였으나, Other와 함께 이 탭으로 옮겨왔다. -->
+                    <div id="rdp-sidebar-list" class="d-flex flex-column gap-1"></div>
+                    <div id="other-sidebar-list" class="d-flex flex-column gap-1"></div>
                 </div>
                 <div class="tab-pane fade" id="right-option-panel" role="tabpanel" aria-labelledby="right-option-tab">
                     <div class="mb-2">

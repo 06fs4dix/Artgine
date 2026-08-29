@@ -884,7 +884,7 @@ function sessionItemDragKey(spec) {
     return null;
 }
 document.addEventListener('dragstart', (e) => {
-    if (e.target?.closest?.('.ai-session-item'))
+    if (e.target?.closest?.('.ai-session-item, .top-tab-item'))
         document.body.classList.add('tmux-dragging');
 });
 document.addEventListener('dragend', () => document.body.classList.remove('tmux-dragging'));
@@ -1010,14 +1010,15 @@ function showPooledFrame(ctx, key, src) {
     return f;
 }
 function syncSidebarTabToFrame(key) {
-    const target = /^(chat:|term:|term-new:)/.test(key) ? 'agent'
-        : /^(browser:|editor:)/.test(key) ? 'other'
-            : null;
-    if (target && sbSubTab !== target) {
-        sbSubTab = target;
-        localStorage.setItem(SB_TAB_LS, target);
+    const isAgent = /^(chat:|term:|term-new:)/.test(key);
+    const isOther = /^(browser:|editor:)/.test(key);
+    if (isAgent && sbSubTab !== 'agent') {
+        sbSubTab = 'agent';
+        localStorage.setItem(SB_TAB_LS, 'agent');
         applySidebarSubTab();
     }
+    if (isOther)
+        window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-other-tab')).show();
 }
 const rdpFrameCtx = {
     pool: rdpIframePool,
@@ -1171,6 +1172,7 @@ function rdpRenderList() {
         const item = createSessionItem({
             ...sessActiveFromKey(key),
             dataAttr: { name: 'id', value: r.remoteId },
+            shortLabel: r.entryUrl,
             leftHtml: `<span class="${stv.cls} small flex-shrink-0" title="${aiEscapeHtml(stv.title)}">●</span>`,
             bodyHtml: `<span class="flex-grow-1 text-truncate small ${rdpTextColor(r.remoteId)}"`
                 + (r.saved ? ` title="${aiEscapeHtml(L('ctrl.msg.rdpSaved', 'Saved'))}"` : '')
@@ -1604,10 +1606,16 @@ if (ctrlInitRootPath)
 else
     helpActivatePane();
 function ctrlShowFileTab() {
-    if (appSidebarRight && !appSidebarRight.classList.contains('sidebar-docked')) {
-        window.bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
+    if (!appSidebar)
+        return;
+    if (!tmuxSidebarVisible('left'))
+        tmuxShowSidebar('left');
+    if (sbSubTab !== 'file') {
+        sbSubTab = 'file';
+        localStorage.setItem(SB_TAB_LS, 'file');
+        applySidebarSubTab();
     }
-    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-file-tab')).show();
+    appSidebar.focus();
 }
 function ctrlSideFileOpenFromSearch(scope, pathVal) {
     const nextWeb = scope.remoteId ? scope.webRootUrl : '';
@@ -2496,6 +2504,12 @@ function ctrlSideSrchRenderResults(query) {
             item.innerHTML =
                 `<i class="bi ${icon} me-1"></i><strong>${aiEscapeHtml(fl.name)}</strong>` +
                     `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(dirPath)}</span>`;
+            item.draggable = true;
+            item.addEventListener('dragstart', (e) => {
+                e.dataTransfer?.setData('text/plain', g_ctrlSideSrch.root + dirPath + fl.name);
+                if (e.dataTransfer)
+                    e.dataTransfer.effectAllowed = 'copy';
+            });
             item.addEventListener('click', () => {
                 ctrlSideFileSearchInputEl.value = '';
                 ctrlSideFileSearchResultsEl.classList.add('d-none');
@@ -2554,7 +2568,7 @@ document.addEventListener('click', (e) => {
 function ctrlOpenLeftSidebar() {
     if (!appSidebar)
         return;
-    if (sbSubTab === 'other') {
+    if (sbSubTab !== 'agent') {
         sbSubTab = 'agent';
         localStorage.setItem(SB_TAB_LS, 'agent');
         applySidebarSubTab();
@@ -2563,17 +2577,12 @@ function ctrlOpenLeftSidebar() {
         tmuxShowSidebar('left');
     appSidebar.focus();
 }
-function ctrlOpenRightSidebarToggleFile() {
+function ctrlOpenRightSidebar() {
+    if (!appSidebarRight)
+        return;
     if (!tmuxSidebarVisible('right'))
         tmuxShowSidebar('right');
-    const fileTab = CDOM.ID('right-file-tab');
-    const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
-    if (onFile) {
-        window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-info-tab')).show();
-    }
-    else {
-        ctrlShowFileTab();
-    }
+    appSidebarRight.focus();
 }
 function runControlHotkey(key, shift = false) {
     switch (key) {
@@ -2585,14 +2594,23 @@ function runControlHotkey(key, shift = false) {
             return true;
         case 'F2':
             if (shift)
-                tmuxHideSidebar('right');
-            else
-                ctrlOpenRightSidebarToggleFile();
+                tmuxHideSidebar('left');
+            else {
+                ctrlShowFileTab();
+                if (g_ctrlSideSrch.indexed && g_ctrlSideSrch.rootKey === ctrlSideSrchKey())
+                    ctrlSideFileSearchInputEl.focus();
+            }
             return true;
         case 'F3':
             if (!ctrlRequireAuthed())
                 return true;
             termStartNew('cmd');
+            return true;
+        case 'F4':
+            if (shift)
+                tmuxHideSidebar('right');
+            else
+                ctrlOpenRightSidebar();
             return true;
     }
     return false;
@@ -2605,8 +2623,9 @@ function isSidebarFocused() {
 function runControlArrowKey(dir) {
     if (!isSidebarFocused())
         return false;
-    const listEl = sbSubTab === 'agent' ? agentSidebarList : otherSidebarList;
-    const items = Array.from(listEl.querySelectorAll('.ai-session-item')).filter(el => el.offsetParent !== null);
+    if (sbSubTab !== 'agent')
+        return false;
+    const items = Array.from(agentSidebarList.querySelectorAll('.ai-session-item')).filter(el => el.offsetParent !== null);
     if (items.length === 0)
         return false;
     let curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-main') || el.classList.contains('ai-session-item-active-remote'));
@@ -2622,7 +2641,7 @@ function runControlArrowKey(dir) {
 function runControlSubTabArrowKey(dir) {
     if (!isSidebarFocused())
         return false;
-    const next = dir === 1 ? 'other' : 'agent';
+    const next = dir === 1 ? 'file' : 'agent';
     if (sbSubTab === next)
         return false;
     sbSubTab = next;
@@ -2636,7 +2655,7 @@ function wirePooledFrameHotkeys(f, key) {
         try {
             if (!isTerm) {
                 f.contentWindow?.addEventListener('keydown', (e) => {
-                    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
+                    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
                         e.preventDefault();
                         runControlHotkey(e.key, e.shiftKey);
                         return;
@@ -2651,7 +2670,7 @@ document.addEventListener('keydown', (e) => {
     if (e.target === ctrlSideFileSearchInputEl && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         return;
     }
-    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
         e.preventDefault();
         runControlHotkey(e.key, e.shiftKey);
         return;
@@ -3264,6 +3283,7 @@ if (memoTab.classList.contains("active"))
 const agentSidebarList = CDOM.ID("agent-sidebar-list");
 const otherSidebarList = CDOM.ID("other-sidebar-list");
 const agentAddFolderBtn = CDOM.ID("agentAddFolderBtn");
+const leftFilePanel = CDOM.ID("left-file-panel");
 const SB_TAB_LS = 'ctrl.sidebar.subtab';
 const SB_COLLAPSE_LS = 'ctrl.sidebar.collapsed';
 function sbSafeArr(s) { try {
@@ -3273,19 +3293,103 @@ function sbSafeArr(s) { try {
 catch {
     return [];
 } }
-let sbSubTab = localStorage.getItem(SB_TAB_LS) === 'other' ? 'other' : 'agent';
+let sbSubTab = localStorage.getItem(SB_TAB_LS) === 'file' ? 'file' : 'agent';
 const collapsedGroups = new Set(sbSafeArr(localStorage.getItem(SB_COLLAPSE_LS)));
 function saveCollapsedGroups() { localStorage.setItem(SB_COLLAPSE_LS, JSON.stringify(Array.from(collapsedGroups))); }
 function applySidebarSubTab() {
     agentSidebarList.classList.toggle('d-none', sbSubTab !== 'agent');
     agentAddFolderBtn.classList.toggle('d-none', sbSubTab !== 'agent');
-    otherSidebarList.classList.toggle('d-none', sbSubTab !== 'other');
+    leftFilePanel.classList.toggle('d-none', sbSubTab !== 'file');
     CDOM.ID('sb-agent-tab').classList.toggle('active', sbSubTab === 'agent');
-    CDOM.ID('sb-other-tab').classList.toggle('active', sbSubTab === 'other');
+    CDOM.ID('sb-file-tab').classList.toggle('active', sbSubTab === 'file');
 }
 CDOM.ID('sb-agent-tab').addEventListener('click', () => { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); });
-CDOM.ID('sb-other-tab').addEventListener('click', () => { sbSubTab = 'other'; localStorage.setItem(SB_TAB_LS, 'other'); applySidebarSubTab(); });
+CDOM.ID('sb-file-tab').addEventListener('click', () => { sbSubTab = 'file'; localStorage.setItem(SB_TAB_LS, 'file'); applySidebarSubTab(); });
 applySidebarSubTab();
+const topTabStripEl = CDOM.ID("top-tab-strip");
+const TOP_TAB_ICON = { chat: 'bi-chat-dots', term: 'bi-terminal', 'term-new': 'bi-terminal', browser: 'bi-browser-chrome', editor: 'bi-file-earmark-code', web: 'bi-globe' };
+const TOP_TAB_DRAG_MIME = 'application/x-control-top-tab-key';
+let topTabOrder = [];
+let topTabLastEntries = [];
+function topTabMoveTo(draggedKey, beforeKey) {
+    const from = topTabOrder.indexOf(draggedKey);
+    if (from < 0)
+        return;
+    topTabOrder.splice(from, 1);
+    if (beforeKey) {
+        const to = topTabOrder.indexOf(beforeKey);
+        topTabOrder.splice(to < 0 ? topTabOrder.length : to, 0, draggedKey);
+    }
+    else {
+        topTabOrder.push(draggedKey);
+    }
+    setTimeout(() => renderTopTabStrip(topTabLastEntries), 0);
+}
+if (topTabStripEl) {
+    topTabStripEl.addEventListener('dragover', (ev) => {
+        if (ev.dataTransfer?.types.includes(TOP_TAB_DRAG_MIME))
+            ev.preventDefault();
+    });
+    topTabStripEl.addEventListener('drop', (ev) => {
+        const draggedKey = ev.dataTransfer?.getData(TOP_TAB_DRAG_MIME);
+        if (!draggedKey)
+            return;
+        ev.preventDefault();
+        topTabMoveTo(draggedKey, null);
+    });
+}
+function renderTopTabStrip(entries) {
+    if (!topTabStripEl)
+        return;
+    topTabLastEntries = entries;
+    const specByKey = new Map(entries.map(e => [e.key, e.spec]));
+    topTabOrder = topTabOrder.filter(k => specByKey.has(k));
+    const newKeys = entries.filter(e => !topTabOrder.includes(e.key)).sort((a, b) => b.sortKey - a.sortKey).map(e => e.key);
+    topTabOrder = [...newKeys, ...topTabOrder];
+    topTabStripEl.innerHTML = '';
+    for (const key of topTabOrder) {
+        const spec = specByKey.get(key);
+        if (!spec)
+            continue;
+        const prefix = key.slice(0, key.indexOf(':'));
+        const tab = document.createElement('div');
+        tab.className = 'top-tab-item d-flex align-items-center gap-1' + (spec.isActive ? ' ' + spec.activeClass : '');
+        tab.title = spec.shortLabel;
+        tab.innerHTML = `<i class="bi ${TOP_TAB_ICON[prefix] ?? 'bi-app'}"></i>`
+            + `<span class="text-truncate">${aiEscapeHtml(spec.shortLabel)}</span>`
+            + `<button type="button" class="btn-close" aria-label="Close"></button>`;
+        tab.addEventListener('click', (ev) => {
+            if (ev.target.closest('.btn-close'))
+                return;
+            spec.onClick();
+        });
+        tab.draggable = true;
+        tab.addEventListener('dragstart', (ev) => {
+            const dragKey = sessionItemDragKey(spec);
+            if (dragKey)
+                ev.dataTransfer?.setData('text/plain', dragKey);
+            ev.dataTransfer?.setData(TOP_TAB_DRAG_MIME, key);
+            if (ev.dataTransfer)
+                ev.dataTransfer.effectAllowed = 'copyMove';
+        });
+        tab.addEventListener('dragover', (ev) => {
+            if (!ev.dataTransfer?.types.includes(TOP_TAB_DRAG_MIME))
+                return;
+            ev.preventDefault();
+            ev.stopPropagation();
+        });
+        tab.addEventListener('drop', (ev) => {
+            const draggedKey = ev.dataTransfer?.getData(TOP_TAB_DRAG_MIME);
+            if (!draggedKey || draggedKey === key)
+                return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            topTabMoveTo(draggedKey, key);
+        });
+        tab.querySelector('.btn-close')?.addEventListener('click', (ev) => { ev.stopPropagation(); spec.onDelete(); });
+        topTabStripEl.appendChild(tab);
+    }
+}
 let sessionOrderFrozen = false;
 let frozenSessionOrder = [];
 let frozenAgentGroupOrder = [];
@@ -3676,6 +3780,8 @@ function flushSessionSidebar() {
             clearSessionItems();
             clearAgentGroups();
             otherSidebarList.innerHTML = '';
+            topTabOrder = [];
+            topTabStripEl.innerHTML = '';
             renderSignInPrompt(agentSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
         }
         return;
@@ -3723,6 +3829,7 @@ function flushSessionSidebar() {
         || !!otherSidebarList.querySelector('.dropdown-menu.show');
     renderAgentGroups(agentEntries, frozen, hiddenByGroup);
     renderOtherList(otherEntries, frozen);
+    renderTopTabStrip([...agentEntries, ...otherEntries]);
 }
 function renderAgentGroups(entries, frozen, hiddenByGroup) {
     const byGroup = new Map();
@@ -4038,6 +4145,7 @@ function editorItemSpec(s) {
     return {
         ...sessActiveFromKey(s.key),
         dataAttr: { name: 'key', value: s.key },
+        shortLabel: name,
         leftHtml: `${dot}`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.path)}">
@@ -4131,6 +4239,7 @@ function webItemSpec(s) {
     return {
         ...sessActiveFromKey(s.key),
         dataAttr: { name: 'key', value: s.key },
+        shortLabel: s.url,
         leftHtml: `<i class="bi bi-globe"></i>`,
         bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.url)}">
@@ -4281,6 +4390,7 @@ function chatItemSpec(s) {
     return {
         ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
+        shortLabel: s.title || s.lastMsg || s.sessionId,
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
             ${dot}
@@ -4471,6 +4581,7 @@ function termItemSpec(s) {
     return {
         ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
+        shortLabel: s.key || s.mode || s.token,
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
             ${dot}
@@ -4863,6 +4974,7 @@ function browserItemSpec(s) {
     return {
         ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
+        shortLabel: s.url,
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
             <span class="browser-dot ${isLoaded ? 'text-success' : 'text-danger'} small flex-shrink-0">●</span>
@@ -5120,6 +5232,7 @@ function tmuxSaveLayout() {
     tmuxRenderMenu();
     renderSessionSidebar();
     refreshRdpHighlights();
+    tmuxUpdateWideMode();
 }
 let tmuxRoot = tmuxLoadLayout();
 tmuxTreeReady = true;
@@ -5382,6 +5495,12 @@ function tmuxRenderAll() {
     tmuxTreeStruct.innerHTML = '';
     tmuxTreeStruct.appendChild(tmuxBuildEl(tmuxRoot));
     tmuxSyncPanePositions();
+    tmuxUpdateWideMode();
+}
+function tmuxUpdateWideMode() {
+    const isSplit = !!(tmuxRoot.split && tmuxRoot.children);
+    const isShown = CDOM.ID('tmux-panel-tab').classList.contains('active');
+    document.body.classList.toggle('tmux-split-wide', isSplit && isShown);
 }
 function tmuxSplitPane(paneId, dir) {
     const pane = tmuxFind(tmuxRoot, paneId);
@@ -5516,6 +5635,8 @@ function tmuxPaneLabel(pane) {
 function tmuxShowPanel() {
     window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('tmux-panel-tab')).show();
 }
+CDOM.ID('tmux-panel-tab').addEventListener('shown.bs.tab', () => tmuxUpdateWideMode());
+CDOM.ID('tmux-panel-tab').addEventListener('hidden.bs.tab', () => tmuxUpdateWideMode());
 function tmuxSidebarVisible(side) {
     if (document.body.classList.contains(side === 'left' ? 'hide-left-sidebar' : 'hide-right-sidebar'))
         return false;

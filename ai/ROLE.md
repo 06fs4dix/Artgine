@@ -67,7 +67,7 @@ node ai/tool/c_cpp_check.js [web|window|linux|mac] 파일A.cpp 파일B.cpp
 - **팝업/메뉴/대화상자는 직접 HTML을 삽입하지 말고 `CModal`로 구현** (z-index 자동 관리).
 
 ### ⚠️ 엔진 API 사용 전 반드시 검증 (Engine API Verification Before Usage)
-코드 작성 전, 엔진 클래스(`artgine/`)의 메서드/프로퍼티를 사용할 때는 **존재 여부를 `find_symbol`로 먼저 확인**한다.
+코드 작성 전, 엔진 클래스(`artgine/`)의 메서드/프로퍼티를 사용할 때는 **존재 여부를 검색(Grep 등)으로 먼저 확인**한다.
 - 일반적인 언어 패턴(`.clone()`, `.copy()`, `.length` 등)을 **가정하고 쓰지 말 것**.
 - 과거 사례: `CVec3.Clone()` 존재 가정 → 런타임 에러. 실제 복사 방법은 `.Export()` (CObject에서 상속).
 

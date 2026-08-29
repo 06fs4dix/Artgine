@@ -22,7 +22,7 @@ export var shadowWrite = new CVec3(0, 0, 0);
 export var shadowRate = 0.3;
 export var bias = 4.0;
 export var normalBias = 0.6;
-export var PCF = 2.0;
+export var PCF = 3.0;
 export var PCFStep = 1.0;
 export var jitter = 0.0;
 function Hash22(p) {
@@ -38,7 +38,7 @@ function randomJitter(fragCoord, _strength) {
 }
 function SampleShadowTexel(_uv, _layer, _depth) {
     var sp0 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, new CVec3(_uv, _layer));
-    return (sp0.w == 0.0) ? 0.0 : step(_depth, sp0.z);
+    return sp0.w < 1.0 ? 0.0 : step(_depth, sp0.z);
 }
 function ApplyPCF(_uvZ, _texZ, _texScale, _bias, _world) {
     var f16Bias = texture16f > 0.5 ? abs(_uvZ.z) * (1.0 / 1024.0) : 0.0;
@@ -61,7 +61,7 @@ function ApplyPCF(_uvZ, _texZ, _texScale, _bias, _world) {
     return 1.0 - sVal / count;
 }
 function ProcessCascadeLevel(_casMatOff, _shadowIndex, _world, _normal, _normalBiasTileScale) {
-    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, _normalBiasTileScale));
+    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, _normalBiasTileScale * max(PCF * 0.5, 1.0)));
     var shadowViewZRow = Sam2DArrToV4(_casMatOff, _shadowIndex * 4.0 + 3.0);
     var shadowVPMat = TransposeMat4(new CMat(Sam2DArrToV4(_casMatOff, _shadowIndex * 4.0 + 0.0), Sam2DArrToV4(_casMatOff, _shadowIndex * 4.0 + 1.0), Sam2DArrToV4(_casMatOff, _shadowIndex * 4.0 + 2.0), new CVec4(0.0, 0.0, 0.0, 1.0)));
     var shadowPos = V4MulMatCoordi(_world, shadowVPMat);
@@ -168,7 +168,7 @@ export function CalcShadow(_index, _normal, _world, _camPos, _viewPos) {
     var shadowInfo = Sam2DArrToV4(shadowInfoList, _index);
     var lDir = Sam2DArrToV4(ligDir, shadowInfo.x);
     var isPointLight = lDir.w > 1.1 ? 1.0 : 0.0;
-    var NdotL = clamp(V3Dot(_normal, V3Nor(lDir.xyz)), 0.001, 1.0);
+    var NdotL = clamp(V3Dot(_normal, V3Nor(lDir.xyz)), 0.001, 0.999);
     var tanTheta = tan(acos(NdotL));
     var normalScale = normalBias * min(tanTheta, 5.0);
     _normal = V3MulFloat(_normal, normalScale);

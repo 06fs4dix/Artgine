@@ -273,7 +273,9 @@ export class CRendererGL extends CRenderer
 	}
 	override End(_tex : CTexture=null,_rtUse :Set<number>,_rtLevel=0)
 	{
-		
+		 
+        
+    
 	}
 	override GetMainFrameTex() {		return this.mMainFrameTex;	}
 	SetXR(_frame,_eye)
