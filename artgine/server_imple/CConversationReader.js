@@ -5,11 +5,11 @@ import { CSQLite } from '../network/CSQLite.js';
 import { CAI } from '../util/CAI.js';
 import { CWASM } from '../basic/CWASM.js';
 CWASM.IsSIMD();
-const SCAN_MS = 0x1388;
-const HOT_MS = 0xea60;
+const SCAN_MS = 5000;
+const HOT_MS = 60_000;
 const gTracked = new Map();
 const gHot = new Set();
-let gNextScanAt = 0x0;
+let gNextScanAt = 0;
 const gStartAt = Date.now();
 function _listDir(dir, filter) {
     try {
@@ -30,48 +30,48 @@ const _SYS_BLOCKS = [
 function _cleanUserText(text) {
     let out = text;
     for (const re of _SYS_BLOCKS)
-        out = out.replace(re, "");
+        out = out.replace(re, '');
     return out.trim();
 }
-const _textOf = (c, blockType = "\x74\x65\x78\x74") => typeof c === "\x73\x74\x72\x69\x6e\x67" ? c
-    : Array.isArray(c) ? c.filter((b) => b?.type === blockType).map((b) => String(b.text ?? "")).join("")
-        : "";
-const _FILE_KEYS = ["\x66\x69\x6c\x65\x5f\x70\x61\x74\x68", "\x66\x69\x6c\x65\x50\x61\x74\x68", "\x74\x61\x72\x67\x65\x74\x5f\x66\x69\x6c\x65", "\x74\x61\x72\x67\x65\x74\x5f\x64\x69\x72\x65\x63\x74\x6f\x72\x79", "\x70\x61\x74\x68", "\x66\x69\x6c\x65", "\x66\x69\x6c\x65\x6e\x61\x6d\x65", "\x63\x6f\x6d\x6d\x61\x6e\x64", "\x75\x72\x6c"];
+const _textOf = (c, blockType = 'text') => typeof c === 'string' ? c
+    : Array.isArray(c) ? c.filter((b) => b?.type === blockType).map((b) => String(b.text ?? '')).join('')
+        : '';
+const _FILE_KEYS = ['file_path', 'filePath', 'target_file', 'target_directory', 'path', 'file', 'filename', 'command', 'url'];
 function _fileFromArgs(args) {
     if (args == null)
-        return "";
+        return '';
     let obj = args;
-    if (typeof args === "\x73\x74\x72\x69\x6e\x67") {
+    if (typeof args === 'string') {
         const s = args.trim();
         if (!s)
-            return "";
+            return '';
         try {
             obj = JSON.parse(s);
         }
         catch {
-            return "";
+            return '';
         }
     }
-    if (typeof obj !== "\x6f\x62\x6a\x65\x63\x74")
-        return "";
+    if (typeof obj !== 'object')
+        return '';
     for (const k of _FILE_KEYS) {
         const v = obj[k];
-        if (typeof v === "\x73\x74\x72\x69\x6e\x67" && v.trim())
+        if (typeof v === 'string' && v.trim())
             return v.trim();
-        if (Array.isArray(v) && typeof v[0x0] === "\x73\x74\x72\x69\x6e\x67" && v[0x0].trim())
-            return v[0x0].trim();
+        if (Array.isArray(v) && typeof v[0] === 'string' && v[0].trim())
+            return v[0].trim();
     }
-    return "";
+    return '';
 }
 function _toolChunk(name, args, model, iso) {
-    return { role: "\x74\x6f\x6f\x6c", text: "", model, iso, tool: String(name || "\x3f"), file: _fileFromArgs(args) };
+    return { role: 'tool', text: '', model, iso, tool: String(name || '?'), file: _fileFromArgs(args) };
 }
 function _normMatchText(text) {
     return text
-        .replace(/\r\n/g, "\x0a")
-        .replace(/\r/g, "\x0a")
-        .replace(/[ \t\u00a0]+/g, "\x20")
-        .replace(/\n{3,}/g, "\x0a\x0a")
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .replace(/[ \t\u00a0]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
         .trim();
 }
 function _textsMatch(a, b) {
@@ -83,7 +83,7 @@ function _textsMatch(a, b) {
         return false;
     if (na === nb)
         return true;
-    const minLen = 0xc;
+    const minLen = 12;
     if (na.length >= minLen && nb.length >= minLen) {
         if (na.includes(nb) || nb.includes(na))
             return true;
@@ -96,34 +96,34 @@ function _peersOf(provider, cwd, live) {
 }
 function _soleLiveKey(provider, cwd, live) {
     const peers = _peersOf(provider, cwd, live);
-    return peers.length === 0x1 ? peers[0x0].key : "";
+    return peers.length === 1 ? peers[0].key : '';
 }
 function _matchKey(provider, cwd, text, live) {
     const peers = _peersOf(provider, cwd, live);
-    if (peers.length === 0x0)
-        return "";
+    if (peers.length === 0)
+        return '';
     const hits = [];
     for (const s of peers) {
         const input = s.inputs.find(i => !i.used && _textsMatch(i.text, text));
         if (input)
             hits.push({ key: s.key, input });
     }
-    if (hits.length === 0x1) {
-        hits[0x0].input.used = true;
-        return hits[0x0].key;
+    if (hits.length === 1) {
+        hits[0].input.used = true;
+        return hits[0].key;
     }
-    if (hits.length > 0x1)
-        return "";
+    if (hits.length > 1)
+        return '';
     const withUnused = peers.filter(s => s.inputs.some(i => !i.used));
-    if (withUnused.length === 0x1) {
-        const input = withUnused[0x0].inputs.find(i => !i.used);
+    if (withUnused.length === 1) {
+        const input = withUnused[0].inputs.find(i => !i.used);
         if (input)
             input.used = true;
-        return withUnused[0x0].key;
+        return withUnused[0].key;
     }
-    if (peers.length === 0x1)
-        return peers[0x0].key;
-    return "";
+    if (peers.length === 1)
+        return peers[0].key;
+    return '';
 }
 function _resolveKey(provider, cwd, text, live, prevKey) {
     if (text != null) {
@@ -144,12 +144,12 @@ function _readAppended(file, t) {
         return [];
     }
     if (size < t.offset)
-        t.offset = 0x0;
+        t.offset = 0;
     if (size === t.offset)
         return [];
     let fd;
     try {
-        fd = fs.openSync(file, "\x72");
+        fd = fs.openSync(file, 'r');
     }
     catch {
         return [];
@@ -157,13 +157,13 @@ function _readAppended(file, t) {
     try {
         const len = size - t.offset;
         const buf = Buffer.alloc(len);
-        fs.readSync(fd, buf, 0x0, len, t.offset);
-        const text = buf.toString("\x75\x74\x66\x38");
-        const lastNl = text.lastIndexOf("\x0a");
-        if (lastNl < 0x0)
+        fs.readSync(fd, buf, 0, len, t.offset);
+        const text = buf.toString('utf8');
+        const lastNl = text.lastIndexOf('\n');
+        if (lastNl < 0)
             return [];
-        t.offset += Buffer.byteLength(text.slice(0x0, lastNl + 0x1), "\x75\x74\x66\x38");
-        return text.slice(0x0, lastNl).split("\x0a").filter(l => l.trim().length > 0x0);
+        t.offset += Buffer.byteLength(text.slice(0, lastNl + 1), 'utf8');
+        return text.slice(0, lastNl).split('\n').filter(l => l.trim().length > 0);
     }
     catch {
         return [];
@@ -182,97 +182,97 @@ function _claudeParse(line) {
     const msg = rec?.message;
     if (!msg)
         return [];
-    const iso = typeof rec.timestamp === "\x73\x74\x72\x69\x6e\x67" ? rec.timestamp : undefined;
-    const model = typeof msg.model === "\x73\x74\x72\x69\x6e\x67" ? msg.model : "";
-    if (rec.type === "\x75\x73\x65\x72") {
+    const iso = typeof rec.timestamp === 'string' ? rec.timestamp : undefined;
+    const model = typeof msg.model === 'string' ? msg.model : '';
+    if (rec.type === 'user') {
         const text = _cleanUserText(_textOf(msg.content));
-        return text ? [{ role: "\x75\x73\x65\x72", text, model, iso }] : [];
+        return text ? [{ role: 'user', text, model, iso }] : [];
     }
-    if (rec.type !== "\x61\x73\x73\x69\x73\x74\x61\x6e\x74")
+    if (rec.type !== 'assistant')
         return [];
     const out = [];
     if (Array.isArray(msg.content)) {
         for (const b of msg.content) {
-            if (b?.type === "\x74\x6f\x6f\x6c\x5f\x75\x73\x65")
-                out.push(_toolChunk(String(b.name ?? ""), b.input, model, iso));
+            if (b?.type === 'tool_use')
+                out.push(_toolChunk(String(b.name ?? ''), b.input, model, iso));
         }
     }
-    if (msg.stop_reason === "\x65\x6e\x64\x5f\x74\x75\x72\x6e") {
+    if (msg.stop_reason === 'end_turn') {
         const text = _textOf(msg.content).trim();
         if (text)
-            out.push({ role: "\x61\x73\x73\x69\x73\x74\x61\x6e\x74", text, model, iso });
+            out.push({ role: 'assistant', text, model, iso });
     }
     return out;
 }
 function _grokUnwrapQuery(text) {
     const m = text.match(/^<user_query>\r?\n?([\s\S]*?)\r?\n?<\/user_query>$/);
-    return m ? m[0x1] : text;
+    return m ? m[1] : text;
 }
 function _grokParse(line) {
     const rec = JSON.parse(line);
-    const model = typeof rec?.model_id === "\x73\x74\x72\x69\x6e\x67" ? rec.model_id : "";
-    if (rec?.type === "\x75\x73\x65\x72") {
+    const model = typeof rec?.model_id === 'string' ? rec.model_id : '';
+    if (rec?.type === 'user') {
         const text = _cleanUserText(_grokUnwrapQuery(_textOf(rec.content).trim()));
-        return text ? [{ role: "\x75\x73\x65\x72", text, model }] : [];
+        return text ? [{ role: 'user', text, model }] : [];
     }
-    if (rec?.type !== "\x61\x73\x73\x69\x73\x74\x61\x6e\x74")
+    if (rec?.type !== 'assistant')
         return [];
     const calls = Array.isArray(rec.tool_calls) ? rec.tool_calls : null;
     if (calls && calls.length) {
         const out = [];
         for (const t of calls) {
-            const name = String(t?.name ?? t?.function?.name ?? "");
+            const name = String(t?.name ?? t?.function?.name ?? '');
             const args = t?.arguments ?? t?.function?.arguments ?? t?.input ?? t?.args;
             out.push(_toolChunk(name, args, model));
         }
         return out;
     }
     const text = _textOf(rec.content).trim();
-    return text ? [{ role: "\x61\x73\x73\x69\x73\x74\x61\x6e\x74", text, model }] : [];
+    return text ? [{ role: 'assistant', text, model }] : [];
 }
 function _codexParse(line) {
     const rec = JSON.parse(line);
     const p = rec?.payload;
     if (!p)
         return [];
-    const iso = typeof rec.timestamp === "\x73\x74\x72\x69\x6e\x67" ? rec.timestamp : undefined;
-    if (rec.type === "\x65\x76\x65\x6e\x74\x5f\x6d\x73\x67" && p.type === "\x74\x61\x73\x6b\x5f\x63\x6f\x6d\x70\x6c\x65\x74\x65") {
-        const text = String(p.last_agent_message ?? "").trim();
-        return text ? [{ role: "\x61\x73\x73\x69\x73\x74\x61\x6e\x74", text, model: "", iso }] : [];
+    const iso = typeof rec.timestamp === 'string' ? rec.timestamp : undefined;
+    if (rec.type === 'event_msg' && p.type === 'task_complete') {
+        const text = String(p.last_agent_message ?? '').trim();
+        return text ? [{ role: 'assistant', text, model: '', iso }] : [];
     }
-    if (rec.type === "\x72\x65\x73\x70\x6f\x6e\x73\x65\x5f\x69\x74\x65\x6d" && p.type === "\x6d\x65\x73\x73\x61\x67\x65" && p.role === "\x75\x73\x65\x72") {
-        const text = _cleanUserText(_textOf(p.content, "\x69\x6e\x70\x75\x74\x5f\x74\x65\x78\x74"));
-        return text ? [{ role: "\x75\x73\x65\x72", text, model: "", iso }] : [];
+    if (rec.type === 'response_item' && p.type === 'message' && p.role === 'user') {
+        const text = _cleanUserText(_textOf(p.content, 'input_text'));
+        return text ? [{ role: 'user', text, model: '', iso }] : [];
     }
-    if (rec.type === "\x72\x65\x73\x70\x6f\x6e\x73\x65\x5f\x69\x74\x65\x6d" && p.type === "\x66\x75\x6e\x63\x74\x69\x6f\x6e\x5f\x63\x61\x6c\x6c") {
-        const name = String(p.name ?? "");
+    if (rec.type === 'response_item' && p.type === 'function_call') {
+        const name = String(p.name ?? '');
         const full = p.namespace ? `${p.namespace}/${name}` : name;
-        return [_toolChunk(full, p.arguments, "", iso)];
+        return [_toolChunk(full, p.arguments, '', iso)];
     }
     return [];
 }
 function _codexCandidates() {
-    const base = path.join(os.homedir(), "\x2e\x63\x6f\x64\x65\x78", "\x73\x65\x73\x73\x69\x6f\x6e\x73");
+    const base = path.join(os.homedir(), '.codex', 'sessions');
     const out = [];
-    for (const off of [0x0, 0x1]) {
-        const d = new Date(Date.now() - off * 0x5265c00);
-        const dir = path.join(base, String(d.getFullYear()), String(d.getMonth() + 0x1).padStart(0x2, "\x30"), String(d.getDate()).padStart(0x2, "\x30"));
-        for (const n of _listDir(dir, x => x.startsWith("\x72\x6f\x6c\x6c\x6f\x75\x74\x2d") && x.endsWith("\x2e\x6a\x73\x6f\x6e\x6c")))
+    for (const off of [0, 1]) {
+        const d = new Date(Date.now() - off * 86400000);
+        const dir = path.join(base, String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0'));
+        for (const n of _listDir(dir, x => x.startsWith('rollout-') && x.endsWith('.jsonl')))
             out.push(path.join(dir, n));
     }
     return out;
 }
 function _codexVerify(file, cwd, t) {
     try {
-        const head = fs.readFileSync(file, "\x75\x74\x66\x38").split("\x0a")[0x0];
+        const head = fs.readFileSync(file, 'utf8').split('\n')[0];
         const rec = JSON.parse(head);
-        if (rec?.type !== "\x73\x65\x73\x73\x69\x6f\x6e\x5f\x6d\x65\x74\x61")
+        if (rec?.type !== 'session_meta')
             return false;
         const p = rec.payload ?? {};
-        if (path.resolve(String(p.cwd ?? "")) !== path.resolve(cwd))
+        if (path.resolve(String(p.cwd ?? '')) !== path.resolve(cwd))
             return false;
-        t.sessionId = String(p.session_id ?? "");
-        t.model = String(p.model ?? "");
+        t.sessionId = String(p.session_id ?? '');
+        t.model = String(p.model ?? '');
         return true;
     }
     catch {
@@ -282,16 +282,16 @@ function _codexVerify(file, cwd, t) {
 const SPECS = {
     [CAI.eProvider.claude]: {
         candidates: cwd => {
-            const dir = path.join(os.homedir(), "\x2e\x63\x6c\x61\x75\x64\x65", "\x70\x72\x6f\x6a\x65\x63\x74\x73", cwd.replace(/[^a-zA-Z0-9]/g, "\x2d"));
-            return _listDir(dir, n => n.endsWith("\x2e\x6a\x73\x6f\x6e\x6c")).map(n => path.join(dir, n));
+            const dir = path.join(os.homedir(), '.claude', 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'));
+            return _listDir(dir, n => n.endsWith('.jsonl')).map(n => path.join(dir, n));
         },
-        sessionIdOf: f => path.basename(f, "\x2e\x6a\x73\x6f\x6e\x6c"),
+        sessionIdOf: f => path.basename(f, '.jsonl'),
         parse: _claudeParse,
     },
     [CAI.eProvider.grok]: {
         candidates: cwd => {
-            const dir = path.join(os.homedir(), "\x2e\x67\x72\x6f\x6b", "\x73\x65\x73\x73\x69\x6f\x6e\x73", encodeURIComponent(cwd));
-            return _listDir(dir, () => true).map(n => path.join(dir, n, "\x63\x68\x61\x74\x5f\x68\x69\x73\x74\x6f\x72\x79\x2e\x6a\x73\x6f\x6e\x6c"));
+            const dir = path.join(os.homedir(), '.grok', 'sessions', encodeURIComponent(cwd));
+            return _listDir(dir, () => true).map(n => path.join(dir, n, 'chat_history.jsonl'));
         },
         sessionIdOf: f => path.basename(path.dirname(f)),
         parse: _grokParse,
@@ -299,11 +299,11 @@ const SPECS = {
     [CAI.eProvider.codex]: {
         candidates: _codexCandidates,
         verify: _codexVerify,
-        sessionIdOf: f => path.basename(f, "\x2e\x6a\x73\x6f\x6e\x6c"),
+        sessionIdOf: f => path.basename(f, '.jsonl'),
         parse: _codexParse,
     },
 };
-const _OPENCODE_DB = path.join(os.homedir(), "\x2e\x6c\x6f\x63\x61\x6c", "\x73\x68\x61\x72\x65", "\x6f\x70\x65\x6e\x63\x6f\x64\x65", "\x6f\x70\x65\x6e\x63\x6f\x64\x65\x2e\x64\x62");
+const _OPENCODE_DB = path.join(os.homedir(), '.local', 'share', 'opencode', 'opencode.db');
 let gOpencodeDb = null;
 async function _opencodeDb() {
     if (gOpencodeDb)
@@ -320,68 +320,68 @@ async function _opencodeRead(t, live, out) {
     const db = await _opencodeDb();
     if (!db)
         return;
-    const rows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x69\x64\x2c\x20\x64\x61\x74\x61\x2c\x20\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x2c\x20\x74\x69\x6d\x65\x5f\x75\x70\x64\x61\x74\x65\x64\x20\x46\x52\x4f\x4d\x20\x6d\x65\x73\x73\x61\x67\x65\x20\x57\x48\x45\x52\x45\x20\x73\x65\x73\x73\x69\x6f\x6e\x5f\x69\x64\x20\x3d\x20\x3f\x20\x41\x4e\x44\x20\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x20\x3e\x20\x3f\x20\x4f\x52\x44\x45\x52\x20\x42\x59\x20\x74\x69\x6d\x65\x5f\x63\x72\x65\x61\x74\x65\x64\x20\x41\x53\x43", [t.sessionId, t.lastSeen]);
+    const rows = await db.Recv('SELECT id, data, time_created, time_updated FROM message WHERE session_id = ? AND time_created > ? ORDER BY time_created ASC', [t.sessionId, t.lastSeen]);
     if (!rows || !rows.length)
         return;
     for (const r of rows) {
-        const mid = String(r[0x0]);
-        const tCreated = Number(r[0x2]);
-        const tUpdated = Number(r[0x3]);
+        const mid = String(r[0]);
+        const tCreated = Number(r[2]);
+        const tUpdated = Number(r[3]);
         let md;
         try {
-            md = JSON.parse(String(r[0x1]));
+            md = JSON.parse(String(r[1]));
         }
         catch {
             t.lastSeen = tCreated;
             continue;
         }
         const role = md?.role;
-        if (role !== "\x75\x73\x65\x72" && role !== "\x61\x73\x73\x69\x73\x74\x61\x6e\x74") {
+        if (role !== 'user' && role !== 'assistant') {
             t.lastSeen = tCreated;
             continue;
         }
-        const partRows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x64\x61\x74\x61\x20\x46\x52\x4f\x4d\x20\x70\x61\x72\x74\x20\x57\x48\x45\x52\x45\x20\x6d\x65\x73\x73\x61\x67\x65\x5f\x69\x64\x20\x3d\x20\x3f", [mid]);
+        const partRows = await db.Recv('SELECT data FROM part WHERE message_id = ?', [mid]);
         const parts = (partRows ?? []).map((p) => { try {
-            return JSON.parse(String(p[0x0]));
+            return JSON.parse(String(p[0]));
         }
         catch {
             return null;
         } })
             .filter((p) => p);
         const types = new Set(parts.map((p) => String(p.type)));
-        if (role === "\x61\x73\x73\x69\x73\x74\x61\x6e\x74" && !types.has("\x73\x74\x65\x70\x2d\x66\x69\x6e\x69\x73\x68") && Date.now() - tUpdated < 0x2710)
+        if (role === 'assistant' && !types.has('step-finish') && Date.now() - tUpdated < 10_000)
             break;
         t.lastSeen = tCreated;
         t.activeAt = Date.now();
-        const model = String(md?.modelID ?? "");
+        const model = String(md?.modelID ?? '');
         const iso = new Date(tCreated).toISOString();
-        if (role === "\x61\x73\x73\x69\x73\x74\x61\x6e\x74" && types.has("\x74\x6f\x6f\x6c")) {
+        if (role === 'assistant' && types.has('tool')) {
             t.currentKey = _resolveKey(t.provider, t.cwd, null, live, t.currentKey);
             for (const p of parts) {
-                if (p.type !== "\x74\x6f\x6f\x6c")
+                if (p.type !== 'tool')
                     continue;
-                const name = String(p.tool ?? p.name ?? "");
+                const name = String(p.tool ?? p.name ?? '');
                 const input = p.state?.input ?? p.input;
                 const chunk = _toolChunk(name, input, model, iso);
                 out.push({ ...chunk, key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd });
             }
             continue;
         }
-        const raw = parts.filter((p) => p.type === "\x74\x65\x78\x74").map((p) => String(p.text ?? "")).join("");
-        const text = role === "\x75\x73\x65\x72" ? _cleanUserText(raw) : raw.trim();
+        const raw = parts.filter((p) => p.type === 'text').map((p) => String(p.text ?? '')).join('');
+        const text = role === 'user' ? _cleanUserText(raw) : raw.trim();
         if (!text)
             continue;
-        t.currentKey = _resolveKey(t.provider, t.cwd, role === "\x75\x73\x65\x72" ? text : null, live, t.currentKey);
+        t.currentKey = _resolveKey(t.provider, t.cwd, role === 'user' ? text : null, live, t.currentKey);
         out.push({
             key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd,
             role, text, model, iso,
         });
     }
 }
-const AGY_BASE = path.join(os.homedir(), "\x2e\x67\x65\x6d\x69\x6e\x69", "\x61\x6e\x74\x69\x67\x72\x61\x76\x69\x74\x79\x2d\x63\x6c\x69");
-const AGY_CONV_DIR = path.join(AGY_BASE, "\x63\x6f\x6e\x76\x65\x72\x73\x61\x74\x69\x6f\x6e\x73");
-const AGY_USER = 0xe, AGY_ASST = 0xf, AGY_TITLE = 0x17, AGY_START = 0x62;
-const AGY_SETTLE_MS = 0x2710;
+const AGY_BASE = path.join(os.homedir(), '.gemini', 'antigravity-cli');
+const AGY_CONV_DIR = path.join(AGY_BASE, 'conversations');
+const AGY_USER = 14, AGY_ASST = 15, AGY_TITLE = 23, AGY_START = 98;
+const AGY_SETTLE_MS = 10_000;
 const gAgyDb = new Map();
 const gAgyCwd = new Map();
 async function _agyDb(file) {
@@ -402,63 +402,63 @@ async function _agyDb(file) {
     return db;
 }
 function _pbVarint(buf, p) {
-    let result = 0x0, shift = 0x0, pos = p;
+    let result = 0, shift = 0, pos = p;
     while (pos < buf.length) {
         const b = buf[pos++];
-        result += (b & 0x7f) * Math.pow(0x2, shift);
-        if ((b & 0x80) === 0x0)
+        result += (b & 0x7f) * Math.pow(2, shift);
+        if ((b & 0x80) === 0)
             return [result, pos];
-        shift += 0x7;
-        if (shift > 0x3f)
+        shift += 7;
+        if (shift > 63)
             break;
     }
-    return [0x0, -0x1];
+    return [0, -1];
 }
-function* _pbFields(buf, start = 0x0, end = buf.length) {
+function* _pbFields(buf, start = 0, end = buf.length) {
     let p = start;
     while (p < end) {
         const [tag, p1] = _pbVarint(buf, p);
-        if (p1 < 0x0)
+        if (p1 < 0)
             return;
-        const field = Math.floor(tag / 0x8), wire = tag & 0x7;
+        const field = Math.floor(tag / 8), wire = tag & 7;
         p = p1;
-        if (wire === 0x0) {
+        if (wire === 0) {
             const [v, p2] = _pbVarint(buf, p);
-            if (p2 < 0x0)
+            if (p2 < 0)
                 return;
             yield { field, wire, varint: v };
             p = p2;
         }
-        else if (wire === 0x2) {
+        else if (wire === 2) {
             const [len, p2] = _pbVarint(buf, p);
-            if (p2 < 0x0 || p2 + len > end)
+            if (p2 < 0 || p2 + len > end)
                 return;
             yield { field, wire, bytes: buf.subarray(p2, p2 + len) };
             p = p2 + len;
         }
-        else if (wire === 0x5)
-            p += 0x4;
-        else if (wire === 0x1)
-            p += 0x8;
+        else if (wire === 5)
+            p += 4;
+        else if (wire === 1)
+            p += 8;
         else
             return;
     }
 }
 function _pbGetBytes(buf, field) {
     for (const f of _pbFields(buf))
-        if (f.field === field && f.wire === 0x2)
+        if (f.field === field && f.wire === 2)
             return f.bytes;
     return null;
 }
 function _pbGetVarint(buf, field) {
     for (const f of _pbFields(buf))
-        if (f.field === field && f.wire === 0x0)
+        if (f.field === field && f.wire === 0)
             return f.varint;
     return null;
 }
 function _agyProse(s) {
     const t = s.trim();
-    if (t.length < 0x2)
+    if (t.length < 2)
         return false;
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t))
         return false;
@@ -466,18 +466,18 @@ function _agyProse(s) {
         return false;
     return /[A-Za-z가-힣]/.test(t);
 }
-function _agyFallbackText(buf, depth = 0x0) {
-    let best = "";
+function _agyFallbackText(buf, depth = 0) {
+    let best = '';
     for (const f of _pbFields(buf)) {
-        if (f.wire !== 0x2 || !f.bytes)
+        if (f.wire !== 2 || !f.bytes)
             continue;
-        if (depth < 0x6) {
-            const nested = _agyFallbackText(f.bytes, depth + 0x1);
+        if (depth < 6) {
+            const nested = _agyFallbackText(f.bytes, depth + 1);
             if (nested.length > best.length)
                 best = nested;
         }
-        const s = f.bytes.toString("\x75\x74\x66\x38");
-        if (Buffer.byteLength(s, "\x75\x74\x66\x38") !== f.bytes.length)
+        const s = f.bytes.toString('utf8');
+        if (Buffer.byteLength(s, 'utf8') !== f.bytes.length)
             continue;
         if (_agyProse(s) && s.length > best.length)
             best = s;
@@ -485,12 +485,12 @@ function _agyFallbackText(buf, depth = 0x0) {
     return best;
 }
 function _agyStepText(payload, stepType) {
-    const [outer, inner] = stepType === AGY_USER ? [0x13, 0x2] : [0x14, 0x1];
+    const [outer, inner] = stepType === AGY_USER ? [19, 2] : [20, 1];
     const content = _pbGetBytes(payload, outer);
     if (content) {
         const s = _pbGetBytes(content, inner);
         if (s && s.length) {
-            const txt = s.toString("\x75\x74\x66\x38");
+            const txt = s.toString('utf8');
             if (txt.trim())
                 return txt;
         }
@@ -498,27 +498,27 @@ function _agyStepText(payload, stepType) {
     return _agyFallbackText(payload);
 }
 function _agyIso(payload) {
-    const meta = _pbGetBytes(payload, 0x5);
+    const meta = _pbGetBytes(payload, 5);
     if (!meta)
         return undefined;
-    const ts = _pbGetBytes(meta, 0x1);
+    const ts = _pbGetBytes(meta, 1);
     if (!ts)
         return undefined;
-    const secs = _pbGetVarint(ts, 0x1);
+    const secs = _pbGetVarint(ts, 1);
     if (!secs)
         return undefined;
-    const nanos = _pbGetVarint(ts, 0x2) ?? 0x0;
-    return new Date(secs * 0x3e8 + Math.floor(nanos / 0xf4240)).toISOString();
+    const nanos = _pbGetVarint(ts, 2) ?? 0;
+    return new Date(secs * 1000 + Math.floor(nanos / 1e6)).toISOString();
 }
-function _agyFindMarker(buf, prefix, depth = 0x0) {
+function _agyFindMarker(buf, prefix, depth = 0) {
     for (const f of _pbFields(buf)) {
-        if (f.wire !== 0x2 || !f.bytes)
+        if (f.wire !== 2 || !f.bytes)
             continue;
-        const s = f.bytes.toString("\x75\x74\x66\x38");
+        const s = f.bytes.toString('utf8');
         if (s.startsWith(prefix))
             return s;
-        if (depth < 0x8) {
-            const r = _agyFindMarker(f.bytes, prefix, depth + 0x1);
+        if (depth < 8) {
+            const r = _agyFindMarker(f.bytes, prefix, depth + 1);
             if (r)
                 return r;
         }
@@ -531,7 +531,7 @@ function _agyNormCwd(s) {
         raw = decodeURIComponent(s);
     }
     catch { }
-    return path.resolve(raw.replace(/\//g, "\x5c")).toLowerCase();
+    return path.resolve(raw.replace(/\//g, '\\')).toLowerCase();
 }
 async function _agyResolveCwd(file) {
     const cached = gAgyCwd.get(file);
@@ -539,14 +539,14 @@ async function _agyResolveCwd(file) {
         return cached;
     const db = await _agyDb(file);
     if (!db)
-        return "";
-    const rows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x73\x74\x65\x70\x5f\x70\x61\x79\x6c\x6f\x61\x64\x20\x46\x52\x4f\x4d\x20\x73\x74\x65\x70\x73\x20\x57\x48\x45\x52\x45\x20\x73\x74\x65\x70\x5f\x74\x79\x70\x65\x20\x3d\x20\x3f\x20\x4f\x52\x44\x45\x52\x20\x42\x59\x20\x69\x64\x78\x20\x41\x53\x43\x20\x4c\x49\x4d\x49\x54\x20\x31", [AGY_USER]);
-    const raw = rows?.[0x0]?.[0x0];
+        return '';
+    const rows = await db.Recv('SELECT step_payload FROM steps WHERE step_type = ? ORDER BY idx ASC LIMIT 1', [AGY_USER]);
+    const raw = rows?.[0]?.[0];
     if (!raw)
-        return "";
+        return '';
     const payload = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
-    const url = _agyFindMarker(payload, "\x66\x69\x6c\x65\x3a\x2f\x2f\x2f");
-    const cwd = url ? _agyNormCwd(url.slice("\x66\x69\x6c\x65\x3a\x2f\x2f\x2f".length)) : "";
+    const url = _agyFindMarker(payload, 'file:///');
+    const cwd = url ? _agyNormCwd(url.slice('file:///'.length)) : '';
     if (cwd)
         gAgyCwd.set(file, cwd);
     return cwd;
@@ -554,16 +554,16 @@ async function _agyResolveCwd(file) {
 async function _agyMaxIdx(file) {
     const db = await _agyDb(file);
     if (!db)
-        return 0x0;
-    const r = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x4d\x41\x58\x28\x69\x64\x78\x29\x20\x46\x52\x4f\x4d\x20\x73\x74\x65\x70\x73", []);
-    return Number(r?.[0x0]?.[0x0] ?? 0x0);
+        return 0;
+    const r = await db.Recv('SELECT MAX(idx) FROM steps', []);
+    return Number(r?.[0]?.[0] ?? 0);
 }
 function _agyFlushPending(t, live, out) {
     if (!t.pendText)
         return;
     t.currentKey = _resolveKey(t.provider, t.cwd, null, live, t.currentKey);
     out.push({ key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd,
-        role: "\x61\x73\x73\x69\x73\x74\x61\x6e\x74", text: t.pendText, model: "", iso: t.pendIso });
+        role: 'assistant', text: t.pendText, model: '', iso: t.pendIso });
     t.pendText = undefined;
     t.pendIso = undefined;
 }
@@ -573,11 +573,11 @@ async function _agyRead(t, live, out) {
     const db = await _agyDb(t.file);
     if (!db)
         return;
-    const rows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x69\x64\x78\x2c\x20\x73\x74\x65\x70\x5f\x74\x79\x70\x65\x2c\x20\x73\x74\x65\x70\x5f\x70\x61\x79\x6c\x6f\x61\x64\x20\x46\x52\x4f\x4d\x20\x73\x74\x65\x70\x73\x20\x57\x48\x45\x52\x45\x20\x69\x64\x78\x20\x3e\x20\x3f\x20\x4f\x52\x44\x45\x52\x20\x42\x59\x20\x69\x64\x78\x20\x41\x53\x43", [t.lastSeen]);
+    const rows = await db.Recv('SELECT idx, step_type, step_payload FROM steps WHERE idx > ? ORDER BY idx ASC', [t.lastSeen]);
     for (const r of rows ?? []) {
-        const idx = Number(r[0x0]);
-        const stype = Number(r[0x1]);
-        const raw = r[0x2];
+        const idx = Number(r[0]);
+        const stype = Number(r[1]);
+        const raw = r[2];
         t.lastSeen = idx;
         t.activeAt = Date.now();
         if (raw == null)
@@ -590,7 +590,7 @@ async function _agyRead(t, live, out) {
                 continue;
             t.currentKey = _resolveKey(t.provider, t.cwd, text, live, t.currentKey);
             out.push({ key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd,
-                role: "\x75\x73\x65\x72", text, model: "", iso: _agyIso(payload) });
+                role: 'user', text, model: '', iso: _agyIso(payload) });
         }
         else if (stype === AGY_ASST) {
             const text = _agyStepText(payload, AGY_ASST).trim();
@@ -620,17 +620,17 @@ async function _scan(live) {
             const db = await _opencodeDb();
             if (!db)
                 continue;
-            const rows = await db.Recv("\x53\x45\x4c\x45\x43\x54\x20\x69\x64\x20\x46\x52\x4f\x4d\x20\x73\x65\x73\x73\x69\x6f\x6e\x20\x57\x48\x45\x52\x45\x20\x64\x69\x72\x65\x63\x74\x6f\x72\x79\x20\x3d\x20\x3f", [s.cwd.replace(/\\/g, "\x2f")]);
-            const sids = (rows ?? []).map((r) => String(r[0x0]));
+            const rows = await db.Recv('SELECT id FROM session WHERE directory = ?', [s.cwd.replace(/\\/g, '/')]);
+            const sids = (rows ?? []).map((r) => String(r[0]));
             const coldIds = sids.filter(sid => { const k = gTracked.get(`opencode:${sid}`); return k && !gHot.has(`opencode:${sid}`); });
             const newIds = sids.filter(sid => !gTracked.has(`opencode:${sid}`));
             if (coldIds.length) {
-                const ph = coldIds.map(() => "\x3f").join("\x2c");
+                const ph = coldIds.map(() => '?').join(',');
                 const mx = await db.Recv(`SELECT session_id, MAX(time_created) FROM message WHERE session_id IN (${ph}) GROUP BY session_id`, coldIds);
-                const maxMap = new Map((mx ?? []).map((r) => [String(r[0x0]), Number(r[0x1])]));
+                const maxMap = new Map((mx ?? []).map((r) => [String(r[0]), Number(r[1])]));
                 for (const sid of coldIds) {
                     const known = gTracked.get(`opencode:${sid}`);
-                    const lastMax = maxMap.get(sid) ?? 0x0;
+                    const lastMax = maxMap.get(sid) ?? 0;
                     if (lastMax > known.lastSeen) {
                         gHot.add(`opencode:${sid}`);
                         known.activeAt = Date.now();
@@ -638,18 +638,18 @@ async function _scan(live) {
                 }
             }
             if (newIds.length) {
-                const ph = newIds.map(() => "\x3f").join("\x2c");
+                const ph = newIds.map(() => '?').join(',');
                 const mm = await db.Recv(`SELECT session_id, MIN(time_created), MAX(time_created) FROM message WHERE session_id IN (${ph}) GROUP BY session_id`, newIds);
-                const rangeMap = new Map((mm ?? []).map((r) => [String(r[0x0]), { min: Number(r[0x1]), max: Number(r[0x2]) }]));
+                const rangeMap = new Map((mm ?? []).map((r) => [String(r[0]), { min: Number(r[1]), max: Number(r[2]) }]));
                 for (const sid of newIds) {
                     if (CAI.gHeadlessSessionIds.has(sid))
                         continue;
-                    const range = rangeMap.get(sid) ?? { min: 0x0, max: 0x0 };
-                    const fresh = (range.min === 0x0 || range.min >= gStartAt);
+                    const range = rangeMap.get(sid) ?? { min: 0, max: 0 };
+                    const fresh = (range.min === 0 || range.min >= gStartAt);
                     const id = `opencode:${sid}`;
                     gTracked.set(id, {
                         provider: s.provider, cwd: s.cwd, sessionId: sid,
-                        offset: 0x0, lastSeen: fresh ? 0x0 : range.max, currentKey: "", activeAt: Date.now(),
+                        offset: 0, lastSeen: fresh ? 0 : range.max, currentKey: '', activeAt: Date.now(),
                     });
                     if (fresh)
                         gHot.add(id);
@@ -659,14 +659,14 @@ async function _scan(live) {
         }
         if (s.provider === CAI.eProvider.antigravity) {
             const wantCwd = _agyNormCwd(s.cwd);
-            for (const name of _listDir(AGY_CONV_DIR, n => n.endsWith("\x2e\x64\x62"))) {
+            for (const name of _listDir(AGY_CONV_DIR, n => n.endsWith('.db'))) {
                 const file = path.join(AGY_CONV_DIR, name);
                 const known = gTracked.get(file);
                 if (known) {
                     if (!gHot.has(file)) {
                         try {
                             const mt = fs.statSync(file).mtimeMs;
-                            if (mt > (known.mtime ?? 0x0)) {
+                            if (mt > (known.mtime ?? 0)) {
                                 gHot.add(file);
                                 known.activeAt = Date.now();
                                 known.mtime = mt;
@@ -679,12 +679,12 @@ async function _scan(live) {
                 const cwd = await _agyResolveCwd(file);
                 if (!cwd || cwd !== wantCwd)
                     continue;
-                const agySessionId = path.basename(file, "\x2e\x64\x62");
+                const agySessionId = path.basename(file, '.db');
                 if (CAI.gHeadlessSessionIds.has(agySessionId))
                     continue;
                 const t = {
                     provider: s.provider, cwd: s.cwd, sessionId: agySessionId, file,
-                    offset: 0x0, lastSeen: 0x0, currentKey: "", activeAt: Date.now(),
+                    offset: 0, lastSeen: 0, currentKey: '', activeAt: Date.now(),
                 };
                 let fresh = false;
                 try {
@@ -722,8 +722,8 @@ async function _scan(live) {
                 continue;
             }
             const t = {
-                provider: s.provider, cwd: s.cwd, sessionId: "",
-                offset: 0x0, lastSeen: 0x0, currentKey: "", activeAt: Date.now(),
+                provider: s.provider, cwd: s.cwd, sessionId: '',
+                offset: 0, lastSeen: 0, currentKey: '', activeAt: Date.now(),
             };
             if (spec.verify && !spec.verify(file, s.cwd, t))
                 continue;
@@ -737,7 +737,7 @@ async function _scan(live) {
                 const st = fs.statSync(file);
                 const birth = st.birthtimeMs || st.mtimeMs;
                 fresh = birth >= gStartAt;
-                t.offset = fresh ? 0x0 : st.size;
+                t.offset = fresh ? 0 : st.size;
             }
             catch {
                 continue;
@@ -762,7 +762,7 @@ function _readFile(t, live, out) {
             for (const c of chunks) {
                 if (!c.model && t.model)
                     c.model = t.model;
-                t.currentKey = _resolveKey(t.provider, t.cwd, c.role === "\x75\x73\x65\x72" ? c.text : null, live, t.currentKey);
+                t.currentKey = _resolveKey(t.provider, t.cwd, c.role === 'user' ? c.text : null, live, t.currentKey);
                 out.push({ ...c, key: t.currentKey, provider: t.provider, sessionId: t.sessionId, cwd: t.cwd });
             }
         }
