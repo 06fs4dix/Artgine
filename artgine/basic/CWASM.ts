@@ -110,10 +110,26 @@ function wasmNew(_byteLength: number): number
 }
 
 const textDecoder = new TextDecoder("utf-16le");
-let keyNameCache: string[] = [];
-let opCodeCache: number[] = [];
 
+// AS 쪽 CASM.ts의 PERM_SIZE(4096=2^12, permTable 크기)와 반드시 같은 값이어야 한다 - 둘 중
+//하나만 바뀌면 회전(rotation) 복원이 조용히 엉뚱한 오프셋을 가리키게 된다. 2의 거듭제곱이라
+// 모듈러(%)를 비트마스크(&)로 대체할 수 있고, 항상 이 고정 크기로 배열을 채워두면(.fill)
+// permTable이 뒤섞어 돌려주는 오프셋이 어떤 순서로 와도 hole 없이 packed 상태가 유지된다
+// (V8 holey/dictionary-mode 강등 방지 - jsLinkDispatch/getKeyName 핫패스 인덱싱 속도에 직결).
+const KEY_SLOT_CAP = 4096;
+const KEY_SLOT_MASK = KEY_SLOT_CAP - 1;
+let keyNameCache: string[] = new Array(KEY_SLOT_CAP).fill(undefined);
+let opCodeCache: number[] = new Array(KEY_SLOT_CAP).fill(0);
+
+// getKeyName 회전 복원 결과의 구간(epoch) 캐시. gRotBase는 jsSetArrPos 호출 시점(게이트웨이
+// 진입/탈출)에만 바뀌므로, 그 사이(같은 epoch)에는 같은 wiredIdx가 항상 같은 이름으로
+// 풀린다 - 그래서 매번 재계산하지 않고 wiredIdx 슬롯에 이름+epoch 태그를 캐싱해뒀다가
+// epoch가 같으면 배열 읽기 한 번으로 끝낸다. epoch가 바뀌면 태그 불일치로 자연히 무효화되니
+// 캐시 배열 자체를 지울 필요는 없다.
 let gRotBase = 0;
+let gRotEpoch = 0;
+const resolvedNameCache: string[] = new Array(KEY_SLOT_CAP).fill(undefined);
+const resolvedNameEpoch: number[] = new Array(KEY_SLOT_CAP).fill(-1);
 
 const WIRE_STEP = 197;
 const gSessionSeed: number = (() => {
@@ -139,13 +155,19 @@ function readAsString(ptr: number): string {
 }
 
 function getKeyName(wiredIdx: number): string {
-    const n = keyNameCache.length;
-    let trueIdx = (wiredIdx - gRotBase) % n;
-    if (trueIdx < 0) trueIdx += n;
+    if (resolvedNameEpoch[wiredIdx] === gRotEpoch) {
+        return resolvedNameCache[wiredIdx];
+    }
+    // (wiredIdx - gRotBase) & KEY_SLOT_MASK: JS의 & 는 32비트 두 보수 연산이라 음수 결과도
+    // %와 동일하게 [0, KEY_SLOT_CAP) 범위로 감싸준다 - 별도 음수 보정 분기가 필요 없다
+    // (AS 쪽 SetKeyBase/_wireIdx와 동일한 방식, CASM.ts 참고).
+    const trueIdx = (wiredIdx - gRotBase) & KEY_SLOT_MASK;
     const name = keyNameCache[trueIdx];
     if (name === undefined) {
         throw new Error(`CWASM: keyNameCache miss at offset ${trueIdx} (wired=${wiredIdx}, base=${gRotBase})`);
     }
+    resolvedNameCache[wiredIdx] = name;
+    resolvedNameEpoch[wiredIdx] = gRotEpoch;
     return name;
 }
 
@@ -453,6 +475,9 @@ function buildImportObject(): WebAssembly.Imports {
                     const sep = entry.indexOf(String.fromCharCode(2));
                     const offset = parseInt(entry.substring(0, sep), 10);
                     const name = entry.substring(sep + 1);
+                    // keyNameCache/opCodeCache는 위에서 이미 KEY_SLOT_CAP(4096) 크기로
+                    // .fill()해뒀으므로 offset이 permTable로 뒤섞여 어떤 순서로 와도
+                    // hole 없이 packed 상태가 유지된다 - 그냥 직접 대입하면 된다.
                     keyNameCache[offset] = name;
                     const op = NAME_TO_OP[name];
                     if (op !== undefined) opCodeCache[offset] = op;
@@ -460,6 +485,9 @@ function buildImportObject(): WebAssembly.Imports {
             },
             jsSetArrPos: (pos: number) => {
                 gRotBase = pos;
+                // 회전 기준이 바뀌었으니 getKeyName의 epoch 캐시를 무효화한다(배열을 지울
+                // 필요 없이 태그만 새 값으로 넘기면 이전 결과는 자연히 미스 처리된다).
+                gRotEpoch++;
             },
             jsGetSeed: () => gSessionSeed,
             jsLinkONOFFF_O: jsLinkDispatch, jsLinkNFFFF_O: jsLinkDispatch, jsLinkNFOF_O: jsLinkDispatch,
@@ -640,8 +668,8 @@ function liftDecodeString(pointer: number): string {
     return String.fromCharCode(...memoryU16.subarray(start, end));
 }
 
-const RES_TAG_A: string = "3981151161_3655399013";
-const RES_TAG_B: string = "1884747724_4049602760";
+const RES_TAG_A: string = "952465336_3546857140";
+const RES_TAG_B: string = "3347165939_1147473823";
 
 const gArtgineBytesCache = new Map<string, ArrayBuffer | Uint8Array>();
 

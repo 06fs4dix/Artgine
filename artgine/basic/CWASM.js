@@ -102,9 +102,14 @@ function wasmNew(_byteLength) {
     return ptr;
 }
 const textDecoder = new TextDecoder("utf-16le");
-let keyNameCache = [];
-let opCodeCache = [];
+const KEY_SLOT_CAP = 4096;
+const KEY_SLOT_MASK = KEY_SLOT_CAP - 1;
+let keyNameCache = new Array(KEY_SLOT_CAP).fill(undefined);
+let opCodeCache = new Array(KEY_SLOT_CAP).fill(0);
 let gRotBase = 0;
+let gRotEpoch = 0;
+const resolvedNameCache = new Array(KEY_SLOT_CAP).fill(undefined);
+const resolvedNameEpoch = new Array(KEY_SLOT_CAP).fill(-1);
 const WIRE_STEP = 197;
 const gSessionSeed = (() => {
     try {
@@ -128,14 +133,16 @@ function readAsString(ptr) {
     return textDecoder.decode(new Uint8Array(gMemory.buffer, ptr, byteLength));
 }
 function getKeyName(wiredIdx) {
-    const n = keyNameCache.length;
-    let trueIdx = (wiredIdx - gRotBase) % n;
-    if (trueIdx < 0)
-        trueIdx += n;
+    if (resolvedNameEpoch[wiredIdx] === gRotEpoch) {
+        return resolvedNameCache[wiredIdx];
+    }
+    const trueIdx = (wiredIdx - gRotBase) & KEY_SLOT_MASK;
     const name = keyNameCache[trueIdx];
     if (name === undefined) {
         throw new Error(`CWASM: keyNameCache miss at offset ${trueIdx} (wired=${wiredIdx}, base=${gRotBase})`);
     }
+    resolvedNameCache[wiredIdx] = name;
+    resolvedNameEpoch[wiredIdx] = gRotEpoch;
     return name;
 }
 const OP = {
@@ -645,6 +652,7 @@ function buildImportObject() {
             },
             jsSetArrPos: (pos) => {
                 gRotBase = pos;
+                gRotEpoch++;
             },
             jsGetSeed: () => gSessionSeed,
             jsLinkONOFFF_O: jsLinkDispatch, jsLinkNFFFF_O: jsLinkDispatch, jsLinkNFOF_O: jsLinkDispatch,
@@ -811,8 +819,8 @@ function liftDecodeString(pointer) {
     const end = start + (memoryU32[(pointer - 4) >>> 2] >>> 1);
     return String.fromCharCode(...memoryU16.subarray(start, end));
 }
-const RES_TAG_A = "3981151161_3655399013";
-const RES_TAG_B = "1884747724_4049602760";
+const RES_TAG_A = "952465336_3546857140";
+const RES_TAG_B = "3347165939_1147473823";
 const gArtgineBytesCache = new Map();
 export class CWASM {
     static async LoadArtgineBytes(_relPath) {
