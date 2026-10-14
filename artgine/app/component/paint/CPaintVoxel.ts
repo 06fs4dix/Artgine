@@ -80,15 +80,6 @@ export class CPaintVoxel extends CPaint
 	// 	//Start에 있어야 하지 않나?
 		
 	// }
-	override EmptyRPChk()
-	{
-		if(this.mRenderPass.length==0)
-		{
-			var rp=new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxelKey());
-			rp.mPriority = CRenderPass.ePriority.BackGround;
-			this.mRenderPass=[rp];
-		}
-	}
 	override Start(): void {
 		if(CUtil.IsNode())	return;
 		this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(this.mMD,this.mOwner.GetFrame().Pal().SlVoxel().mShader[0],this.mMCI);
@@ -210,8 +201,5 @@ export class CPaintVoxel extends CPaint
 			return;
 		}
 		barr[0]=batch;
-	}
-	override ClearCRPAuto(): void {
-		super.ClearCRPAuto();
 	}
 }

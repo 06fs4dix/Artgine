@@ -14,6 +14,7 @@ let CPlaywrightRouter = class CPlaywrightRouter extends CAuthServer {
         this.On("/PlayWright/reset", this.onReset.bind(this));
         this.On("/PlayWright/exec", this.onExec.bind(this));
         this.On("/PlayWright/screenshot", this.onScreenshot.bind(this));
+        this.On("/PlayWright/record", this.onRecord.bind(this));
         this.On("/PlayWright/input", this.onInput.bind(this));
         this.On("/PlayWright/logs", this.onLogs.bind(this));
         this.On("/PlayWright/remove", this.onRemove.bind(this));
@@ -26,13 +27,14 @@ let CPlaywrightRouter = class CPlaywrightRouter extends CAuthServer {
     async onReset(_json, _req, _res) { return null; }
     async onExec(_json, _req, _res) { return null; }
     async onScreenshot(_json, _req, _res) { return null; }
+    async onRecord(_json, _req, _res) { return null; }
     async onInput(_json, _req, _res) { return null; }
     async onLogs(_json, _req, _res) { return null; }
     async onRemove(_json, _req, _res) { return null; }
     async onEval(_json, _req, _res) { return null; }
 };
 CPlaywrightRouter = __decorate([
-    URLPatterns(["/PlayWright/list", "/PlayWright/push", "/PlayWright/reset", "/PlayWright/exec", "/PlayWright/screenshot", "/PlayWright/input", "/PlayWright/logs", "/PlayWright/remove", "/PlayWright/eval"])
+    URLPatterns(["/PlayWright/list", "/PlayWright/push", "/PlayWright/reset", "/PlayWright/exec", "/PlayWright/screenshot", "/PlayWright/record", "/PlayWright/input", "/PlayWright/logs", "/PlayWright/remove", "/PlayWright/eval"])
 ], CPlaywrightRouter);
 export { CPlaywrightRouter };
 import CPlaywrightRouter_imple from '../server_imple/CPlaywrightRouter.js';

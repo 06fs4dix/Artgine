@@ -1882,6 +1882,10 @@ export class CUtilRender
 		const outBufs: CFloat32Mgr[] = _ci.vertex.map(() => new CFloat32Mgr());
 		const outPos = outBufs[_ci.vertex.findIndex(v => v.vfType === CVertexFormat.eIdentifier.Position)];
 
+		//TexOff(재질 텍스처 번호)/가중치 등이 다른 정점까지 합치면 한 삼각형에 재질 번호가 섞여 셰이더 보간으로 엉뚱한 텍스처(ORM 등)가 찍힌다
+		const extraBufs = _ci.vertex.filter(v => v.vfType !== CVertexFormat.eIdentifier.Position && v.vfType !== CVertexFormat.eIdentifier.UV &&
+			v.vfType !== CVertexFormat.eIdentifier.Normal && Number.isInteger(elemPerVert.get(v.vfType)) && elemPerVert.get(v.vfType) > 0);
+
 		// 키 함수(양자화로 ε비교)
 		const q = (v: number, eps: number) => Math.round(v / eps);
 		const makeKey = (i: number): string => {
@@ -1894,6 +1898,12 @@ export class CUtilRender
 			if (useNormal && norBuf) {
 				const n = norBuf.V3(i);
 				k += `|n:${q(n.x, norEps)},${q(n.y, norEps)},${q(n.z, norEps)}`;
+			}
+			for (const vb of extraBufs) {
+				const e = elemPerVert.get(vb.vfType);
+				const f = vb.bufF.GetArray();
+				k += `|${vb.vfType}:`;
+				for (let j = 0; j < e; ++j) k += f[i * e + j] + ",";
 			}
 			return k;
 		};
@@ -2009,7 +2019,223 @@ export class CUtilRender
 		}
 	}
 
-	
+	/**
+	 * 트리를 순회하며 (실제 지오메트리가 있는 노드, 그 노드까지 누적된 로컬 매트릭스)를
+	 * 평평한 리스트로 모은다. 병합은 이 리스트를 텍스처 조합별로 묶은 뒤 그룹별로 굽는다
+	 * (MergeMeshTree 참고) - 한 draw call에 텍스처가 너무 많이 몰려 GPU 텍스처 유닛
+	 * 한도(보통 16)를 넘기지 않기 위함이다.
+	 */
+	private static CollectMeshLeaf(_PMat : CMat, _tNode : CTree<CMeshDataNode>, _out : Array<{node:CTree<CMeshDataNode>,mat:CMat}>) : void
+	{
+		let LMat=CMath.MatScale(_tNode.mData.sca);
+		if(_tNode.mData.rot.w >= 100000)	// euler
+			CMath.MatMul(LMat,CMath.MatRotation(_tNode.mData.rot),LMat);
+		else
+			CMath.MatMul(LMat,CMath.QutToMat(_tNode.mData.rot),LMat);
+		LMat.SetV3(3,_tNode.mData.pos);
+
+		let LPMat=CMath.MatMul(LMat,_PMat);
+		if(_tNode.mData.ci!=null)
+			_out.push({node:_tNode,mat:LPMat});
+
+		if(_tNode.mColleague!=null)
+			CUtilRender.CollectMeshLeaf(_PMat,_tNode.mColleague,_out);
+		if(_tNode.mChild!=null)
+			CUtilRender.CollectMeshLeaf(LPMat,_tNode.mChild,_out);
+	}
+
+	/**
+	 * 지오메트리가 있는 노드 하나를 이미 계산된 누적 매트릭스(_PMat, 이 노드 자신의 것)로
+	 * 정점에 구워서 출력 CMeshCreateInfo에 이어붙인다. CPaint3D.Merge()와 같은 원리
+	 * (정점 복사 + 인덱스 오프셋 + 로컬 매트릭스를 정점에 직접 굽기).
+	 *
+	 * 텍스처 리매핑이 필요 없다고 착각했던 부분: 정점의 TexOff(x/y/z)는 mesh.texture의
+	 * 전역 인덱스가 아니라 "그 노드 자신의 textureOff 배열" 안에서의 로컬 위치다(파서가
+	 * data.textureOff.length를 오프셋으로 쓰고, 실제 전역 인덱스는 data.textureOff[off]에
+	 * 넣는다 - util_imple/parser/CParserGLTF.ts:843~884 참고). 노드마다 이 로컬 배열이
+	 * 0부터 다시 시작하므로, 그대로 이어붙이면 서로 다른 서브메시의 로컬 인덱스가 겹쳐
+	 * 엉뚱한 텍스처를 가리키게 된다. 그래서 CPaint3D.Merge()가 하는 것과 같은 리매핑이
+	 * 필요하다 - 여기선 같은 CMesh 안이라 문자열 비교 대신 전역 인덱스(숫자)로 중복 제거한다.
+	 */
+	private static MergeMeshLeaf(_LPMat : CMat, _tNode : CTree<CMeshDataNode>, _oCI : CMeshCreateInfo, _bound : CBound,
+		_texMap : Map<number,number>, _texList : Array<number>) : void
+	{
+		{
+			let LPMat=_LPMat;
+			let tvb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Position);
+			let tub=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.UV);
+			let tnb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+			let ttb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+			let tweb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Weight);
+			let twib=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+			let tinb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Index);
+
+			let ovb=_oCI.GetVFType(CVertexFormat.eIdentifier.Position);
+			let oub=_oCI.GetVFType(CVertexFormat.eIdentifier.UV);
+			let onb=_oCI.GetVFType(CVertexFormat.eIdentifier.Normal);
+			let otb=_oCI.GetVFType(CVertexFormat.eIdentifier.TexOff);
+			let oweb=_oCI.GetVFType(CVertexFormat.eIdentifier.Weight);
+			let owib=_oCI.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+			let oinb=_oCI.GetVFType(CVertexFormat.eIdentifier.Index);
+			if(ovb.length==0)	{ _oCI.Create(CVertexFormat.eIdentifier.Position); ovb=_oCI.GetVFType(CVertexFormat.eIdentifier.Position); }
+			if(oub.length==0)	{ _oCI.Create(CVertexFormat.eIdentifier.UV); oub=_oCI.GetVFType(CVertexFormat.eIdentifier.UV); }
+			if(onb.length==0)	{ _oCI.Create(CVertexFormat.eIdentifier.Normal); onb=_oCI.GetVFType(CVertexFormat.eIdentifier.Normal); }
+			if(otb.length==0)	{ _oCI.Create(CVertexFormat.eIdentifier.TexOff); otb=_oCI.GetVFType(CVertexFormat.eIdentifier.TexOff); }
+			if(oweb.length==0)	{ _oCI.Create(CVertexFormat.eIdentifier.Weight); oweb=_oCI.GetVFType(CVertexFormat.eIdentifier.Weight); }
+			if(owib.length==0)	{ _oCI.Create(CVertexFormat.eIdentifier.WeightIndex); owib=_oCI.GetVFType(CVertexFormat.eIdentifier.WeightIndex); }
+			if(oinb.length==0)	{ _oCI.Create(CVertexFormat.eIdentifier.Index); oinb=_oCI.GetVFType(CVertexFormat.eIdentifier.Index); }
+
+			// 이 노드의 로컬 textureOff(0,1,2...) -> 병합 노드의 로컬 textureOff로 재매핑하는 표.
+			// 전역 텍스처 인덱스(mesh.texture 기준)가 같으면 슬롯도 같이 쓴다(중복 제거)
+			let remap=new Array<number>(_tNode.mData.textureOff.length);
+			for(let i=0;i<_tNode.mData.textureOff.length;++i)
+			{
+				let g=_tNode.mData.textureOff[i];
+				let m=_texMap.get(g);
+				if(m==null)
+				{
+					m=_texList.length;
+					_texMap.set(g,m);
+					_texList.push(g);
+				}
+				remap[i]=m;
+			}
+
+			for(let i=0;i<tvb[0].bufF.Size(3);++i)
+			{
+				let v=tvb[0].bufF.V3(i);
+				let u=tub.length>0?tub[0].bufF.V2(i):new CVec2(0,0);
+				let n=tnb.length>0?tnb[0].bufF.V3(i):new CVec3(0,1,0);
+				let t=ttb.length>0?ttb[0].bufF.V3(i):new CVec3(-1,-1,-1);
+
+				ovb[0].bufF.Push(v);
+				oub[0].bufF.Push(u);
+				onb[0].bufF.Push(n);
+
+				let toff=new CVec3(-1,-1,-1);
+				if(t.x!=-1)	toff.x=remap[t.x];
+				if(t.y!=-1)	toff.y=remap[t.y];
+				if(t.z!=-1)	toff.z=remap[t.z];
+				otb[0].bufF.Push(toff);
+
+				if(tweb.length>0)
+				{
+					oweb[0].bufF.Push(tweb[0].bufF.V4(i));
+					owib[0].bufF.Push(twib[0].bufF.V4(i));
+				}
+				else
+				{
+					oweb[0].bufF.Push(new CVec4(0,0,0,0));
+					owib[0].bufF.Push(new CVec4(0,0,0,0));
+				}
+			}
+
+			let tempv=new CVec3();
+			for(let i=_oCI.vertexCount;i<ovb[0].bufF.Size(3);++i)
+			{
+				let v=ovb[0].bufF.V3(i);
+				CMath.V3MulMatCoordi(v,LPMat,tempv);
+				ovb[0].bufF.X3(i,tempv.x);
+				ovb[0].bufF.Y3(i,tempv.y);
+				ovb[0].bufF.Z3(i,tempv.z);
+			}
+
+			// 노말도 같이 굽는다(안 하면 로컬 회전이 있는 서브노드는 병합 후 노말이 틀어져
+			// 조명이 어긋난다). 비균등 스케일에서도 맞도록 역-전치 행렬을 쓴다 - 셰이더의
+			// 기본 노말 변환(z_file/3D.ts의 nMat3 = TransposeMat3(InverseMat3(...)))과 같은 방식
+			let nMat=CMath.MatTranspose(CMath.MatInvert(LPMat));
+			let tempn=new CVec3();
+			for(let i=_oCI.vertexCount;i<onb[0].bufF.Size(3);++i)
+			{
+				let n=onb[0].bufF.V3(i);
+				CMath.V3MulMatNormal(n,nMat,tempn);
+				CMath.V3Nor(tempn,tempn);
+				onb[0].bufF.X3(i,tempn.x);
+				onb[0].bufF.Y3(i,tempn.y);
+				onb[0].bufF.Z3(i,tempn.z);
+			}
+
+			for(let i=0;i<tinb[0].bufI.length;++i)
+			{
+				_bound.InitBound(ovb[0].bufF.V3(tinb[0].bufI[i]+_oCI.vertexCount));
+				oinb[0].bufI.push(tinb[0].bufI[i]+_oCI.vertexCount);
+			}
+
+			_oCI.vertexCount+=_tNode.mData.ci.vertexCount;
+			_oCI.indexCount+=_tNode.mData.ci.indexCount;
+		}
+	}
+
+	/**
+	 * 스킨/애니메이션/IK/어태처가 없는 정적 메시 전용. 서브메시(primitive) 개수만큼 갈라져 있던
+	 * mesh.meshTree를, "같은 텍스처 조합을 쓰는 것끼리만" 묶어서 여러 개의 병합 노드로 줄인다
+	 * (렌더 시 페인트가 서브메시 수만큼 돌던 CPU 루프를 텍스처 종류 수만큼으로 줄임).
+	 *
+	 * 전부 노드 1개로 합치지 않는 이유: 한 draw call은 자신이 쓰는 텍스처를 전부 동시에
+	 * GPU 텍스처 유닛에 바인딩해야 하는데(WebGL에서 흔히 16개 한도), 서로 다른 재질을 쓰는
+	 * 서브메시를 몽땅 하나로 합치면 그 개수를 넘겨서 일부 텍스처가 깨진다(실측: bastion1.glb
+	 * 서브메시 420개, 텍스처 18개 - 노드 1개로 합쳤더니 실제로 일부가 안 나왔다). 그래서 텍스처
+	 * 조합이 같은 서브메시끼리만(보통 재질 하나 = 텍스처 1~3개) 묶어서, 그룹당 안전하게
+	 * 텍스처 유닛 한도 안에 들어오게 한다.
+	 *
+	 * 애초에 뼈가 움직여야 하는 메시는 병합하면 안 되므로, 그런 경우 이 함수는 아무것도
+	 * 하지 않고 false를 반환한다.
+	 */
+	static MergeMeshTree(_mesh : CMesh) : boolean
+	{
+		if(_mesh.skin.length>0 || _mesh.aniMap.size>0 || _mesh.ik.size>0 || _mesh.attacher.size>0)
+			return false;
+
+		// 1) 지오메트리가 있는 노드를 전부 (노드, 누적 로컬 매트릭스)로 모은다
+		let leaves=new Array<{node:CTree<CMeshDataNode>,mat:CMat}>();
+		CUtilRender.CollectMeshLeaf(new CMat(),_mesh.meshTree,leaves);
+		if(leaves.length==0)	return false;
+
+		// 2) 텍스처 조합(정렬된 전역 인덱스 목록)이 같은 노드끼리 그룹핑
+		let groupMap=new Map<string,Array<{node:CTree<CMeshDataNode>,mat:CMat}>>();
+		let groupOrder=new Array<string>();
+		for(let leaf of leaves)
+		{
+			let key=leaf.node.mData.textureOff.slice().sort((a,b)=>a-b).join(",");
+			let arr=groupMap.get(key);
+			if(arr==null)
+			{
+				arr=new Array<{node:CTree<CMeshDataNode>,mat:CMat}>();
+				groupMap.set(key,arr);
+				groupOrder.push(key);
+			}
+			arr.push(leaf);
+		}
+
+		// 3) 그룹별로 별도 병합 노드를 만든다
+		let newTree=new CTree<CMeshDataNode>();
+		newTree.mData=new CMeshDataNode();	// 그룹들의 부모 - 지오메트리 없는 그룹핑 노드
+		let groupIdx=0;
+		for(let key of groupOrder)
+		{
+			let oCI=new CMeshCreateInfo();
+			let bound=new CBound();
+			bound.SetType(CBound.eType.Box);
+			let texMap=new Map<number,number>();
+			let texList=new Array<number>();
+			for(let leaf of groupMap.get(key))
+				CUtilRender.MergeMeshLeaf(leaf.mat,leaf.node,oCI,bound,texMap,texList);
+			oCI.bound=bound;
+
+			let data=new CMeshDataNode();
+			data.rot.w=1;	// euler 취급(rot=0,0,0)
+			data.ci=oCI;
+			data.textureOff=texList;
+			let childTree=newTree.PushChild("merge"+groupIdx);
+			childTree.mData=data;
+			++groupIdx;
+		}
+
+		_mesh.meshTree=newTree;
+		return true;
+	}
+
+
 	static MeshBoundUpdate(_mesh : CMesh)
 	{
 		let Tree = new CTree<CMeshCopyNode>();
@@ -2570,6 +2796,15 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 	if(mdd.ci!=null && mdd.textureOff.length>0)
 	{
 		mdd.ci.bound.SetType(CBound.eType.Box);
+		//이번 호출에서 만든 점만 여기 모아 두고, 끝에서 mPos를 통째로 갈아끼운다.
+		//그냥 덧붙이면 지오메트리 생성기(GetBox/GetSphere 등이 AABB를 구하려고
+		//InitBound(pos,true)로 정점 버퍼를 통째로 밀어넣는다)가 남긴 "정점 목록" 뒤에
+		//인덱스 순서 정점이 붙어 mPos가 [정점목록]+[삼각형목록]이 된다. 그러면 3개씩 끊어
+		//삼각형으로 읽는 쪽(eType.Triangle 충돌, PickChk)에서 앞부분이 엉뚱한 삼각형이 되고,
+		//vertexCount가 3의 배수가 아니면 뒷부분까지 한 칸씩 밀린다.
+		//반대로 무조건 먼저 비우면 안 된다 - 이 함수는 행렬이 0이면 한 점도 안 만드는데,
+		//그 경우까지 비워버리면 앞선 정상 호출의 결과가 사라진다.
+		let newPos=new Array<CVec3>();
 		let posb=mdd.ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
 		let web=mdd.ci.GetVFType(CVertexFormat.eIdentifier.Weight)[0];
 		let wib=mdd.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex)[0];
@@ -2614,7 +2849,9 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 						
 					if(mat.IsZero()==false)
 					{
-						mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,mat),true);	
+						let wpos=CMath.V3MulMatCoordi(pos,mat);
+						mdd.ci.bound.InitBound(wpos,false);
+						newPos.push(wpos);
 					}
 				}
 			}
@@ -2658,18 +2895,26 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 					
 				if(mat.IsZero()==false)
 				{
-					mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,mat),true);	
+					let wpos=CMath.V3MulMatCoordi(pos,mat);
+					mdd.ci.bound.InitBound(wpos,false);
+					newPos.push(wpos);
 				}
-				
-				
+
+
 			}
-			
-			
-			
+
+
+
 		}
-		
+
+		//한 점도 못 만들었으면 이번 호출은 기여한 게 없으니 기존 mPos를 건드리지 않는다
+		if(newPos.length>0)
+		{
+			mdd.ci.bound.mPos.Clear();
+			for(let i=0;i<newPos.length;++i)	mdd.ci.bound.mPos.Push(newPos[i]);
+		}
 	}
-	
+
 	CPoolGeo.RecycleMat(mat);
 	// if(_node.mChild!=null)	MeshNodeBoundUpdate(_skinMat,_node.mChild,mat);
 	// if(_node.mColleague!=null)	MeshNodeBoundUpdate(_skinMat,_node.mColleague,_sum);

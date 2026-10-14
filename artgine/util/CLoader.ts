@@ -41,6 +41,8 @@ export class CLoaderOption extends CObject
 	public mFilter=CTexture.eFilter.Linear;
 	public mWrap=CTexture.eWrap.Clamp;
 	public mMipMap=CTexture.eMipmap.GL;
+	//이방성 필터링 최대 배수(0=끔). CTexture.SetAniso로 넘어간다
+	public mAniso=0;
 	public mColorTex=false;
 	public mAlphaCut=0x09;
 	public mAlphaBleed =true;
@@ -51,6 +53,7 @@ export class CLoaderOption extends CObject
 
 	public mInch=false;
 	public mComputeNormal=true;
+	public mMergeStatic=true;
     public mIsBumpHeightmap=false;
 	//public simplify=100;
 	
@@ -100,6 +103,7 @@ export class CLoader
 	{
 		this.mRender=_renderer;
 		this.mRes=_res;
+		if(_renderer!=null)	_renderer.mLoadSet=this.mLoadSet;
 	}
 	IsLoad(_key : string)
 	{
@@ -308,6 +312,8 @@ export class CLoader
 
 
 		this.mLoadSet.add(_file);
+		if(this.IsChannelKey(_file))
+			return await this.ChannelTexLoad(_file,_option);
 		var pos=_file.lastIndexOf(".")+1;
 		var ext=_file.substr(pos,_file.length-pos).toLowerCase();
 
@@ -358,6 +364,7 @@ export class CLoader
 		tex.SetFilter(_option.mFilter);
 		tex.SetWrap(_option.mWrap);
 		tex.SetMipMap(_option.mMipMap);
+		tex.SetAniso(_option.mAniso);
 		tex.SetSize(1,1);
 		tex.CreateBuf();
 		
@@ -380,9 +387,15 @@ export class CLoader
 			par.GetResult().SetFilter(_option.mFilter);
 			par.GetResult().SetWrap(_option.mWrap);
 			par.GetResult().SetMipMap(_option.mMipMap);
-			if( this.mRender!=null)	
+			par.GetResult().SetAniso(_option.mAniso);
+			if( this.mRender!=null)
 			{
-				this.mRender.BuildTexture(par.GetResult());
+				//GPU로 올린 텍스처는 업로드가 끝나면 CPU 픽셀을 비운다. 로드 후 픽셀을 읽어야 하면 mGPU=false(CPU만)로 로드한다
+				const gpuTex=par.GetResult();
+				Promise.resolve(this.mRender.BuildTexture(gpuTex)).then(()=>{
+					gpuTex.mKeepBuf=false;
+					gpuTex.ReleaseBuf();
+				});
 				this.mRender.ReleaseTexture(tex);
 			}
 		}
@@ -444,9 +457,9 @@ export class CLoader
 		
 		
 		var par :CParser=null;
-		if(ext=="fbx")	par = new CParserFBX(_option.mColorTex,_option.mComputeNormal);
-		else if(ext=="obj") 	par = new CParserOBJ(_option.mComputeNormal);
-		else 	par = new CParserGLTF(_option.mInch,_option.mColorTex,_option.mTexBufRaw,_option.mComputeNormal);
+		if(ext=="fbx")	par = new CParserFBX(_option.mColorTex,_option.mComputeNormal,_option.mMergeStatic);
+		else if(ext=="obj") 	par = new CParserOBJ(_option.mComputeNormal,_option.mMergeStatic);
+		else 	par = new CParserGLTF(_option.mInch,_option.mColorTex,_option.mTexBufRaw,_option.mComputeNormal,_option.mMergeStatic);
 		
 		
 
@@ -472,8 +485,15 @@ export class CLoader
 		let path=_file.substring(0,_file.lastIndexOf("/"))+"/";
 
 		let texMap=new Map<string,ArrayBuffer>();
+		let channelArr=new Array<number>();
 		for (let i = 0; i < mesh.texture.length; i++)
 		{
+			// 채널 합성 텍스쳐는 #n 참조 대상(임베디드 텍스쳐)이 이름을 받고 로드된 뒤에 만든다
+			if(typeof mesh.texture[i]=="string" && this.IsChannelKey(mesh.texture[i]))
+			{
+				channelArr.push(i);
+				continue;
+			}
             // 텍스쳐가 버퍼로 되어 있음
 			if(mesh.texture[i] as any instanceof Uint8Array)
 			{
@@ -536,6 +556,84 @@ export class CLoader
 		{
 			await this.LoadSwitch(key, value, option);
 		}
+		for(let i of channelArr)
+		{
+			mesh.texture[i]=mesh.texture[i].split("&").map((p)=>/^#\d+$/.test(p)?mesh.texture[Number(p.substring(1))]:p).join("&");
+			await this.Exe(mesh.texture[i],option);
+		}
+	}
+	IsChannelKey(_key : string)
+	{
+		return _key.indexOf("&")!=-1 && _key.indexOf("://")==-1 && _key.startsWith("base64:")==false;
+	}
+	//_key : "R&G&B&A" 항목마다 텍스쳐 경로(같은 순번 채널을 가져옴) 또는 0~255 상수
+	private async ChannelTexLoad(_key : string,_option : CLoaderOption)
+	{
+		if(_option==null)	_option=new CLoaderOption();
+		const partArr=_key.split("&");
+		if(partArr.some((p)=>p.startsWith("#")))
+		{
+			this.mLoadSet.delete(_key);
+			return null;
+		}
+		const srcArr=new Array<{buf:ArrayLike<number>,w:number,h:number}>(null,null,null,null);
+		const constArr=[0,0,0,255];
+		let w=1,h=1;
+		for(let c=0;c<4 && c<partArr.length;++c)
+		{
+			const part=partArr[c];
+			if(/^\d+$/.test(part))
+			{
+				constArr[c]=Math.min(255,Number(part));
+				continue;
+			}
+			const src=await this.Exe(part,_option);
+			let buf=src instanceof CTexture?src.GetBuf()[0]:null;
+			//GPU로 로드된 원본은 CPU 픽셀이 비워졌으므로 캐시를 거치지 않고 한 번 더 디코딩해 채널을 읽는다
+			if(buf==null && src instanceof CTexture)
+			{
+				const par=part.toLowerCase().endsWith(".tga")?new CParserTGA():new CParserIMG();
+				await par.Load(part);
+				const raw=par.GetResult();
+				buf=raw!=null?raw.GetBuf()[0]:null;
+			}
+			if(buf instanceof Uint8Array || buf instanceof Uint8ClampedArray)
+			{
+				srcArr[c]={buf:buf,w:src.GetWidth(),h:src.GetHeight()};
+				w=Math.max(w,src.GetWidth());
+				h=Math.max(h,src.GetHeight());
+			}
+			else
+				CConsol.Log("ChannelTexLoad fail : "+part);
+		}
+		const tex=new CTexture();
+		tex.SetSize(w,h);
+		tex.CreateBuf();
+		const dst=tex.GetBuf()[0];
+		for(let y=0;y<h;++y)
+		{
+			for(let x=0;x<w;++x)
+			{
+				const di=(y*w+x)*4;
+				for(let c=0;c<4;++c)
+				{
+					const src=srcArr[c];
+					if(src==null)
+						dst[di+c]=constArr[c];
+					else
+						dst[di+c]=src.buf[(Math.floor(y*src.h/h)*src.w+Math.floor(x*src.w/w))*4+c];
+				}
+			}
+		}
+		tex.SetFilter(_option.mFilter);
+		tex.SetWrap(_option.mWrap);
+		tex.SetMipMap(_option.mMipMap);
+		tex.SetAniso(_option.mAniso);
+		tex.SetKey(_key);
+		if(this.mRender!=null && _option.mGPU)	this.mRender.BuildTexture(tex);
+		if(this.mRes!=null)	this.mRes.Push(_key,tex);
+		this.mLoadSet.delete(_key);
+		return tex;
 	}
 	private VideoLoad(_file : string,_buffer : ArrayBufferLike)
 	{

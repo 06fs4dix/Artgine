@@ -1,0 +1,15 @@
+{
+    "dependencies": {
+		"artgine":1
+    },
+    "version":1,
+    "text":"절차적 건물 생성(벽·탑·집·울타리·길). Create(종류, 점[], 영향 여부) → 페인트·콜라이더가 붙은 서브젝트",
+    "include":true,
+    "client":["ForgeBuild.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Unknown",
+        "Revision":"1",
+        "Comment":"자동 조정 생성기"
+    }
+}

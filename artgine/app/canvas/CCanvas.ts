@@ -24,6 +24,7 @@ import { CLight } from "../component/CLight.js";
 import { CFile } from "../../system/CFile.js";
 import { CShader } from "../../render/CShader.js";
 import { CVec3 } from "../../geometry/CVec3.js";
+import { CBound } from "../../geometry/CBound.js";
 import { CMath } from "../../geometry/CMath.js";
 import { CRay } from "../../geometry/CRay.js";
 import { CCollider } from "../component/CCollider.js";
@@ -91,6 +92,8 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	public mPushSub=new CArray<CSubject>();
 	public mSave=true;
 	
+	public mAutoRPMap=new Map<string, CRPAuto>();
+	public mAutoRPUpdate=CUpdate.eType.Not;
 
 	//mWebSocket : CWebSocket=null;
 
@@ -99,6 +102,9 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	
 	mPlugin =new  Array<CCanvasPlugin>();
 
+	//월드 좌표 바운드. 하나라도 있으면 mSleep이 있는 서브젝트는 위치가 어느 바운드에도 안 들면 잠든다.
+	//잠든 서브젝트는 페인트 컬링도 멈추므로 바운드는 카메라 시야보다 넉넉해야 한다.
+	protected mSleepBound=new Array<CBound>();
 
 
 	
@@ -109,7 +115,6 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		this.mFrame=_fw;
 		this.mBrush=_brash;
 		this.mGI=_GI;
-
 		
 		if(_fw==null)	return;
 		
@@ -131,9 +136,55 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		
 		if(_member=="mBrush" || _member=="mRemoveList" || _member=="mFrame" || _member=="mPushSub" ||
 			_member=="mBroMsg" || _member=="mBroLen"  ||_member=="mPacArr" ||
-			_member=="mKeyChangeList" || _member=="mGI" || _member=="mChangeRPMgr")
+			_member=="mKeyChangeList" || _member=="mGI" || _member=="mChangeRPMgr" || _member=="mSleepBound")
 			return false;
 		return super.IsShould(_member,_type);
+	}
+	PushSleepBound(_bound : CBound)
+	{
+		this.mSleepBound.push(_bound);
+	}
+	ClearSleepBound()
+	{
+		this.mSleepBound.length=0;
+	}
+	//캔버스 Update에서 서브젝트 순회 전에 한 번 부른다. 슬립이 있는 서브젝트마다 이번 프레임
+	//건너뛸지(mSleepSkip)를 정해 두고, 순회(JS/ASM 양쪽)는 그 플래그만 읽는다 — ASM 루프가
+	//서브젝트마다 위치/타이머를 직접 읽으면 경계를 여러 번 넘어 절감분을 까먹는다.
+	//false면 이번 프레임은 아무도 재우지 않으므로 순회는 mSleepSkip을 보지 않는다.
+	SleepChk(_update : CUpdate) : boolean
+	{
+		if(this.mSleepBound.length==0)	return false;
+		//정적 옥트리 재빌드 프레임에 콜라이더가 업데이트되지 않으면 트리에서 빠진다
+		if(this.mGI!=null && this.mGI.mOctree.mStaticBuild)	return false;
+
+		const delay=_update.DeltaTime();
+		for(const sub of this.mSubMap.values())
+		{
+			const sleep=sub.mSleep;
+			if(sleep==null)	continue;
+
+			const pos=sub.GetPos();
+			let inside=false;
+			for(const b of this.mSleepBound)
+			{
+				if(pos.x>=b.mMin.x && pos.x<=b.mMax.x && pos.y>=b.mMin.y && pos.y<=b.mMax.y && pos.z>=b.mMin.z && pos.z<=b.mMax.z)
+				{
+					inside=true;
+					break;
+				}
+			}
+			if(inside)
+			{
+				sub.mSleepSkip=false;
+				continue;
+			}
+			sleep.Add(delay);
+			sub.mSleepSkip=sleep.Is()==false;
+			//평소에는 RootMsgUpdate가 비운다
+			if(sub.mSleepSkip)	sub.mBroMsg.Clear();
+		}
+		return true;
 	}
 	SetPause(_pause : boolean)
 	{
@@ -175,31 +226,11 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		if(index != -1) {
 			list.splice(index, 1);
 		}
-
 	}
-	
-	// SetRPMgr(_rpMgr : CRPMgr) 
-	// {
 
-
-	// 	if(this.mRPMgr==null && _rpMgr==null)	
-	// 	{
-	// 		this.mChangeRPMgr=null;
-	// 		return;
-	// 	}
-			
-
-	// 	if(_rpMgr==null)
-	// 		this.mChangeRPMgr=new CRPMgr();
-	// 	else
-	// 		this.mChangeRPMgr=_rpMgr;
-	// }
 	ClearBatch() {
 		this.mBrush.ClearRen();
 	}
-	// GetRPMgr() {
-	// 	return this.mRPMgr;
-	// }
 	PushPacket(_pac : CStream)
 	{
 		this.mPacketArr.Push(_pac);
@@ -216,6 +247,22 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 	}
 	
+	RemoveAutoRP(_key : string)
+	{
+		this.mAutoRPMap.delete(_key);
+		this.mAutoRPUpdate=CUpdate.eType.Updated;
+	}
+	PushAutoRP(_key : string,_val : CRPAuto)
+	{
+		this.mAutoRPMap.set(_key,_val);
+		this.mAutoRPUpdate=CUpdate.eType.Updated;
+		return _val;
+	}
+	FindAutoRP(_key : string)
+	{
+		return this.mAutoRPMap.get(_key);
+	}
+	AutoRP()	{	return this.mAutoRPMap;	}
 
 	
 	override EditHTMLInit(_div: HTMLDivElement): void {
@@ -406,10 +453,6 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 			_pointer.target.Destroy();
 
 		}
-		// else if(_pointer.member=="mRPMgr")
-		// {
-		// 	this.mRPMgr.Reset();
-		// }
 	}
 	GetFrame()	{	return this.mFrame;	}
 	public async LoadRes() {
@@ -455,17 +498,10 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		{
 			plugin.mCanvas=this;
 		}
-		// const rpMgr = this.mRPMgr;
-		// this.mRPMgr = null;
-		// this.mBrush.AutoRP().clear();
-		// this.ClearBatch();
-		// this.SetRPMgr(rpMgr);
 		
 		return this;
 	}
 	GetBrush()	{	return this.mBrush;	}
-	
-	// }
 	
 	PushBroMsg(_msg :CRouteMsg)
 	{
@@ -562,20 +598,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		if(this.mSave)	CFile.Save(this,_file+".json");
 		
 	}
-	// override ExportJSON(): { class: string } 
-	// {		
-	// 	//rpMgr에서 넣어준 오브젝트 / RP 제거
-	// 	let rpMgr = this.mRPMgr;
-	// 	this.SetRPMgr(null);
-	// 	this.mRPMgr = rpMgr;
-	// 	const json = super.ExportJSON();
-	
-	// 	//rpMgr 다시 세팅
-	// 	this.mRPMgr = null;
-	// 	this.SetRPMgr(rpMgr);
-		
-	// 	return json;
-	// }
+
 	Update(_update : CUpdate)
 	{
 
@@ -714,7 +737,6 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 				
 		}
 		obj=_obj as CSubject;
-		//
 		
 
 		obj.ClearKeyChange();
@@ -811,4 +833,5 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 import CCanvas_imple from "../../app_imple/canvas/CCanvas.js";
 import { CPaintTerrain } from "../component/paint/CPaintTerrain.js";
+import { CRPAuto, CRPMgr } from "./CRPMgr.js";
 CCanvas_imple();

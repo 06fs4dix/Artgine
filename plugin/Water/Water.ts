@@ -3,6 +3,8 @@ import { CBrushComp } from "../../artgine/app/component/CBrushComp.js";
 import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
 import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
+import { CPaintTrail } from "../../artgine/app/component/paint/CPaintTrail.js";
+import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CSubject } from "../../artgine/app/subject/CSubject.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
@@ -57,6 +59,9 @@ export class CWater3D extends CSubject
 
     // 노말 플로우
     mNormalFlowDir : CVec2 = new CVec2(0, 0);
+
+    //CPaint3D.SetMesh가 텍스처 목록을 비우므로, 텍스처 방식 굴절은 키를 들고 있다가 다시 올린다
+    mWaterTex : string = null;
 
     constructor() {
         super();
@@ -178,9 +183,10 @@ export class CWater3D extends CSubject
                 this.GetFrame().Res().Push(waterMeshKey, mesh);
                 CUtilRender.MeshBoundUpdate(mesh);
             }
-            if(this.mPaint.GetMesh() != waterMeshKey) 
+            if(this.mPaint.GetMesh() != waterMeshKey)
             {
                 this.mPaint.SetMesh(waterMeshKey);
+                if(this.mWaterTex != null)	this.mPaint.SetTexture([this.mWaterTex]);
             }
         }
     }
@@ -235,6 +241,9 @@ export class CWater3D extends CSubject
 
             this.mPaint.PushTag("UseWaterTex");
             this.mPaint.PushCShaderAttr(new CShaderAttr("texflowDir", _flow));
+            //셰이더가 uv를 time만큼 계속 밀어내므로 Clamp면 몇 초 만에 가장자리 텍셀만 찍힌다
+            if(this.mPaint.mAutoLoad != null)	this.mPaint.mAutoLoad.mWrap = CTexture.eWrap.Repeat;
+            this.mWaterTex = _texture;
             this.mPaint.SetTexture([_texture]);
         }
     }
@@ -294,11 +303,14 @@ export class CWater3D extends CSubject
 export class CReflector3D extends CBrushComp
 {
     mSize : number = 256;
+    //다시 그리는 주기(초, 밀리초 아님). 0이면 매 프레임
     mCycle : number = 0;
 
     constructor() {
         super("reflector_" + CUniqueID.Get());
 
+        //메인 포워드 RP처럼 프로브 envmap으로 간접광을 받는다. 없으면 ambientColor 기본값(0.2)이 들어가 밤에도 반사 속 물체만 밝다.
+        //CEnvMap은 첫 업데이트 때 있던 브러시 RP에만 env 태그를 달아서, 나중에 등록되는 이 RP는 직접 단다(프로브가 없으면 ambientColor로 돌아간다)
         // 오브젝트용 RP
         {
             const rp = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
@@ -308,6 +320,7 @@ export class CReflector3D extends CBrushComp
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class","==","CPaint3D"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
+            rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, CFrame.Main().Pal().GetEnvMapTex()));
             this.PushRPAuto(rp);
         }
 
@@ -320,6 +333,7 @@ export class CReflector3D extends CBrushComp
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class","==","CPaintTerrain"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
+            rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, CFrame.Main().Pal().GetEnvMapTex()));
             this.PushRPAuto(rp);
         }
 
@@ -399,7 +413,7 @@ export class CReflector3D extends CBrushComp
             const rpKey = this.mTexKey + rp.mShader;
             // 등록된 RP가 없다면 등록
             if(!this.mBrush.AutoRP().has(rpKey)) {
-                this.mBrush.SetAutoRP(rpKey, rp);
+                this.mBrush.PushAutoRP(rpKey, rp);
             }
             // 사이클 변경 시 업데이트
             if(rp.mCycle != this.mCycle) {
@@ -411,19 +425,22 @@ export class CReflector3D extends CBrushComp
         // ---------------------------------------------------------
         // 3. 가상 카메라 동기화
         // ---------------------------------------------------------
+        //Updated 프레임에만 맞추면 그 프레임을 놓쳤을 때(로드 직후 등) 반사 카메라가 옛 상태로 남는다. Init이 같은 값이면 아무것도 안 하므로 매 프레임 맞춘다
         const mainCam = this.mBrush.GetCam3D();
-        if(mainCam.mUpdateMat == CUpdate.eType.Updated) {
+        {
             const virtualCam = this.mBrush.GetCamera(this.mTexKey);
 
             const wMat = this.GetOwner().GetMat();
             const pos = wMat.xyz;
             const rot = CMath.QutToMat(CMath.MatDecomposeRot(wMat));
-            const normal = CMath.V3Nor(CMath.V3MulMatNormal(new CVec3(0, 0, 1), rot));
+            const normal = new CVec3(0, 1, 0);//CMath.V3Nor(CMath.V3MulMatNormal(new CVec3(0, 1, 0), rot));
             const view = CMath.V3SubV3(pos, mainCam.GetEye());
             const realUp = CMath.V3Cross(mainCam.GetView(), mainCam.GetCross());
 
             const eye = CMath.V3AddV3(CMath.V3MulFloat(this.V3Reflect(view, normal), -1), pos);
-            const look = CMath.V3AddV3(this.V3Reflect(mainCam.GetView(), normal), eye);
+            //eye+반사(view)처럼 1유닛 앞 점을 쓰면 좌표가 큰 맵에서 float32 간격에 반올림돼 시선이 계단식으로 끊긴다(천천히 돌리면 반사가 점프).
+            //eye와 같은 방식으로 메인 카메라의 먼 시선점을 수면에 대칭시킨다
+            const look = CMath.V3AddV3(CMath.V3MulFloat(this.V3Reflect(CMath.V3SubV3(pos, mainCam.GetLook()), normal), -1), pos);
             const up = this.V3Reflect(realUp, normal);
 
             if(virtualCam.Init(eye, look, up))
@@ -453,21 +470,26 @@ export class CReflector3D extends CBrushComp
 
 export class CRefractor3D extends CBrushComp
 {
-    mSize : number = 256;
+    mSize : number = 512;
+    //다시 그리는 주기(초, 밀리초 아님). 0이면 매 프레임
     mCycle : number = 0;
 
     constructor() {
         super("refractor_" + CUniqueID.Get());
 
+        //알파 채널에 수면 아래 깊이를 인코딩하므로 블렌딩을 끈다. 켜두면 색이 알파만큼 어두워지고 깊이값도 섞인다
+        //envmap·env 태그는 CReflector3D와 같은 이유로 직접 단다
         // 오브젝트용 RP
         {
             const rp = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
             rp.mCopy = false;
+            rp.mAlpha = false;
             rp.mPriority = CRenderPass.ePriority.Normal - 1;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class","==","CPaint3D"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
+            rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, CFrame.Main().Pal().GetEnvMapTex()));
             this.PushRPAuto(rp);
         }
 
@@ -475,11 +497,13 @@ export class CRefractor3D extends CBrushComp
         {
             const rp = new CRPAuto(CFrame.Main().Pal().SlTerrain().mKey);
             rp.mCopy = false;
+            rp.mAlpha = false;
             rp.mPriority = CRenderPass.ePriority.Normal - 1;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class","==","CPaintTerrain"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
+            rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, CFrame.Main().Pal().GetEnvMapTex()));
             this.PushRPAuto(rp);
         }
 
@@ -503,6 +527,7 @@ export class CRefractor3D extends CBrushComp
     {
         for(let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
+            rp.mTag.add("waterProcessing");
             rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
             rp.mShaderAttr.push(new CShaderAttr("waterUnderFadeDist", _waterDist));
             rp.mShaderAttr.push(new CShaderAttr("shallowColor", _shallowColor));
@@ -514,6 +539,7 @@ export class CRefractor3D extends CBrushComp
     {
         for(let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
+            rp.mTag.add("waterProcessing");
             rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
             rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
         }
@@ -522,6 +548,7 @@ export class CRefractor3D extends CBrushComp
     {
         for(let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
+            rp.mTag.add("waterProcessing");
             rp.mShaderAttr.push(new CShaderAttr("normalflowDir", _flow));
         }
     }
@@ -569,7 +596,7 @@ export class CRefractor3D extends CBrushComp
             const rpKey = this.mTexKey + rp.mShader;
             // 등록된 RP가 없다면 등록
             if(!this.mBrush.AutoRP().has(rpKey)) {
-                this.mBrush.SetAutoRP(rpKey, rp);
+                this.mBrush.PushAutoRP(rpKey, rp);
             }
             // 사이클 변경 시 업데이트
             if(rp.mCycle != this.mCycle) {
@@ -581,8 +608,8 @@ export class CRefractor3D extends CBrushComp
         // ---------------------------------------------------------
         // 3. 가상 카메라 동기화
         // ---------------------------------------------------------
+        //반사 카메라와 같은 이유로 매 프레임 맞춘다(Init이 같은 값이면 아무것도 안 함)
         const mainCam = this.mBrush.GetCam3D();
-        if(mainCam.mUpdateMat == CUpdate.eType.Updated) 
         {
             const virtualCam = this.mBrush.GetCamera(this.mTexKey);
             if(virtualCam.Init(mainCam.GetEye(), mainCam.GetLook()))
@@ -719,32 +746,163 @@ export class CRefractor3D extends CBrushComp
         normal strength
         fade distance
 */
-export class  CPaint2DWater extends CPaint2D
+export class  CPaint2DWater extends CPaintTrail
 {
-
+    //윗변/아랫변 정점을 직접 지정한다. 좌표는 로컬 공간이라 SetPos/SetSca가 그대로 먹는다.
+    //z는 좌표가 아니라 미러/깊이 기준선이다. 외곽을 타일 경계로 계단지게 만들 때
+    //z에 매끄러운 수면선을 넣으면 단차에서 반사가 잘리지 않는다. 보통은 z=y로 둔다
+    SetSurface(_up : Array<CVec3>, _down : Array<CVec3>)
+    {
+        if(_up.length < 2 || _up.length != _down.length)
+        {
+            CAlert.E("CPaint2DWater.SetSurface : up/down 길이가 같아야 하고 2개 이상이어야 함");
+            return;
+        }
+        this.UpdateBuffer(_up, _down);
+    }
+    SetColor(_shallow : CVec3, _deep : CVec3, _tint : number = 0.35)
+    {
+        this.PushCShaderAttr(new CShaderAttr("shallowColor", _shallow));
+        this.PushCShaderAttr(new CShaderAttr("deepColor", _deep));
+        this.PushCShaderAttr(new CShaderAttr("waterTint", _tint));
+    }
+    SetTint(_val : number)
+    {
+        this.PushCShaderAttr(new CShaderAttr("waterTint", _val));
+    }
+    SetWobble(_val : number)
+    {
+        this.PushCShaderAttr(new CShaderAttr("wobble", _val));
+    }
+    SetReflectivity(_val : number)
+    {
+        this.PushCShaderAttr(new CShaderAttr("reflectivity", _val));
+    }
+    //1이면 1:1 미러, 낮출수록 반사가 눌려 가까운 것만 비친다
+    SetReflectScale(_val : number)
+    {
+        this.PushCShaderAttr(new CShaderAttr("reflectScale", _val));
+    }
+    //_anchorY : 물에서 가장 높은 수면(로컬 좌표)
+    //_blend : 0 = 전부 기준선 기준(기울어짐 없음), 1 = 그 열의 수면 기준(물가에 정렬)
+    SetReflectAnchor(_anchorY : number, _blend : number)
+    {
+        this.PushCShaderAttr(new CShaderAttr("anchorY", _anchorY));
+        this.PushCShaderAttr(new CShaderAttr("reflectAnchor", _blend));
+    }
+    SetReflectRange(_start : number, _end : number)
+    {
+        this.PushCShaderAttr(new CShaderAttr("reflectRange", new CVec2(_start, _end)));
+    }
+    SetTopSide(_top : boolean)
+    {
+        this.PushCShaderAttr(new CShaderAttr("waterTop", _top ? 1.0 : -1.0));
+    }
 }
 export class CWater2D extends CSubject
 {
 
     mPaint : CPaint2DWater;
-    mReflector : CReflector2D;   // 반사 텍스쳐 굽는 컴포넌트
-    constructor()
+    mReflector : CReflector2D;   // 반사 텍스쳐 굽는 컴포넌트. 공유받으면 null
+    mShare : CWater2D = null;    // 반사 렌더타겟을 빌려주는 물
+    //탑다운처럼 캐릭터가 물 위에 올라서는 씬은 Normal로 낮추고 z정렬에 맡긴다.
+    //_share를 주면 반사 렌더타겟과 WaterCam을 공유한다. 구간별로 물을 쪼갤 때
+    //각자 RT를 구우면 씬을 구간 수만큼 다시 그리게 되므로 반드시 공유해야 한다
+    constructor(_priority : number = CRenderPass.ePriority.AlphaAuto, _share : CWater2D = null)
     {
         super();
-        
 
+        if(_share==null)
+        {
+            this.mReflector=new CReflector2D();
+            this.PushComp(this.mReflector);
+        }
+        else this.mShare=_share;
 
-        this.mReflector=new CReflector2D();
-        this.PushComp(this.mReflector);
-
-
-        //this.mPaint = new CPaint2D(CFrame.Main().Pal().GetBlackTex());
-        this.mPaint = new CPaint2DWater(this.mReflector.GetTex(),new CVec2(1,1));
-        this.mPaint.PushRenderPass(new CRenderPass(gWaterShader));
+        this.mPaint = new CPaint2DWater(this.Reflector().GetTex());
+        //CPaintTrail 생성자가 붙이는 태그. 다른 trail용 RPAuto에 물이 걸려들지 않게 뗀다
+        this.mPaint.RemoveTag("trail");
+        //반사 렌더타겟을 굽는 RPAuto들이 Normal 버킷을 쓰므로, 같은 버킷이면 배경이 물 위에 덧칠된다
+        const rp=new CRenderPass(gWaterShader,_priority);
+        //CPaintTrail.UpdateBuffer가 바운드를 2배로 부풀린다. 원점에서 먼 곳에 놓인 물은
+        //그 박스가 엉뚱한 자리로 늘어나 프러스텀 컬링에 걸려 통째로 사라진다
+        rp.mCullFrustum=false;
+        this.mPaint.PushRenderPass(rp);
         this.mPaint.PushTag("water");
         this.mPaint.PushTag("2D");
         this.PushComp(this.mPaint);
 
+        //CPaintTrail은 월드 좌표를 전제해서 worldMat을 올려주지 않는다.
+        //물은 로컬 좌표 + SetPos/SetSca를 쓰므로 FMat을 직접 물려준다
+        this.mPaint.PushCShaderAttr(new CShaderAttr("worldMat", this.mPaint.GetFMat()));
+
+        this.mPaint.SetColor(new CVec3(0.25, 0.45, 0.55), new CVec3(0.02, 0.12, 0.25), 0.35);
+        this.mPaint.SetWobble(0.005);
+        this.mPaint.SetReflectivity(1.0);
+        this.mPaint.SetReflectRange(0.25, 0.85);
+
+        //구간 분할 시 축은 오브젝트 원점(로컬 0) 하나로 고정한다
+        this.mPaint.SetReflectAnchor(0.0, 1.0);
+
+        //기본값은 유닛 사각형. SetSca/SetPos만으로 기존과 동일하게 동작한다
+        this.SetRect();
+    }
+    //자기 반사기, 없으면 공유받은 쪽
+    Reflector() : CReflector2D
+    {
+        return this.mReflector!=null ? this.mReflector : this.mShare.Reflector();
+    }
+    //윗변을 평평하게 둔 기본 사각형으로 되돌린다
+    SetRect()
+    {
+        this.mPaint.SetSurface(
+            [new CVec3(-0.5, 0.5, 0.5), new CVec3(0.5, 0.5, 0.5)],
+            [new CVec3(-0.5,-0.5,-0.5), new CVec3(0.5,-0.5,-0.5)]);
+    }
+    SetSurface(_up : Array<CVec3>, _down : Array<CVec3>)
+    {
+        this.mPaint.SetSurface(_up, _down);
+    }
+    //윗변 높이만 배열로 준다. x는 -0.5~0.5 균등분할, 아랫변은 -0.5 고정
+    SetSurfaceHeight(_height : Array<number>)
+    {
+        const up : Array<CVec3> = new Array();
+        const down : Array<CVec3> = new Array();
+        for(let i=0;i<_height.length;++i)
+        {
+            const x = -0.5 + i/(_height.length-1);
+            up.push(new CVec3(x, _height[i], _height[i]));
+            down.push(new CVec3(x, -0.5, -0.5));
+        }
+        this.mPaint.SetSurface(up, down);
+    }
+    SetColor(_shallow : CVec3, _deep : CVec3, _tint : number = 0.35)
+    {
+        this.mPaint.SetColor(_shallow, _deep, _tint);
+    }
+    SetTint(_val : number)
+    {
+        this.mPaint.SetTint(_val);
+    }
+    SetWobble(_val : number)
+    {
+        this.mPaint.SetWobble(_val);
+    }
+    SetReflectivity(_val : number)
+    {
+        this.mPaint.SetReflectivity(_val);
+    }
+    SetReflectScale(_val : number)
+    {
+        this.mPaint.SetReflectScale(_val);
+    }
+    SetReflectAnchor(_anchorY : number, _blend : number)
+    {
+        this.mPaint.SetReflectAnchor(_anchorY, _blend);
+    }
+    SetReflectRange(_start : number, _end : number)
+    {
+        this.mPaint.SetReflectRange(_start, _end);
     }
     NormalFlow(_flow : CVec2, _normalTex1 : string = null, _normalTex2 : string = null) {        
         this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
@@ -763,17 +921,18 @@ export class CWater2D extends CSubject
     override Update(_update: CUpdate): void {
         super.Update(_update);
 
-        if(this.mPaint.FindCShaderAttr("waterViewMat")==null && this.mReflector.mWaterCam!=null)
+        const refl=this.Reflector();
+        if(this.mPaint.FindCShaderAttr("waterViewMat")==null && refl.mWaterCam!=null)
         {
-            this.mPaint.PushCShaderAttr(new CShaderAttr("waterViewMat", this.mReflector.mWaterCam.GetViewMat()));
-            this.mPaint.PushCShaderAttr(new CShaderAttr("waterProjectMat", this.mReflector.mWaterCam.GetProjMat()));
+            this.mPaint.PushCShaderAttr(new CShaderAttr("waterViewMat", refl.mWaterCam.GetViewMat()));
+            this.mPaint.PushCShaderAttr(new CShaderAttr("waterProjectMat", refl.mWaterCam.GetProjMat()));
         }
-        
     }
 }
 export class CReflector2D extends CBrushComp
 {
     mSize : number = 512;
+    //다시 그리는 주기(초, 밀리초 아님). 0이면 매 프레임
     mCycle : number = 0;
     mWaterCam : CCamera;
 
@@ -788,7 +947,8 @@ export class CReflector2D extends CBrushComp
             rp.mRenderTarget = this.GetTex();
             rp.PushOr(new CCondition("class","==","CPaint2D"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
-            rp.SetKey("water2dCPaint2D");
+            //렌더타겟에 쓰는 패스는 물마다 타깃이 달라서 키가 인스턴스별로 고유해야 한다
+            rp.SetKey("water2dCPaint2D_"+this.GetTex());
             this.PushRPAuto(rp);
 
             rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
@@ -798,7 +958,7 @@ export class CReflector2D extends CBrushComp
             rp.PushOr(new CCondition("class","==","CPaintVoxel"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
             rp.mShader="Artgine/Voxel.sl";
-            rp.SetKey("water2dCPaintVoxel");
+            rp.SetKey("water2dCPaintVoxel_"+this.GetTex());
             this.PushRPAuto(rp);
 
             rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
@@ -824,7 +984,7 @@ export class CReflector2D extends CBrushComp
             //rp.PushOr(new CCondition("class","==","CPaint2D"));
             rp.PushOr(new CCondition("class","==","CShadowPlane"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
-            rp.SetKey("rp2");
+            rp.SetKey("rp2_"+this.GetTex());
             this.PushRPAuto(rp);
 
             //rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
@@ -898,7 +1058,7 @@ export class CReflector2D extends CBrushComp
             
             // 등록된 RP가 없다면 등록
             if(!this.mBrush.AutoRP().has(rp.Key())) {
-                this.mBrush.SetAutoRP(rp.Key(), rp);
+                this.mBrush.PushAutoRP(rp.Key(), rp);
             }
             // // 사이클 변경 시 업데이트
             // if(rp.mCycle != this.mCycle) {

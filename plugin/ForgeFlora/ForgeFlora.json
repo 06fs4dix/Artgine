@@ -1,0 +1,15 @@
+{
+    "dependencies": {
+		"artgine":1
+    },
+    "version":1,
+    "text":"절차적 식생 생성(풀·나무·돌). Grass/Tree/Rock(프리셋, 시드) → LOD 메시 키 목록(+나무 빌보드 텍스처)",
+    "include":true,
+    "client":["ForgeFlora.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Unknown",
+        "Revision":"1",
+        "Comment":"식생 LOD 생성기"
+    }
+}

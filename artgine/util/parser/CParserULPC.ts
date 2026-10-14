@@ -9,50 +9,10 @@ import { CObject } from "../../basic/CObject.js";
 
 // ── 공통 상수 ─────────────────────────────────────────────────────────────
 
-const ANIMS: Record<string, { f: number }> = {
-    spellcast:   { f: 7  },
-    thrust:      { f: 8  },
-    walk:        { f: 9  },
-    slash:       { f: 6  },
-    shoot:       { f: 13 },
-    hurt:        { f: 6  },
-    climb:       { f: 6  },
-    idle:        { f: 2  },
-    jump:        { f: 5  },
-    sit:         { f: 3  },
-    emote:       { f: 3  },
-    run:         { f: 8  },
-    combat_idle: { f: 2  },
-    backslash:   { f: 13 },
-    halfslash:   { f: 6  },
-};
-
-const ANIM_YOFFSETS: Record<string, number> = {
-    spellcast: 0,    thrust:     256,  walk:       512,  slash:    768,
-    shoot:     1024, hurt:       1280, climb:      1344, idle:     1408,
-    jump:      1664, sit:        1920, emote:      2176, run:      2432,
-    combat_idle: 2688, backslash: 2944, halfslash: 3200,
-};
-
-const ONE_DIR_ANIMS = new Set(['hurt', 'climb']);
-
-function getDirArr(dir: any, animName: string): number[] {
-    if (dir && !Array.isArray(dir) && typeof dir === 'object') {
-        return dir[animName] ?? (ONE_DIR_ANIMS.has(animName) ? [1] : [0, 2, 1, 3]);
-    }
-    return ONE_DIR_ANIMS.has(animName) ? [1] : [0, 2, 1, 3];
-}
-
-const ANIM_ORDER = [
-    'spellcast', 'thrust', 'walk', 'slash', 'shoot', 'hurt', 'climb',
-    'idle', 'jump', 'sit', 'emote', 'run', 'combat_idle', 'backslash', 'halfslash',
-];
-
-const COMPOSITE_W = 832;
-const FRAME_SIZE  = 64;
-
 // ── 팔레트 ────────────────────────────────────────────────────────────────
-
+// V3(selections[] 기반, ulpc_selection.json)에서는 base/recolor hex가 선택 JSON에
+// 직접 내장되어 오므로, 파일명/타입이름으로 재질을 "추측"할 필요가 없다.
+// PALETTE_META는 V3의 중복 파일 선호도 판단(_buildV3 preferred)에서만 쓰인다.
 const PALETTE_META: Record<string, { version: string; base: string }> = {
     cloth: { version: "ulpc", base: "white"  },
     body:  { version: "ulpc", base: "light"  },
@@ -61,19 +21,6 @@ const PALETTE_META: Record<string, { version: string; base: string }> = {
     eye:   { version: "ulpc", base: "blue"   },
     all:   { version: "lpcr", base: "white"  },
 };
-
-const TYPE_MATERIAL: Record<string, string[]> = {
-    clothes:    ["cloth"],
-    torso:      ["cloth"],
-    shoulders:  ["cloth", "metal"],
-    body:       ["body"],
-    head:       ["body"],
-    expression: ["body"],
-    face:       ["body"],
-    hair:       ["hair"],
-    eyes:       ["eye"],
-};
-const PALETTE_FALLBACK_ORDER = ["cloth", "body", "metal", "hair", "eye"];
 
 // ── AnimClipSpec ───────────────────────────────────────────────────────────
 // 이미지 굽기 이후 CAnimation 생성에 필요한 정보.
@@ -97,7 +44,7 @@ export class CULPC extends CObject
     static eState={
         "walk":"walk",
         "slash":"slash",
-        "thrush":"thrush",
+        "thrust":"thrust",
         "idle":"idle",
         "shoot":"shoot",
         
@@ -110,7 +57,7 @@ export class CULPC extends CObject
     // 1. 연관된 애니메이션들을 '그룹'으로 묶어줍니다.
     static AniGroups: string[][] = [
         ["walk", "move"],         // 이동 계열
-        ["slash", "thrush", "attack","spellcast","shoot"],   // 공격 계열
+        ["slash", "thrust", "attack","spellcast","shoot"],   // 공격 계열
         ["idle", "basic"]                // 대기 계열
     ];
 
@@ -154,7 +101,7 @@ export class CULPC extends CObject
         if (ani != null) return ani;
 
         // 2. 못 찾았다면, 양방향 FallbackMap에서 대체 상태들을 가져와 검색
-        // 예: _state가 "attack"이면 fallbackStates는 ["slash", "thrush"]가 됨
+        // 예: _state가 "attack"이면 fallbackStates는 ["slash", "thrust"]가 됨
         const fallbackStates = CULPC.FallbackMap[_state];
         if (fallbackStates != null) {
             for (const fallbackState of fallbackStates) {
@@ -273,15 +220,10 @@ export class CParserULPC extends CParser {
             let textureFile = pa_fileName.replace(/\.json$/i, ".ulpc");
             
 
-            let specs: AnimClipSpec[];
-            if (Array.isArray(json.selections)) {
-                // V3: selections[] 기반 (ulpc_selection.json)
-                specs = await this._buildV3(json, absBase, cv);
-            } else {
-                // V2: layers[] 기반 (sample.json)
-                const paletteBase = rootSlash ? new URL("../palette_definitions/", rootSlash).toString() : "palette_definitions/";
-                specs = await this._buildV2(json, absBase, paletteBase, cv);
-            }
+            // V3: selections[] 기반 (ulpc_selection.json) 만 지원한다.
+            // (구버전 V2 layers[] 포맷은 제거됨 — TYPE_MATERIAL 기반 재질 추측 없이
+            //  선택 JSON에 base/recolor hex가 직접 내장되어 오는 방식으로 통일)
+            const specs: AnimClipSpec[] = await this._buildV3(json, absBase, cv);
 
             this._buildAnimMap(specs, result, textureFile);
             result.mTexture = cv.GetNewTex();
@@ -311,315 +253,6 @@ export class CParserULPC extends CParser {
             }
             result.mAniMap.set(s.key, cAnim);
         }
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // V2: layers[] 기반 포맷 — 이미지 굽기 + AnimClipSpec 반환
-    // 애니메이션 영역이 sizeBase(64) 단위로 ANIM_ORDER 순서로 고정 스택됨.
-    // 오버사이즈(128/192px)는 표준 섹션 아래에 별도 영역으로 추가됨.
-    // ══════════════════════════════════════════════════════════════════════
-
-    private async _buildV2(json: any, absBase: string, paletteBase: string, cv: CH5CanvasInst): Promise<AnimClipSpec[]> {
-        const layers   = [...((json.layers ?? []) as any[])].sort((a, b) => a.zPos - b.zPos);
-        const sizeBase: number = json.sizeBase ?? FRAME_SIZE;
-
-        // ── 1. 레이어에서 오버사이즈 섹션 도출 ──────────────────────────
-        interface OversizeSection {
-            animName: string; baseAnim: string;
-            frameSize: number; cols: number; dirArr: number[];
-            yOffset: number; idleYOffset: number;
-        }
-        const oversizeSections: OversizeSection[] = [];
-        const seenAnim = new Set<string>();
-
-        for (const layer of layers) {
-            if ((layer.size ?? FRAME_SIZE) <= sizeBase) continue;
-            const supported: string[] = layer.supportedAnimations ?? [];
-            for (const animName of supported) {
-                if (seenAnim.has(animName)) continue;
-                const baseAnim = this._extractBaseAnim(animName);
-                if (!baseAnim) continue;
-                seenAnim.add(animName);
-                const dirArr: number[] = getDirArr(layer.dir, animName);
-                oversizeSections.push({
-                    animName, baseAnim,
-                    frameSize: layer.size,
-                    cols: layer.frame,
-                    dirArr,
-                    yOffset: 0, idleYOffset: 0,
-                });
-            }
-        }
-
-        // ── 2. 표준 애니메이션 Y 맵 동적 빌드 ──────────────────────────
-        interface AnimInfo { y: number; dirs: number[]; }
-        const animYMap = new Map<string, AnimInfo>();
-        let stackY = 0;
-        for (const animName of ANIM_ORDER) {
-            const supportingLayer = layers.find(l =>
-                (l.size ?? FRAME_SIZE) <= sizeBase &&
-                (l.supportedAnimations ?? []).includes(animName)
-            );
-            if (!supportingLayer) continue;
-            const dirs: number[] = getDirArr(supportingLayer.dir, animName);
-            animYMap.set(animName, { y: stackY, dirs });
-            stackY += dirs.length * sizeBase;
-        }
-        const idleDirs = animYMap.get("idle")?.dirs ?? [0, 2, 1, 3];
-        const idleF    = ANIMS["idle"].f;
-
-        // ── 3. 캔버스 크기 계산 ──────────────────────────────────────────
-        let canvasW = COMPOSITE_W;
-        let canvasH = stackY;
-        for (const sec of oversizeSections) {
-            sec.yOffset = canvasH;
-            if (sec.cols * sec.frameSize > canvasW) canvasW = sec.cols * sec.frameSize;
-            canvasH += sec.dirArr.length * sec.frameSize;
-            sec.idleYOffset = canvasH;
-            if (idleF * sec.frameSize > canvasW) canvasW = idleF * sec.frameSize;
-            canvasH += idleDirs.length * sec.frameSize;
-        }
-
-        // ── 4. 캔버스 초기화 ─────────────────────────────────────────────
-        cv.Init(canvasW, canvasH, false, false);
-        await cv.Draw();
-        const ctx = cv.GetContext();
-        ctx.imageSmoothingEnabled = false;
-
-        // ── 5. 이미지 로드 및 리컬러링 병렬 처리 ────────────────────────────
-        // V2 로직에서도 모든 조합에 대해 미리 로드/리컬러링을 병렬로 수행
-        const loadTasks: Promise<{ key: string; img: CanvasImageSource | null }>[] = [];
-        const taskKeys = new Set<string>();
-
-        // 표준 애니메이션용 작업 수집
-        for (const [animName, { y: dstY }] of animYMap) {
-            for (const layer of layers) {
-                const supported: string[] = layer.supportedAnimations ?? [];
-                const isOversize = supported.some(a => seenAnim.has(a));
-                if (isOversize) continue;
-
-                let url: string;
-                if (supported.length > 0 && !supported.includes(animName)) {
-                    if (animName !== "idle") continue;
-                    const fallback = ["walk", "hurt", ...supported]
-                        .find(a => supported.includes(a) && ANIMS[a] !== undefined);
-                    if (!fallback) continue;
-                    url = absBase + "/" + this._swapAnim(layer.fileName, fallback);
-                } else {
-                    url = absBase + "/" + this._swapAnim(layer.fileName, animName);
-                }
-
-                const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
-                if (!taskKeys.has(taskKey)) {
-                    taskKeys.add(taskKey);
-                    loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                }
-            }
-        }
-
-        // 오버사이즈용 작업 수집
-        for (const sec of oversizeSections) {
-            const { animName, baseAnim } = sec;
-            for (const layer of layers) {
-                const supported: string[] = layer.supportedAnimations ?? [];
-                
-                // 정식 지원
-                if (supported.includes(animName)) {
-                    const url = absBase + "/" + layer.fileName;
-                    const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
-                    if (!taskKeys.has(taskKey)) {
-                        taskKeys.add(taskKey);
-                        loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                    }
-                }
-                
-                // Fallback (baseAnim 사용)
-                if (supported.length === 0 || supported.includes(baseAnim)) {
-                    const url = absBase + "/" + this._swapAnim(layer.fileName, baseAnim);
-                    const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
-                    if (!taskKeys.has(taskKey)) {
-                        taskKeys.add(taskKey);
-                        loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                    }
-                }
-
-                // Idle Fallback
-                const isOversizeForOther = supported.some(a => seenAnim.has(a) && a !== animName);
-                if (!isOversizeForOther) {
-                    const isOversizeForThis = supported.includes(animName);
-                    if (isOversizeForThis) {
-                        const oversizeAnim = supported.find(a => seenAnim.has(a)) ?? animName;
-                        const walkUrl = absBase + "/" + layer.fileName.replace(`/${oversizeAnim}/`, `/${baseAnim}/`);
-                        const taskKey = `${walkUrl}|${JSON.stringify(layer.recolors ?? {})}`;
-                        if (!taskKeys.has(taskKey)) {
-                            taskKeys.add(taskKey);
-                            loadTasks.push(this._loadAndRecolor(walkUrl, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                        }
-                    } else if (supported.length === 0 || supported.includes(baseAnim)) {
-                        const canUseIdle = supported.length === 0 || supported.includes("idle");
-                        const srcAnim    = canUseIdle ? "idle" : baseAnim;
-                        const srcUrl     = absBase + "/" + this._swapAnim(layer.fileName, srcAnim);
-                        const taskKey = `${srcUrl}|${JSON.stringify(layer.recolors ?? {})}`;
-                        if (!taskKeys.has(taskKey)) {
-                            taskKeys.add(taskKey);
-                            loadTasks.push(this._loadAndRecolor(srcUrl, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                        }
-                    }
-                }
-            }
-        }
-
-        const results = await Promise.all(loadTasks);
-        const imgCache = new Map<string, CanvasImageSource | null>();
-        for (const res of results) imgCache.set(res.key, res.img);
-
-        const getCachedImg = (url: string, layer: any) => {
-            const key = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
-            return imgCache.get(key) ?? null;
-        };
-
-        // ── 6. 표준 섹션 드로잉 ──────────────────────────────────────────
-        const pendingFallbacks: { url: string; layer: any; dstY: number }[] = [];
-
-        for (const [animName, { y: dstY }] of animYMap) {
-            for (const layer of layers) {
-                const supported: string[] = layer.supportedAnimations ?? [];
-                const isOversize = supported.some(a => seenAnim.has(a));
-                if (isOversize) continue;
-
-                if (supported.length > 0 && !supported.includes(animName)) {
-                    if (animName !== "idle") continue;
-                    const fallback = ["walk", "hurt", ...supported]
-                        .find(a => supported.includes(a) && ANIMS[a] !== undefined);
-                    if (!fallback) continue;
-                    const url = absBase + "/" + this._swapAnim(layer.fileName, fallback);
-                    pendingFallbacks.push({ url, layer, dstY });
-                    continue;
-                }
-
-                const url = absBase + "/" + this._swapAnim(layer.fileName, animName);
-                const img = getCachedImg(url, layer);
-                if (img) ctx.drawImage(img, 0, dstY);
-            }
-        }
-
-        // ── 5.5. idle fallback: frame-0 spread ───────────────────────────
-        for (const { url, layer, dstY } of pendingFallbacks) {
-            const img = getCachedImg(url, layer);
-            if (!img) continue;
-            for (let d = 0; d < idleDirs.length; d++) {
-                const srcY = d * sizeBase;
-                const rowY = dstY + d * sizeBase;
-                for (let f = 0; f < idleF; f++) {
-                    ctx.drawImage(img as CanvasImageSource, 0, srcY, sizeBase, sizeBase,
-                        f * sizeBase, rowY, sizeBase, sizeBase);
-                }
-            }
-        }
-
-        // ── 6. 오버사이즈 섹션 드로잉 ────────────────────────────────────
-        for (const sec of oversizeSections) {
-            const { animName, baseAnim, frameSize, cols, dirArr, yOffset } = sec;
-            const offset   = (frameSize - sizeBase) / 2;
-            const reversed = animName.includes('_reverse');
-
-            for (const layer of layers) {
-                const supported: string[] = layer.supportedAnimations ?? [];
-                let oversizeImg: CanvasImageSource | null = null;
-
-                if (supported.includes(animName)) {
-                    oversizeImg = getCachedImg(absBase + "/" + layer.fileName, layer);
-                }
-
-                if (oversizeImg) {
-                    for (let d = 0; d < dirArr.length; d++)
-                        for (let f = 0; f < cols; f++)
-                            ctx.drawImage(oversizeImg,
-                                f * frameSize, d * frameSize, frameSize, frameSize,
-                                f * frameSize, yOffset + d * frameSize, frameSize, frameSize);
-                } else if (supported.length === 0 || supported.includes(baseAnim)) {
-                    const url = absBase + "/" + this._swapAnim(layer.fileName, baseAnim);
-                    const stdImg = getCachedImg(url, layer);
-                    if (!stdImg) continue;
-                    for (let d = 0; d < dirArr.length; d++)
-                        for (let f = 0; f < cols; f++) {
-                            const srcF = reversed ? (cols - 1 - f) : f;
-                            ctx.drawImage(stdImg,
-                                srcF * sizeBase, d * sizeBase, sizeBase, sizeBase,
-                                f * frameSize + offset, yOffset + d * frameSize + offset,
-                                sizeBase, sizeBase);
-                        }
-                }
-            }
-        }
-
-        // ── 6.5. 오버사이즈 idle 영역 드로잉 ─────────────────────────────
-        for (const sec of oversizeSections) {
-            const { animName, baseAnim, frameSize, idleYOffset } = sec;
-            const offset = (frameSize - sizeBase) / 2;
-
-            for (const layer of layers) {
-                const supported: string[] = layer.supportedAnimations ?? [];
-                const isOversizeForThis  = supported.includes(animName);
-                const isOversizeForOther = supported.some(a => seenAnim.has(a) && a !== animName);
-                if (isOversizeForOther) continue;
-
-                if (isOversizeForThis) {
-                    const oversizeAnim = supported.find(a => seenAnim.has(a)) ?? animName;
-                    const walkUrl = absBase + "/" + layer.fileName.replace(`/${oversizeAnim}/`, `/${baseAnim}/`);
-                    const img = getCachedImg(walkUrl, layer);
-                    if (!img) continue;
-                    for (let d = 0; d < idleDirs.length; d++)
-                        for (let f = 0; f < idleF; f++)
-                            ctx.drawImage(img as CanvasImageSource,
-                                0, d * frameSize, frameSize, frameSize,
-                                f * frameSize, idleYOffset + d * frameSize, frameSize, frameSize);
-                } else if (supported.length === 0 || supported.includes(baseAnim)) {
-                    const canUseIdle = supported.length === 0 || supported.includes("idle");
-                    const srcAnim    = canUseIdle ? "idle" : baseAnim;
-                    const srcUrl     = absBase + "/" + this._swapAnim(layer.fileName, srcAnim);
-                    const img = getCachedImg(srcUrl, layer);
-                    if (!img) continue;
-                    for (let d = 0; d < idleDirs.length; d++)
-                        for (let f = 0; f < idleF; f++) {
-                            const srcF = canUseIdle ? f : 0;
-                            ctx.drawImage(img as CanvasImageSource,
-                                srcF * sizeBase, d * sizeBase, sizeBase, sizeBase,
-                                f * frameSize + offset, idleYOffset + d * frameSize + offset,
-                                sizeBase, sizeBase);
-                        }
-                }
-            }
-        }
-
-        // ── 7. AnimClipSpec 수집 ──────────────────────────────────────────
-        const specs: AnimClipSpec[] = [];
-
-        for (const [animName, { y: dstY, dirs }] of animYMap) {
-            const fStart = animName === "walk" ? 1 : 0;
-            for (let d = 0; d < dirs.length; d++) {
-                const key = dirs.length > 1 ? `${animName}_${dirs[d]}` : animName;
-                specs.push({ key, yOffset: dstY + d * sizeBase, frameSize: sizeBase,
-                    frameCount: ANIMS[animName].f, frameStart: fStart, scale: 1 });
-            }
-        }
-
-        for (const sec of oversizeSections) {
-            const { animName, baseAnim, frameSize, cols, dirArr, yOffset, idleYOffset } = sec;
-            const scale  = frameSize / sizeBase;
-            const fStart = baseAnim === "walk" ? 1 : 0;
-            for (let d = 0; d < dirArr.length; d++) {
-                const key = dirArr.length > 1 ? `${animName}_${dirArr[d]}` : animName;
-                specs.push({ key, yOffset: yOffset + d * frameSize,
-                    frameSize, frameCount: cols, frameStart: fStart, scale });
-            }
-            for (let d = 0; d < idleDirs.length; d++) {
-                specs.push({ key: `idle_${idleDirs[d]}`, yOffset: idleYOffset + d * frameSize,
-                    frameSize, frameCount: idleF, frameStart: 0, scale });
-            }
-        }
-
-        return specs;
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -788,124 +421,6 @@ export class CParserULPC extends CParser {
         return specs;
     }
 
-    // ── V2 팔레트 리컬러 ──────────────────────────────────────────────────
-
-    private async _loadAndRecolor(
-        url: string,
-        layer: any,
-        paletteBase: string
-    ): Promise<CanvasImageSource | null> {
-        const recolors: Record<string, string> | null = layer.recolors ?? null;
-
-        const recolorKey = JSON.stringify(recolors || {});
-        const cacheKey = `${url}|${recolorKey}|${paletteBase}`;
-        if (CParserULPC.sRecolorCache.has(cacheKey)) return CParserULPC.sRecolorCache.get(cacheKey)!;
-
-        if (!recolors || Object.keys(recolors).length === 0) {
-            const img = await this._loadImg(url);
-            if (img) CParserULPC.sRecolorCache.set(cacheKey, img);
-            return img;
-        }
-
-        const img = await this._loadImg(url);
-        if (img) {
-            const swapped = await this._applyRecolors(img, recolors, paletteBase);
-            const res = swapped ?? img;
-            CParserULPC.sRecolorCache.set(cacheKey, res);
-            return res;
-        }
-
-        const firstColor = Object.values(recolors)[0];
-        if (firstColor) {
-            const variantUrl = this._toVariantUrl(url, firstColor);
-            if (variantUrl !== url) {
-                const res = await this._loadImg(variantUrl);
-                if (res) CParserULPC.sRecolorCache.set(cacheKey, res);
-                return res;
-            }
-        }
-
-        return null;
-    }
-
-    private _toVariantUrl(url: string, colorName: string): string {
-        if (!colorName) return url;
-        return url.replace(/\/([^/]+)\.png$/i, `/$1/${colorName}.png`);
-    }
-
-    private _parseRecolorKey(key: string): { material: string | null; version: string | null; color: string } {
-        const parts = key.split('.');
-        if (parts.length === 3) return { material: parts[0], version: parts[1], color: parts[2] };
-        if (parts.length === 2) return { material: parts[0], version: null,     color: parts[1] };
-        return { material: null, version: null, color: parts[0] };
-    }
-
-    private async _applyRecolors(
-        img: HTMLImageElement,
-        recolors: Record<string, string>,
-        paletteBase: string
-    ): Promise<HTMLCanvasElement | null> {
-        let current: HTMLImageElement | HTMLCanvasElement = img;
-        let changed = false;
-
-        for (const [typeName, targetColor] of Object.entries(recolors)) {
-            const parsed = this._parseRecolorKey(targetColor);
-
-            const tgtMaterial = parsed.material ?? (TYPE_MATERIAL[typeName]?.[0] ?? "cloth");
-            const tgtVersion  = parsed.version  ?? PALETTE_META[tgtMaterial]?.version;
-            const tgtPalette  = await this._fetchPalette(tgtMaterial, paletteBase, tgtVersion);
-            if (!tgtPalette) continue;
-            const dstColors = tgtPalette[parsed.color];
-            if (!dstColors) continue;
-
-            const srcCandidates = [
-                ...(parsed.material ? [parsed.material] : []),
-                ...(TYPE_MATERIAL[typeName] ?? []),
-                ...PALETTE_FALLBACK_ORDER,
-            ].filter((m, i, arr) => arr.indexOf(m) === i);
-
-            for (const srcMaterial of srcCandidates) {
-                const srcVersion = PALETTE_META[srcMaterial]?.version;
-                const srcPalette = await this._fetchPalette(srcMaterial, paletteBase, srcVersion);
-                if (!srcPalette) continue;
-                const srcBase   = PALETTE_META[srcMaterial]?.base ?? "white";
-                if (srcMaterial === tgtMaterial && srcBase === parsed.color) continue;
-                const srcColors = srcPalette[srcBase];
-                if (!srcColors) continue;
-
-                const result = this._swapPalette(current, srcColors, dstColors);
-                if (result) { 
-                    current = result; 
-                    changed = true; 
-                    // Break since we found a matching source material and applied it
-                    break;
-                }
-            }
-        }
-
-        return changed ? (current as HTMLCanvasElement) : null;
-    }
-
-    private async _fetchPalette(
-        material: string,
-        paletteBase: string,
-        version?: string
-    ): Promise<Record<string, string[]> | null> {
-        const meta = PALETTE_META[material];
-        const ver  = version ?? meta?.version;
-        if (!ver) return null;
-        const cacheKey = `${material}_${ver}`;
-        if (CParserULPC.sPaletteCache.has(cacheKey)) return CParserULPC.sPaletteCache.get(cacheKey);
-        const url = `${paletteBase}${material}/${material}_${ver}.json`;
-        try {
-            const resp = await fetch(url);
-            if (!resp.ok) return null;
-            const data: Record<string, string[]> = await resp.json();
-            CParserULPC.sPaletteCache.set(cacheKey, data);
-            return data;
-        } catch { return null; }
-    }
-
     private _swapPalette(
         src: HTMLImageElement | HTMLCanvasElement,
         srcColors: string[],
@@ -961,7 +476,11 @@ export class CParserULPC extends CParser {
             const d = this._hexToRgb(dstColors[i]);
             if (!s || !d) continue;
 
-            const dst32 = (255 << 24) | (d.b << 16) | (d.g << 8) | d.r;
+            // `>>> 0`으로 부호 없는 32비트로 맞춘다. JS의 비트 연산 결과는 부호 있는 32비트라
+            // (255 << 24)가 -16777216(음수)이 되는데, _swapPalette는 픽셀을 Uint32Array(부호 없음)로
+            // 읽어서 이 맵을 조회한다 — 키는 음수, 조회는 양수라 매칭이 단 한 번도 성립하지 않았다
+            // (그래서 recolor 기능 전체가 조용히 무동작이었다).
+            const dst32 = ((255 << 24) | (d.b << 16) | (d.g << 8) | d.r) >>> 0;
             // Populate +/- 1 tolerance (3x3x3 = 27 entries per color)
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dg = -1; dg <= 1; dg++) {
@@ -969,7 +488,7 @@ export class CParserULPC extends CParser {
                         const r = Math.max(0, Math.min(255, s.r + dr));
                         const g = Math.max(0, Math.min(255, s.g + dg));
                         const b = Math.max(0, Math.min(255, s.b + db));
-                        const src32 = (255 << 24) | (b << 16) | (g << 8) | r;
+                        const src32 = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
                         map.set(src32, dst32);
                     }
                 }
@@ -980,28 +499,6 @@ export class CParserULPC extends CParser {
     }
 
     // ── 유틸 ──────────────────────────────────────────────────────────────
-
-    private _swapAnim(filePath: string, anim: string): string {
-        const parts     = filePath.split('/');
-        const lastNoExt = parts[parts.length - 1].replace('.png', '');
-        if (ANIMS[lastNoExt] !== undefined) {
-            parts[parts.length - 1] = anim + '.png';
-        } else {
-            for (let i = parts.length - 2; i >= 0; i--) {
-                if (ANIMS[parts[i]] !== undefined) { parts[i] = anim; break; }
-            }
-        }
-        return parts.join('/');
-    }
-
-    private _extractBaseAnim(animName: string): string | null {
-        const parts = animName.split('_');
-        for (let i = 1; i <= parts.length; i++) {
-            const candidate = parts.slice(0, i).join('_');
-            if (ANIMS[candidate] !== undefined) return candidate;
-        }
-        return null;
-    }
 
     private _loadImg(url: string): Promise<HTMLImageElement | null> {
         return new Promise(resolve => {

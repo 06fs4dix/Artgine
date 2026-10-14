@@ -9,8 +9,8 @@ export class CBound extends CObject {
     mPos;
     constructor() {
         super();
-        this.mMin = new CVec3(100000, 100000, 100000);
-        this.mMax = new CVec3(-100000, -100000, -100000);
+        this.mMin = new CVec3(1e30, 1e30, 1e30);
+        this.mMax = new CVec3(-1e30, -1e30, -1e30);
         this.mType = CBound.eType.Null;
         this.mPos = new CArray();
     }
@@ -31,7 +31,7 @@ export class CBound extends CObject {
     EditForm(_pointer, _body, _input) {
         super.EditForm(_pointer, _body, _input);
         if (_pointer.member == "mType") {
-            let textArr = ["Box", "Sphere", "Polytope", "Null"], valArr = [0, 1, 2, 4];
+            let textArr = ["Box", "Sphere", "GJK", "Triangle", "Null"], valArr = [0, 1, 2, 5, 4];
             _input.hidden = true;
             let select = document.createElement("select");
             select.className = "form-select";
@@ -57,12 +57,12 @@ export class CBound extends CObject {
         }
     }
     Reset() {
-        this.mMin.mF32A[0] = 100000;
-        this.mMin.mF32A[1] = 100000;
-        this.mMin.mF32A[2] = 100000;
-        this.mMax.mF32A[0] = -100000;
-        this.mMax.mF32A[1] = -100000;
-        this.mMax.mF32A[2] = -100000;
+        this.mMin.mF32A[0] = 1e30;
+        this.mMin.mF32A[1] = 1e30;
+        this.mMin.mF32A[2] = 1e30;
+        this.mMax.mF32A[0] = -1e30;
+        this.mMax.mF32A[1] = -1e30;
+        this.mMax.mF32A[2] = -1e30;
         this.mType = CBound.eType.Null;
         this.mPos.Clear();
     }
@@ -79,6 +79,8 @@ export class CBound extends CObject {
     }
     InitBound(_vInfo, _push = false) {
         if (typeof _vInfo == "number") {
+            if (this.mType == CBound.eType.Null)
+                this.mType = CBound.eType.Box;
             this.mMin.x = -_vInfo;
             this.mMin.y = -_vInfo;
             this.mMin.z = -_vInfo;
@@ -97,7 +99,7 @@ export class CBound extends CObject {
         }
         else if (_vInfo instanceof Array) {
             for (var each0 of _vInfo) {
-                if (this.GetType() == CBound.eType.Polytope)
+                if (this.GetType() == CBound.eType.GJK || this.GetType() == CBound.eType.Triangle)
                     this.mPos.Push(each0);
                 this.ResetBoxMinMax(each0);
             }
@@ -176,18 +178,20 @@ export class CBound extends CObject {
         dummy.mMin = this.mMin.Export();
         dummy.mMax = this.mMax.Export();
         dummy.mType = this.mType;
-        for (var each0 of this.mPos.mArray) {
-            dummy.mPos.Push(each0);
+        for (let i = 0; i < this.mPos.Size(); ++i) {
+            dummy.mPos.Push(this.mPos.Find(i));
         }
         return dummy;
     }
     Import(_tar) {
+        if (_tar == this)
+            return;
         this.mMin.Import(_tar.mMin);
         this.mMax.Import(_tar.mMax);
         this.mType = _tar.mType;
         this.mPos.Clear();
-        for (var each0 of _tar.mPos.mArray) {
-            this.mPos.Push(each0);
+        for (let i = 0; i < _tar.mPos.Size(); ++i) {
+            this.mPos.Push(_tar.mPos.Find(i));
         }
     }
 }
@@ -196,9 +200,10 @@ export class CBound extends CObject {
     (function (eType) {
         eType[eType["Box"] = 0] = "Box";
         eType[eType["Sphere"] = 1] = "Sphere";
-        eType[eType["Polytope"] = 2] = "Polytope";
+        eType[eType["GJK"] = 2] = "GJK";
         eType[eType["Voxel"] = 3] = "Voxel";
         eType[eType["Null"] = 4] = "Null";
+        eType[eType["Triangle"] = 5] = "Triangle";
     })(eType = CBound.eType || (CBound.eType = {}));
     ;
 })(CBound || (CBound = {}));

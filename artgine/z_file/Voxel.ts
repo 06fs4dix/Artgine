@@ -1,7 +1,7 @@
 
 import { AlphaModalFun, vfxMat0, vfxMat1, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, VFX, VFXDown2, PackGrayToRGBA } from "./ColorFun";
 import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
-import { ambientColor, ligCol, ligCount, ligDir, LightCac2D, ligMask, cullMask, LightCac3D, material, ligStep0, ligStep1, ligStep2, ligStep3, envmapOn, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, ligCol, ligCount, ligDir, LightCac2D, ligMask, cullMask, LightCac3D, material, ligStep0, ligStep1, ligStep2, ligStep3, envCount,envPos, EnvNearest, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
 import { 
 	Build, CMat, CVec2, CVec3, CVec4, CMat3, OutColor, OutPosition,   
@@ -20,8 +20,8 @@ import {
 	V4MulFloat,
 	V4Mix,
 	Attribute,
-	Sam2DArrToV4,
-	Sam2DArrToMat,
+	Sam2DArrNearestToV4,
+	Sam2DArrNearestToMat,
     min,
     max,
     V3Len,
@@ -29,22 +29,21 @@ import {
     V3Nor,
     V4Dot,
     TransposeMat4,
+	V3MulV3,
+	V3Sqrt,
 } from "./Shader"
 import { 
-	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
-    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
+	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowZOffset,
+    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
 	jitter,
-	shadowReadList,
     CalcShadow,
     shadowInfoList,
-    shadowCascadeDataList,
     shadowNear,
     shadowFar,
     shadowTop,
     shadowBottom,
     shadowLeft,
     shadowRight,
-    shadowDivideList,
     PCFStep, 
 } from "./Shadow";
 
@@ -65,16 +64,18 @@ var to_viewPos : ToV4=Null();
 var to_shadowBias : ToV1=Null();
 var to_worldPos : ToV4=Null();
 var to_normal : ToV3=Null();
+var to_envIdx : ToV2=Null();
 
 var screenSize : CVec2;
 
 var shadowOn : number = -1.0;
 var sun : number=1.0;
+var voxelCount : CVec3 = new CVec3(16,16,16);
 
 var time : number=Attribute(0,"time");
 
 Build("Artgine/Shader/Voxel",[],
-	vs_main,[worldMat,viewMat,projectMat,colorModel,alphaModel,size,shadowOn,sun],[out_position,to_uv,to_worldPos,to_normal],
+	vs_main,[worldMat,viewMat,projectMat,colorModel,alphaModel,size,shadowOn,sun,voxelCount],[out_position,to_uv,to_worldPos,to_normal,to_envIdx],
     ps_main,[out_color]
 );
 	
@@ -82,9 +83,9 @@ Build("Artgine/Shader/VoxelShadowWrite",["shadowWrite"],
 	vs_main_shadow_write,[
 		worldMat,viewMat,projectMat,colorModel,alphaModel,size,
 		ligDir,ligCol,ligCount,
-		shadowCount,shadowWrite,
-        shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-        shadowReadList,shadowInfoList, shadowCascadeDataList,shadowDivideList,
+		shadowCount,shadowWrite,shadowZOffset,
+        shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+        shadowInfoList,
 		shadowRate,PCF,texture16f,bias,normalBias
 	],[out_position,to_uv,to_viewPos,to_shadowBias],
     ps_main_shadow_write,[out_color]
@@ -95,8 +96,8 @@ Build("Artgine/Shader/VoxelShadowRead",["shadowRead"],
 		worldMat,viewMat,projectMat,colorModel,alphaModel,size,
 		ligDir,ligCol,ligCount,
 		shadowCount,shadowWrite,
-        shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-        shadowReadList,shadowInfoList, shadowCascadeDataList,shadowDivideList,
+        shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+        shadowInfoList,
 		shadowRate,PCF,PCFStep,texture16f,bias,normalBias,sun,jitter,
         camPos
 	],[out_position,to_uv,to_normal,to_worldPos,to_viewPos],
@@ -354,7 +355,12 @@ function vs_main(f4_ver : Vertex4,f4_uv : UV4,f2_color : Color2)
 	to_worldPos=P;
 	P=V4MulMatCoordi(P,viewMat);
 	P=V4MulMatCoordi(P,projectMat);
-	
+
+	to_envIdx.x = -1.0;
+	BranchBegin("env","E",[envCount,envPos]);
+	to_envIdx.x = EnvNearest(to_worldPos.xyz, to_normal);
+	BranchEnd();
+
 	out_position=P;
 }
 
@@ -403,10 +409,16 @@ function ps_main()
     }
     BranchEnd();
 
+
 	var DSE : CMat3=new CMat3(0);
-	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount,cullMask]);
-	DSE = LightCac3D(camPos,to_worldPos,L_cor,to_normal,shadow,material.y,material.x,material.z,cullMask.x);
+	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envCount,envPos,sam2DCount,samCubeCount,cullMask]);
+	L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
+	if(voxelCount.z < 1.5)
+		DSE = LightCac2D(to_worldPos,L_cor,new CVec3(0.0,0.0,0.0),shadow,cullMask.x);
+	else
+		DSE = LightCac3D(to_worldPos,L_cor,to_normal,shadow,cullMask.x,camPos,material.y,material.x,material.z,to_envIdx.x);
 	L_cor.rgb=V3AddV3(DSE[0],DSE[1]);
+	L_cor.rgb=V3Sqrt(L_cor.rgb);
     BranchDefault();
     if(shadow.r > -0.5) {
 		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);
@@ -464,15 +476,16 @@ function ps_main_shadow_write()
 	BranchEnd();
 	if ( L_cor.a <= 0.01 ) discard;
 
-    var shadowRead: CVec4;
+    var shadowInfo: CVec4;
     var lDir: CVec4;
     BranchBegin("PointLightShadowF","PLSF",[ligDir]);
-    shadowRead = Sam2DArrToV4(shadowReadList, shadowWrite.y);
-    lDir = Sam2DArrToV4(ligDir, shadowRead.x);
-    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowRead.z) / (shadowRead.w - shadowRead.z);
+    shadowInfo = Sam2DArrNearestToV4(shadowInfoList, shadowWrite.y * 4.0);
+    lDir = Sam2DArrNearestToV4(ligDir, shadowInfo.x);
+    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowInfo.z) / (shadowInfo.w - shadowInfo.z);
     out_color.a = 1.0;
     BranchDefault();
     out_color = to_viewPos;
+    out_color.z += shadowZOffset;
     out_color.a = 1.0;
     BranchEnd();
 }

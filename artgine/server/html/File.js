@@ -158,28 +158,41 @@ function saveEditedFile(filePath, base64) {
         .catch((e) => CAlert.E('저장 실패: ' + e.message));
 }
 const textToBase64 = (text) => btoa(unescape(encodeURIComponent(text)));
-function addFolderTracks(fl) {
-    const p2 = { path: gPath + fl.name + "/" };
-    if (RootPath)
-        p2.RootPath = RootPath;
-    CFecth.Exe(FileApiUrl("File/List"), FileParam(p2), "json").then((data) => {
-        CAlert.Info(gPath + fl.name + "추가");
-        for (const fl2 of data.list) {
-            if (fl.name == fl2.name)
-                continue;
-            if (fl2.ext == "mp3" || fl2.ext == "ogg")
-                g_musicJBox.Add(gDown + encodeUrlPath(gPath + fl.name + "/" + fl2.name));
+async function addFolderTracks(fl) {
+    const down = gDown;
+    const rootDir = gPath + fl.name + "/";
+    const urls = [];
+    const queue = [rootDir];
+    while (queue.length > 0) {
+        const dirPath = queue.shift();
+        const p2 = { path: dirPath };
+        if (RootPath)
+            p2.RootPath = RootPath;
+        try {
+            const data = await CFecth.Exe(FileApiUrl("File/List"), FileParam(p2), "json");
+            for (const fl2 of data.list ?? []) {
+                if (fl2.hidden)
+                    continue;
+                if (!fl2.file) {
+                    if (!isSearchExcluded(fl2.name))
+                        queue.push(dirPath + fl2.name + "/");
+                }
+                else if (fl2.ext == "mp3" || fl2.ext == "ogg") {
+                    urls.push(down + encodeUrlPath(dirPath + fl2.name));
+                }
+            }
         }
+        catch { }
+    }
+    const before = g_musicJBox.GetList().length;
+    g_musicJBox.Add(urls);
+    const added = g_musicJBox.GetList().length - before;
+    CAlert.Info(rootDir + " " + added + "곡 추가");
+    if (before == 0 && added > 0)
         g_musicJBox.Play(0);
-    });
 }
 function openFolder(fl) {
-    if (CDOM.IDValue("soundAddType") == "1") {
-        addFolderTracks(fl);
-    }
-    else {
-        FolderCD(gPath + fl.name + "/");
-    }
+    FolderCD(gPath + fl.name + "/");
 }
 function viewportSize() {
     return {
@@ -211,24 +224,18 @@ function openImage(fl) {
     g_contentJBox.Show();
 }
 function openAudio(fl) {
-    if (CDOM.IDValue("soundAddType") == "1") {
-        g_musicJBox.Add(downUrl(fl));
-        CAlert.Info(fl.name + " 추가");
-    }
-    else {
-        const paths = [downUrl(fl)];
-        for (const fl2 of gDirList) {
-            if (fl.name == fl2.name)
-                continue;
-            if (fl2.ext == "mp3" || fl2.ext == "ogg") {
-                const fp = gDown + encodeUrlPath(gPath + fl2.name);
-                if (!paths.includes(fp))
-                    paths.push(fp);
-            }
+    const paths = [downUrl(fl)];
+    for (const fl2 of gDirList) {
+        if (fl.name == fl2.name)
+            continue;
+        if (fl2.ext == "mp3" || fl2.ext == "ogg") {
+            const fp = gDown + encodeUrlPath(gPath + fl2.name);
+            if (!paths.includes(fp))
+                paths.push(fp);
         }
-        g_musicJBox.SetList(paths);
-        g_musicJBox.Play(0);
     }
+    g_musicJBox.SetList(paths);
+    g_musicJBox.Play(0);
     fl.open = true;
     RefreshOpen();
 }
@@ -336,9 +343,17 @@ const LONG_PRESS_MS = 500;
 function makeLongPressHandlers(fl, kind) {
     let pressTimer = null;
     let longPressed = false;
-    const start = () => {
+    const cancel = () => { if (pressTimer != null) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+    } };
+    const start = (e) => {
+        if (e.button !== 0)
+            return;
+        cancel();
         longPressed = false;
         pressTimer = window.setTimeout(() => {
+            pressTimer = null;
             longPressed = true;
             if (fl.file)
                 renameFile(fl);
@@ -346,18 +361,14 @@ function makeLongPressHandlers(fl, kind) {
                 addFolderTracks(fl);
         }, LONG_PRESS_MS);
     };
-    const cancel = () => { if (pressTimer != null) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-    } };
     const click = () => { if (longPressed) {
         longPressed = false;
         return;
     } FILE_OPEN[kind](fl); };
     return {
         onclick: click,
-        onmousedown: start, onmouseup: cancel, onmouseleave: cancel,
-        ontouchstart: start, ontouchend: cancel, ontouchcancel: cancel, ontouchmove: cancel,
+        onpointerdown: start, onpointerup: cancel, onpointerleave: cancel, onpointercancel: cancel,
+        ondragstart: cancel,
     };
 }
 function encodeQueryValue(_value) {
@@ -696,10 +707,6 @@ var g_menuList = { "<>": "div", "class": "d-flex align-items-center p-1", "html"
                         g_musicJBox.Show();
                         g_musicJBox.SetPosition(CModal.ePos.Center);
                     } },
-                { "<>": "select", "class": "form-select form-select-sm", "id": "soundAddType", "style": "width:128px;", "html": [
-                        { "<>": "option", "value": "0", "text": "Add All" },
-                        { "<>": "option", "value": "1", "text": "Add Each (w/ Folder)" },
-                    ] },
                 { "<>": "button", "type": "button", "class": "btn btn-sm btn-outline-info", "text": "Search", "onclick": () => { FileSearch(); } },
                 { "<>": "button", "type": "button", "class": "btn btn-sm btn-outline-secondary", "text": "File", "onclick": () => { FileBtn(); } },
             ] },
@@ -1184,11 +1191,10 @@ async function FileSearch() {
         if (fl.file) {
             item.addEventListener('click', () => {
                 modal.Hide();
-                FolderCD(dirPath);
-                const url = gDown + encodeUrlPath(dirPath + fl.name);
-                if (tryNotifyEditorHost(gRoot + dirPath + fl.name, url))
-                    return;
-                new CFileViewer([url], async (filePath, bufStr) => saveEditedFile(filePath, textToBase64(bufStr))).Open();
+                FolderCD(dirPath, () => {
+                    const entry = gDirList.find(d => d.name === fl.name) ?? fl;
+                    FILE_OPEN[kindOf(entry)](entry);
+                });
             });
         }
         else {

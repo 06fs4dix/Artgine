@@ -4,11 +4,16 @@ import { CUtil } from "../../basic/CUtil.js";
 import { CUtilWeb } from "../../util/CUtilWeb.js";
 import { CPath } from "../../basic/CPath.js";
 import { CFecth } from "../../network/CFecth.js";
-import { getAuthToken, checkAuthed } from "../CAuthToken.js";
+import { CHash } from "../../basic/CHash.js";
+import { CConfirm } from "../../basic/CModal.js";
+import { CAlert } from "../../basic/CAlert.js";
+import { getAuthToken, setAuthToken, checkAuthed, authLogin } from "../CAuthToken.js";
 import { CIframeMsg } from "./CIframeMsg.js";
+const MODAL_DOM_DELAY = 100;
 const gPath = CUtilWeb.Parameter("path") ?? "";
 const gUrl = CUtilWeb.Parameter("url") ?? "";
 const saveBtn = CDOM.ID("editor-save-btn");
+const loginBtn = CDOM.ID("editor-login-btn");
 const refreshBtn = CDOM.ID("editor-refresh-btn");
 const pathEl = CDOM.ID("editor-path");
 const statusEl = CDOM.ID("editor-status");
@@ -24,8 +29,58 @@ let gWritable = false;
 let gExt = "";
 let gContainer = null;
 let gToolbarBound = false;
+let gTextWritableBound = false;
 async function canWrite() {
     return checkAuthed(CPath.WebRootUrl());
+}
+function promptEditorAuth() {
+    const dlg = new CConfirm();
+    dlg.SetBody('Enter admin password:<br><input type="password" id="editorAuthPw" class="form-control form-control-sm">');
+    const doAuth = () => {
+        const pw = CDOM.IDValue("editorAuthPw");
+        authLogin(CPath.WebRootUrl(), CHash.SHA256('artgine_' + pw), () => { CAlert.Info("Waiting for messenger approval (up to 5 minutes)..."); }).then(async (j) => {
+            if (j.ok) {
+                setAuthToken(CPath.WebRootUrl(), j.token);
+                gWritable = true;
+                if (gMode === "text")
+                    enableTextWritable();
+                else if (gMode === "sheet" && gContainer)
+                    await mainSheet(gContainer, gExt, true);
+                showToolbar();
+                CAlert.Info("Permission granted");
+            }
+            else {
+                CAlert.E("Wrong password: " + (j.msg ?? ""));
+            }
+        }).catch(() => { CAlert.E("Server error"); });
+    };
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [doAuth, () => { }], ["OK", "Cancel"]);
+    dlg.Open();
+    setTimeout(() => {
+        const input = CDOM.ID("editorAuthPw");
+        input?.focus();
+        input?.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter')
+                return;
+            e.preventDefault();
+            doAuth();
+            dlg.Close();
+        });
+    }, MODAL_DOM_DELAY);
+}
+function enableTextWritable() {
+    if (!gEditor)
+        return;
+    gEditor.updateOptions({ readOnly: false });
+    if (gTextWritableBound)
+        return;
+    gTextWritableBound = true;
+    const monacoNs = window["monaco"];
+    gEditor.addCommand(monacoNs.KeyMod.CtrlCmd | monacoNs.KeyCode.KeyS, () => saveFile(gEditor));
+    gEditor.onDidChangeModelContent(() => {
+        if (!gSuppressDirty)
+            sendDirty(true);
+    });
 }
 function sendDirty(_dirty) {
     gDirty = _dirty;
@@ -69,8 +124,10 @@ function stopSaveTimer() {
 function showToolbar() {
     if (refreshBtn)
         refreshBtn.style.display = "inline-block";
-    if (saveBtn && gWritable)
-        saveBtn.style.display = "inline-block";
+    if (saveBtn)
+        saveBtn.style.display = gWritable ? "inline-block" : "none";
+    if (loginBtn)
+        loginBtn.style.display = gWritable ? "none" : "inline-block";
 }
 function bindToolbarOnce() {
     if (gToolbarBound)
@@ -83,6 +140,9 @@ function bindToolbarOnce() {
             else if (gEditor)
                 saveFile(gEditor);
         });
+    }
+    if (loginBtn) {
+        loginBtn.addEventListener("click", () => promptEditorAuth());
     }
     if (refreshBtn) {
         refreshBtn.addEventListener("click", () => { void refreshFile(); });
@@ -347,13 +407,8 @@ async function main() {
                 return true;
             }
         });
-        if (!writable)
-            return;
-        editor.addCommand(monacoNs.KeyMod.CtrlCmd | monacoNs.KeyCode.KeyS, () => saveFile(editor));
-        editor.onDidChangeModelContent(() => {
-            if (!gSuppressDirty)
-                sendDirty(true);
-        });
+        if (writable)
+            enableTextWritable();
     }, false, gUrl);
 }
 main();

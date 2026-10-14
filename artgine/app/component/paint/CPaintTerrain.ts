@@ -151,10 +151,4 @@ export class CPaintTerrain extends CPaint
         barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
     }
 
-    override EmptyRPChk(): void {
-        if(this.mRenderPass.length==0)
-        {
-            this.mRenderPass=[new CRPAuto(this.mOwner.GetFrame().Pal().SlTerrainKey())];
-        }
-    }
 }

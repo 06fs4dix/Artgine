@@ -1,11 +1,9 @@
 import { CAlpha } from "../../artgine/render/CAlpha.js";
 import { CAnimation } from "../../artgine/app/component/CAnimation.js";
 import { CAniFlow } from "../../artgine/app/component/CAniFlow.js";
-import { CAtelier } from "../../artgine/app/CAtelier.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CCollider } from "../../artgine/app/component/CCollider.js";
 import { CColor } from "../../artgine/render/CColor.js";
-import { CCondition } from "../../artgine/util/CCondition.js";
 import CEnvMap from "../../artgine/app/component/CEnvMap.js";
 import { CForce } from "../../artgine/app/component/CForce.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
@@ -264,14 +262,9 @@ export class CShape3D extends CSubject {
 			this.PushComp(new CAniFlow(_opt.animation));
 		}
 
-		// 기본 Sl3D Auto RP (Brush에 한 번 등록, ClearCRPAuto 시 자동 복구)
+		// 전용 Auto RP를 따로 등록하면 Brush 기본 RP(Forward_3D/Forward_Shadow_3D)와 함께 매칭돼 두 번 그려지므로 기본 RP에 맡긴다.
+		// sDefaultRPRegistered는 이를 끄던 기존 프로젝트 호환용으로만 남아 있다
 		this.mPaint.PushTag(CShape3D.sDefaultTag);
-		if (!CShape3D.sDefaultRPRegistered) {
-			const defRP = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
-			defRP.PushAnd(new CCondition("mTag[" + CShape3D.sDefaultTag + "]"));
-			CAtelier.Main().Brush().SetAutoRP("CShape3D_Default", defRP);
-			CShape3D.sDefaultRPRegistered = true;
-		}
 
 		this.PushComp(this.mPaint);
 	}

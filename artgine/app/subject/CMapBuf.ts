@@ -53,6 +53,11 @@ export class CMapBuf extends CObject
     SetTexture(_tex: CTexture)
     {
         let buf = _tex.GetBuf()[0] as Uint8Array;
+        if(buf == null)
+        {
+            CAlert.W(_tex.Key() + " : CPU 픽셀이 없다. 맵 이미지는 mGPU=false로 로드해야 한다");
+            return;
+        }
         let width = _tex.GetWidth();
         let height = _tex.GetHeight();
 

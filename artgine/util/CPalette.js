@@ -153,6 +153,12 @@ export class CPalette {
         _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, 1)], new CVec2(1024, 1024), this.GetShadowWriteTex());
         let stex = _fw.Res().Find(this.GetShadowWriteTex());
         stex.SetFilter(CTexture.eFilter.Linear);
+        _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)], new CVec2(1, 1), this.GetShadowReadTex());
+        _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA8, 1)], new CVec2(128, 128), this.GetEnvMapTex());
+        let etex = _fw.Res().Find(this.GetEnvMapTex());
+        etex.SetAutoResize(false);
+        etex.SetFilter(CTexture.eFilter.Linear);
+        etex.SetMipMap(CTexture.eMipmap.EnvFilter);
         let fa = new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize) * 4);
         for (let j = 0; j < 6; ++j) {
             tex = CImgPro.ExtractColorPalette(_fw.Res().Find(gLUT[j]), new CVec2(32, 32));
@@ -262,6 +268,9 @@ export class CPalette {
     }
     GetShadowReadTex() {
         return "Artgine/shadowRead.tex";
+    }
+    GetEnvMapTex() {
+        return "Artgine/envmap.tex";
     }
     GetMainFrameTex() {
         return "Artgine/MainFrame.tex";

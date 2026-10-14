@@ -34,7 +34,7 @@ const LS_MODEL    = 'ai.model';
 
 import { CPath } from "../../basic/CPath.js";
 import { CHash } from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin, checkAuthed, getPageAuthToken, withAuthToken } from "../CAuthToken.js";
 import { CLan } from "../../basic/CLan.js";
 import { CStorage } from "../../system/CStorage.js";
 import { marked } from "../../external/esnext/md/marked.esm.js";
@@ -63,13 +63,15 @@ function applyChatLan(root: ParentNode = document): void {
 applyChatLan();
 
 // ---- auth ----
-let authToken: string = getAuthToken(CPath.WebRootUrl());
+// 로컬(same-origin)이면 '' 이라 세션 쿠키로 인증되고, 원격이면 Control이 URL에 실어 보낸 ?authToken= 이 들어온다.
+let authToken: string = getPageAuthToken(CPath.WebRootUrl());
 function isStandaloneChat(): boolean {
     return window.parent === window;
 }
+// 로컬은 same-origin 세션 쿠키로 인증된다. 원격(cross-origin)은 쿠키가 서드파티로 차단되므로
+// 서버가 받아주는 ?authToken= 을 붙인다(CAIChatRouter.isAuthedOrToken). 토큰이 ''이면 URL이 그대로다.
 function authedFetch(input: string, init?: RequestInit): Promise<Response> {
-    // 세션 쿠키로 인증되므로 토큰을 별도로 첨부하지 않는다.
-    return fetch(input, init);
+    return fetch(withAuthToken(input, authToken), init);
 }
 function clearAuth() {
     authToken = '';
@@ -214,8 +216,8 @@ function isImagePath(p: string): boolean {
 }
 function attachmentUrl(sid: string, relPath: string, bust?: number): string {
     const t = bust ?? Date.now();
-    // 같은 출처 요청이라 세션 쿠키가 자동 전송된다(토큰 불필요).
-    return `${CPath.WebRootUrl()}AIChat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
+    // <img src>로도 쓰이므로 authedFetch를 못 탄다 - 원격이면 여기서 직접 토큰을 붙인다(로컬은 쿠키라 그대로).
+    return withAuthToken(`${CPath.WebRootUrl()}AIChat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`, authToken);
 }
 
 // ---- provider/model dropdowns ----
@@ -542,8 +544,9 @@ function connectWs() {
     if (ws && ws.readyState === WebSocket.OPEN) return;
     if (ws) { ws.close(); ws = null; }
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // 인증은 WS 핸드셰이크에 자동 전송되는 세션 쿠키로 처리된다(토큰 불필요).
-    ws = new WebSocket(`${CPath.WebRootUrl().replace(/^http/, 'ws')}AIChat/ws`);
+    // 로컬은 WS 핸드셰이크에 자동 전송되는 세션 쿠키로 인증된다. 원격(cross-origin)은 그 쿠키가 안 실리므로
+    // ?authToken= 을 붙인다(CAIChatRouter의 upgrade 핸들러가 받는다 - CTerminalRouter의 ws와 동일 패턴).
+    ws = new WebSocket(withAuthToken(`${CPath.WebRootUrl().replace(/^http/, 'ws')}AIChat/ws`, authToken));
     ws.addEventListener('open', () => {
         setStatus('connected', 'text-bg-success');
         ws!.send(JSON.stringify({ type: 'join', sessionId: currentSid }));
@@ -607,9 +610,12 @@ async function bootChat() {
 
 async function init() {
     // verify cached token (or session cookie); if invalid, ask again
-    const valid = await checkAuthed(CPath.WebRootUrl());
+    // authToken은 원격이면 URL(?authToken=)에서, 로컬이면 localStorage에서 온다(getPageAuthToken).
+    const valid = await checkAuthed(CPath.WebRootUrl(), authToken);
     if (valid) {
-        authToken = getAuthToken(CPath.WebRootUrl());
+        // 로컬에서 쿠키만으로 통과한 경우 저장된 토큰을 집어온다. 원격이면 URL로 받은 토큰을 덮어쓰지 않는다
+        // (이 origin의 localStorage는 비어 있어서 덮으면 토큰을 잃는다).
+        if (!authToken) authToken = getAuthToken(CPath.WebRootUrl());
         hideComposerLogin();
         bootChat();
     } else {

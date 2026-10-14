@@ -64,15 +64,48 @@ export class CProviderLog {
         const t = CProviderLog.sTable;
         const cols = CProviderLog.sCols;
         const afterId = _afterId == null || isNaN(Number(_afterId)) ? -1 : Number(_afterId);
-        const owned = `sessionId != '' AND sessionId IN (SELECT DISTINCT sessionId FROM ${t} WHERE key = ? AND sessionId != '')`;
+        const owned = CProviderLog.OwnedBy();
         const where = afterId >= 0
-            ? `WHERE id > ? AND (key = ? OR (${owned}))`
-            : `WHERE key = ? OR (${owned})`;
+            ? `WHERE id > ? AND (${owned})`
+            : `WHERE ${owned}`;
         const params = afterId >= 0 ? [afterId, _key, _key] : [_key, _key];
         const rows = await db.Recv(`SELECT ${cols} FROM ${t} ${where} ORDER BY id ASC`, params);
         if (rows == null)
             return [];
         return rows.map(CProviderLog.RowToRecord);
+    }
+    static async MaxId() {
+        const db = await CProviderLog.Init();
+        const rows = await db.Recv(`SELECT MAX(id) FROM ${CProviderLog.sTable}`, []);
+        if (rows == null || rows.length === 0)
+            return 0;
+        return Number(rows[0][0]) || 0;
+    }
+    static async ListForKeyRange(_key, _afterId, _beforeId = 0) {
+        const db = await CProviderLog.Init();
+        const t = CProviderLog.sTable;
+        const before = _beforeId > 0 ? ' AND id < ?' : '';
+        const params = [_afterId, ...(_beforeId > 0 ? [_beforeId] : []), _key, _key];
+        const rows = await db.Recv(`SELECT ${CProviderLog.sCols} FROM ${t} WHERE id > ?${before} AND (${CProviderLog.OwnedBy()}) ORDER BY id ASC`, params);
+        if (rows == null)
+            return [];
+        return rows.map(CProviderLog.RowToRecord);
+    }
+    static async FindTaskRow(_key, _afterId, _marker) {
+        const db = await CProviderLog.Init();
+        const rows = await db.Recv(`SELECT MIN(id) FROM ${CProviderLog.sTable} WHERE id > ? AND role = 'user' AND instr(text, ?) > 0 AND (${CProviderLog.OwnedBy()})`, [_afterId, _marker, _key, _key]);
+        if (rows == null || rows.length === 0)
+            return 0;
+        return Number(rows[0][0]) || 0;
+    }
+    static async HasFinalAfter(_key, _taskRowId) {
+        const db = await CProviderLog.Init();
+        const rows = await db.Recv(`SELECT id FROM ${CProviderLog.sTable} WHERE id > ? AND role = 'assistant' AND (${CProviderLog.OwnedBy()}) LIMIT 1`, [_taskRowId, _key, _key]);
+        return rows != null && rows.length > 0;
+    }
+    static OwnedBy() {
+        const t = CProviderLog.sTable;
+        return `key = ? OR (sessionId != '' AND sessionId IN (SELECT DISTINCT sessionId FROM ${t} WHERE key = ? AND sessionId != ''))`;
     }
     static async ListBySession(_sessionId) {
         const db = await CProviderLog.Init();

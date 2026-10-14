@@ -3,7 +3,7 @@ const LS_PROVIDER = 'ai.provider';
 const LS_MODEL = 'ai.model';
 import { CPath } from "../../basic/CPath.js";
 import { CHash } from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, removeAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, removeAuthToken, authLogin, checkAuthed, getPageAuthToken, withAuthToken } from "../CAuthToken.js";
 import { CLan } from "../../basic/CLan.js";
 import { CStorage } from "../../system/CStorage.js";
 import { marked } from "../../external/esnext/md/marked.esm.js";
@@ -29,12 +29,12 @@ function applyChatLan(root = document) {
     });
 }
 applyChatLan();
-let authToken = getAuthToken(CPath.WebRootUrl());
+let authToken = getPageAuthToken(CPath.WebRootUrl());
 function isStandaloneChat() {
     return window.parent === window;
 }
 function authedFetch(input, init) {
-    return fetch(input, init);
+    return fetch(withAuthToken(input, authToken), init);
 }
 function clearAuth() {
     authToken = '';
@@ -190,7 +190,7 @@ function isImagePath(p) {
 }
 function attachmentUrl(sid, relPath, bust) {
     const t = bust ?? Date.now();
-    return `${CPath.WebRootUrl()}AIChat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
+    return withAuthToken(`${CPath.WebRootUrl()}AIChat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`, authToken);
 }
 async function fetchProviders() {
     try {
@@ -542,7 +542,7 @@ function connectWs() {
         ws = null;
     }
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${CPath.WebRootUrl().replace(/^http/, 'ws')}AIChat/ws`);
+    ws = new WebSocket(withAuthToken(`${CPath.WebRootUrl().replace(/^http/, 'ws')}AIChat/ws`, authToken));
     ws.addEventListener('open', () => {
         setStatus('connected', 'text-bg-success');
         ws.send(JSON.stringify({ type: 'join', sessionId: currentSid }));
@@ -602,9 +602,10 @@ async function bootChat() {
     connectWs();
 }
 async function init() {
-    const valid = await checkAuthed(CPath.WebRootUrl());
+    const valid = await checkAuthed(CPath.WebRootUrl(), authToken);
     if (valid) {
-        authToken = getAuthToken(CPath.WebRootUrl());
+        if (!authToken)
+            authToken = getAuthToken(CPath.WebRootUrl());
         hideComposerLogin();
         bootChat();
     }

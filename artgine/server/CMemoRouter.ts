@@ -132,9 +132,9 @@ export class CMemoRouter extends CAuthServer {
         if (!key || !id) { _res.status(400).json({ ok: false, msg: 'key, id 필요' }); return null; }
 
         try {
-            const deleted = await CMemo.Delete(key, id, this.GetPassword(_json, _req));
+            const { deleted, keyDeleted } = await CMemo.Delete(key, id, this.GetPassword(_json, _req));
             if (!deleted) { _res.status(404).json({ ok: false, msg: '해당 id 메모를 찾을 수 없음' }); return null; }
-            _res.json({ ok: true });
+            _res.json({ ok: true, keyDeleted });
         } catch (e: any) {
             _res.status(400).json({ ok: false, msg: e?.message || 'Delete failed' });
         }

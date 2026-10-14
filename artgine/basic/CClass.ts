@@ -1,5 +1,8 @@
 import {CUtil} from "./CUtil.js";
 var gClassMap = new Map();
+// Push 시점(= 외부 스크립트가 이 클래스에 대해 아직 한 줄도 못 돈 시점)의 프로토타입
+// 메서드 스냅샷. 이후 누가 prototype 메서드를 바꿔치기해도 ResolveMethod는 이 스냅샷을 본다.
+var gMethodSnapshot = new Map<Function, Map<string, Function>>();
 export class CClass
 {
     //현재 클래스 상속받은것들 찾기
@@ -97,15 +100,38 @@ export class CClass
     static Push(_key, _val=null) {
         if (_val && typeof _val != "object" && typeof _val != "function")
             return;
+        let ctor: any = null;
         if (typeof _key == "string") {
             if(CUtil.IsNode()==false)   window[_key] = _val;
             gClassMap.set(_key, _val);
+            ctor = _val;
         }
         else if(_key.name!=null)
         {
             if(CUtil.IsNode()==false) window[_key.name] = _key;
             gClassMap.set(_key.name, _key);
+            ctor = _key;
         }
+        if (typeof ctor === "function" && ctor.prototype != null) {
+            const methods = new Map<string, Function>();
+            let proto = ctor.prototype;
+            while (proto && proto !== Object.prototype) {
+                for (const name of Object.getOwnPropertyNames(proto)) {
+                    if (name === "constructor" || methods.has(name)) continue;
+                    const desc = Object.getOwnPropertyDescriptor(proto, name);
+                    if (desc && typeof desc.value === "function") methods.set(name, desc.value);
+                }
+                proto = Object.getPrototypeOf(proto);
+            }
+            gMethodSnapshot.set(ctor, methods);
+        }
+    }
+    // jsCallM6(CWASM.ts)가 프로토타입 몽키패치를 무시하고 진짜 메서드를 호출하는 데 쓴다.
+    // 스냅샷이 없으면 null - 호출부가 obj[name] 경로로 안전하게 폴백한다.
+    static ResolveMethod(obj: any, name: string): Function {
+        if (obj == null) return null;
+        const methods = gMethodSnapshot.get(obj.constructor);
+        return methods ? (methods.get(name) ?? null) : null;
     }
     //메소스만 찾기
     static MethodName(_target: any, _all: boolean = false): string[] 
@@ -237,3 +263,4 @@ export class CClass
     }
 }
 CClass.Push(CClass);
+CClass.Push(CUtil);

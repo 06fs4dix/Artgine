@@ -169,6 +169,11 @@ export class CTooltip extends CModal
         this.SetResize(false);
         this.Open();
         this.Hide(0);
+        // 화면보다 클 때만 본문이 스크롤된다. 그래야 아래 preventOverflow가 항상 화면 안에 다 넣을 수 있다
+        if (this.mBody) {
+            this.mBody.style.maxHeight = "calc(100vh - 20px)";
+            this.mBody.style.maxWidth = "calc(100vw - 20px)";
+        }
 
         if (typeof _content === "string") {
             CDOM.ID("Content_" + this.mKey).textContent = _content;
@@ -245,9 +250,12 @@ export class CTooltip extends CModal
                     }
                 },
                 {
-                    name: "flip",
+                    name: "preventOverflow",
                     options: {
-                        fallbackPlacements: []
+                        altAxis: true,
+                        tether: false,
+                        padding: 8,
+                        rootBoundary: "viewport"
                     }
                 },
                 {

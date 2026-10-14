@@ -4,11 +4,12 @@ import { CObject } from "../basic/CObject.js";
 //condition
 export class CCondition extends CObject
 {
-    constructor(_state : string|{s}|{s,v}|{s,v,o},_op : string="==",_value : any=1)
+    constructor(_state : string|{s}|{s,v}|{s,v,o},_op : string="==",_value : any=1,_group : string="")
     {
         super();
         this.mOperator=_op==null?"==":_op;
         this.mValue=_value==null?1:_value;
+        this.mGroup=_group;
 
         if(_state==null)    {}
         else if(typeof _state=="number")
@@ -28,6 +29,7 @@ export class CCondition extends CObject
     mState="";
     mValue : any=1;
     mOperator="==";
+    mGroup="";
     static eOperator={
         "==":"==",
         "!=":"!=",
@@ -43,7 +45,7 @@ export class CCondition extends CObject
         GreaterEqual: ">=",
         Less: "<",
         Greater: ">",
-        And: "&"
+        And: "&",
     };
     Excute(_state : CObject)
     {
@@ -52,7 +54,6 @@ export class CCondition extends CObject
             st=_state.Temp(this.mState) as any;
         else
             st=_state.Get(this.mState) as any;
-
 
         if(st==null && typeof this.mValue =="number")   st=0;
         if(this.mOperator=="==")    return st==this.mValue;
@@ -72,8 +73,14 @@ export class CCondition extends CObject
             this.mState=this.mState+"";
         this.mOperator=json["mOperator"]==null?json["o"]:json["mOperator"];
         if(this.mOperator==null)    this.mOperator="==";
-        this.mValue=json["mValue"]==null?json["v"]:json["mValue"];
-        if(this.mValue==null)    this.mValue=1;
+        let val = json["mValue"]==null?json["v"]:json["mValue"];
+        if (val != null && typeof val === "object" && (this.mOperator === "every" || this.mOperator === "some")) {
+            let inner = new CCondition(null);
+            inner.ImportJSON(val);
+            this.mValue = inner;
+        } else {
+            this.mValue = val == null ? 1 : val;
+        }
         return this;
     }
 

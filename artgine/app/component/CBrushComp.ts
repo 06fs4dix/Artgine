@@ -1,15 +1,8 @@
-
-
-
 import { CUpdate } from "../../basic/Basic.js";
 import { CObject } from "../../basic/CObject.js";
 import { CBrush } from "../canvas/CBrush.js";
 import { CRPAuto } from "../canvas/CRPMgr.js";
-
-import { CSubject } from "../subject/CSubject.js";
 import {CComponent} from "./CComponent.js";
-import { CPaint3D } from "./paint/CPaint3D.js";
-
 
 export class CBrushComp extends CComponent
 {
@@ -33,9 +26,10 @@ export class CBrushComp extends CComponent
     }
     GetWrite() { return this.mWriteRP; }
     GetTex()    {   return this.mTexKey+".tex";   }
-    PushRPAuto(_write : CRPAuto)
+    PushRPAuto(_write : CRPAuto) : CRPAuto
     {
         this.mWriteRP.push(_write);
+        return _write;
     }
     override StartChk(): boolean {
         if(this.mStartChk==true && this.mBrush!=null)
@@ -66,19 +60,10 @@ export class CBrushComp extends CComponent
         //     return true;
         // }
         
-
-        if(this.mReadTag!=null)
-        {
-            var cm=this.ProductMsg("CubeMap");
-            cm.mIntra=CPaint3D;
-            cm.mInter = "";
-            cm.mMsgData[0]=this;
-        }
         return false;
     }
   
-    
-    RecvGetBrush(_brush : CBrush) 
+    RecvGetBrush(_brush : CBrush)
     {
         this.mBrush=_brush;
     }

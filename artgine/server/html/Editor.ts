@@ -4,8 +4,13 @@ import { CUtil } from "../../basic/CUtil.js";
 import { CUtilWeb, CSheetData } from "../../util/CUtilWeb.js";
 import { CPath } from "../../basic/CPath.js";
 import { CFecth } from "../../network/CFecth.js";
-import { getAuthToken, checkAuthed } from "../CAuthToken.js";
+import { CHash } from "../../basic/CHash.js";
+import { CConfirm } from "../../basic/CModal.js";
+import { CAlert } from "../../basic/CAlert.js";
+import { getAuthToken, setAuthToken, checkAuthed, authLogin } from "../CAuthToken.js";
 import { CIframeMsg } from "./CIframeMsg.js";
+
+const MODAL_DOM_DELAY = 100;
 
 // path/url은 Control.ts가 file-opened 이벤트로 받은 값을 그대로 쿼리스트링에 실어 iframe src로 넘긴다.
 const gPath = CUtilWeb.Parameter("path") ?? "";
@@ -13,6 +18,7 @@ const gUrl = CUtilWeb.Parameter("url") ?? "";
 
 // 언어 맵은 CUtilWeb.sMonacoExtToLang 공유. TS 언어 서비스/TSImport는 typescript일 때만 MonacoEditer 내부에서 동작.
 const saveBtn = CDOM.ID("editor-save-btn") as HTMLButtonElement;
+const loginBtn = CDOM.ID("editor-login-btn") as HTMLButtonElement;
 const refreshBtn = CDOM.ID("editor-refresh-btn") as HTMLButtonElement;
 const pathEl = CDOM.ID("editor-path") as HTMLSpanElement;
 const statusEl = CDOM.ID("editor-status") as HTMLSpanElement;
@@ -26,11 +32,62 @@ let gWritable = false;
 let gExt = "";
 let gContainer: HTMLElement | null = null;
 let gToolbarBound = false;
+let gTextWritableBound = false;
 
 // 이 페이지가 로드된 origin(로컬/원격 서버 공통)의 admin 토큰이 이미 저장돼 있는지로 쓰기 가능 여부를 판단한다.
-// Home/Control 쪽에서 로그인하면 같은 origin의 localStorage 토큰을 공유하므로 여기서 별도 로그인 UI는 두지 않는다.
+// 원격 서버는 Home/Control 로그인과 별개의 origin이라 토큰이 없을 수 있는데, 그 경우 read-only로 열리고
+// 툴바의 Login 버튼으로 이 페이지에서 바로 그 origin에 인증할 수 있다(promptEditorAuth).
 async function canWrite(): Promise<boolean> {
     return checkAuthed(CPath.WebRootUrl());
+}
+
+// read-only로 열렸을 때 Login 버튼으로 이 origin(원격 서버 포함)에 직접 인증한다.
+// File.ts의 promptFileAuth()와 동일한 패턴(CConfirm + 비밀번호 입력 + authLogin).
+function promptEditorAuth(): void {
+    const dlg = new CConfirm();
+    dlg.SetBody('Enter admin password:<br><input type="password" id="editorAuthPw" class="form-control form-control-sm">');
+    const doAuth = () => {
+        const pw = CDOM.IDValue("editorAuthPw");
+        authLogin(CPath.WebRootUrl(), CHash.SHA256('artgine_' + pw),
+            () => { CAlert.Info("Waiting for messenger approval (up to 5 minutes)..."); }
+        ).then(async (j: { ok: boolean, token?: string, msg?: string }) => {
+            if (j.ok) {
+                setAuthToken(CPath.WebRootUrl(), j.token!);
+                gWritable = true;
+                if (gMode === "text") enableTextWritable();
+                else if (gMode === "sheet" && gContainer) await mainSheet(gContainer, gExt, true);
+                showToolbar();
+                CAlert.Info("Permission granted");
+            } else {
+                CAlert.E("Wrong password: " + (j.msg ?? ""));
+            }
+        }).catch(() => { CAlert.E("Server error"); });
+    };
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [doAuth, () => {}], ["OK", "Cancel"]);
+    dlg.Open();
+    setTimeout(() => {
+        const input = CDOM.ID("editorAuthPw") as HTMLInputElement | null;
+        input?.focus();
+        input?.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            doAuth();
+            dlg.Close();
+        });
+    }, MODAL_DOM_DELAY);
+}
+
+// 텍스트 모드에서 쓰기 권한을 켠다: readOnly 해제 + (최초 1회만) Ctrl+S/변경 감지 바인딩.
+function enableTextWritable(): void {
+    if (!gEditor) return;
+    gEditor.updateOptions({ readOnly: false });
+    if (gTextWritableBound) return;
+    gTextWritableBound = true;
+    const monacoNs = (window as any)["monaco"];
+    gEditor.addCommand(monacoNs.KeyMod.CtrlCmd | monacoNs.KeyCode.KeyS, () => saveFile(gEditor));
+    gEditor.onDidChangeModelContent(() => {
+        if (!gSuppressDirty) sendDirty(true);
+    });
 }
 
 // 수정/저장 상태를 부모(Control.ts)에 알린다. 부모는 이 신호로 사이드바 항목의 초록/노랑 점을 갱신한다.
@@ -76,7 +133,8 @@ function stopSaveTimer(): void {
 
 function showToolbar(): void {
     if (refreshBtn) refreshBtn.style.display = "inline-block";
-    if (saveBtn && gWritable) saveBtn.style.display = "inline-block";
+    if (saveBtn) saveBtn.style.display = gWritable ? "inline-block" : "none";
+    if (loginBtn) loginBtn.style.display = gWritable ? "none" : "inline-block";
 }
 
 function bindToolbarOnce(): void {
@@ -87,6 +145,9 @@ function bindToolbarOnce(): void {
             if (gMode === "sheet") saveSheetFile();
             else if (gEditor) saveFile(gEditor);
         });
+    }
+    if (loginBtn) {
+        loginBtn.addEventListener("click", () => promptEditorAuth());
     }
     if (refreshBtn) {
         refreshBtn.addEventListener("click", () => { void refreshFile(); });
@@ -335,12 +396,7 @@ async function main() {
             }
         });
 
-        if (!writable) return;
-
-        editor.addCommand(monacoNs.KeyMod.CtrlCmd | monacoNs.KeyCode.KeyS, () => saveFile(editor));
-        editor.onDidChangeModelContent(() => {
-            if (!gSuppressDirty) sendDirty(true);
-        });
+        if (writable) enableTextWritable();
     }, false, gUrl);
 }
 main();

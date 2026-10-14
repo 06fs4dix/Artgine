@@ -1,87 +1,77 @@
 import { CUpdate } from "../../basic/Basic.js";
+import { CVec2 } from "../../geometry/CVec2.js";
 import { CSubject } from "../subject/CSubject.js";
 import { CCanvasPlugin } from "./CCanvas.js";
 import { CRPMgr } from "./CRPMgr.js";
 
-
-
-
-
 export class CCanvasPluginRPMgr extends CCanvasPlugin
 {
-	private mRPMgr : CRPMgr=null;
-	private mChangeRPMgr : CRPMgr=null;
+	private mRPMgr : CRPMgr;	// 현재 사용중인 RPMgr
+	private mChangeRPMgr : CRPMgr;	// 새로 사용할 RPMgr
 
 	constructor(_RPMgr : CRPMgr)
 	{
 		super();
-
 		this.SetRPMgr(_RPMgr);
-		
-		
 	}
-	
-	SetRPMgr(_rpMgr : CRPMgr)
+	SetRPMgr(_rpMgr : CRPMgr = null)
 	{
-		if(this.mRPMgr==null && _rpMgr==null)	
-		{
-			this.mChangeRPMgr=null;
-			return;
-		}
-			
-
-		if(_rpMgr==null)
-			this.mChangeRPMgr=new CRPMgr();
-		else
-			this.mChangeRPMgr=_rpMgr;
+		if(_rpMgr==null) _rpMgr = new CRPMgr();
+		if(this.mRPMgr==null) this.mRPMgr=_rpMgr;
+		else this.mChangeRPMgr=_rpMgr;
+		this.mRPMgr.mUpdate=CUpdate.eType.Updated;
 	}
 	override Exe()
 	{
-		if(this.mChangeRPMgr!=null)
+		if(this.mRPMgr.mUpdate==CUpdate.eType.Updated)
+			this.mRPMgr.mUpdate=CUpdate.eType.Already;
+		else if(this.mRPMgr.mUpdate==CUpdate.eType.Already)
+			this.mRPMgr.mUpdate=CUpdate.eType.Not;
+
+		// RPMgr가 업데이트되면 전체 삭제
+		if(this.mRPMgr.mUpdate != CUpdate.eType.Not)
 		{
-			if(this.mRPMgr!=null)
-			{
-				for(let i=0;i<this.mRPMgr.mRPArr.length;++i)
-				{
-					this.mCanvas.GetBrush().RemoveAutoRP(this.mRPMgr.Key()+"_"+i);
+			for(const autoRP of this.mRPMgr.mRPArr)
+				this.mCanvas.RemoveAutoRP(autoRP.Key());
+			for(const suf of this.mRPMgr.mSufArr)
+				this.mCanvas.Find(suf.Key())?.Destroy();
+			for(const [key, tex] of this.mRPMgr.mTexMap) {
+				const oldTex = this.mCanvas.GetFrame().Res().Find(key);
+				if(oldTex) {
+					this.mCanvas.GetFrame().Ren().ReleaseTexture(oldTex);
+					this.mCanvas.GetFrame().Res().Remove(key);
 				}
-				this.mCanvas.GetBrush().mAutoRPUpdate=CUpdate.eType.Not;
-				
-				for(let i=0;i<this.mRPMgr.mSufArr.length;++i)
-				{
-					const obj = this.mCanvas.Find(this.mRPMgr.mSufArr[i].Key());
-					if(obj) obj.Destroy();
-				}
-				this.mCanvas.GetBrush().ClearRen();
 			}
-		
-			
-			if(this.mChangeRPMgr.mTexMap.size!=0 || this.mChangeRPMgr.mSufArr.length!=0 || this.mChangeRPMgr.mRPArr.length!=0) 
-			{
+		}
 
-				for(let i=0;i<this.mChangeRPMgr.mRPArr.length;++i)
-				{
-					this.mCanvas.GetBrush().SetAutoRP(this.mChangeRPMgr.Key()+"_"+i,this.mChangeRPMgr.mRPArr[i]);
+		// 새로 RPMgr가 세팅됨
+		if(this.mChangeRPMgr!=null)
+		{			
+			this.mRPMgr = this.mChangeRPMgr;
+			this.mRPMgr.mUpdate = CUpdate.eType.Already;
+			this.mChangeRPMgr = null;
+		}
+
+		// RPMgr가 업데이트되면 전체 추가
+		if(this.mRPMgr.mUpdate != CUpdate.eType.Not)
+		{
+			for(const autoRP of this.mRPMgr.mRPArr)
+				this.mCanvas.PushAutoRP(autoRP.Key(), autoRP);
+			for(const suf of this.mRPMgr.mSufArr)
+				this.mCanvas.PushSub(suf.Export(true, false));
+			for(const [key, tex] of this.mRPMgr.mTexMap) {
+				const oldTex = this.mCanvas.GetFrame().Res().Find(key);
+				if(oldTex) {
+					this.mCanvas.GetFrame().Ren().ReleaseTexture(oldTex);
+					this.mCanvas.GetFrame().Res().Remove(key);
 				}
-				for(let i=0;i<this.mChangeRPMgr.mSufArr.length;++i)
-				{
-					let c=this.mChangeRPMgr.mSufArr[i].Export(true, false) as CSubject;
-					this.mCanvas.PushSub(c);
-				}
-				
-				this.mChangeRPMgr.SetFrame(this.mCanvas.GetFrame());
-				this.mRPMgr = this.mChangeRPMgr;
+				this.mCanvas.GetFrame().Ren().BuildRenderTarget(tex.GetInfo(),tex.HasOrg()?new CVec2(tex.GetOrgWidth(),tex.GetOrgHeight()):null,key);
 			}
-			else
-				this.mRPMgr = null;
-
-			
-			this.mChangeRPMgr=null;
 		}
 	};
 	override Destroy()
 	{
 		super.Destroy();
-		this.SetRPMgr(null);
+		this.SetRPMgr();
 	}
 }

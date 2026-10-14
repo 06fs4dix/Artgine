@@ -28,6 +28,9 @@ export class CBoundWorld
         this.mBound.Reset();
         this.mBound.mType=_LBound.mType;
 
+        if(_LBound.mType==CBound.eType.GJK || _LBound.mType==CBound.eType.Triangle)
+            this.mBound.mPos.PushArray(_LBound.mPos);
+
         if(_LBound.mType==CBound.eType.Sphere)
         {
             this.mCenter.Zero();

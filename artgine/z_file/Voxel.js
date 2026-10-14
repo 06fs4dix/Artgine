@@ -1,8 +1,8 @@
 import { AlphaModalFun, vfxMat0, vfxMat1, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, VFX, VFXDown2 } from "./ColorFun";
-import { ambientColor, ligCol, ligCount, ligDir, ligMask, cullMask, LightCac3D, material, ligStep0, ligStep1, ligStep2, ligStep3, envmapOn, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, ligCol, ligCount, ligDir, LightCac2D, ligMask, cullMask, LightCac3D, material, ligStep0, ligStep1, ligStep2, ligStep3, envCount, envPos, EnvNearest, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
-import { Build, CVec3, CVec4, CMat3, Sam2DToColor, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, BranchDefault, Attribute, Sam2DArrToV4, min, max, V3Len, V3SubV3, V3Nor, } from "./Shader";
-import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, jitter, shadowReadList, CalcShadow, shadowInfoList, shadowCascadeDataList, shadowDivideList, PCFStep, } from "./Shadow";
+import { Build, CVec3, CVec4, CMat3, Sam2DToColor, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, BranchDefault, Attribute, Sam2DArrNearestToV4, min, max, V3Len, V3SubV3, V3Nor, V3MulV3, V3Sqrt, } from "./Shader";
+import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowZOffset, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow, jitter, CalcShadow, shadowInfoList, PCFStep, } from "./Shadow";
 var size = 100;
 var worldMat = Null();
 var viewMat = Null();
@@ -17,25 +17,27 @@ var to_viewPos = Null();
 var to_shadowBias = Null();
 var to_worldPos = Null();
 var to_normal = Null();
+var to_envIdx = Null();
 var screenSize;
 var shadowOn = -1.0;
 var sun = 1.0;
+var voxelCount = new CVec3(16, 16, 16);
 var time = Attribute(0, "time");
-Build("Artgine/Shader/Voxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun], [out_position, to_uv, to_worldPos, to_normal], ps_main, [out_color]);
+Build("Artgine/Shader/Voxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun, voxelCount], [out_position, to_uv, to_worldPos, to_normal, to_envIdx], ps_main, [out_color]);
 Build("Artgine/Shader/VoxelShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
     worldMat, viewMat, projectMat, colorModel, alphaModel, size,
     ligDir, ligCol, ligCount,
-    shadowCount, shadowWrite,
-    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-    shadowReadList, shadowInfoList, shadowCascadeDataList, shadowDivideList,
+    shadowCount, shadowWrite, shadowZOffset,
+    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+    shadowInfoList,
     shadowRate, PCF, texture16f, bias, normalBias
 ], [out_position, to_uv, to_viewPos, to_shadowBias], ps_main_shadow_write, [out_color]);
 Build("Artgine/Shader/VoxelShadowRead", ["shadowRead"], vs_main_shadow_read, [
     worldMat, viewMat, projectMat, colorModel, alphaModel, size,
     ligDir, ligCol, ligCount,
     shadowCount, shadowWrite,
-    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-    shadowReadList, shadowInfoList, shadowCascadeDataList, shadowDivideList,
+    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+    shadowInfoList,
     shadowRate, PCF, PCFStep, texture16f, bias, normalBias, sun, jitter,
     camPos
 ], [out_position, to_uv, to_normal, to_worldPos, to_viewPos], ps_main_shadow_read, [out_color]);
@@ -230,6 +232,10 @@ function vs_main(f4_ver, f4_uv, f2_color) {
     to_worldPos = P;
     P = V4MulMatCoordi(P, viewMat);
     P = V4MulMatCoordi(P, projectMat);
+    to_envIdx.x = -1.0;
+    BranchBegin("env", "E", [envCount, envPos]);
+    to_envIdx.x = EnvNearest(to_worldPos.xyz, to_normal);
+    BranchEnd();
     out_position = P;
 }
 function ps_main() {
@@ -261,9 +267,14 @@ function ps_main() {
     }
     BranchEnd();
     var DSE = new CMat3(0);
-    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envmapOn, sam2DCount, samCubeCount, cullMask]);
-    DSE = LightCac3D(camPos, to_worldPos, L_cor, to_normal, shadow, material.y, material.x, material.z, cullMask.x);
+    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envCount, envPos, sam2DCount, samCubeCount, cullMask]);
+    L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
+    if (voxelCount.z < 1.5)
+        DSE = LightCac2D(to_worldPos, L_cor, new CVec3(0.0, 0.0, 0.0), shadow, cullMask.x);
+    else
+        DSE = LightCac3D(to_worldPos, L_cor, to_normal, shadow, cullMask.x, camPos, material.y, material.x, material.z, to_envIdx.x);
     L_cor.rgb = V3AddV3(DSE[0], DSE[1]);
+    L_cor.rgb = V3Sqrt(L_cor.rgb);
     BranchDefault();
     if (shadow.r > -0.5) {
         L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);
@@ -306,15 +317,16 @@ function ps_main_shadow_write() {
     BranchEnd();
     if (L_cor.a <= 0.01)
         discard;
-    var shadowRead;
+    var shadowInfo;
     var lDir;
     BranchBegin("PointLightShadowF", "PLSF", [ligDir]);
-    shadowRead = Sam2DArrToV4(shadowReadList, shadowWrite.y);
-    lDir = Sam2DArrToV4(ligDir, shadowRead.x);
-    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowRead.z) / (shadowRead.w - shadowRead.z);
+    shadowInfo = Sam2DArrNearestToV4(shadowInfoList, shadowWrite.y * 4.0);
+    lDir = Sam2DArrNearestToV4(ligDir, shadowInfo.x);
+    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowInfo.z) / (shadowInfo.w - shadowInfo.z);
     out_color.a = 1.0;
     BranchDefault();
     out_color = to_viewPos;
+    out_color.z += shadowZOffset;
     out_color.a = 1.0;
     BranchEnd();
 }

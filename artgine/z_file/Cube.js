@@ -2,7 +2,7 @@ import { HSVToRGB, RGBToHSV } from "./ColorFun";
 import { ligCol, ligCount, ligDir } from "./Light";
 import { NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
-import { Build, CMat, CVec3, CVec4, Mat4ToMat3, V3Nor, V4MulMatCoordi, Mat3ToMat4, V3MulFloat, V3MulV3, acos, V3Dot, V3AddV3, V3Mix, smoothstep, sin, mod, V3Max, V3Len, SamCubeToColor, max, fract, CVec2, pow, abs, floor, SaturateFloat, FloatToInt, Exp, LWVPMul, clamp, Attribute, Null, BranchEnd, BranchBegin, BranchDefault, screenPos, IntToFloat, sqrt, V3SubV3, mix, min, Hash13, SaturateV3, V3Floor, V3DivV3, V3Fract, V3DivFloat, V3Min, V2Len, Sam2DArrToV4, } from "./Shader";
+import { Build, CMat, CVec3, CVec4, Mat4ToMat3, V3Nor, V4MulMatCoordi, Mat3ToMat4, V3MulFloat, V3MulV3, acos, V3Dot, V3AddV3, V3Mix, smoothstep, sin, mod, V3Max, V3Len, SamCubeToColor, max, fract, CVec2, pow, abs, floor, SaturateFloat, FloatToInt, Exp, LWVPMul, clamp, Attribute, Null, BranchEnd, BranchBegin, BranchDefault, screenPos, IntToFloat, sqrt, V3SubV3, mix, min, Hash13, SaturateV3, V3Floor, V3DivV3, V3Fract, V3DivFloat, V3Min, V2Len, Sam2DArrNearestToV4, } from "./Shader";
 var worldMat = Null();
 var viewMat = Null();
 var projectMat = Null();
@@ -10,9 +10,9 @@ var out_position = Null();
 var out_color = Null();
 var to_uvw = Null();
 var time = Attribute(0, "time");
-var sunColorRTable = new CMat(1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25);
-var sunColorGTable = new CMat(0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95);
-var sunColorBTable = new CMat(0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85);
+var sunColorRTable = new CMat(1.00, 0.76, 0.62, 0.54, 0.50, 0.46, 0.44, 0.42, 0.42, 0.44, 0.47, 0.49, 0.50, 0.50, 0.50, 0.50);
+var sunColorGTable = new CMat(0.68, 0.74, 0.66, 0.61, 0.58, 0.55, 0.53, 0.51, 0.50, 0.49, 0.49, 0.48, 0.48, 0.48, 0.48, 0.48);
+var sunColorBTable = new CMat(0.36, 0.72, 0.72, 0.71, 0.70, 0.68, 0.67, 0.66, 0.66, 0.64, 0.62, 0.59, 0.57, 0.56, 0.55, 0.55);
 var starLayer1ColorTable = new CMat(1.0, 0.9, 0.7, 1.0, 1.0, 0.9, 0.8, 0.9, 1.0, 0.7, 0.8, 1.0, 0.02, 0.07, 5.0, 2.0);
 var starLayer2ColorTable = new CMat(1.6, 0.0, 0.0, 1.2, 1.0, 1.0, 0.0, 0.0, 1.6, 1.0, 1.2, 1.0, 0.20, 0.25, 5.0, 0.0);
 var starLayer3ColorTable = new CMat(1.6, 0.0, 0.0, 1.2, 1.0, 1.0, 0.0, 0.0, 1.6, 1.0, 1.2, 1.0, 0.25, 0.30, 15.0, 0.0);
@@ -43,9 +43,9 @@ var auroraMax = new CVec3(20000.0, 25000.0, 20000.0);
 var auroraStep = 20.0;
 var camPos = Null();
 var roughness;
-var SkyColorRTable = new CMat(0.22, 0.24, 0.27, 0.30, 0.35, 0.45, 0.60, 0.78, 0.90, 0.88, 0.85, 0.82, 0.80, 0.78, 0.76, 0.75);
-var SkyColorGTable = new CMat(0.50, 0.53, 0.56, 0.60, 0.68, 0.78, 0.88, 0.96, 1.00, 0.98, 0.96, 0.94, 0.92, 0.90, 0.88, 0.87);
-var SkyColorBTable = new CMat(0.92, 0.94, 0.96, 0.98, 1.00, 1.00, 1.00, 1.00, 1.00, 0.99, 0.98, 0.97, 0.96, 0.95, 0.94, 0.93);
+var SkyColorRTable = new CMat(0.24, 0.27, 0.30, 0.34, 0.38, 0.43, 0.50, 0.58, 0.56, 0.53, 0.50, 0.48, 0.47, 0.47, 0.47, 0.47);
+var SkyColorGTable = new CMat(0.47, 0.52, 0.56, 0.60, 0.64, 0.68, 0.73, 0.78, 0.75, 0.71, 0.67, 0.64, 0.63, 0.63, 0.63, 0.63);
+var SkyColorBTable = new CMat(0.84, 0.87, 0.90, 0.92, 0.94, 0.95, 0.96, 0.96, 0.92, 0.87, 0.82, 0.78, 0.76, 0.76, 0.76, 0.76);
 Build("Artgine/Shader/CubeObject", [], vs_main, [worldMat, viewMat, projectMat], [out_position, to_uvw], ps_main, [out_color]);
 Build("Artgine/Shader/CubeSky", ["sky"], vs_main_camBased, [worldMat, viewMat, projectMat, time, camPos], [out_position, to_uvw], ps_main, [out_color]);
 function vs_main(f3_ver) {
@@ -110,6 +110,8 @@ function Cloud(_viewDir, _sunDir, _sunCol) {
         rayMarchT += rayMarchStep * NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Gaussian);
     }
     var lightDir = _sunDir;
+    var sunVis = smoothstep(-0.05, 0.05, _sunDir.y);
+    var ambVis = mix(0.1, 1.0, smoothstep(-0.2, 0.1, _sunDir.y));
     var lightStepSize = cloudLightDistance / cloudLightStep;
     var lightStepVector = V3MulFloat(lightDir, lightStepSize);
     var windScale = 0.015;
@@ -153,7 +155,7 @@ function Cloud(_viewDir, _sunDir, _sunCol) {
                 tauL += dL * lightStepSize;
             }
             var lightT = Exp(-tauL * extinction);
-            var lit = V3AddV3(V3MulFloat(new CVec3(1.0, 1.0, 1.0), ambient), V3MulFloat(_sunCol, lightT * (1.0 - ambient)));
+            var lit = V3AddV3(V3MulFloat(new CVec3(1.0, 1.0, 1.0), ambient * ambVis), V3MulFloat(_sunCol, lightT * (1.0 - ambient) * sunVis));
             acc = V3AddV3(acc, V3MulFloat(lit, T * (density * scatterK) * rayMarchStep));
             T *= Exp(-density * extinction * rayMarchStep);
             if (T < 0.05)
@@ -319,15 +321,17 @@ function ps_main() {
     var sunPass = 0.0;
     var sun_deg = 1.0;
     var isSunDisc = 0.0;
+    var sunDirL = new CVec3(0.0, 1.0, 0.0);
+    var sunColL = new CVec3(0.0, 0.0, 0.0);
     BranchBegin("light", "L", [ligDir, ligCol, ligCount, sunColorRTable, sunColorGTable, sunColorBTable]);
     for (i.dummy = 0; i.dummy < 3; i.dummy++) {
         if (i.dummy >= FloatToInt(ligCount))
             break;
-        lDir = Sam2DArrToV4(ligDir, IntToFloat(i));
+        lDir = Sam2DArrNearestToV4(ligDir, IntToFloat(i));
         if (lDir.w > 1.5)
             continue;
         dir = V3Nor(lDir.xyz);
-        lCol = Sam2DArrToV4(ligCol, IntToFloat(i));
+        lCol = Sam2DArrNearestToV4(ligCol, IntToFloat(i));
         angle = acos(V3Dot(dir, fragDir));
         intensity = V3Len(lCol.rgb);
         isSunDisc = 0.0;
@@ -345,6 +349,8 @@ function ps_main() {
             sun_deg = 1.0 - abs(V3Dot(dir, new CVec3(0.0, 1.0, 0.0)));
             sunsetBlend = sun_deg * (1.0 - dir_deg);
             sunIntensity = intensity;
+            sunDirL = dir;
+            sunColL = lCol.rgb;
         }
         col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
         col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
@@ -365,7 +371,7 @@ function ps_main() {
     BranchEnd();
     var cloudAlpha = 0.0;
     BranchBegin("cloud", "C", [cloudCoverage, cloudDither, cloudStart, cloudHeight, cloudPlanetRadius, cloudSpeed, cloudStep, cloudLightStep, cloudScale, cloudExtinction, cloudScatter, cloudAmbient, cloudLightDistance]);
-    value = Cloud(fragDir, dir, lCol.rgb);
+    value = Cloud(fragDir, sunDirL, sunColL);
     cloudAlpha = value.w;
     finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - cloudAlpha)), V3MulFloat(value.rgb, cloudAlpha));
     BranchEnd();

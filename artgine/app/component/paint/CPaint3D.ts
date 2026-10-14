@@ -1,7 +1,6 @@
 import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import {CArray} from "../../../basic/CArray.js";
-import { CConsol } from "../../../basic/CConsol.js";
 import { CHash } from "../../../basic/CHash.js";
 import { CObject, CPointer } from "../../../basic/CObject.js";
 import {CString} from "../../../basic/CString.js";
@@ -10,12 +9,11 @@ import { CBound } from "../../../geometry/CBound.js";
 import {CMat} from "../../../geometry/CMat.js";
 import {CMath} from "../../../geometry/CMath.js";
 import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
-import { CRay } from "../../../geometry/CRay.js";
-import { CUtilMath } from "../../../geometry/CUtilMath.js";
 import {CVec1} from "../../../geometry/CVec1.js";
-import { CVec2 } from "../../../geometry/CVec2.js";
+import {CVec2} from "../../../geometry/CVec2.js";
 import { CVec3 } from "../../../geometry/CVec3.js";
 import { CVec4 } from "../../../geometry/CVec4.js";
+import { CFloat32Mgr } from "../../../geometry/CFloat32Mgr.js";
 import { CBatch } from "../../../render/CBatchMgr.js";
 import {CDevice} from "../../../render/CDevice.js";
 import {CMesh} from "../../../render/CMesh.js";
@@ -25,15 +23,15 @@ import { CMeshDataNode } from "../../../render/CMeshDataNode.js";
 import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
 import {CMeshPaint} from "../../../render/CMeshPaint.js";
 import {CMeshTreeUpdate} from "../../../render/CMeshTreeUpdate.js";
-import { CRenderPass } from "../../../render/CRenderPass.js";
-
 import {CShader, CVertexFormat} from "../../../render/CShader.js";
 import {CShaderAttr} from "../../../render/CShaderAttr.js";
+import { CTexture } from "../../../render/CTexture.js";
+import { CUtilRender } from "../../../render/CUtilRender.js";
 import { SDF } from "../../../z_file/SDF.js";
-import { CRPAuto } from "../../canvas/CRPMgr.js";
 import {CSubject} from "../../subject/CSubject.js";
 import {CBrushComp} from "../CBrushComp.js";
 import {CPaint} from "./CPaint.js";
+import { CPaintMerge } from "./CPaintMerge.js";
 
 export class CPaint3D extends CPaint
 {
@@ -85,9 +83,13 @@ export class CPaint3D extends CPaint
 		this.PushTag("wind");
 		this.mWindInfluence.x = _influence;
 	}
-	ParallaxNormal(_value : number) {
+	//_near 이내 전체 깊이, _far 밖은 시차 반복을 건너뛴다(엔진 단위). 생략 시 셰이더 기본값(1500, 3000)
+	//_depth: 시차만큼 깊이를 뒤로 미는 배율(1 기본, 0이면 안 밈). 생략 시 셰이더 기본값 1
+	ParallaxNormal(_value : number, _near : number = null, _far : number = null, _depth : number = null) {
 		this.PushTag("parallax");
-		this.PushCShaderAttr(new CShaderAttr("parallaxNormal", new CVec1(0.05)));
+		this.PushCShaderAttr(new CShaderAttr("parallaxNormal", new CVec1(_value)));
+		if(_near != null && _far != null) this.PushCShaderAttr(new CShaderAttr("parallaxDist", new CVec2(_near, _far)));
+		if(_depth != null) this.PushCShaderAttr(new CShaderAttr("parallaxDepth", new CVec1(_depth)));
 	}
 	override EditDrop(_object: CObject): void 
 	{
@@ -95,43 +97,6 @@ export class CPaint3D extends CPaint
 		{
 			this.SetMesh(_object.Key());
 		}
-	}
-	CubeMap(_camComp : CBrushComp)
-	{
-		
-		if(this.mTag.has(_camComp.mReadTag)==false)	return;
-
-		var len=CMath.V3Distance(this.mOwner.GetPos(),_camComp.GetOwner().GetPos());
-		var play=this.mBrushCompArr[_camComp.mTexOff];
-		if(play==null)
-		{
-			
-			if(_camComp.mReadLen>len)
-			{
-				this.PushCShaderAttr(new CShaderAttr(0,_camComp.GetTex()))
-				this.PushCShaderAttr(new CShaderAttr("envmapOn", 1));
-				this.mBrushCompArr[_camComp.mTexOff]=_camComp;	
-			}
-		}
-		else if(play==_camComp)
-		{
-			if(_camComp.mReadLen<len)
-			{
-				this.mShaderAttrMap.delete(_camComp.GetTex());
-				this.ClearBatch();
-				this.mBrushCompArr[_camComp.mTexOff]=null;
-			}
-		}
-		else if(_camComp.mReadLen>len)
-		{
-			var len2=CMath.V3Distance(this.mOwner.GetPos(),play.GetOwner().GetPos());
-			if(len2>len)
-			{
-				this.mBrushCompArr[_camComp.mTexOff]=_camComp;	
-				this.FindCShaderAttr(0).mKey=_camComp.GetTex();
-			}
-		}
-		
 	}
 	override EditChange(_pointer : CPointer,_child : boolean)
 	{
@@ -162,23 +127,6 @@ export class CPaint3D extends CPaint
 			
 
 		
-	}
-	override EmptyRPChk()
-	{
-		if(this.mTree==null || this.mRenderPass.length==0)
-		{
-			let sChk=true;
-			for(let each0 of this.mRenderPass)
-			{
-				if(each0.mTag.has("shadowWrite")==true)
-				{
-					continue;
-				}
-				sChk=false;
-			}
-			if(sChk)
-				this.mRenderPass.push(new CRPAuto(this.mOwner.GetFrame().Pal().Sl3D().mKey));
-		}	
 	}
 	//SetPivot(_pivot)	{	this.m_pivot=_pivot;	}
 	SetWeightMat(_off,_tar : CMat)
@@ -351,10 +299,10 @@ export class CPaint3D extends CPaint
 		return true;
 	}
 	
-	override Update(_update : CUpdate): void 
+	override Update(_update : CUpdate): void
 	{
 		super.Update(_update);
-		
+
 
 		if(this.mUpdateFMat==false)	return;
 		// if(CWASM.IsWASM())
@@ -609,27 +557,13 @@ export class CPaintCube extends CPaint3D
 		this.mTextureKey[0]=_cubeTex;
 	}
 	override InitChk()
-	{
-		// this.mLMat.mF32A[0]=100;
-		// this.mLMat.mF32A[5]=100;
-		// this.mLMat.mF32A[10]=100;
-		
+	{		
 		this.mMesh=this.GetOwner().GetFrame().Pal().GetBoxMesh();
-		this.mRenderPass[0]=new CRenderPass(this.GetOwner().GetFrame().Pal().SlCubeKey());
-		if(this.mTag.has("sky") || this.mTag.has("table"))
-		{
-			this.mRenderPass[0].mPriority=CRenderPass.ePriority.BackGround;
-			this.mRenderPass[0].mCullFace=CRenderPass.eCull.None;
-			this.mRenderPass[0].mCullFrustum=false;
-		}
 		super.InitChk();
-		
-		
-		
 	}
 	Sky(_table : boolean=false,_cloud : boolean=false,_light : boolean=false,_star : boolean=false,_aurora : boolean=false)
 	{
-		
+
 		this.PushTag("sky");
 
 		if(_table)		this.PushTag("table");
@@ -641,9 +575,9 @@ export class CPaintCube extends CPaint3D
 	}
 }
 //static mesh only
-export class CPaint3DMerge extends CPaint
+export class CPaint3DMerge extends CPaintMerge
 {
-	constructor(_meshList : Array<string>,_matList : Array<CMat>,_centerPos=false,_targetScale=0)
+	constructor(_meshList : Array<string>=[],_matList : Array<CMat>=[],_centerPos=false,_targetScale=0)
 	{
 		super();
 		this.mMeshList=_meshList;
@@ -653,41 +587,26 @@ export class CPaint3DMerge extends CPaint
 	}
 	mMeshList : Array<string>;
 	mMatList : Array<CMat>;
-	mMeshDataNode=new CMeshDataNode();
     mWeightMat : Float32Array;
     mWeightMatArr : CMat[] = [];
-	mHash="";
 	public mCenterPos=false;
 	public mTargetScale=0;
     mWindInfluence : CVec1 = new CVec1(0.0);
-	// Reset 발생 시 다음 Render에서 GetDrawMesh를 modify로 1회 갱신하기 위한 플래그
-	mReset = false;
 	// SkinCalc(new CMat(), mesh, mesh.meshTree)는 인스턴스 매트릭스와 무관하게
 	// 메시 리소스(트리 포즈)에만 의존해 항상 같은 결과를 낸다. 메시 키별로 캐시해 재계산을 없앤다.
 	mSkinMatCache : Map<string, CMat[]> = new Map();
-	// 메시 키별 "로컬(인스턴스=항등행렬) 위치" 캐시. Merge()의 LPMat=LMat*_PMat 결합 방식상
-	// 인스턴스 매트릭스는 항상 맨 마지막에 곱해지므로, 최종위치=로컬위치×인스턴스매트릭스로 분리된다.
-	// uv/normal/texOff/weight/weightIndex/index는 인스턴스와 무관해 이 캐시가 필요 없다.
-	mLocalPosCache : Map<string, Float32Array> = new Map();
-	// 마지막으로 구성에 실제 사용된 mMeshList(참조 스냅샷). 토폴로지 동일 여부 판별에 쓰인다.
-	mMeshListPrev : Array<string> = null;
-	// 각 mMeshList 엔트리가 병합 버퍼에서 차지하는 정점 시작 오프셋(마지막에 총 정점 수 sentinel).
-	// 토폴로지(메시 목록)가 그대로일 때만 유효 — RepositionOnly가 이 오프셋으로 position만 덮어쓴다.
-	mMeshVertexStart : number[] = [];
-	// 마지막으로 실제 정점을 굽는 데 쓰인 인스턴스 매트릭스 스냅샷(복제, 인덱스 대응).
-	// RepositionOnly에서 "이동만 바뀌었는지" 판별하는 기준선으로 쓰인다.
-	mMatListPrev : CMat[] = null;
-	// 이번 갱신이 position 만 고쳤는가(RepositionOnly 경로). true 면 Render 가 메시를 통째로
-	// 다시 올리지 않고 position 의 바뀐 구간만 올린다
-	mPosOnly = false;
+	// null이 아니면 메시 텍스처 대신 이 목록을 번호대로 쓴다(CPaint3D.SetTexture와 같은 규칙)
+	mTexOverride : Array<string>=null;
+	// 메시 키별로 인스턴스=항등행렬로 구운 결과. Merge()의 LPMat=LMat*_PMat 결합 방식상 인스턴스 매트릭스는
+	// 항상 맨 마지막에 곱해지므로, 슬롯은 이 템플릿에 인스턴스 매트릭스만 곱해 쓰면 된다.
+	mTemplate : Map<string, CMeshCreateInfo> = new Map();
+	private mTemplateBuf=new Map<string,{mPos:Float32Array,mUV:Float32Array,mNor:Float32Array,mTex:Float32Array,
+		mWe:Float32Array,mWi:Float32Array,mTan:Float32Array,mIdx:Array<number>,mCount:number}>();
 	override IsShould(_member: string, _type: CObject.eShould): boolean {
-		if(_member=="mMeshDataNode" || _member=="mReset" || _member=="mSkinMatCache" ||
-			_member=="mLocalPosCache" || _member=="mMeshListPrev" || _member=="mMeshVertexStart" ||
-			_member=="mMatListPrev" || _member=="mPosOnly")	return false;
+		if(_member=="mSkinMatCache" || _member=="mTemplate" || _member=="mTemplateBuf")	return false;
 		return super.IsShould(_member,_type);
 	}
 	// 두 메시 목록이 원소별로 완전히 같은지(개수+순서+키 전부) 비교한다.
-	// join("|") 방식은 키에 구분자가 우연히 들어가면 오탐 가능성이 있어 원소 직접 비교로 대체.
 	static SameMeshList(_a : Array<string>,_b : Array<string>): boolean
 	{
 		if(_a==null || _b==null || _a.length!=_b.length)	return false;
@@ -695,18 +614,10 @@ export class CPaint3DMerge extends CPaint
 			if(_a[i]!=_b[i])	return false;
 		return true;
 	}
-	// 회전/스케일(0~11, 15번 성분)이 완전히 같고 이동(12~14번)만 다른지 확인한다.
-	static MatOnlyTranslationDiff(_a : CMat,_b : CMat): boolean
+	override InitChk(): void
 	{
-		for(let i=0;i<12;++i)
-			if(_a.mF32A[i]!=_b.mF32A[i])	return false;
-		if(_a.mF32A[15]!=_b.mF32A[15])	return false;
-		return true;
-	}
-	override InitChk(): void 
-	{
-		super.InitChk();	
-		
+		super.InitChk();
+
 		for(let i=0;i<this.mMeshList.length;++i)
 		{
 			let mesh=this.GetOwner().GetFrame().Res().Find(this.mMeshList[i]) as CMesh;
@@ -717,18 +628,50 @@ export class CPaint3DMerge extends CPaint
 				{
 					this.GetOwner().GetFrame().Load().Exe(this.mMeshList[i]);
 				}
-				
+
 
 			}
 
 		}
-		
+
 	}
-	// Update(_delay: any): void {
-	// 	super.Update(_delay);
-	// }
 	override Start(): void {
-		this.BuildCI();
+		this.BuildSlot();
+		for(let i=0;i<this.mMeshList.length;++i)
+			this.PushSlot(this.mMeshList[i],this.mMatList[i]);
+	}
+	// 메시가 아직 로드되지 않았으면 로드를 걸고 -1을 돌려준다
+	Push(_mesh : string,_mat : CMat) : number
+	{
+		if(this.mSlotReady==false)
+		{
+			this.mMeshList.push(_mesh);
+			this.mMatList.push(_mat);
+			return this.mMeshList.length-1;
+		}
+		return this.PushSlot(_mesh,_mat);
+	}
+	// 메시 목록을 통째로 교체한다.
+	// - 메시 구성(개수/순서/키)이 슬롯과 같으면 슬롯별 Modify로 바뀐 슬롯만 다시 쓴다.
+	// - 구성이 바뀌면 Clear 후 다시 Push한다(같은 메시는 빈 슬롯을 재사용한다).
+	ResetMesh(_meshList : Array<string>,_matList : Array<CMat>): void {
+		this.mMeshList=_meshList;
+		this.mMatList=_matList;
+		if(this.mSlotReady==false)	return;
+
+		let same=(this.mSlotSize==_meshList.length && this.Size()==_meshList.length);
+		for(let i=0;same && i<_meshList.length;++i)
+			if(this.mSlotKey[i]!=_meshList[i])	same=false;
+
+		if(same)
+		{
+			for(let i=0;i<_meshList.length;++i)
+				this.Modify(i,_matList[i]);
+			return;
+		}
+		this.Clear();
+		for(let i=0;i<_meshList.length;++i)
+			this.PushSlot(_meshList[i],_matList[i]);
 	}
 	// 메시 키의 SkinCalc 결과를 구해 캐시한다(메시 키별 mSkinMatCache). 항등행렬은 매번 new하지 않고
 	// CPoolGeo에서 빌려 쓰고 즉시 반납한다(SkinCalc는 결과를 skinMatList에 담을 뿐 _PMat 참조를 보유하지 않는다).
@@ -745,271 +688,166 @@ export class CPaint3DMerge extends CPaint
 		}
 		return calcSkinMat;
 	}
-	// 메시 키의 "로컬(인스턴스=항등행렬) 위치"를 구해 캐시한다. 트리 로컬 변환/스킨/스케일-센터
-	// 보정까지는 반영되고 인스턴스 매트릭스만 빠진 상태 — 이후 인스턴스 매트릭스만 곱하면 최종위치.
-	GetLocalPos(_meshKey : string): Float32Array
+	GetTemplate(_meshKey : string): CMeshCreateInfo
 	{
-		let cached=this.mLocalPosCache.get(_meshKey);
-		if(cached!=null)	return cached;
+		let tmp=this.mTemplate.get(_meshKey);
+		if(tmp!=null)	return tmp;
 
-		let mesh=this.GetOwner().GetFrame().Res().Find(_meshKey) as CMesh;
-		let calcSkinMat=this.GetSkinMat(_meshKey,mesh);
-		let tmp=new CMeshCreateInfo();
+		let frame=this.GetOwner().GetFrame();
+		let mesh=frame.Res().Find(_meshKey) as CMesh;
+		if(mesh==null)
+		{
+			if(frame.Load().IsLoad(_meshKey)==false)
+				frame.Load().Exe(_meshKey);
+			return null;
+		}
+		tmp=new CMeshCreateInfo();
 		let dummyBound=CPoolGeo.ProductBound();
 		dummyBound.SetType(CBound.eType.Box);
+		//mTargetScale/mCenterPos는 메시 전체(모든 노드) 경계 기준으로 한 번만 건다. 노드마다 따로 걸면 재질별로 나뉜
+		//노드(나무의 줄기/잎)가 각자 원점·크기 1로 맞춰져 잎이 줄기 중심으로 내려가고 비율도 틀어진다
 		let identMat=CPoolGeo.ProductMat();
 		identMat.Unit();
-		this.Merge(identMat, mesh, mesh.meshTree, tmp, dummyBound, calcSkinMat);	// _PMat=항등 → 로컬 위치
+		if(this.mTargetScale!=0 || this.mCenterPos)
+		{
+			const whole=new CBound();
+			whole.SetType(CBound.eType.Box);
+			const dummy=new CTree<CMeshCopyNode>();
+			dummy.mData=new CMeshCopyNode();
+			CMeshTreeUpdate.TreeCopy(mesh.meshTree, dummy, new CMat(), whole);
+			const size=whole.GetSize();
+			const s=this.mTargetScale!=0 ? this.mTargetScale/CMath.Max(CMath.Max(size.x,size.y),size.z) : 1;
+			identMat.mF32A[0]=s; identMat.mF32A[5]=s; identMat.mF32A[10]=s;
+			if(this.mCenterPos)
+			{
+				const center=whole.GetCenter();
+				identMat.mF32A[12]=-center.x*s; identMat.mF32A[13]=-center.y*s; identMat.mF32A[14]=-center.z*s;
+			}
+			//mF32A를 직접 고치면 단위행렬 플래그가 남아 MatMul이 이 행렬을 무시한다
+			identMat.UnitCheck();
+		}
+		this.Merge(identMat, mesh, mesh.meshTree, tmp, dummyBound, this.GetSkinMat(_meshKey,mesh));
+		identMat.Unit();
 		CPoolGeo.RecycleMat(identMat);
 		CPoolGeo.RecycleBound(dummyBound);
-		let posb=tmp.GetVFType(CVertexFormat.eIdentifier.Position)[0];
-		let local=posb.bufF.GetArray().slice(0,posb.bufF.mSize);
-		this.mLocalPosCache.set(_meshKey,local);
-		return local;
+		this.mTemplate.set(_meshKey,tmp);
+		return tmp;
 	}
-	// 현재 mMeshList/mMatList를 새 매트릭스로 병합해 _ci에 채운다(bound/texture 갱신).
-	// 토폴로지(메시 구성) 자체가 바뀔 때만 쓰는 전체 재구성 경로.
-	MergeAll(_ci : CMeshCreateInfo): void
+	private PushSlot(_mesh : string,_mat : CMat) : number
 	{
-		this.mBound.Reset();
-		this.mBound.SetType(CBound.eType.Box);
-		this.mMeshVertexStart=[];
-		for(let i=0;i<this.mMeshList.length;++i)
-		{
-			this.mMeshVertexStart.push(_ci.vertexCount);
-			let mesh=this.GetOwner().GetFrame().Res().Find(this.mMeshList[i]) as CMesh;
-			let calcSkinMat=this.GetSkinMat(this.mMeshList[i],mesh);
-            this.Merge(this.mMatList[i], mesh, mesh.meshTree, _ci, this.mBound, calcSkinMat);
-		}
-		this.mMeshVertexStart.push(_ci.vertexCount);
+		const t=this.GetTemplate(_mesh);
+		if(t==null || t.vertexCount==0)	return -1;
+		const slot=this.NewSlot(_mesh);
+		this.SetSlotMat(slot,_mat);
+		this.WriteSlot(slot,true);
+		this.Dirty(slot);
+		return slot;
 	}
-	// mMeshList/mMatList로 병합 버퍼(ci)를 처음부터 새로 구성한다.
-	BuildCI(): void {
-		this.mMeshDataNode.ci=new CMeshCreateInfo();
-		this.MergeAll(this.mMeshDataNode.ci);
-		// 해시는 버퍼 용량(정점 수) 기반. 커질 때만 바뀌어 새 키가 되고, 같거나 작으면 유지된다.
-		this.mHash=""+this.mMeshDataNode.ci.vertexCount;
-		this.mMeshListPrev=this.mMeshList.slice();
-		this.SnapshotMatList();
-		// mBound가 새로 계산됐으므로 컬링용 mBW(스피어)도 다음 FMatUpdate에서 강제 재계산되게 한다.
-		// mBW.mRadian=0만으로는 부족 — FMatUpdate() 자체가 mUpdateLMat(또는 owner mat 변경)일 때만
-		// 호출되므로(CPaint.Update), UpdateLMat()으로 다음 프레임 FMatUpdate 실행을 강제한다.
-		this.mBW.mRadian=0;
-		this.UpdateLMat();
+	protected override CreateChannel(): void {
+		const ci=this.mMeshDataNode.ci;
+		const I=CVertexFormat.eIdentifier;
+		ci.Create(I.Position);
+		ci.Create(I.UV);
+		ci.Create(I.Normal);
+		ci.Create(I.TexOff);
+		ci.Create(I.Weight);
+		ci.Create(I.WeightIndex);
+		ci.Create(I.Tangent);
 	}
-	// this.mMatList의 현재 값을 mMatListPrev에 스냅샷으로 저장한다. 매번 new CMat()으로 새로
-	// 만들지 않고 CPoolGeo(Mat)로 재사용한다 — 기존 mMatListPrev 항목은 풀에 반납하고,
-	// 풀에서 꺼낸 인스턴스에 Import()로 값만 복사한다(새 Float32Array 할당 없음).
-	SnapshotMatList(): void
+	protected override SlotVertex(_key: string): number	{	return this.GetTemplate(_key).vertexCount;	}
+	protected override SlotIndex(_key: string): number	{	return this.GetTemplate(_key).indexCount;	}
+	protected override WriteIndex(_key: string, _iStart: number, _vStart: number): void {
+		const src=this.GetTemplateBuf(_key).mIdx;
+		const ib=this.Buf(CVertexFormat.eIdentifier.Index).bufI;
+		for(let i=0;i<src.length;++i)
+			ib[_iStart+i]=src[i]+_vStart;
+	}
+	private GetTemplateBuf(_key : string)
 	{
-		if(this.mMatListPrev!=null)
-		{
-			for(let m of this.mMatListPrev)
-				CPoolGeo.RecycleMat(m);
-		}
-		let next=new Array<CMat>(this.mMatList.length);
-		for(let i=0;i<this.mMatList.length;++i)
-		{
-			let m=CPoolGeo.ProductMat();
-			m.Import(this.mMatList[i]);
-			next[i]=m;
-		}
-		this.mMatListPrev=next;
+		let tb=this.mTemplateBuf.get(_key);
+		if(tb!=null)	return tb;
+		const t=this.GetTemplate(_key);
+		const I=CVertexFormat.eIdentifier;
+		const pos=t.GetVFType(I.Position)[0].bufF.mF32A;
+		let we=t.GetVFType(I.Weight)[0].bufF.mF32A;
+		if(this.mWindInfluence.x>0)	we=CPaint3DMerge.WindWeight(pos,we,t.vertexCount);
+		tb={
+			mPos:pos, mUV:t.GetVFType(I.UV)[0].bufF.mF32A,
+			mNor:t.GetVFType(I.Normal)[0].bufF.mF32A, mTex:t.GetVFType(I.TexOff)[0].bufF.mF32A,
+			mWe:we, mWi:t.GetVFType(I.WeightIndex)[0].bufF.mF32A,
+			mTan:t.GetVFType(I.Tangent)[0].bufF.mF32A, mIdx:t.GetVFType(I.Index)[0].bufI,
+			mCount:t.vertexCount,
+		};
+		this.mTemplateBuf.set(_key,tb);
+		return tb;
 	}
-	// 토폴로지(메시 목록/순서)가 이전과 완전히 같을 때만 쓸 수 있는 빠른 경로.
-	// uv/normal/texOff/weight/weightIndex/index는 인스턴스 매트릭스와 무관해 손대지 않는다.
-	// 메시별로 이전 매트릭스와 비교해 회전/스케일까지 같고 이동만 다르면(MatOnlyTranslationDiff)
-	// 로컬 위치×행렬곱조차 없이 이미 구워진 정점에 이동량(dx,dy,dz)만 더하는 하드 경로를 쓴다.
-	// 회전/스케일이 바뀌었거나 이전 매트릭스가 없으면(최초) 로컬 위치×인스턴스 매트릭스로 계산한다.
-	RepositionOnly(): void
-	{
-		let ci=this.mMeshDataNode.ci;
-		let ovb=ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
-		this.mBound.Reset();
-		this.mBound.SetType(CBound.eType.Box);
-		let v=CPoolGeo.ProductV3();
-		let outv=CPoolGeo.ProductV3();
-		let prevList=this.mMatListPrev;
-		for(let i=0;i<this.mMeshList.length;++i)
-		{
-			let vStart=this.mMeshVertexStart[i];
-			let vCount=this.mMeshVertexStart[i+1]-vStart;
-			let instMat=this.mMatList[i];
-			let prevMat=(prevList!=null && i<prevList.length)?prevList[i]:null;
+	protected override WriteSlot(_slot: number,_static: boolean): void {
+		const tb=this.GetTemplateBuf(this.mSlotKey[_slot]);
+		const I=CVertexFormat.eIdentifier;
+		const n=tb.mCount;
+		const vs=this.mSlotVS[_slot];
 
-			if(prevMat!=null && CPaint3DMerge.MatOnlyTranslationDiff(prevMat,instMat))
+		const sPos=tb.mPos, sNor=tb.mNor, sTan=tb.mTan;
+		const oPos=this.F32(I.Position), oNor=this.F32(I.Normal), oTan=this.F32(I.Tangent);
+
+		const m=this.mSlotMat, mo=_slot*16;
+		const m0=m[mo], m1=m[mo+1], m2=m[mo+2], m3=m[mo+3];
+		const m4=m[mo+4], m5=m[mo+5], m6=m[mo+6], m7=m[mo+7];
+		const m8=m[mo+8], m9=m[mo+9], m10=m[mo+10], m11=m[mo+11];
+		const m12=m[mo+12], m13=m[mo+13], m14=m[mo+14], m15=m[mo+15];
+		//노말은 역행렬의 전치(=여인수 행렬/행렬식)로 변환한다. 4x4 MatInvert 대신 3x3만 직접 계산한다
+		const c00=m5*m10-m9*m6, c01=m9*m2-m1*m10, c02=m1*m6-m5*m2;
+		const c10=m8*m6-m4*m10, c11=m0*m10-m8*m2, c12=m4*m2-m0*m6;
+		const c20=m4*m9-m8*m5, c21=m8*m1-m0*m9, c22=m0*m5-m4*m1;
+		const det=m0*c00+m4*c01+m8*c02;
+		const inv=det!=0?1/det:0;
+		const f=Math.fround;
+		for(let i=0;i<n;++i)
+		{
+			const i3=i*3, i4=i*4;
+			const o3=(vs+i)*3, o4=(vs+i)*4;
+
+			const vx=sPos[i3], vy=sPos[i3+1], vz=sPos[i3+2];
+			const w=(m3*vx)+(m7*vy)+(m11*vz)+m15;
+			const px=((m0*vx)+(m4*vy)+(m8*vz)+m12)/w;
+			const py=((m1*vx)+(m5*vy)+(m9*vz)+m13)/w;
+			const pz=((m2*vx)+(m6*vy)+(m10*vz)+m14)/w;
+			oPos[o3]=px; oPos[o3+1]=py; oPos[o3+2]=pz;
+			this.BoundPush(px,py,pz);
+
+			const nx=sNor[i3], ny=sNor[i3+1], nz=sNor[i3+2];
+			let ax=f((c00*nx+c01*ny+c02*nz)*inv);
+			let ay=f((c10*nx+c11*ny+c12*nz)*inv);
+			let az=f((c20*nx+c21*ny+c22*nz)*inv);
+			if(ax!=0 || ay!=0 || az!=0)
 			{
-				// 이동만 변경 → 캐시된 로컬 위치/행렬곱 없이 기존 baked 정점에 델타만 더한다.
-				let dx=instMat.mF32A[12]-prevMat.mF32A[12];
-				let dy=instMat.mF32A[13]-prevMat.mF32A[13];
-				let dz=instMat.mF32A[14]-prevMat.mF32A[14];
-				let moved=(dx!=0 || dy!=0 || dz!=0);
-				// mBound.Reset()이 매 호출 위에서 일어나므로, 이동이 없어도(moved=false)
-				// 바운드 갱신을 위해 정점은 순회해야 한다 — 좌표 덧셈만 건너뛴다.
-				for(let j=0;j<vCount;++j)
-				{
-					let off=(vStart+j)*3;
-					if(moved)
-					{
-						ovb.bufF.mF32A[off+0]+=dx;
-						ovb.bufF.mF32A[off+1]+=dy;
-						ovb.bufF.mF32A[off+2]+=dz;
-					}
-					outv.x=ovb.bufF.mF32A[off+0];
-					outv.y=ovb.bufF.mF32A[off+1];
-					outv.z=ovb.bufF.mF32A[off+2];
-					this.mBound.InitBound(outv);
-				}
+				const len=Math.sqrt(ax*ax+ay*ay+az*az);
+				ax=ax/len; ay=ay/len; az=az/len;
 			}
-			else
+			oNor[o3]=ax; oNor[o3+1]=ay; oNor[o3+2]=az;
+
+			const tx=sTan[i4], ty=sTan[i4+1], tz=sTan[i4+2];
+			let bx=f((m0*tx)+(m4*ty)+(m8*tz));
+			let by=f((m1*tx)+(m5*ty)+(m9*tz));
+			let bz=f((m2*tx)+(m6*ty)+(m10*tz));
+			if(bx!=0 || by!=0 || bz!=0)
 			{
-				// 회전/스케일까지 바뀜(또는 최초) → 로컬 위치 × 인스턴스 매트릭스 풀 계산
-				let local=this.GetLocalPos(this.mMeshList[i]);
-				for(let j=0;j<vCount;++j)
-				{
-					v.x=local[j*3+0];
-					v.y=local[j*3+1];
-					v.z=local[j*3+2];
-					CMath.V3MulMatCoordi(v,instMat,outv);
-					ovb.bufF.X3(vStart+j,outv.x);
-					ovb.bufF.Y3(vStart+j,outv.y);
-					ovb.bufF.Z3(vStart+j,outv.z);
-					this.mBound.InitBound(outv);
-				}
+				const len=Math.sqrt(bx*bx+by*by+bz*bz);
+				bx=bx/len; by=by/len; bz=bz/len;
 			}
+			oTan[o4]=bx; oTan[o4+1]=by; oTan[o4+2]=bz; oTan[o4+3]=sTan[i4+3];
 		}
-		CPoolGeo.RecycleV3(v);
-		CPoolGeo.RecycleV3(outv);
-		// 다음 비교를 위해 이번에 실제로 구운 매트릭스를 스냅샷으로 저장.
-		this.SnapshotMatList();
+		if(_static)
+		{
+			const o2=vs*2, o3=vs*3, o4=vs*4;
+			this.F32(I.UV).set(tb.mUV.subarray(0,n*2),o2);
+			this.F32(I.TexOff).set(tb.mTex.subarray(0,n*3),o3);
+			this.F32(I.Weight).set(tb.mWe.subarray(0,n*4),o4);
+			this.F32(I.WeightIndex).set(tb.mWi.subarray(0,n*4),o4);
+		}
+		this.WriteBinormal(vs,n);
 	}
-	/**
-	 * position 만 바뀌었을 때(RepositionOnly) 그 채널의 바뀐 구간만 GPU 에 올린다.
-	 *
-	 * GetDrawMesh(modify) 는 셰이더의 mVF 전체를 다시 올린다 - position 만 고쳤는데
-	 * uv/normal/texOff/weight 까지 따라 올라간다. CPaintVoxel 이 쓰는 방식대로
-	 * (CPaintVoxel.ts:121) 바뀐 채널의 바뀐 구간만 올린다.
-	 *
-	 * @returns 올렸으면 true. false 면 호출자가 GetDrawMesh(modify) 로 통째로 올려야 한다
-	 */
-	PosUpload(_dm : CMeshDrawNode,_vf : CShader): boolean
-	{
-		let ci=this.mMeshDataNode.ci;
-		//버퍼가 아직 없거나 정점 수가 어긋나면 부분 갱신이 성립하지 않는다
-		if(_dm.vGBufEx==null || _dm.vNum!=ci.vertexCount)	return false;
-
-		//Position 이 mVF 의 몇 번째 버퍼인지(RebuildMeshDrawNode 의 _gBufOff)
-		let slot=-1;
-		for(let j=0;j<_vf.mVF.length;++j)
-		{
-			let vf=_vf.mVF[j];
-			if(vf.identifier==CVertexFormat.eIdentifier.Position && vf.identifierCount==0)
-			{	slot=j;	break;	}
-		}
-		if(slot<0)	return false;
-
-		let pb=ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
-		if(pb==null || pb.bufF==null)	return false;
-		let arr=pb.bufF.mF32A as Float32Array;
-		if(arr==null)					return false;
-
-		//Position 은 정점당 3 플로트. CFloat32Mgr 는 용량을 2배씩 잡아두고 줄이지 않으므로
-		//실제 쓰는 만큼으로 잘라서 넘긴다. subarray 는 뷰라 복사가 아니다
-		let n=Math.min(ci.vertexCount*3,arr.length);
-		if(n<=0)	return true;
-
-		this.mOwner.GetFrame().Ren().RebuildMeshDrawNode(_dm,slot,0,arr.subarray(0,n));
-		return true;
-	}
-	// 메시 목록을 통째로 교체한다.
-	// - 토폴로지(메시 목록/순서)가 이전과 완전히 같으면(=매트릭스만 바뀜, 예: shake) → RepositionOnly로
-	//   position만 재계산(uv/normal/texOff/weight/weightIndex/index/SkinCalc/텍스처 매칭 전부 스킵).
-	// - 토폴로지가 바뀌면(개수/구성 변경) → 전체 재구성.
-	//   - 정점 총량이 기존 버퍼(용량)보다 커지면 → 버퍼를 새로 구성하고 해시를 바꾼다(새 키 → 새로 빌드).
-	//   - 같거나 작아지면 → 기존 버퍼 용량을 유지한 채 앞쪽만 새로 굽고, 남는 뒤쪽 정점은 0으로 세팅해 숨긴다.
-	//     해시는 유지되어 같은 키로 GetDrawMesh가 modify 1회 갱신된다.
-	ResetMesh(_meshList : Array<string>,_matList : Array<CMat>): void {
-		let oldCI=this.mMeshDataNode.ci;
-		// 개수뿐 아니라 순서/키까지 원소 단위로 완전히 같아야 빠른 경로를 쓴다.
-		// 예: [꽃,꽃,나무,나무] → [나무,꽃,나무,나무]처럼 개수는 같아도 0번 종류가 바뀌면 false → 전체 재구성.
-		let sameTopology=(oldCI!=null && CPaint3DMerge.SameMeshList(this.mMeshListPrev,_meshList));
-
-		this.mMeshList=_meshList;
-		this.mMatList=_matList;
-		this.mMeshListPrev=this.mMeshList.slice();
-
-		//position 만 고쳤는지 표시한다. Render 가 이걸 보고 부분 갱신으로 간다
-		this.mPosOnly=sameTopology;
-		if(sameTopology)
-		{
-			this.RepositionOnly();
-		}
-		else
-		{
-			let capVC=(oldCI!=null)?oldCI.vertexCount:0;	// 기존 버퍼 용량(정점 수, high-water)
-
-			// 새 매트릭스로 병합을 다시 굽는다(임시 버퍼).
-			let newCI=new CMeshCreateInfo();
-			this.MergeAll(newCI);
-			let newVC=newCI.vertexCount;
-
-			if(oldCI==null || newVC>capVC)
-			{
-				// 커짐 → 새로 구성, 해시 변경 → 새 키 → 새로 빌드
-				this.mMeshDataNode.ci=newCI;
-				this.mHash=""+newVC;
-			}
-			else
-			{
-				// 같거나 작아짐 → 기존 용량 유지, 앞쪽만 새 데이터로 덮고 뒤쪽은 0으로
-				for(let ob of oldCI.vertex)
-				{
-					if(ob.vfType==CVertexFormat.eIdentifier.Index)	continue;	// 인덱스는 그대로 두어 뒤쪽 삼각형이 0정점을 참조(붕괴)하게 한다.
-					let capF=ob.bufF.mSize;										// 기존 용량(float 수) 유지
-					let nb=newCI.GetVFType(ob.vfType);
-					if(nb.length>0)
-					{
-						let nSize=nb[0].bufF.mSize;
-						ob.bufF.mF32A.set(nb[0].bufF.mF32A.subarray(0,nSize),0);	// 앞쪽 복사
-						ob.bufF.mF32A.fill(0,nSize,capF);							// 뒤쪽 0
-					}
-					else
-					{
-						ob.bufF.mF32A.fill(0,0,capF);	// 새 구성에 없는 포맷 → 전부 0
-					}
-				}
-				// vertexCount(용량)/indexCount 및 mHash 유지 → 같은 키 → modify
-			}
-			// 다음 RepositionOnly 호출을 위한 기준선(이번에 실제로 구운 매트릭스) 스냅샷.
-			this.SnapshotMatList();
-		}
-		this.mReset=true;
-		// mBound가 새로 계산됐으므로 컬링용 mBW(스피어)도 다음 FMatUpdate에서 강제 재계산되게 한다.
-		// mBW.mRadian=0만으로는 부족 — FMatUpdate() 자체가 mUpdateLMat(또는 owner mat 변경)일 때만
-		// 호출되므로(CPaint.Update), UpdateLMat()으로 다음 프레임 FMatUpdate 실행을 강제한다.
-		this.mBW.mRadian=0;
-		this.UpdateLMat();
-		// 배치는 한 번 만들면 캐시되어(mBatchMap) 다음 프레임에 Render()가 재실행되지 않고
-		// 캐시된 배치를 그대로 재사용한다(BatchPool). 그러면 GetDrawMesh(modify)가 다시는 안 불려
-		// 정점 갱신이 GPU에 반영되지 않는다. 이걸 막기 위해 배치 캐시만 무효화한다.
-		// ClearBatch()는 mRenPT/mCamCullUpdate까지 건드려 캔버스의 렌더패스 재계산을 매번 유발하므로
-		// (렌더패스 자체는 안 바뀌었으니 불필요) 여기서는 mBatchMap만 직접 비운다.
-		for(let key of this.mBatchMap.keys())
-			this.mBatchMap.set(key,null);
-	}
-	override Render(_vf: CShader): void {
-		
-		
-
-		var barr=this.RenderBatch(_vf,1);
-		if(barr==null)	return;
-
-		
-		
-
-		this.mOwner.GetFrame().BMgr().BatchOn();
-		this.Common(_vf);
-
+	protected override RenderAttr(_vf: CShader): void {
         let wsa=new CShaderAttr("worldMat", this.GetFMat());
 		switch(this.mWorldMatType)
 		{
@@ -1026,32 +864,65 @@ export class CPaint3DMerge extends CPaint
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("skin", SDF.eSkin.None));
         if(_vf.mUniform.get("windInfluence")!=null)
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
-		// if(this.mMeshDataNode==null)
-		// {
-
-		// }
-		// 키에 인스턴스 고유값(Key)을 포함해 다른 인스턴스와 drawMesh를 공유하지 않게 한다.
-		// (shrink 시 in-place modify로 지오메트리를 변형하므로 콘텐츠 해시 공유는 충돌을 일으킨다.)
-		// mHash는 유지 → grow 시 해시가 바뀌어 새 키로 새로 빌드, shrink 시 해시 유지로 같은 키 modify.
-		//position 만 바뀐 프레임은 GetDrawMesh 로 통째로 올리지 않는다(mVF 전 채널이 따라 올라간다).
-		//대신 아래에서 그 채널의 바뀐 구간만 올린다
-		let posOnly=this.mReset && this.mPosOnly;
-		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.Key()+this.mHash,_vf,this.mMeshDataNode.ci,
-			this.mReset && posOnly==false);
-		//부분 갱신이 성립하지 않으면(버퍼 미생성/정점 수 불일치) 통째로 되돌린다
-		if(posOnly && this.PosUpload(dm,_vf)==false)
-			this.mOwner.GetFrame().Ren().BuildMeshDrawNode(dm,this.mMeshDataNode.ci,_vf);
-		this.mReset=false;
-		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
-
-		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
 	}
 
-    Wind(_influence: number) 
+    Wind(_influence: number)
 	{
 		this.PushTag("wind");
 		this.mWindInfluence.x = _influence;
+	}
+	//셰이더 ApplyWind 는 가중치 0.5 초과 정점만 (2w-1)만큼 흔든다. 본/가중치가 없는 정적 메시(풀·나무 gltf)는
+	//전부 0이라 바람 태그가 있어도 안 움직이므로, 높이로 가중치를 만들어 밑동은 고정하고 위로 갈수록 흔들리게 한다
+	static WindWeight(_pos : Float32Array,_we : Float32Array,_count : number) : Float32Array
+	{
+		for(let i=0;i<_count*4;++i)
+			if(_we[i]>0.5)	return _we;
+		let minY=Infinity,maxY=-Infinity;
+		for(let i=0;i<_count;++i)
+		{
+			const y=_pos[i*3+1];
+			if(y<minY)	minY=y;
+			if(y>maxY)	maxY=y;
+		}
+		const out=new Float32Array(_count*4);
+		const h=maxY-minY;
+		if(h<=0)	return out;
+		for(let i=0;i<_count;++i)
+		{
+			const r=(_pos[i*3+1]-minY)/h;
+			out[i*4]=0.5+0.5*r*Math.sqrt(r);
+		}
+		return out;
+	}
+	//노드가 쓰는 메시 텍스처 번호를 이 페인트의 텍스처 목록 번호로 바꾼다. mTexOverride가 있으면 CPaint3D에
+	//SetTexture한 것처럼 그 목록을 번호 그대로 쓰고, 목록에 없는 번호는 텍스처 없음(-1)이다
+	private TexOffMap(_tMesh : CMesh,_tNode : CTree<CMeshDataNode>) : number[]
+	{
+		const texOff=new Array<number>();
+		for(const ttexOff of _tNode.mData.textureOff)
+		{
+			const key=this.mTexOverride!=null ? this.mTexOverride[ttexOff] : _tMesh.texture[ttexOff];
+			if(this.mTexOverride!=null && key==null)
+			{
+				texOff.push(-1);
+				continue;
+			}
+			let i=this.mTextureKey.indexOf(key);
+			if(i<0)
+			{
+				i=this.mTextureKey.length;
+				this.mTextureKey.push(key);
+				//SetTexture를 거치지 않아 CPaint의 알파 텍스처 검사가 안 걸리므로 여기서 한다. 이미 불투명 목록에 들어갔으면 다시 만든다
+				const tex=this.GetOwner().GetFrame().Res().Find(key);
+				if(this.mAlphaTex==false && tex instanceof CTexture && tex.GetAlpha())
+				{
+					this.mAlphaTex=true;
+					this.ClearBatch();
+				}
+			}
+			texOff.push(i);
+		}
+		return texOff;
 	}
     SkinCalc(_PMat : CMat,_tMesh : CMesh,_tNode : CTree<CMeshDataNode>,_skinMatList : CMat[] = new Array(_tMesh.skin.length))
     {
@@ -1078,7 +949,201 @@ export class CPaint3DMerge extends CPaint
 
         return _skinMatList;
     }
+	SourceTangent(_ci : CMeshCreateInfo)
+	{
+		let tanb=_ci.GetVFType(CVertexFormat.eIdentifier.Tangent);
+		if(tanb.length>0 && tanb[0].bufF.IsEmpty()==false)	return tanb[0].bufF;
+
+		let posb=_ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+		let norb=_ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
+		let uvb=_ci.GetVFType(CVertexFormat.eIdentifier.UV)[0];
+		let inb=_ci.GetVFType(CVertexFormat.eIdentifier.Index)[0];
+		if(posb==null || norb==null || uvb==null || inb==null)	return null;
+
+		let out=tanb.length>0 ? tanb[0] : _ci.Create(CVertexFormat.eIdentifier.Tangent);
+		out.bufF.Resize(posb.bufF.Size(3)*4);
+		CUtilRender.TangentCalculate(posb.bufF, norb.bufF, uvb.bufF, inb.bufI, out.bufF);
+		return out.bufF;
+	}
+	//빠른 경로를 쓸 수 있는 표준 버퍼 구성인지. 아니면 MergeSlow(원래 구현)로 처리한다
+	private CanFastMerge(_src : CMeshCreateInfo,_oCI : CMeshCreateInfo) : boolean
+	{
+		const I=CVertexFormat.eIdentifier;
+		const pos=_src.GetVFType(I.Position)[0], uv=_src.GetVFType(I.UV)[0], nor=_src.GetVFType(I.Normal)[0];
+		const tex=_src.GetVFType(I.TexOff)[0], ind=_src.GetVFType(I.Index)[0];
+		if(pos==null || uv==null || nor==null || tex==null || ind==null)	return false;
+		const n=pos.bufF.mSize/3;
+		if(n!=Math.floor(n) || uv.bufF.mSize<n*2 || nor.bufF.mSize<n*3 || tex.bufF.mSize<n*3)	return false;
+		const we=_src.GetVFType(I.Weight)[0], wi=_src.GetVFType(I.WeightIndex)[0];
+		if(we!=null && (wi==null || we.bufF.mSize<n*4 || wi.bufF.mSize<n*4))	return false;
+		const vc=_oCI.vertexCount;
+		const outs : Array<[number,number]>=[[I.Position,3],[I.UV,2],[I.Normal,3],[I.TexOff,3],[I.Weight,4],[I.WeightIndex,4],[I.Tangent,4]];
+		for(const [id,k] of outs)
+		{
+			const b=_oCI.GetVFType(id)[0];
+			if(b!=null && b.bufF.mSize!=vc*k)	return false;
+		}
+		return true;
+	}
+	private static GrowF32(_buf : CFloat32Mgr,_add : number) : Float32Array
+	{
+		const need=_buf.mSize+_add;
+		if(need>_buf.mF32A.length)
+		{
+			const arr=new Float32Array(Math.max(need,_buf.mF32A.length*2));
+			arr.set(_buf.mF32A.subarray(0,_buf.mSize));
+			_buf.mF32A=arr;
+		}
+		return _buf.mF32A;
+	}
+	//MergeSlow와 같은 결과(값 단위)를 내되, 정점마다 객체를 만들지 않고 Float32Array에 직접 쓴다.
+	//중간 벡터를 float32에 저장하던 원래 계산과 같아지도록 같은 지점에서 Math.fround로 반올림한다
 	Merge(_PMat : CMat,_tMesh : CMesh,_tNode : CTree<CMeshDataNode>,_oCI : CMeshCreateInfo,_bound : CBound,_skinMatList : CMat[])
+	{
+		const src=_tNode.mData.ci;
+		if(src!=null && this.CanFastMerge(src,_oCI)==false)
+		{
+			this.MergeSlow(_PMat,_tMesh,_tNode,_oCI,_bound,_skinMatList);
+			return;
+		}
+
+		let LMat=CMath.MatScale(_tNode.mData.sca);
+		if(_tNode.mData.rot.w >= 100000)
+			CMath.MatMul(LMat,CMath.MatRotation(_tNode.mData.rot),LMat);
+		else
+			CMath.MatMul(LMat,CMath.QutToMat(_tNode.mData.rot),LMat);
+		LMat.SetV3(3,_tNode.mData.pos);
+
+		let LPMat:CMat;
+		if(src!=null)
+		{
+			const I=CVertexFormat.eIdentifier;
+			const sPos=src.GetVFType(I.Position)[0].bufF.mF32A;
+			const sUV=src.GetVFType(I.UV)[0].bufF.mF32A;
+			const sNor=src.GetVFType(I.Normal)[0].bufF.mF32A;
+			const sTex=src.GetVFType(I.TexOff)[0].bufF.mF32A;
+			const sIdx=src.GetVFType(I.Index)[0].bufI;
+			const sWeB=src.GetVFType(I.Weight)[0], sWiB=src.GetVFType(I.WeightIndex)[0];
+			const sWe=sWeB!=null ? sWeB.bufF.mF32A : null, sWi=sWiB!=null ? sWiB.bufF.mF32A : null;
+			const sTanB=this.SourceTangent(src);
+			const sTan=sTanB!=null ? sTanB.mF32A : null;
+			const n=src.GetVFType(I.Position)[0].bufF.mSize/3;
+
+			const texOff=this.TexOffMap(_tMesh,_tNode);
+
+			const Out=(_id : number)=>{
+				let b=_oCI.GetVFType(_id)[0];
+				if(b==null)	b=_oCI.Create(_id);
+				return b;
+			};
+			const ovb=Out(I.Position), oub=Out(I.UV), onb=Out(I.Normal), otb=Out(I.TexOff);
+			const oweb=Out(I.Weight), owib=Out(I.WeightIndex), oinb=Out(I.Index), otanb=Out(I.Tangent);
+
+			//크기/중심 정규화는 GetTemplate이 메시 전체 기준으로 _PMat에 넣어 준다
+			LPMat=CMath.MatMul(LMat,_PMat);
+			const nMat=CMath.MatTranspose(CMath.MatInvert(LPMat));
+			const m=LPMat.mF32A, nm=nMat.mF32A;
+
+			const base=_oCI.vertexCount;
+			const oPos=CPaint3DMerge.GrowF32(ovb.bufF,n*3), oUV=CPaint3DMerge.GrowF32(oub.bufF,n*2);
+			const oNor=CPaint3DMerge.GrowF32(onb.bufF,n*3), oTex=CPaint3DMerge.GrowF32(otb.bufF,n*3);
+			const oWe=CPaint3DMerge.GrowF32(oweb.bufF,n*4), oWi=CPaint3DMerge.GrowF32(owib.bufF,n*4);
+			const oTan=CPaint3DMerge.GrowF32(otanb.bufF,n*4);
+
+			const f=Math.fround;
+			const skinV=new CVec3(), skinOut=new CVec3();
+			for(let i=0;i<n;++i)
+			{
+				const i2=i*2, i3=i*3, i4=i*4;
+				const o2=(base+i)*2, o3=(base+i)*3, o4=(base+i)*4;
+
+				let vx=sPos[i3], vy=sPos[i3+1], vz=sPos[i3+2];
+				//본 없는 메시의 가중치는 바람 가중치(ApplyWind)로만 쓴다. 스킨 행렬 목록이 비어 있어 스키닝하면 깨진다
+				if(sWe!=null && _skinMatList.length>0 && sWe[i4]+sWe[i4+1]+sWe[i4+2]+sWe[i4+3]>0.0)
+				{
+					var SkinMat = CMath.MatMulFloat(_skinMatList[sWi[i4]], sWe[i4]);
+					SkinMat = CMath.MatAdd(CMath.MatMulFloat(_skinMatList[sWi[i4+1]], sWe[i4+1]), SkinMat);
+					SkinMat = CMath.MatAdd(CMath.MatMulFloat(_skinMatList[sWi[i4+2]], sWe[i4+2]), SkinMat);
+					SkinMat = CMath.MatAdd(CMath.MatMulFloat(_skinMatList[sWi[i4+3]], sWe[i4+3]), SkinMat);
+					skinV.mF32A[0]=vx; skinV.mF32A[1]=vy; skinV.mF32A[2]=vz;
+					CMath.V3MulMatCoordi(skinV,SkinMat,skinOut);
+					vx=skinOut.mF32A[0]; vy=skinOut.mF32A[1]; vz=skinOut.mF32A[2];
+				}
+				const w=(m[3]*vx)+(m[7]*vy)+(m[11]*vz)+m[15];
+				oPos[o3  ]=((m[0]*vx)+(m[4]*vy)+(m[8]*vz)+m[12])/w;
+				oPos[o3+1]=((m[1]*vx)+(m[5]*vy)+(m[9]*vz)+m[13])/w;
+				oPos[o3+2]=((m[2]*vx)+(m[6]*vy)+(m[10]*vz)+m[14])/w;
+
+				oUV[o2]=sUV[i2]; oUV[o2+1]=sUV[i2+1];
+
+				const nx=sNor[i3], ny=sNor[i3+1], nz=sNor[i3+2];
+				let ax=f((nm[0]*nx)+(nm[4]*ny)+(nm[8]*nz));
+				let ay=f((nm[1]*nx)+(nm[5]*ny)+(nm[9]*nz));
+				let az=f((nm[2]*nx)+(nm[6]*ny)+(nm[10]*nz));
+				if(ax!=0 || ay!=0 || az!=0)
+				{
+					const len=Math.sqrt(ax*ax+ay*ay+az*az);
+					ax=ax/len; ay=ay/len; az=az/len;
+				}
+				oNor[o3]=ax; oNor[o3+1]=ay; oNor[o3+2]=az;
+
+				const tx=sTan!=null ? sTan[i4] : 1, ty=sTan!=null ? sTan[i4+1] : 0, tz=sTan!=null ? sTan[i4+2] : 0, tw=sTan!=null ? sTan[i4+3] : 1;
+				let bx=f((m[0]*tx)+(m[4]*ty)+(m[8]*tz));
+				let by=f((m[1]*tx)+(m[5]*ty)+(m[9]*tz));
+				let bz=f((m[2]*tx)+(m[6]*ty)+(m[10]*tz));
+				if(bx!=0 || by!=0 || bz!=0)
+				{
+					const len=Math.sqrt(bx*bx+by*by+bz*bz);
+					bx=bx/len; by=by/len; bz=bz/len;
+				}
+				oTan[o4]=bx; oTan[o4+1]=by; oTan[o4+2]=bz; oTan[o4+3]=tw;
+
+				const t0=sTex[i3], t1=sTex[i3+1], t2=sTex[i3+2];
+				oTex[o3  ]=t0!=-1 ? texOff[t0] : -1;
+				oTex[o3+1]=t1!=-1 ? texOff[t1] : -1;
+				oTex[o3+2]=t2!=-1 ? texOff[t2] : -1;
+
+				if(sWe!=null)
+				{
+					oWe[o4]=sWe[i4]; oWe[o4+1]=sWe[i4+1]; oWe[o4+2]=sWe[i4+2]; oWe[o4+3]=sWe[i4+3];
+					oWi[o4]=sWi[i4]; oWi[o4+1]=sWi[i4+1]; oWi[o4+2]=sWi[i4+2]; oWi[o4+3]=sWi[i4+3];
+				}
+				else
+				{
+					oWe[o4]=0; oWe[o4+1]=0; oWe[o4+2]=0; oWe[o4+3]=0;
+					oWi[o4]=0; oWi[o4+1]=0; oWi[o4+2]=0; oWi[o4+3]=0;
+				}
+			}
+			ovb.bufF.mSize+=n*3; oub.bufF.mSize+=n*2; onb.bufF.mSize+=n*3; otb.bufF.mSize+=n*3;
+			oweb.bufF.mSize+=n*4; owib.bufF.mSize+=n*4; otanb.bufF.mSize+=n*4;
+
+			const oIdx=oinb.bufI;
+			const bMin=_bound.mMin.mF32A, bMax=_bound.mMax.mF32A;
+			for(let k=0;k<sIdx.length;++k)
+			{
+				const idx=sIdx[k]+base;
+				oIdx.push(idx);
+				const p=idx*3;
+				const px=oPos[p], py=oPos[p+1], pz=oPos[p+2];
+				if(px<bMin[0]) bMin[0]=px;	if(px>bMax[0]) bMax[0]=px;
+				if(py<bMin[1]) bMin[1]=py;	if(py>bMax[1]) bMax[1]=py;
+				if(pz<bMin[2]) bMin[2]=pz;	if(pz>bMax[2]) bMax[2]=pz;
+			}
+			if(sIdx.length>0 && _bound.GetType()==CBound.eType.Null)	_bound.SetType(CBound.eType.Box);
+
+			_oCI.vertexCount+=src.vertexCount;
+			_oCI.indexCount+=src.indexCount;
+		}
+		else
+		{
+			LPMat=CMath.MatMul(LMat,_PMat);
+		}
+		if(_tNode.mColleague!=null)
+			this.Merge(_PMat,_tMesh,_tNode.mColleague,_oCI,_bound,_skinMatList);
+		if(_tNode.mChild!=null)
+			this.Merge(LPMat,_tMesh,_tNode.mChild,_oCI,_bound,_skinMatList);
+	}
+	MergeSlow(_PMat : CMat,_tMesh : CMesh,_tNode : CTree<CMeshDataNode>,_oCI : CMeshCreateInfo,_bound : CBound,_skinMatList : CMat[])
 	{
         // 복사할 메시의 로컬 매트릭스 LMat
 		let LMat=CMath.MatScale(_tNode.mData.sca);
@@ -1102,27 +1167,12 @@ export class CPaint3DMerge extends CPaint
             let tweb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Weight);
             let twib=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
 			let tinb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Index);
+			//병합 메시에 탄젠트가 없으면 탄젠트를 쓰는 셰이더(그림자 리드 등)가 빌드 때 병합 정점 전체로
+			//TangentCalculate를 돌려 수백 ms씩 멈춘다. 원본에서 한 번만 구해 두고 회전만 적용해 복사한다
+			let ttanb=this.SourceTangent(_tNode.mData.ci);
 
             // 텍스쳐 복사
-			let texOff=[];
-            for(let ttexOff of _tNode.mData.textureOff)
-			{
-				let push=true;
-				for(let i=0;i<this.mTextureKey.length;++i)
-				{
-					if(this.mTextureKey[i]==_tMesh.texture[ttexOff])
-					{
-						push=false;
-						texOff.push(i);
-						break;
-					}
-				}
-				if(push)
-				{
-					texOff.push(this.mTextureKey.length);
-					this.mTextureKey.push(_tMesh.texture[ttexOff]);
-				}
-			}
+			const texOff=this.TexOffMap(_tMesh,_tNode);
 			
             // 복사받을 메시의 정점 정보
 			let ovb=_oCI.GetVFType(CVertexFormat.eIdentifier.Position);
@@ -1167,6 +1217,12 @@ export class CPaint3DMerge extends CPaint
 				_oCI.Create(CVertexFormat.eIdentifier.Index);
 				oinb=_oCI.GetVFType(CVertexFormat.eIdentifier.Index);
 			}
+			let otanb=_oCI.GetVFType(CVertexFormat.eIdentifier.Tangent);
+			if(otanb.length==0)
+			{
+				_oCI.Create(CVertexFormat.eIdentifier.Tangent);
+				otanb=_oCI.GetVFType(CVertexFormat.eIdentifier.Tangent);
+			}
 
             // 버텍스 복사
 			for(let i=0;i<tvb[0].bufF.Size(3);++i)
@@ -1180,6 +1236,7 @@ export class CPaint3DMerge extends CPaint
 				ovb[0].bufF.Push(v);
 				oub[0].bufF.Push(u);
 				onb[0].bufF.Push(n);
+				otanb[0].bufF.Push(ttanb!=null ? ttanb.V4(i) : new CVec4(1,0,0,1));
 
                 // 텍스쳐 오프셋
 				let toff=new CVec3(-1,-1,-1);
@@ -1204,26 +1261,8 @@ export class CPaint3DMerge extends CPaint
                 }
 			}
 
-            // mTargetScale, mCenterPos 추가된 매트릭스
-            let mat=new CMat();
-            if(this.mTargetScale!=0)
-            {
-                let size=_tNode.mData.ci.bound.GetSize();
-                let maxSize=CMath.Max(CMath.Max(size.x,size.y),size.z);
-                mat.mF32A[0]=this.mTargetScale/maxSize;
-                mat.mF32A[5]=this.mTargetScale/maxSize;
-                mat.mF32A[10]=this.mTargetScale/maxSize;
-            }
-            if(this.mCenterPos)
-            {
-                let center=_tNode.mData.ci.bound.GetCenter();
-                mat.mF32A[12]=-center.x*mat.mF32A[0];
-                mat.mF32A[13]=-center.y*mat.mF32A[5];
-                mat.mF32A[14]=-center.z*mat.mF32A[10];
-            }
-            mat.UnitCheck();
-            LPMat=CMath.MatMul(LMat,mat);
-            LPMat=CMath.MatMul(LPMat,_PMat);
+            //크기/중심 정규화는 GetTemplate이 메시 전체 기준으로 _PMat에 넣어 준다
+            LPMat=CMath.MatMul(LMat,_PMat);
 
             // skin mat 적용
             if(tweb.length > 0) {
@@ -1234,7 +1273,7 @@ export class CPaint3DMerge extends CPaint
                     let wi=twib[0].bufF.V4(i);
                     let v=ovb[0].bufF.V3(_oCI.vertexCount + i);
 
-                    if(we.x+we.y+we.z+we.w>0.0)
+                    if(_skinMatList.length>0 && we.x+we.y+we.z+we.w>0.0)
                     {
                         var SkinMat = CMath.MatMulFloat(_skinMatList[wi.x], we.x);
                         SkinMat = CMath.MatAdd(CMath.MatMulFloat(_skinMatList[wi.y], we.y), SkinMat);
@@ -1254,11 +1293,33 @@ export class CPaint3DMerge extends CPaint
             for(let i=_oCI.vertexCount;i<ovb[0].bufF.Size(3);++i)
             {
                 let v=ovb[0].bufF.V3(i);
-            
+
                 CMath.V3MulMatCoordi(v,LPMat,tempv);
                 ovb[0].bufF.X3(i,tempv.x);
                 ovb[0].bufF.Y3(i,tempv.y);
                 ovb[0].bufF.Z3(i,tempv.z);
+            }
+
+            // 노말도 같이 굽는다(안 하면 로컬 회전이 있는 인스턴스는 병합 후 노말이 틀어져
+            // 조명이 어긋난다). 비균등 스케일에서도 맞도록 역-전치 행렬을 쓴다 - 셰이더의
+            // 기본 노말 변환(z_file/3D.ts의 nMat3 = TransposeMat3(InverseMat3(...)))과 같은 방식
+            let nMat=CMath.MatTranspose(CMath.MatInvert(LPMat));
+            let tempn=new CVec3();
+            for(let i=_oCI.vertexCount;i<onb[0].bufF.Size(3);++i)
+            {
+                let n=onb[0].bufF.V3(i);
+                CMath.V3MulMatNormal(n,nMat,tempn);
+                CMath.V3Nor(tempn,tempn);
+                onb[0].bufF.X3(i,tempn.x);
+                onb[0].bufF.Y3(i,tempn.y);
+                onb[0].bufF.Z3(i,tempn.z);
+            }
+            for(let i=_oCI.vertexCount;i<otanb[0].bufF.Size(4);++i)
+            {
+                let t=otanb[0].bufF.V4(i);
+                CMath.V3MulMatNormal(t.xyz,LPMat,tempn);
+                CMath.V3Nor(tempn,tempn);
+                otanb[0].bufF.V4(i,tempn.x,tempn.y,tempn.z,t.w);
             }
 
 			// 인덱스 복사
@@ -1284,22 +1345,4 @@ export class CPaint3DMerge extends CPaint
 		
 	}
     
-	override EmptyRPChk()
-	{
-		if(this.mRenderPass.length==0)
-		{
-			let sChk=true;
-			for(let each0 of this.mRenderPass)
-			{
-				if(each0.mTag.has("shadowWrite")==true)
-				{
-					continue;
-				}
-				sChk=false;
-			}
-			if(sChk)
-				this.mRenderPass.push(new CRPAuto(this.mOwner.GetFrame().Pal().Sl3D().mKey));
-		}
-	}
-	
 }

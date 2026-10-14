@@ -299,8 +299,14 @@ export class CUI extends CSubject {
             else
                 ev = CEvent.eType.Pick;
             let push = true;
-            let aDepth = this.GetPt().GetRenderPass()[0].mPriority + this.GetPt().GetFMat().z;
-            for (let i = 0; i < gUIPDepth.length; ++i) {
+            const aPass = this.GetPt().GetRenderPass();
+            if (aPass.length == 0) {
+                push = false;
+                ev = CEvent.eType.Null;
+                this.mPick = null;
+            }
+            let aDepth = aPass.length == 0 ? 0 : aPass[0].mPriority + this.GetPt().GetFMat().z;
+            for (let i = 0; push && i < gUIPDepth.length; ++i) {
                 if (gUIPDepth[i] != this && gUIPDepth[i].mLastPickMouse.mouse.key == this.mPick.mouse.key) {
                     push = false;
                     ev = CEvent.eType.Null;
@@ -311,7 +317,10 @@ export class CUI extends CSubject {
                     push = false;
                     continue;
                 }
-                let bDepth = gUIPDepth[i].GetPt().GetRenderPass()[0].mPriority + gUIPDepth[i].GetPt().GetFMat().z;
+                const bPass = gUIPDepth[i].GetPt().GetRenderPass();
+                if (bPass.length == 0)
+                    continue;
+                let bDepth = bPass[0].mPriority + gUIPDepth[i].GetPt().GetFMat().z;
                 if (gUIPDepth[i].mLastPickMouse.mouse.key == this.mPick.mouse.key) {
                     if (aDepth == bDepth) {
                         let aDist = CMath.V3Distance(this.mPick.ray.GetPosition(), this.GetPos());

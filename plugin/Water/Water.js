@@ -1,8 +1,9 @@
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CBrushComp } from "../../artgine/app/component/CBrushComp.js";
 import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
-import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
+import { CPaintTrail } from "../../artgine/app/component/paint/CPaintTrail.js";
+import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CSubject } from "../../artgine/app/subject/CSubject.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
@@ -40,6 +41,7 @@ export class CWater3D extends CSubject {
     mCausticFlowDir = new CVec2(0, 0);
     mCausticFlowFrequency = new CVec1(1);
     mNormalFlowDir = new CVec2(0, 0);
+    mWaterTex = null;
     constructor() {
         super();
         this.mPaint = new CPaint3D(CFrame.Main().Pal().GetPlaneMesh());
@@ -135,6 +137,8 @@ export class CWater3D extends CSubject {
             }
             if (this.mPaint.GetMesh() != waterMeshKey) {
                 this.mPaint.SetMesh(waterMeshKey);
+                if (this.mWaterTex != null)
+                    this.mPaint.SetTexture([this.mWaterTex]);
             }
         }
     }
@@ -182,6 +186,9 @@ export class CWater3D extends CSubject {
             this.RemoveRefractor();
             this.mPaint.PushTag("UseWaterTex");
             this.mPaint.PushCShaderAttr(new CShaderAttr("texflowDir", _flow));
+            if (this.mPaint.mAutoLoad != null)
+                this.mPaint.mAutoLoad.mWrap = CTexture.eWrap.Repeat;
+            this.mWaterTex = _texture;
             this.mPaint.SetTexture([_texture]);
         }
     }
@@ -239,6 +246,7 @@ export class CReflector3D extends CBrushComp {
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class", "==", "CPaint3D"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
+            rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, CFrame.Main().Pal().GetEnvMapTex()));
             this.PushRPAuto(rp);
         }
         {
@@ -249,6 +257,7 @@ export class CReflector3D extends CBrushComp {
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class", "==", "CPaintTerrain"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
+            rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, CFrame.Main().Pal().GetEnvMapTex()));
             this.PushRPAuto(rp);
         }
         {
@@ -297,7 +306,7 @@ export class CReflector3D extends CBrushComp {
         for (const rp of this.mWriteRP) {
             const rpKey = this.mTexKey + rp.mShader;
             if (!this.mBrush.AutoRP().has(rpKey)) {
-                this.mBrush.SetAutoRP(rpKey, rp);
+                this.mBrush.PushAutoRP(rpKey, rp);
             }
             if (rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
@@ -305,16 +314,16 @@ export class CReflector3D extends CBrushComp {
             }
         }
         const mainCam = this.mBrush.GetCam3D();
-        if (mainCam.mUpdateMat == CUpdate.eType.Updated) {
+        {
             const virtualCam = this.mBrush.GetCamera(this.mTexKey);
             const wMat = this.GetOwner().GetMat();
             const pos = wMat.xyz;
             const rot = CMath.QutToMat(CMath.MatDecomposeRot(wMat));
-            const normal = CMath.V3Nor(CMath.V3MulMatNormal(new CVec3(0, 0, 1), rot));
+            const normal = new CVec3(0, 1, 0);
             const view = CMath.V3SubV3(pos, mainCam.GetEye());
             const realUp = CMath.V3Cross(mainCam.GetView(), mainCam.GetCross());
             const eye = CMath.V3AddV3(CMath.V3MulFloat(this.V3Reflect(view, normal), -1), pos);
-            const look = CMath.V3AddV3(this.V3Reflect(mainCam.GetView(), normal), eye);
+            const look = CMath.V3AddV3(CMath.V3MulFloat(this.V3Reflect(CMath.V3SubV3(pos, mainCam.GetLook()), normal), -1), pos);
             const up = this.V3Reflect(realUp, normal);
             if (virtualCam.Init(eye, look, up)) {
                 virtualCam.SetFar(mainCam.GetFar());
@@ -338,34 +347,39 @@ export class CReflector3D extends CBrushComp {
     }
 }
 export class CRefractor3D extends CBrushComp {
-    mSize = 256;
+    mSize = 512;
     mCycle = 0;
     constructor() {
         super("refractor_" + CUniqueID.Get());
         {
             const rp = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
             rp.mCopy = false;
+            rp.mAlpha = false;
             rp.mPriority = CRenderPass.ePriority.Normal - 1;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class", "==", "CPaint3D"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
+            rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, CFrame.Main().Pal().GetEnvMapTex()));
             this.PushRPAuto(rp);
         }
         {
             const rp = new CRPAuto(CFrame.Main().Pal().SlTerrain().mKey);
             rp.mCopy = false;
+            rp.mAlpha = false;
             rp.mPriority = CRenderPass.ePriority.Normal - 1;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class", "==", "CPaintTerrain"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
+            rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, CFrame.Main().Pal().GetEnvMapTex()));
             this.PushRPAuto(rp);
         }
     }
     AddWaterDeep(_waterDeep, _waterDist, _shallowColor, _deepColor, _waterHeight) {
         for (let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
+            rp.mTag.add("waterProcessing");
             rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
             rp.mShaderAttr.push(new CShaderAttr("waterUnderFadeDist", _waterDist));
             rp.mShaderAttr.push(new CShaderAttr("shallowColor", _shallowColor));
@@ -376,6 +390,7 @@ export class CRefractor3D extends CBrushComp {
     AddCaustics(_flow, _freq) {
         for (let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
+            rp.mTag.add("waterProcessing");
             rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
             rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
         }
@@ -383,6 +398,7 @@ export class CRefractor3D extends CBrushComp {
     AddNormalFlow(_flow) {
         for (let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
+            rp.mTag.add("waterProcessing");
             rp.mShaderAttr.push(new CShaderAttr("normalflowDir", _flow));
         }
     }
@@ -408,7 +424,7 @@ export class CRefractor3D extends CBrushComp {
         for (const rp of this.mWriteRP) {
             const rpKey = this.mTexKey + rp.mShader;
             if (!this.mBrush.AutoRP().has(rpKey)) {
-                this.mBrush.SetAutoRP(rpKey, rp);
+                this.mBrush.PushAutoRP(rpKey, rp);
             }
             if (rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
@@ -416,7 +432,7 @@ export class CRefractor3D extends CBrushComp {
             }
         }
         const mainCam = this.mBrush.GetCam3D();
-        if (mainCam.mUpdateMat == CUpdate.eType.Updated) {
+        {
             const virtualCam = this.mBrush.GetCamera(this.mTexKey);
             if (virtualCam.Init(mainCam.GetEye(), mainCam.GetLook())) {
                 virtualCam.SetFar(mainCam.GetFar());
@@ -439,20 +455,109 @@ export class CRefractor3D extends CBrushComp {
         }
     }
 }
-export class CPaint2DWater extends CPaint2D {
+export class CPaint2DWater extends CPaintTrail {
+    SetSurface(_up, _down) {
+        if (_up.length < 2 || _up.length != _down.length) {
+            CAlert.E("CPaint2DWater.SetSurface : up/down 길이가 같아야 하고 2개 이상이어야 함");
+            return;
+        }
+        this.UpdateBuffer(_up, _down);
+    }
+    SetColor(_shallow, _deep, _tint = 0.35) {
+        this.PushCShaderAttr(new CShaderAttr("shallowColor", _shallow));
+        this.PushCShaderAttr(new CShaderAttr("deepColor", _deep));
+        this.PushCShaderAttr(new CShaderAttr("waterTint", _tint));
+    }
+    SetTint(_val) {
+        this.PushCShaderAttr(new CShaderAttr("waterTint", _val));
+    }
+    SetWobble(_val) {
+        this.PushCShaderAttr(new CShaderAttr("wobble", _val));
+    }
+    SetReflectivity(_val) {
+        this.PushCShaderAttr(new CShaderAttr("reflectivity", _val));
+    }
+    SetReflectScale(_val) {
+        this.PushCShaderAttr(new CShaderAttr("reflectScale", _val));
+    }
+    SetReflectAnchor(_anchorY, _blend) {
+        this.PushCShaderAttr(new CShaderAttr("anchorY", _anchorY));
+        this.PushCShaderAttr(new CShaderAttr("reflectAnchor", _blend));
+    }
+    SetReflectRange(_start, _end) {
+        this.PushCShaderAttr(new CShaderAttr("reflectRange", new CVec2(_start, _end)));
+    }
+    SetTopSide(_top) {
+        this.PushCShaderAttr(new CShaderAttr("waterTop", _top ? 1.0 : -1.0));
+    }
 }
 export class CWater2D extends CSubject {
     mPaint;
     mReflector;
-    constructor() {
+    mShare = null;
+    constructor(_priority = CRenderPass.ePriority.AlphaAuto, _share = null) {
         super();
-        this.mReflector = new CReflector2D();
-        this.PushComp(this.mReflector);
-        this.mPaint = new CPaint2DWater(this.mReflector.GetTex(), new CVec2(1, 1));
-        this.mPaint.PushRenderPass(new CRenderPass(gWaterShader));
+        if (_share == null) {
+            this.mReflector = new CReflector2D();
+            this.PushComp(this.mReflector);
+        }
+        else
+            this.mShare = _share;
+        this.mPaint = new CPaint2DWater(this.Reflector().GetTex());
+        this.mPaint.RemoveTag("trail");
+        const rp = new CRenderPass(gWaterShader, _priority);
+        rp.mCullFrustum = false;
+        this.mPaint.PushRenderPass(rp);
         this.mPaint.PushTag("water");
         this.mPaint.PushTag("2D");
         this.PushComp(this.mPaint);
+        this.mPaint.PushCShaderAttr(new CShaderAttr("worldMat", this.mPaint.GetFMat()));
+        this.mPaint.SetColor(new CVec3(0.25, 0.45, 0.55), new CVec3(0.02, 0.12, 0.25), 0.35);
+        this.mPaint.SetWobble(0.005);
+        this.mPaint.SetReflectivity(1.0);
+        this.mPaint.SetReflectRange(0.25, 0.85);
+        this.mPaint.SetReflectAnchor(0.0, 1.0);
+        this.SetRect();
+    }
+    Reflector() {
+        return this.mReflector != null ? this.mReflector : this.mShare.Reflector();
+    }
+    SetRect() {
+        this.mPaint.SetSurface([new CVec3(-0.5, 0.5, 0.5), new CVec3(0.5, 0.5, 0.5)], [new CVec3(-0.5, -0.5, -0.5), new CVec3(0.5, -0.5, -0.5)]);
+    }
+    SetSurface(_up, _down) {
+        this.mPaint.SetSurface(_up, _down);
+    }
+    SetSurfaceHeight(_height) {
+        const up = new Array();
+        const down = new Array();
+        for (let i = 0; i < _height.length; ++i) {
+            const x = -0.5 + i / (_height.length - 1);
+            up.push(new CVec3(x, _height[i], _height[i]));
+            down.push(new CVec3(x, -0.5, -0.5));
+        }
+        this.mPaint.SetSurface(up, down);
+    }
+    SetColor(_shallow, _deep, _tint = 0.35) {
+        this.mPaint.SetColor(_shallow, _deep, _tint);
+    }
+    SetTint(_val) {
+        this.mPaint.SetTint(_val);
+    }
+    SetWobble(_val) {
+        this.mPaint.SetWobble(_val);
+    }
+    SetReflectivity(_val) {
+        this.mPaint.SetReflectivity(_val);
+    }
+    SetReflectScale(_val) {
+        this.mPaint.SetReflectScale(_val);
+    }
+    SetReflectAnchor(_anchorY, _blend) {
+        this.mPaint.SetReflectAnchor(_anchorY, _blend);
+    }
+    SetReflectRange(_start, _end) {
+        this.mPaint.SetReflectRange(_start, _end);
     }
     NormalFlow(_flow, _normalTex1 = null, _normalTex2 = null) {
         this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
@@ -469,9 +574,10 @@ export class CWater2D extends CSubject {
     }
     Update(_update) {
         super.Update(_update);
-        if (this.mPaint.FindCShaderAttr("waterViewMat") == null && this.mReflector.mWaterCam != null) {
-            this.mPaint.PushCShaderAttr(new CShaderAttr("waterViewMat", this.mReflector.mWaterCam.GetViewMat()));
-            this.mPaint.PushCShaderAttr(new CShaderAttr("waterProjectMat", this.mReflector.mWaterCam.GetProjMat()));
+        const refl = this.Reflector();
+        if (this.mPaint.FindCShaderAttr("waterViewMat") == null && refl.mWaterCam != null) {
+            this.mPaint.PushCShaderAttr(new CShaderAttr("waterViewMat", refl.mWaterCam.GetViewMat()));
+            this.mPaint.PushCShaderAttr(new CShaderAttr("waterProjectMat", refl.mWaterCam.GetProjMat()));
         }
     }
 }
@@ -488,7 +594,7 @@ export class CReflector2D extends CBrushComp {
             rp.mRenderTarget = this.GetTex();
             rp.PushOr(new CCondition("class", "==", "CPaint2D"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
-            rp.SetKey("water2dCPaint2D");
+            rp.SetKey("water2dCPaint2D_" + this.GetTex());
             this.PushRPAuto(rp);
             rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
             rp.mCamera = "WaterCam";
@@ -497,7 +603,7 @@ export class CReflector2D extends CBrushComp {
             rp.PushOr(new CCondition("class", "==", "CPaintVoxel"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
             rp.mShader = "Artgine/Voxel.sl";
-            rp.SetKey("water2dCPaintVoxel");
+            rp.SetKey("water2dCPaintVoxel_" + this.GetTex());
             this.PushRPAuto(rp);
             rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
             rp.mPriority = CRenderPass.ePriority.Normal;
@@ -512,7 +618,7 @@ export class CReflector2D extends CBrushComp {
             rp.mCullFace = CRenderPass.eCull.None;
             rp.PushOr(new CCondition("class", "==", "CShadowPlane"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
-            rp.SetKey("rp2");
+            rp.SetKey("rp2_" + this.GetTex());
             this.PushRPAuto(rp);
             rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
             rp.mPriority = CRenderPass.ePriority.AlphaAuto;
@@ -545,7 +651,7 @@ export class CReflector2D extends CBrushComp {
         }
         for (const rp of this.mWriteRP) {
             if (!this.mBrush.AutoRP().has(rp.Key())) {
-                this.mBrush.SetAutoRP(rp.Key(), rp);
+                this.mBrush.PushAutoRP(rp.Key(), rp);
             }
         }
     }

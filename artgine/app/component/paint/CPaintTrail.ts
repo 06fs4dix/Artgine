@@ -150,7 +150,7 @@ import { CPaint } from "./CPaint.js";
 // 				this.mOwner.GetFrame().Ren().BuildTexture(tex);
 //                 this.mOwner.GetFrame().Res().Push(texKey,tex);
 // 				tex.SetWrap(CTexture.eWrap.Repeat);
-// 				tex.SetFilter(CTexture.eFilter.Neaest);
+// 				tex.SetFilter(CTexture.eFilter.Nearest);
 // 				tex.SetMipMap(false);
 // 			}
 			
@@ -201,7 +201,7 @@ import { CPaint } from "./CPaint.js";
 // 				//CH5Canvas.Register(this.mOwner.GetFW(),texKey);
 // 				//tex=this.mOwner.GetFW().Res().Find(texKey) as CTexture;
 // 				//tex.SetWrap(CTexture.eWrap.Repeat);
-// 				//tex.SetFilter(CTexture.eFilter.Neaest);
+// 				//tex.SetFilter(CTexture.eFilter.Nearest);
 // 				//tex.SetMipMap(false);
 // 			}
 			
@@ -752,14 +752,6 @@ export class CPaintTrail extends CPaint
 		this.PushTag("trail");
 	}
 	
-	override EmptyRPChk()
-	{
-		if(this.mRenderPass.length==0)
-		{
-			var rp=new CRenderPass(this.mOwner.GetFrame().Pal().Sl2D().mKey);
-			this.mRenderPass=[rp];
-		}
-	}
 	override GetDrawMesh(_meshKey : string,_shader : CShader)
 	{
 		var drawMesh = this.mOwner.GetFrame().Res().Find(this.mCurrentTargetSize+_meshKey+ _shader.mKey);
@@ -799,8 +791,9 @@ export class CPaintTrail extends CPaint
 			// for (let key of this.mBatchMap.keys()) {
 			// 	this.mBatchMap.set(key, null);
 			// }
-			this.ClearBatch();
-			this.mCamCullUpdate = true;
+			// 태그/AutoRP와 무관하게 정점 버퍼 자체가 재생성된 경우라 위임 없이 즉시 반영한다
+			// (위임하면 CCanvas.PTUpdate의 CRPAuto 비교에서 "안 바뀜"으로 판정돼 mRenPT가 갱신 안 될 수 있다).
+			this.ClearBatch(false);
 		} else {
 			// 기존 버퍼가 충분히 크면 사이즈를 유지함
 			this.mIsOutChanged = false; 

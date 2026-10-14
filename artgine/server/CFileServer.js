@@ -586,7 +586,7 @@ let CFileServer = class CFileServer extends CAuthServer {
         const urls = [];
         const seen = new Set();
         for (const row of rows) {
-            const abs = row.absolute_path;
+            const abs = row.path;
             if (!abs || seen.has(abs))
                 continue;
             seen.add(abs);
@@ -600,10 +600,6 @@ let CFileServer = class CFileServer extends CAuthServer {
         return JSON.stringify({ ok: true, urls, reason, matched: urls.length, total: rows.length });
     }
     async onMusicLyricsEn(_json, _req, _res) {
-        if (!this.IsAuth(_json, _req)) {
-            _res.status(403);
-            return JSON.stringify({ ok: false, msg: "Unauthorized" });
-        }
         const url = String(_json.GetStr("url") ?? '').trim();
         if (!url) {
             return JSON.stringify({ ok: false, msg: "No url" });

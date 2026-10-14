@@ -43,7 +43,7 @@ export class CGJKShape extends CObject
 	{
 		switch (_bound.GetType()) 
 		{
-        case CBound.eType.Polytope:
+        case CBound.eType.GJK:
             return new CGJKPolytope(_bound.mPos);
         case CBound.eType.Box:
             return new CGJKBox(_bound.mMin, _bound.mMax);

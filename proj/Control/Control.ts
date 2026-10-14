@@ -106,6 +106,12 @@ function updateSidebarMode() {
 updateSidebarMode();
 window.addEventListener('resize', updateSidebarMode);
 
+// F5 등으로 인한 실수 새로고침/닫기를 막기 위해 항상 브라우저 기본 이탈 확인창을 띄운다.
+window.addEventListener('beforeunload', (e) => {
+    e.preventDefault();
+    e.returnValue = '';
+});
+
 // ---- 우측 사이드바: 테마 선택 ----
 // data-bs-theme를 html 태그에 지정하는 것만으로 iframe(별도 문서라 영향 없음)을 제외한 Control 페이지
 // 전체(사이드바/탭/본문)에 테마가 적용된다. Bootstrap5 다크모드와 동일한 메커니즘을 커스텀 팔레트로 확장.
@@ -933,9 +939,9 @@ function wirePopupActions(rootEl: Element, getUrl: () => string, title: string, 
     rootEl.querySelector<HTMLElement>('[data-act="window"]')?.addEventListener('click', () => openSessionPopup(getUrl(), title, true, winName));
 }
 
-// 사이드바 강조는 Multiplexer에 떠 있는 세션을 그대로 보여 준다(메인 pane=빨강, 서브 pane=파랑,
-// 여러 개 동시). 이전처럼 그룹별로 하나만 켜지 않는다. RDP 목록과 Chat/Terminal/Browser/Editor
-// 통합 목록 모두 tmuxPaneRole() 기준.
+// 사이드바 강조는 Multiplexer에 떠 있는 세션을 그대로 보여 준다(pane마다 고유색, 여러 개 동시).
+// 이전처럼 그룹별로 하나만 켜지 않는다. RDP 목록과 Chat/Terminal/Browser/Editor 통합 목록 모두
+// tmuxPaneIdForKey()/tmuxPaneAccentStyle() 기준.
 function isPanelShown(panelId: string): boolean {
     return CDOM.ID(panelId).classList.contains('active');
 }
@@ -944,7 +950,8 @@ function isPanelShown(panelId: string): boolean {
 interface SessionItemSpec {
     activeClass: string;
     isActive: boolean;
-    /** activeClass가 -remote 계열일 때 원격지별 강조색(--rdp-accent/-bg)을 싣는 인라인 스타일. rdpAccentStyle() 참고. */
+    /** activeClass가 -pane일 때 소속 Multiplexer pane별 강조색(--tmux-pane-accent/-bg)을 싣는 인라인 스타일.
+     *  tmuxPaneAccentStyle() 참고. -remote 계열은 별도로 rdpAccentStyle()을 직접 인라인에 쓴다. */
     accentStyle?: string;
     dataAttr: { name: string; value: string };
     /** 상단 탭 스트립(topTabStrip)의 짧은 한 줄 라벨. bodyHtml은 여러 줄이라 그대로 쓸 수 없어 별도로 둔다. */
@@ -975,7 +982,7 @@ function sessionItemDragKey(spec: SessionItemSpec): string | null {
 // 세션 아이템을 끄는 동안만 body.tmux-dragging을 켜서 Multiplexer pane들의 드롭존(.tmux-leaf-dropzone)이
 // 나타나게 한다(평소엔 숨겨서 iframe 조작을 방해하지 않는다).
 document.addEventListener('dragstart', (e: DragEvent) => {
-    if ((e.target as HTMLElement)?.closest?.('.ai-session-item, .top-tab-item')) document.body.classList.add('tmux-dragging');
+    if ((e.target as HTMLElement)?.closest?.('.ai-session-item, .tmux-tab-item')) document.body.classList.add('tmux-dragging');
 });
 document.addEventListener('dragend', () => document.body.classList.remove('tmux-dragging'));
 // leftHtml/bodyHtml은 갱신 대상이지만 드롭다운은 유지해야 한다(열려 있는 메뉴가 닫히고 Dropdown 인스턴스가
@@ -1032,10 +1039,11 @@ function createSessionItem(spec: SessionItemSpec): HTMLDivElement {
     return item;
 }
 
-const SESS_ACTIVE_CLASSES = ['ai-session-item-active', 'ai-session-item-active-remote', 'ai-session-item-active-main', 'ai-session-item-active-sub'];
-function applySessActiveClasses(el: HTMLElement, spec: { activeClass: string; isActive: boolean }) {
+const SESS_ACTIVE_CLASSES = ['ai-session-item-active', 'ai-session-item-active-remote', 'ai-session-item-active-pane'];
+function applySessActiveClasses(el: HTMLElement, spec: { activeClass: string; isActive: boolean; accentStyle?: string }) {
     el.classList.remove(...SESS_ACTIVE_CLASSES);
     if (spec.isActive) el.classList.add(spec.activeClass);
+    el.style.cssText = spec.accentStyle ?? '';
 }
 
 // 이미 있는 노드를 같은 키의 새 spec으로 맞춘다. 실제로 바뀐 슬롯만 건드리므로 클릭·드롭다운·스크롤이
@@ -1102,8 +1110,8 @@ interface FramePoolCtx {
     onCreate?: (f: HTMLIFrameElement, key: string) => void;
 }
 // RDP/Chat/Terminal/Browser/Editor 공용 프레임 풀. 예전에는 각 타입마다 자기 전용 탭(패널)에
-// iframe을 붙였지만, 지금은 전부 Multiplexer의 첫 번째 pane(tmuxPlaceFrame)에 옮겨 붙인다 -
-// 새 세션을 열면 그게 곧 "첫 프레임과 교체"다. ctx.container는 더 이상 쓰이지 않지만(각 타입의
+// iframe을 붙였지만, 지금은 전부 Multiplexer의 활성 pane(tmuxPlaceFrame)에 탭으로 붙인다.
+// ctx.container는 더 이상 쓰이지 않지만(각 타입의
 // 옛 전용 탭 컨테이너), FramePoolCtx 생성부를 그대로 두기 위해 필드는 남겨둔다.
 function showPooledFrame(ctx: FramePoolCtx, key: string, src: string): HTMLIFrameElement {
     let f = ctx.pool.get(key);
@@ -1125,8 +1133,8 @@ function showPooledFrame(ctx: FramePoolCtx, key: string, src: string): HTMLIFram
     ctx.updatePlaceholder();
     tmuxPlaceFrame(key, f);
     ctx.onActivate?.(key, prevKey);
-    // 센터에 보이는 프레임이 바뀌면(새 터미널/에디터 열림, 세션 전환 등) 좌측 Agent 서브탭 또는 우측 Other
-    // 탭의 active를 즉시 그 화면과 일치시킨다. chat/term→좌측 Agent 서브탭, browser/editor→우측 Other 탭
+    // 센터에 보이는 프레임이 바뀌면(새 터미널/에디터 열림, 세션 전환 등) 좌측 Agent/Other 서브탭의
+    // active를 즉시 그 화면과 일치시킨다. chat/term→Agent 서브탭, browser/editor/web→Other 서브탭
     // (RDP 등 그 외는 탭 전환 없음). renderSessionSidebar()는 rAF로 합류되므로 연속 호출해도 부담이 없다.
     syncSidebarTabToFrame(key);
     renderSessionSidebar();
@@ -1134,10 +1142,11 @@ function showPooledFrame(ctx: FramePoolCtx, key: string, src: string): HTMLIFram
 }
 // 프레임 키 접두사로 소속 탭을 판별해, 필요할 때만 그 탭으로 전환한다(폴링 렌더가 아니라 전환 시점에만).
 function syncSidebarTabToFrame(key: string) {
+    if (sbSubTab === 'file') return;
     const isAgent = /^(chat:|term:|term-new:)/.test(key);
-    const isOther = /^(browser:|editor:)/.test(key);
+    const isOther = /^(browser:|editor:|web:)/.test(key);
     if (isAgent && sbSubTab !== 'agent') { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); }
-    if (isOther) (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-other-tab')).show();
+    if (isOther && sbSubTab !== 'other') { sbSubTab = 'other'; localStorage.setItem(SB_TAB_LS, 'other'); applySidebarSubTab(); }
 }
 
 const rdpFrameCtx: FramePoolCtx = {
@@ -1292,7 +1301,7 @@ async function rdpRefreshAllStatus() {
 // 사이드바에서 "선택됨"으로 표시할 항목. activeRdpFrameKey(실제 로드된 iframe)와 달리
 // 프레임이 아직 열리지 않은 최초 상태에도 Local을 강제로 선택 표시하기 위해 별도로 둔다.
 let selectedRdpKey = 'rdp:local';
-// tmuxRoot/tmuxPaneRole보다 먼저 rdpRenderList()가 호출되므로, let TDZ를 피하려면
+// tmuxRoot/tmuxPaneIdForKey보다 먼저 rdpRenderList()가 호출되므로, let TDZ를 피하려면
 // 이 플래그를 그보다 위에 둬야 한다. tmuxLoadLayout 직후 true가 된다.
 let tmuxTreeReady = false;
 
@@ -1480,7 +1489,7 @@ CDOM.ID('ctrlSideFileRootSel')?.addEventListener('change', () => {
     const nextWeb = remote ? rdpRemoteWebRootUrl(remote.entryUrl) : '';
     const next = opt.value;
     if (ctrlNormPath(next) === ctrlNormPath(ctrlSelectedRootPath) && (currentWebRootUrl || '') === (nextWeb || '')) return;
-    if ((currentWebRootUrl || '') !== (nextWeb || '')) { currentWebRootUrl = nextWeb; logOnServerChanged(); }
+    if ((currentWebRootUrl || '') !== (nextWeb || '')) { currentWebRootUrl = nextWeb; loadAiProviderStatus(); }
     ctrlSelectedRootPath = next;
     // 이전 워킹 폴더 인덱싱이 돌고 있으면 즉시 중단한다(검색창 잠금·BFS 요청이 새 폴더로 새지 않게).
     ctrlSideSrchStop();
@@ -1496,7 +1505,7 @@ function rdpOpenLocal() {
     currentWebRootUrl = '';
     if (fileIframe?.contentWindow) CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: '' });
     ctrlRefreshRootSelect();
-    logOnServerChanged();
+    loadAiProviderStatus();
 }
 
 // 사이드바 클릭 진입점. 미연결(빨강) 항목이면 먼저 재확인부터 한다 — 원격 PC가 그새 켜졌을 수 있으므로
@@ -1532,7 +1541,7 @@ function rdpOpenRemote(remoteId: string) {
     currentWebRootUrl = rdpRemoteWebRootUrl(remote.entryUrl);
     if (fileIframe?.contentWindow) CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: remote.entryUrl });
     ctrlRefreshRootSelect();
-    logOnServerChanged();
+    loadAiProviderStatus();
 }
 
 function rdpShowShareLink(remoteUrl: string) {
@@ -1804,7 +1813,7 @@ function ctrlShowFileTab() {
 function ctrlSideFileOpenFromSearch(scope: ICtrlSearchScope, pathVal: string) {
     // 로컬 스코프는 currentWebRootUrl='', 원격은 그 서버 apiUrl. File/List·토큰이 이 값을 본다.
     const nextWeb = scope.remoteId ? scope.webRootUrl : '';
-    if ((currentWebRootUrl || '') !== (nextWeb || '')) { currentWebRootUrl = nextWeb; logOnServerChanged(); }
+    if ((currentWebRootUrl || '') !== (nextWeb || '')) { currentWebRootUrl = nextWeb; loadAiProviderStatus(); }
     if (ctrlNormPath(ctrlSelectedRootPath ?? '') !== ctrlNormPath(scope.rootPath ?? '')) {
         ctrlSelectedRootPath = scope.rootPath ?? '';
         ctrlSyncSideFileRootSel();
@@ -1978,15 +1987,21 @@ async function ctrlFileSearch(onlyKey?: string) {
 
     const keyOf = (scopeKey: string, dirPath: string, name: string) => scopeKey + ' ' + dirPath + ' ' + name;
 
+    // "big/Effect"(슬래시)나 "big effect"(스페이스) 둘 다 같은 방식으로 처리: 구분자로 쪼갠 토큰들이
+    // 전체 경로(dirPath+name) 안에 순서 무관 AND로 모두 포함되면 매치. 예) "big effect" -> .../big/Effect/... 매치.
+    const ctrlSrchTokens = (query: string) => query.split(/[\/\s]+/).filter(Boolean);
+    const ctrlSrchMatch = (tokens: string[], fullPathLower: string) => tokens.every(t => fullPathLower.includes(t));
+
     const renderFromCache = (activeScopes: ICtrlSearchScopeItem[], query: string, shown: Set<string>) => {
         let found = 0;
+        const tokens = ctrlSrchTokens(query);
         for (const { key: scopeKey, scope } of activeScopes) {
             const cache = g_ctrlSrchCache.get(scopeKey);
             if (!cache) continue;
             for (const [dirPath, list] of cache) {
                 for (const fl of list) {
                     if (fl.hidden || ctrlIsSearchExcluded(fl.name)) continue;
-                    if (fl.name.toLowerCase().includes(query)) {
+                    if (ctrlSrchMatch(tokens, (dirPath + fl.name).toLowerCase())) {
                         const key = keyOf(scopeKey, dirPath, fl.name);
                         if (shown.has(key)) continue;
                         shown.add(key);
@@ -2002,6 +2017,7 @@ async function ctrlFileSearch(onlyKey?: string) {
     const doSearch = async () => {
         const query = input.value.trim().toLowerCase();
         if (!query) return;
+        const tokens = ctrlSrchTokens(query);
 
         const checkedKeys = new Set(
             Array.from(scopesEl.querySelectorAll<HTMLInputElement>('.ctrl-srch-scope-cb'))
@@ -2055,7 +2071,7 @@ async function ctrlFileSearch(onlyKey?: string) {
                     cache.set(dirPath, data.list);
                     for (const fl of data.list) {
                         if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name)) queue.push(dirPath + fl.name + '/');
-                        if (!fl.hidden && fl.name.toLowerCase().includes(query) && found < 200) {
+                        if (!fl.hidden && ctrlSrchMatch(tokens, (dirPath + fl.name).toLowerCase()) && found < 200) {
                             const key = keyOf(scopeKey, dirPath, fl.name);
                             if (shown.has(key)) continue;
                             shown.add(key);
@@ -2678,6 +2694,12 @@ const CTRL_SIDE_SRCH_CONCURRENCY = 16;
 interface ICtrlSideSrchState { rootKey: string; indexed: boolean; indexing: boolean; cache: Map<string, CtrlSrchFile[]>; root: string; down: string; }
 let g_ctrlSideSrch: ICtrlSideSrchState = { rootKey: '', indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
 let ctrlSideSrchSeq = 0;
+// TS 내용 검색 모드(ctrlSideFileSearchMode select). 파일명 인덱스(g_ctrlSideSrch)와 rootKey를 공유하되
+// 별도 캐시(경로 -> 파일 내용)를 쓴다. 용량이 커서 localStorage에는 저장하지 않는다(세션 한정).
+interface ICtrlSideSrchTsState { rootKey: string; indexed: boolean; indexing: boolean; cache: Map<string, string>; }
+let g_ctrlSideSrchTs: ICtrlSideSrchTsState = { rootKey: '', indexed: false, indexing: false, cache: new Map() };
+let ctrlSideSrchTsSeq = 0;
+let ctrlSideSrchMode: 'file' | 'ts' = 'file';
 
 function ctrlSideSrchKey(): string {
     return (currentWebRootUrl || '') + '|' + (ctrlSelectedRootPath || '');
@@ -2687,8 +2709,10 @@ function ctrlSideSrchKey(): string {
 // 요청하지 않음) 검색창/캐시를 초기화한다. 이미 날아간 File/List 응답은 캐시·placeholder에 반영되지 않는다.
 function ctrlSideSrchStop() {
     ctrlSideSrchSeq++;
-    const wasIndexing = g_ctrlSideSrch.indexing;
+    ctrlSideSrchTsSeq++;
+    const wasIndexing = g_ctrlSideSrch.indexing || g_ctrlSideSrchTs.indexing;
     g_ctrlSideSrch = { rootKey: '', indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+    g_ctrlSideSrchTs = { rootKey: '', indexed: false, indexing: false, cache: new Map() };
     if (wasIndexing) {
         ctrlSideFileSearchInputEl.disabled = false;
         ctrlSideFileSearchInputEl.placeholder = L('ctrl.ph.sideSearch', 'Search (click to index)');
@@ -2697,9 +2721,72 @@ function ctrlSideSrchStop() {
     ctrlSideFileSearchResultsEl.classList.add('d-none');
 }
 
-// 현재 워킹 폴더 전체를 BFS로 스캔해 파일명 캐시를 채운다. 이미 인덱싱됐거나 진행 중이면 아무 것도 하지 않는다.
+// 완료된 인덱스를 폴더(rootKey)별로 IndexedDB에 저장해두고, 다음에 같은 폴더를 열면 재스캔 대신
+// 이걸 불러올지 물어본다(ctrlSideSrchIndex) - 매번 BFS를 새로 도는 게 느리고 번거롭다는 요청 반영.
+// localStorage(약 5MB)는 큰 루트 인덱스가 들어가지 않아 setItem이 조용히 실패하고 매번 재스캔됐다 → IndexedDB에 저장한다.
+const CTRL_SIDE_SRCH_LS_PREFIX = 'ctrl-side-file-index-v1:';
+const CTRL_SIDE_SRCH_IDB_PREFIX = 'ctrl-side-file-index-v2:';
+interface ICtrlSideSrchSaved { root: string; down: string; cache: Record<string, CtrlSrchFile[]>; ts: number; }
+async function ctrlSideSrchLoadSavedIndex(key: string): Promise<ICtrlSideSrchSaved | null> {
+    try { localStorage.removeItem(CTRL_SIDE_SRCH_LS_PREFIX + key); } catch (_) {}
+    try {
+        const saved = await CStorage.IGet(CTRL_SIDE_SRCH_IDB_PREFIX + key) as ICtrlSideSrchSaved | null;
+        return saved && saved.cache ? saved : null;
+    } catch (_) { return null; }
+}
+function ctrlSideSrchSaveIndex(key: string, state: ICtrlSideSrchState): void {
+    const saved: ICtrlSideSrchSaved = { root: state.root, down: state.down, cache: Object.fromEntries(state.cache), ts: Date.now() };
+    CStorage.ISet(CTRL_SIDE_SRCH_IDB_PREFIX + key, saved).catch(() => {});
+}
+function ctrlSideSrchDeleteSavedIndex(key: string): void {
+    CStorage.ISet(CTRL_SIDE_SRCH_IDB_PREFIX + key, null).catch(() => {});
+}
+// 저장된 인덱스를 그대로 캐시에 얹는다(재스캔 없이 즉시 검색 가능한 상태로).
+function ctrlSideSrchApplySaved(key: string, saved: ICtrlSideSrchSaved): void {
+    if (ctrlSideSrchKey() !== key) return; // 확인창이 떠 있는 동안 워킹 폴더가 바뀌었으면 무시
+    g_ctrlSideSrch = { rootKey: key, indexed: true, indexing: false, cache: new Map(Object.entries(saved.cache)), root: saved.root, down: saved.down };
+}
+let ctrlSideSrchPending: { key: string; promise: Promise<void> } | null = null;
+// 입력창 포커스 시 호출되는 진입점. 저장된 인덱스가 있으면 재사용할지 새로 스캔할지 먼저 물어보고,
+// 없으면 바로 스캔(ctrlSideSrchScan)한다.
 async function ctrlSideSrchIndex(): Promise<void> {
     const key = ctrlSideSrchKey();
+    if (g_ctrlSideSrch.rootKey !== key) g_ctrlSideSrch = { rootKey: key, indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+    if (g_ctrlSideSrch.indexed || g_ctrlSideSrch.indexing) return;
+    if (ctrlSideSrchPending?.key === key) return ctrlSideSrchPending.promise;
+
+    const promise = (async () => {
+        const saved = await ctrlSideSrchLoadSavedIndex(key);
+        if (ctrlSideSrchKey() !== key) return;
+        await ctrlSideSrchUseSavedOrScan(key, saved);
+    })();
+    ctrlSideSrchPending = { key, promise };
+    try { await promise; }
+    finally { if (ctrlSideSrchPending?.promise === promise) ctrlSideSrchPending = null; }
+}
+async function ctrlSideSrchUseSavedOrScan(key: string, saved: ICtrlSideSrchSaved | null): Promise<void> {
+    if (saved) {
+        // TS 내용 인덱스(ctrlSideSrchTsIndex)가 "파일명 인덱스가 끝날 때까지" 기다릴 수 있도록, 확인창에서
+        // 사용자가 실제로 고를 때까지 이 Promise를 미해결 상태로 둔다(콜백 기반 CConfirm을 await 가능하게 감쌈).
+        await new Promise<void>((resolve) => {
+            CConfirm.List(
+                L('ctrl.msg.reuseIndexBody', 'A previously saved file index exists for this folder. Load the saved index, or scan again?'),
+                [
+                    () => { ctrlSideSrchApplySaved(key, saved); resolve(); },
+                    () => { ctrlSideSrchDeleteSavedIndex(key); ctrlSideSrchScan(key).then(resolve); },
+                ],
+                [
+                    L('ctrl.btn.reuseIndex', 'Load saved'),
+                    L('ctrl.btn.reindex', 'Scan again'),
+                ],
+            );
+        });
+        return;
+    }
+    await ctrlSideSrchScan(key);
+}
+// 현재 워킹 폴더 전체를 BFS로 스캔해 파일명 캐시를 채운다. 이미 인덱싱됐거나 진행 중이면 아무 것도 하지 않는다.
+async function ctrlSideSrchScan(key: string): Promise<void> {
     if (g_ctrlSideSrch.rootKey !== key) g_ctrlSideSrch = { rootKey: key, indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
     if (g_ctrlSideSrch.indexed || g_ctrlSideSrch.indexing) return;
 
@@ -2754,11 +2841,70 @@ async function ctrlSideSrchIndex(): Promise<void> {
     g_ctrlSideSrch.indexed = true;
     ctrlSideFileSearchInputEl.disabled = false;
     ctrlSideFileSearchInputEl.placeholder = prevPlaceholder;
+    ctrlSideSrchSaveIndex(key, g_ctrlSideSrch);
 }
 
+// TS 모드로 전환했을 때(또는 이미 TS 모드에서 포커스했을 때) 호출한다. 파일명 인덱스(g_ctrlSideSrch)가
+// 이 폴더의 파일 목록을 이미 갖고 있으니 디렉터리를 다시 훑지 않고, 그 목록에서 .ts 파일만 골라 내용을
+// 정적 다운로드 URL(g_ctrlSideSrch.down)로 직접 읽어온다 - File/List 같은 API 왕복 없이 순수 GET이라 가볍다.
+// 결과는 localStorage에 저장하지 않는다(요청사항 - 내용 캐시는 용량이 커서 세션 한정으로만 유지).
+async function ctrlSideSrchTsIndex(): Promise<void> {
+    const key = ctrlSideSrchKey();
+    if (g_ctrlSideSrchTs.rootKey !== key) g_ctrlSideSrchTs = { rootKey: key, indexed: false, indexing: false, cache: new Map() };
+    if (g_ctrlSideSrchTs.indexed || g_ctrlSideSrchTs.indexing) return;
+
+    // 파일명 인덱스가 없으면 먼저 만든다(저장된 파일명 인덱스가 있으면 그쪽 흐름이 재사용 여부를 물어봄).
+    await ctrlSideSrchIndex();
+    while (g_ctrlSideSrch.indexing && ctrlSideSrchKey() === key) await new Promise(r => setTimeout(r, 50));
+    if (ctrlSideSrchKey() !== key || !g_ctrlSideSrch.indexed) return;
+
+    const seq = ++ctrlSideSrchTsSeq;
+    g_ctrlSideSrchTs.indexing = true;
+    ctrlSideFileSearchInputEl.disabled = true;
+    const prevPlaceholder = ctrlSideFileSearchInputEl.placeholder;
+
+    const queue: string[] = [];
+    for (const [dirPath, list] of g_ctrlSideSrch.cache) {
+        for (const fl of list) {
+            if (fl.file && !fl.hidden && fl.name.toLowerCase().endsWith('.ts')) queue.push(dirPath + fl.name);
+        }
+    }
+    const total = queue.length;
+    let done = 0;
+    ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingTsCount', 'Indexing .ts content... ({0}/{1})', 0, total);
+    const worker = async () => {
+        while (queue.length > 0 && seq === ctrlSideSrchTsSeq) {
+            const relPath = queue.shift();
+            if (relPath === undefined) break;
+            try {
+                const res = await fetch(g_ctrlSideSrch.down + ctrlEncodeUrlPath(relPath));
+                const text = res.ok ? await res.text() : '';
+                if (seq !== ctrlSideSrchTsSeq) return;
+                g_ctrlSideSrchTs.cache.set(relPath, text);
+            } catch { /* 이 파일만 건너뛰고 계속 */ }
+            if (seq !== ctrlSideSrchTsSeq) return;
+            done++;
+            ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingTsCount', 'Indexing .ts content... ({0}/{1})', done, total);
+        }
+    };
+    await Promise.all(Array.from({ length: CTRL_SIDE_SRCH_CONCURRENCY }, () => worker()));
+
+    if (seq !== ctrlSideSrchTsSeq) return;
+    g_ctrlSideSrchTs.indexing = false;
+    g_ctrlSideSrchTs.indexed = true;
+    ctrlSideFileSearchInputEl.disabled = false;
+    ctrlSideFileSearchInputEl.placeholder = prevPlaceholder;
+}
+
+// mode='file'이면 이름 매치(ctrlSideSrchRenderFileResults), mode='ts'면 .ts 내용 매치
+// (ctrlSideSrchRenderTsResults)로 분기한다.
 function ctrlSideSrchRenderResults(query: string) {
     ctrlSideFileSearchResultsEl.innerHTML = '';
     if (!query) { ctrlSideFileSearchResultsEl.classList.add('d-none'); return; }
+    const found = ctrlSideSrchMode === 'ts' ? ctrlSideSrchRenderTsResults(query) : ctrlSideSrchRenderFileResults(query);
+    ctrlSideFileSearchResultsEl.classList.toggle('d-none', found === 0);
+}
+function ctrlSideSrchRenderFileResults(query: string): number {
     let found = 0;
     outer:
     for (const [dirPath, list] of g_ctrlSideSrch.cache) {
@@ -2791,10 +2937,46 @@ function ctrlSideSrchRenderResults(query: string) {
             if (++found >= 100) break outer;
         }
     }
-    ctrlSideFileSearchResultsEl.classList.toggle('d-none', found === 0);
+    return found;
+}
+// .ts 파일 내용에서 query를 찾아, 매치된 파일과 첫 매치 줄(스니펫)을 보여준다. 클릭하면 그 파일을 연다
+// (특정 줄로 점프하지는 않음 - 파일명 검색과 동일한 수준의 "일단 열기"만 지원).
+function ctrlSideSrchRenderTsResults(query: string): number {
+    let found = 0;
+    for (const [relPath, content] of g_ctrlSideSrchTs.cache) {
+        const idx = content.toLowerCase().indexOf(query);
+        if (idx < 0) continue;
+        const lineStart = content.lastIndexOf('\n', idx) + 1;
+        const lineEndIdx = content.indexOf('\n', idx);
+        const snippet = content.slice(lineStart, lineEndIdx < 0 ? content.length : lineEndIdx).trim();
+        const name = relPath.split('/').pop() || relPath;
+        const dirPath = relPath.slice(0, relPath.length - name.length);
+        const item = document.createElement('div');
+        item.className = 'list-group-item list-group-item-action py-1 px-2';
+        item.innerHTML =
+            `<i class="bi bi-file-earmark-code me-1"></i><strong>${aiEscapeHtml(name)}</strong>` +
+            `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(dirPath)}</span>` +
+            `<div class="text-truncate text-secondary" style="font-size:11px;font-family:monospace;">${aiEscapeHtml(snippet)}</div>`;
+        item.addEventListener('click', () => {
+            ctrlSideFileSearchInputEl.value = '';
+            ctrlSideFileSearchResultsEl.classList.add('d-none');
+            editorOpenFile(g_ctrlSideSrch.root + relPath, currentWebRootUrl, g_ctrlSideSrch.down + ctrlEncodeUrlPath(relPath));
+        });
+        ctrlSideFileSearchResultsEl.appendChild(item);
+        if (++found >= 100) break;
+    }
+    return found;
 }
 
-ctrlSideFileSearchInputEl.addEventListener('focus', () => { void ctrlSideSrchIndex(); });
+const ctrlSideFileSearchModeEl = CDOM.ID('ctrlSideFileSearchMode') as HTMLSelectElement;
+ctrlSideFileSearchModeEl.addEventListener('change', () => {
+    ctrlSideSrchMode = ctrlSideFileSearchModeEl.value as 'file' | 'ts';
+    if (ctrlSideSrchMode === 'ts') void ctrlSideSrchTsIndex();
+    ctrlSideSrchRenderResults(ctrlSideFileSearchInputEl.value.trim().toLowerCase());
+});
+ctrlSideFileSearchInputEl.addEventListener('focus', () => {
+    void (ctrlSideSrchMode === 'ts' ? ctrlSideSrchTsIndex() : ctrlSideSrchIndex());
+});
 ctrlSideFileSearchInputEl.addEventListener('input', () => {
     ctrlSideSrchRenderResults(ctrlSideFileSearchInputEl.value.trim().toLowerCase());
 });
@@ -2883,20 +3065,21 @@ function runControlArrowKey(dir: 1 | -1): boolean {
     // 접힌 그룹에 가려지지 않은(보이는) 항목만 대상으로 한다.
     const items = Array.from(agentSidebarList.querySelectorAll<HTMLElement>('.ai-session-item')).filter(el => el.offsetParent !== null);
     if (items.length === 0) return false;
-    // 메인(빨강)을 현재 선택으로 보고, 없으면 서브(파랑) 중 첫 항목. 예전 클래스명도 함께 본다.
-    let curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-main') || el.classList.contains('ai-session-item-active-remote'));
-    if (curIdx < 0) curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-sub') || el.classList.contains('ai-session-item-active'));
+    // Multiplexer pane에 떠 있는 항목(pane별 고유색)을 현재 선택으로 보고, 없으면 그 외 active 항목 중 첫 항목.
+    let curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-pane') || el.classList.contains('ai-session-item-active-remote'));
+    if (curIdx < 0) curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active'));
     const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
     if (nxt === curIdx) return false;
     items[nxt].click();
     items[nxt].scrollIntoView({ block: 'nearest' });
     return true;
 }
-// 좌/우 화살표: 사이드바가 포커스된 상태에서 Agent ↔ File 서브탭을 전환한다(sb-agent-tab/sb-file-tab
-// 클릭과 동일 효과). 이미 그 탭이면 아무 것도 하지 않는다.
+// 좌/우 화살표: 사이드바가 포커스된 상태에서 Agent → File → Other 순으로 서브탭을 순환 전환한다
+// (sb-agent-tab/sb-file-tab/sb-other-tab 클릭과 동일 효과).
 function runControlSubTabArrowKey(dir: 1 | -1): boolean {
     if (!isSidebarFocused()) return false;
-    const next: 'agent' | 'file' = dir === 1 ? 'file' : 'agent';
+    const idx = SB_SUBTABS.indexOf(sbSubTab);
+    const next = SB_SUBTABS[(idx + dir + SB_SUBTABS.length) % SB_SUBTABS.length];
     if (sbSubTab === next) return false;
     sbSubTab = next;
     localStorage.setItem(SB_TAB_LS, next);
@@ -2971,10 +3154,10 @@ CIframeMsg.Recv({
     'file-remote-changed': (data) => {
         currentWebRootUrl = String(data.baseUrl ?? '');
         memoSendRemoteInfo();
-        logOnServerChanged();
+        loadAiProviderStatus();
     },
     'file-opened': (data) => {
-        promptSourceAction(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
+        promptSourceAction(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''), false);
     },
     // Chat/Terminal은 새 세션 옵션 모달만 띄우고, 현재 보고 있는 탭(File 등)은 그대로 유지한다.
     'open-chat': (data) => chatStartNew(data.cwd || undefined),
@@ -3034,36 +3217,42 @@ interface LogRecord { id: number; key: string; provider: string; sessionId: stri
 const logAccordionList = CDOM.ID('logAccordionList') as HTMLDivElement;
 const logLoadMoreBtn = CDOM.ID('logLoadMoreBtn') as HTMLButtonElement;
 const logSearchInput = CDOM.ID('logSearchInput') as HTMLInputElement;
-const logSourceLabel = CDOM.ID('logSourceLabel') as HTMLSpanElement;
 let logNextBefore: number | null = null;
 let logSearchTerm = '';
 const LOG_PAGE_SIZE = 15;
 
-// 로그 탭은 RDP 사이드바에서 선택한 서버를 그대로 따라간다(로컬 선택=로컬 로그, 원격 선택=그 원격의 로그).
+// 로그 탭은 자체 셀렉트(logServerSelect)로 서버를 고른다 — RDP 사이드바·File 탭이 보는 서버와 독립적이다
+// (그쪽들이 다른 원격으로 넘어가도 로그 탭은 사용자가 고른 서버를 계속 본다).
 // 목록을 불러온 시점의 ctx는 아코디언 항목에 함께 실어둔다 — 펼치기/삭제가 나중에 일어나도 목록을 받아온
-// 그 서버로 가야 하기 때문(중간에 사용자가 다른 원격으로 갈아탈 수 있다).
+// 그 서버로 가야 하기 때문(그 사이 셀렉트를 바꿀 수 있다).
+const logServerSelect = CDOM.ID('logServerSelect') as HTMLSelectElement;
+
 function logServerCtx(): IServerCtx {
-    const prefix = 'rdp:remote:';
-    const remoteId = selectedRdpKey.startsWith(prefix) ? selectedRdpKey.slice(prefix.length) : '';
-    return serverCtxOf(remoteId) ?? localServerCtx();
+    return serverCtxOf(logServerSelect.value || '') ?? localServerCtx();
 }
 
-// 제목 옆에 지금 로그를 가져오는 원본 주소를 보여준다(로컬이면 Local).
-function logUpdateSource() {
+// 셀렉트 옵션을 로컬+저장된 원격 전체로 채운다. 기존 선택이 여전히 유효하면 유지한다
+// (목록이 바뀌어도 사용자가 보던 서버가 갑자기 바뀌지 않게).
+function logPopulateServerSelect() {
+    const prev = logServerSelect.value;
+    const sources = aiProviderAllSources();
+    logServerSelect.innerHTML = sources.map(s =>
+        `<option value="${aiEscapeHtml(s.remoteId)}" title="${aiEscapeHtml(s.baseUrl)}">${aiEscapeHtml(s.label)}</option>`
+    ).join('');
+    if (sources.some(s => s.remoteId === prev)) logServerSelect.value = prev;
+    logApplySelectStyle();
+}
+
+// 원격 선택 시 눈에 띄게 색을 바꾼다(로컬은 기본색).
+function logApplySelectStyle() {
     const ctx = logServerCtx();
-    const addr = remoteEntryUrl(ctx.remoteId);
-    logSourceLabel.className = 'small fw-normal text-truncate ' + (ctx.remoteId ? 'text-danger' : 'text-secondary');
-    logSourceLabel.title = addr || CPath.WebRootUrl();
-    logSourceLabel.textContent = ctx.remoteId ? addr : L('ctrl.local', 'Local');
+    logServerSelect.className = 'form-select form-select-sm w-auto ' + (ctx.remoteId ? 'text-danger' : '');
 }
 
-// RDP에서 서버를 바꾸면 라벨을 갱신하고, 로그 탭이 보이는 중이면 그 자리에서 다시 불러온다
-// (보이지 않으면 다음에 탭을 열 때 shown.bs.tab 핸들러가 어차피 다시 부른다).
-function logOnServerChanged() {
-    logUpdateSource();
+logServerSelect.addEventListener('change', () => {
+    logApplySelectStyle();
     if (isPanelShown('log-panel')) logLoadSessions(true);
-    loadAiProviderStatus();
-}
+});
 
 function logRegexEscape(s: string): string {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -3182,13 +3371,14 @@ async function logLoadSessionBody(ctx: IServerCtx, sessionId: string, bodyEl: HT
         if (!j.ok) { bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(j.msg ?? L('ctrl.failed', 'failed'))}</span>`; return; }
         const records: LogRecord[] = j.records ?? [];
         if (!records.length) { bodyEl.innerHTML = `<span class="text-secondary small">${L('ctrl.noMessages', 'No messages.')}</span>`; return; }
-        bodyEl.innerHTML = records.map(rec => {
+        bodyEl.innerHTML = records.map((rec, idx) => {
+            const noTag = `<span title="id ${rec.id}">#${idx + 1}</span> &middot; `;
             if (rec.role === 'tool') {
                 const toolName = (rec.tool || '?').trim();
                 const filePath = (rec.file || '').trim();
                 return `<div class="d-flex justify-content-start">` +
                     `<div class="px-2 py-1 rounded border bg-body-tertiary text-secondary" style="max-width:95%;font-size:0.82em;">` +
-                    `<div style="font-size:0.68em;opacity:0.75;">${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)} &middot; tool</div>` +
+                    `<div style="font-size:0.68em;opacity:0.75;">${noTag}${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)} &middot; tool</div>` +
                     `<div class="log-body-text" style="word-break:break-word;font-family:var(--bs-font-monospace);">` +
                     `<span class="badge text-bg-dark me-1">${aiEscapeHtml(toolName)}</span>` +
                     (filePath ? `<span class="text-body-secondary">${aiEscapeHtml(filePath)}</span>` : '') +
@@ -3197,7 +3387,7 @@ async function logLoadSessionBody(ctx: IServerCtx, sessionId: string, bodyEl: HT
             const isUser = rec.role === 'user';
             return `<div class="d-flex ${isUser ? 'justify-content-end' : 'justify-content-start'}">` +
                 `<div class="p-2 rounded ${isUser ? 'bg-primary text-white' : 'bg-secondary-subtle'}" style="max-width:85%;">` +
-                `<div style="font-size:0.68em;opacity:0.75;">${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)}</div>` +
+                `<div style="font-size:0.68em;opacity:0.75;">${noTag}${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)}</div>` +
                 `<div class="log-body-text" style="word-break:break-word;">${logRenderMarkdown(rec.text.trim())}</div>` +
                 `</div></div>`;
         }).join('');
@@ -3224,6 +3414,12 @@ function logCreateAccordionItem(ctx: IServerCtx, entry: LogSessionEntry): HTMLDi
     const bodyId = `logBody_${entry.offset}`;
     const preview = entry.firstText.replace(/\s+/g, ' ').trim();
     item.dataset.preview = preview;
+    // 복사용 값: 원격 서버 로그면 어느 서버인지(apiUrl)를 같이 싣는다 — sessionId는 서버마다 로컬
+    // db에만 있어서, 이 값만 복사해 다른 PC/세션에 붙여넣으면 ai/tool/log.js가 자기 로컬 db에서
+    // 못 찾는다(실사례: 원격 세션키를 그대로 복사해 분석 요청했더니 "로그를 찾지 못했다"로 돌아옴).
+    // 포맷: 로컬은 그냥 sessionId(기존 그대로, 가장 흔한 경우라 단순하게), 원격은 "sessionId@baseUrl".
+    // log.js가 '@'로 분리해 원격이면 그 baseUrl로 인증 조회한다(ai/tool/cookie.json의 토큰 재사용).
+    const copyValue = ctx.remoteId ? `${entry.name}@${ctx.apiUrl.replace(/\/$/, '')}` : entry.name;
     item.innerHTML = `
         <div class="d-flex align-items-center gap-2 p-2 bg-body-tertiary rounded" style="cursor:pointer;" data-act="toggle">
             <i class="bi bi-chevron-right log-chevron flex-shrink-0"></i>
@@ -3232,8 +3428,10 @@ function logCreateAccordionItem(ctx: IServerCtx, entry: LogSessionEntry): HTMLDi
                     <span class="badge text-bg-secondary flex-shrink-0">${aiEscapeHtml(entry.model || '?')}</span>
                     <span class="text-truncate small log-title-text">${aiEscapeHtml(preview)}</span>
                 </div>
-                <div class="text-truncate text-secondary" style="font-size:0.72em;">
-                    <i class="bi bi-folder2"></i> ${aiEscapeHtml(entry.cwd || '-')} &middot; ${logFormatTime(entry.time)} &middot; <i class="bi bi-key"></i> ${aiEscapeHtml(entry.name)}
+                <div class="d-flex align-items-center text-secondary" style="font-size:0.72em;">
+                    <span class="text-truncate"><i class="bi bi-folder2"></i> ${aiEscapeHtml(entry.cwd || '-')} &middot; ${logFormatTime(entry.time)}</span>
+                    <i class="bi bi-key flex-shrink-0 ms-1"></i>
+                    <input type="text" class="form-control form-control-sm log-session-key flex-shrink-0 ms-1" style="font-size:0.72em; height:auto; padding:0 4px; width:11rem;" value="${aiEscapeHtml(copyValue)}" readonly title="${aiEscapeHtml(copyValue)}">
                 </div>
             </div>
             <button type="button" class="btn btn-sm btn-link text-danger p-0 flex-shrink-0" data-act="del" title="Delete"><i class="bi bi-x-lg"></i></button>
@@ -3257,6 +3455,11 @@ function logCreateAccordionItem(ctx: IServerCtx, entry: LogSessionEntry): HTMLDi
         loaded = true;
         logLoadSessionBody(ctx, entry.name, item.querySelector<HTMLElement>('[data-role="body"]')!);
     });
+    // 세션키 복사용 인풋 — 클릭/포커스가 아코디언 토글(data-act="toggle")로 번지지 않게 막고, 클릭 즉시
+    // 전체 선택해서 바로 Ctrl+C만으로 복사되게 한다(나중에 "이 세션 로그 확인해줘" 요청에 그대로 붙여넣는 용도).
+    const keyInput = item.querySelector<HTMLInputElement>('.log-session-key')!;
+    keyInput.addEventListener('click', (e: Event) => { e.stopPropagation(); keyInput.select(); });
+    keyInput.addEventListener('focus', () => keyInput.select());
     item.querySelector<HTMLElement>('[data-act="del"]')!.addEventListener('click', (e: Event) => {
         e.stopPropagation();
         const dlg = new CConfirm();
@@ -3292,7 +3495,6 @@ function logRenderAuthNotice(ctx: IServerCtx) {
 
 async function logLoadSessions(reset: boolean) {
     if (reset) { logAccordionList.innerHTML = ''; logNextBefore = null; }
-    logUpdateSource();
     const ctx = logServerCtx();
     if (ctx.remoteId && !ctx.authToken) {
         logLoadMoreBtn.style.display = 'none';
@@ -3311,9 +3513,9 @@ async function logLoadSessions(reset: boolean) {
     } catch (e) { console.error('logLoadSessions error:', e); }
 }
 
-CDOM.ID('log-tab').addEventListener('shown.bs.tab', () => logLoadSessions(true));
+logPopulateServerSelect();
+CDOM.ID('log-tab').addEventListener('shown.bs.tab', () => { logPopulateServerSelect(); logLoadSessions(true); });
 if (CDOM.ID('log-panel').classList.contains('active')) { logLoadSessions(true); }
-else logUpdateSource();
 CDOM.ID('logRefreshBtn').addEventListener('click', () => logLoadSessions(true));
 logLoadMoreBtn.addEventListener('click', () => logLoadSessions(false));
 
@@ -3551,7 +3753,8 @@ function ctrlRequireAuthed(): boolean {
 (window as any).ctrlRequireAuthed = ctrlRequireAuthed;
 // 없는 탭에서 최상위 throw가 나면 이 아래 모듈 본문 전체(사이드바/채팅/터미널/인증 초기화 등)가
 // 실행되지 않으므로, 반드시 옵셔널 체이닝으로 방어한다.
-['rdp-panel-tab', 'chat-panel-tab', 'browser-panel-tab', 'editor-panel-tab', 'term-tab', 'memo-tab', 'log-tab', 'messenger-tab'].forEach((tabId) => {
+// memo-tab은 제외 - Memo.html/CMemoRouter 자체가 사이트 로그인과 무관하게 인증 없이 열리도록 설계되어 있다.
+['rdp-panel-tab', 'chat-panel-tab', 'browser-panel-tab', 'editor-panel-tab', 'term-tab', 'log-tab', 'messenger-tab'].forEach((tabId) => {
     CDOM.ID(tabId)?.addEventListener('show.bs.tab', (e: Event) => {
         if (!ctrlRequireAuthed()) e.preventDefault();
     });
@@ -3610,121 +3813,38 @@ if (memoTab.classList.contains("active")) memoTryInit();
 // 하나의 사이드바 목록에 함께 정렬되어야 한다(안 그러면 유형별로 나뉜 목록끼리는 서로 최신순 비교가
 // 안 되어 "이게 왜 맨 위에 있냐"는 혼란이 생긴다). 그래서 각 유형은 자기 데이터만 캐시에 갱신하고,
 // 실제 DOM 렌더링은 이 공용 renderSessionSidebar()가 세 캐시를 합쳐서 한 번에 그린다.
-// 좌측 사이드바 하위 목록: Agent(Chat/Terminal, 경로 그룹) / File(빠른 파일 열람 패널).
-// Other(Browser/Editor, 평면 최신순)는 우측 사이드바의 Other 탭(#other-sidebar-list)으로 옮겨갔다.
+// 좌측 사이드바 하위 목록: Agent(Chat/Terminal, 경로 그룹) / File(빠른 파일 열람 패널) /
+// Other(RDP + Browser/Editor 평면 최신순, 우측 사이드바에서 이 탭으로 옮겨옴).
 const agentSidebarList = CDOM.ID("agent-sidebar-list") as HTMLDivElement;
 const otherSidebarList = CDOM.ID("other-sidebar-list") as HTMLDivElement;
 const agentAddFolderBtn = CDOM.ID("agentAddFolderBtn") as HTMLButtonElement;
 const leftFilePanel = CDOM.ID("left-file-panel") as HTMLDivElement;
+const leftOtherPanel = CDOM.ID("left-other-panel") as HTMLDivElement;
 
-// ---- 하위 탭(Agent/File) 선택 + 그룹 접힘 상태 persist ----
+// ---- 하위 탭(Agent/File/Other) 선택 + 그룹 접힘 상태 persist ----
 const SB_TAB_LS = 'ctrl.sidebar.subtab';
 const SB_COLLAPSE_LS = 'ctrl.sidebar.collapsed';
 function sbSafeArr(s: string | null): string[] { try { const a = JSON.parse(s || '[]'); return Array.isArray(a) ? a.map(String) : []; } catch { return []; } }
-let sbSubTab: 'agent' | 'file' = localStorage.getItem(SB_TAB_LS) === 'file' ? 'file' : 'agent';
+const SB_SUBTABS = ['agent', 'file', 'other'] as const;
+type SbSubTab = typeof SB_SUBTABS[number];
+let sbSubTab: SbSubTab = SB_SUBTABS.includes(localStorage.getItem(SB_TAB_LS) as SbSubTab) ? (localStorage.getItem(SB_TAB_LS) as SbSubTab) : 'agent';
 const collapsedGroups = new Set<string>(sbSafeArr(localStorage.getItem(SB_COLLAPSE_LS)));
 function saveCollapsedGroups() { localStorage.setItem(SB_COLLAPSE_LS, JSON.stringify(Array.from(collapsedGroups))); }
 function applySidebarSubTab() {
     agentSidebarList.classList.toggle('d-none', sbSubTab !== 'agent');
     agentAddFolderBtn.classList.toggle('d-none', sbSubTab !== 'agent');
     leftFilePanel.classList.toggle('d-none', sbSubTab !== 'file');
+    leftOtherPanel.classList.toggle('d-none', sbSubTab !== 'other');
     CDOM.ID('sb-agent-tab').classList.toggle('active', sbSubTab === 'agent');
     CDOM.ID('sb-file-tab').classList.toggle('active', sbSubTab === 'file');
+    CDOM.ID('sb-other-tab').classList.toggle('active', sbSubTab === 'other');
 }
 CDOM.ID('sb-agent-tab').addEventListener('click', () => { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); });
 CDOM.ID('sb-file-tab').addEventListener('click', () => { sbSubTab = 'file'; localStorage.setItem(SB_TAB_LS, 'file'); applySidebarSubTab(); });
+CDOM.ID('sb-other-tab').addEventListener('click', () => { sbSubTab = 'other'; localStorage.setItem(SB_TAB_LS, 'other'); applySidebarSubTab(); });
 applySidebarSubTab();
 
-// ---- 상단 탭 스트립: 현재 열려 있는(서버에 존재하는) Chat/Terminal/Browser/Editor/Web 세션을 전부
-// More 버튼 뒤에 한 줄로 나열한다. Agent/Other 사이드바 목록과 완전히 같은 소스(spec+sortKey)를 쓰고,
-// 짧은 한 줄 라벨(shortLabel)을 쓴다. RDP는 별도 목록(rdp-sidebar-list)이라 대상에서 제외.
-// 표시 순서(topTabOrder)는 기본은 sortKey(최근 활동/오픈 시각) 내림차순이지만, 탭끼리 드래그해서
-// 자유롭게 재배치할 수 있다 - 한 번 순서가 정해지면 재활동으로 다시 섞이지 않도록 topTabOrder 자체가
-// 그 순서의 기준이 되고, 새로 나타난 세션만 recency 규칙대로 앞쪽에 끼워 넣는다.
-const topTabStripEl = CDOM.ID("top-tab-strip") as HTMLDivElement;
-const TOP_TAB_ICON: Record<string, string> = { chat: 'bi-chat-dots', term: 'bi-terminal', 'term-new': 'bi-terminal', browser: 'bi-browser-chrome', editor: 'bi-file-earmark-code', web: 'bi-globe' };
-const TOP_TAB_DRAG_MIME = 'application/x-control-top-tab-key';
-let topTabOrder: string[] = [];
-let topTabLastEntries: { key: string; sortKey: number; spec: SessionItemSpec }[] = [];
-// draggedKey를 beforeKey 바로 앞으로 옮긴다(beforeKey가 null이면 맨 뒤로).
-function topTabMoveTo(draggedKey: string, beforeKey: string | null) {
-    const from = topTabOrder.indexOf(draggedKey);
-    if (from < 0) return;
-    topTabOrder.splice(from, 1);
-    if (beforeKey) {
-        const to = topTabOrder.indexOf(beforeKey);
-        topTabOrder.splice(to < 0 ? topTabOrder.length : to, 0, draggedKey);
-    } else {
-        topTabOrder.push(draggedKey);
-    }
-    // drop 핸들러 안에서 곧바로 다시 그리면(innerHTML 초기화) 드래그 중이던 원본 탭 엘리먼트가 그 드래그
-    // 시퀀스가 끝나기(dragend) 전에 DOM에서 사라져 dragend가 영영 발화하지 않는다 - 그러면
-    // body.tmux-dragging이 안 풀려 Multiplexer 드롭존 오버레이가 화면 전체를 덮은 채 남아 클릭이 다 막힌다.
-    // 그래서 이번 이벤트 루프가 끝나 dragend까지 처리된 뒤(setTimeout 0)로 렌더를 미룬다.
-    setTimeout(() => renderTopTabStrip(topTabLastEntries), 0);
-}
-if (topTabStripEl) {
-    // 탭 사이 빈 공간(마지막 탭 뒤 등)에 놓으면 맨 뒤로 보낸다.
-    topTabStripEl.addEventListener('dragover', (ev) => {
-        if (ev.dataTransfer?.types.includes(TOP_TAB_DRAG_MIME)) ev.preventDefault();
-    });
-    topTabStripEl.addEventListener('drop', (ev) => {
-        const draggedKey = ev.dataTransfer?.getData(TOP_TAB_DRAG_MIME);
-        if (!draggedKey) return;
-        ev.preventDefault();
-        topTabMoveTo(draggedKey, null);
-    });
-}
-function renderTopTabStrip(entries: { key: string; sortKey: number; spec: SessionItemSpec }[]) {
-    if (!topTabStripEl) return;
-    topTabLastEntries = entries;
-    const specByKey = new Map(entries.map(e => [e.key, e.spec] as const));
-    topTabOrder = topTabOrder.filter(k => specByKey.has(k));
-    const newKeys = entries.filter(e => !topTabOrder.includes(e.key)).sort((a, b) => b.sortKey - a.sortKey).map(e => e.key);
-    topTabOrder = [...newKeys, ...topTabOrder];
-
-    topTabStripEl.innerHTML = '';
-    for (const key of topTabOrder) {
-        const spec = specByKey.get(key);
-        if (!spec) continue;
-        const prefix = key.slice(0, key.indexOf(':'));
-        const tab = document.createElement('div');
-        // 사이드바 세션 항목과 동일하게 Multiplexer 메인 pane=빨강/서브 pane=파랑으로 표시한다.
-        tab.className = 'top-tab-item d-flex align-items-center gap-1' + (spec.isActive ? ' ' + spec.activeClass : '');
-        tab.title = spec.shortLabel;
-        tab.innerHTML = `<i class="bi ${TOP_TAB_ICON[prefix] ?? 'bi-app'}"></i>`
-            + `<span class="text-truncate">${aiEscapeHtml(spec.shortLabel)}</span>`
-            + `<button type="button" class="btn-close" aria-label="Close"></button>`;
-        tab.addEventListener('click', (ev) => {
-            if ((ev.target as HTMLElement).closest('.btn-close')) return;
-            spec.onClick();
-        });
-        // 사이드바 세션 항목(createSessionItem)과 동일하게, Multiplexer pane에 드래그해 놓으면 그 pane
-        // 콘텐츠가 이 세션으로 바뀐다(sessionItemDragKey 참고). 동시에 탭 스트립 안의 다른 탭 위에 놓으면
-        // 그 자리로 순서를 옮긴다(topTabMoveTo) - 같은 드래그가 두 목적 모두를 겸한다.
-        tab.draggable = true;
-        tab.addEventListener('dragstart', (ev: DragEvent) => {
-            const dragKey = sessionItemDragKey(spec);
-            if (dragKey) ev.dataTransfer?.setData('text/plain', dragKey);
-            ev.dataTransfer?.setData(TOP_TAB_DRAG_MIME, key);
-            if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copyMove';
-        });
-        tab.addEventListener('dragover', (ev) => {
-            if (!ev.dataTransfer?.types.includes(TOP_TAB_DRAG_MIME)) return;
-            ev.preventDefault();
-            ev.stopPropagation();
-        });
-        tab.addEventListener('drop', (ev) => {
-            const draggedKey = ev.dataTransfer?.getData(TOP_TAB_DRAG_MIME);
-            if (!draggedKey || draggedKey === key) return;
-            ev.preventDefault();
-            ev.stopPropagation();
-            topTabMoveTo(draggedKey, key);
-        });
-        tab.querySelector('.btn-close')?.addEventListener('click', (ev) => { ev.stopPropagation(); spec.onDelete(); });
-        topTabStripEl.appendChild(tab);
-    }
-}
+// 상단 탭 스트립은 제거됐다 - 열린 세션 탭은 Multiplexer의 각 pane 탭 바(tmuxRenderTabBar)에 나온다.
 
 // 재정렬만 얼린다. 예전에는 "호버 중에는 렌더 자체를 통째로 스킵"했는데, 그러면 마우스를 올려둔 동안
 // 점 색/시간/active까지 전부 멈추고(터치는 mouseleave가 안 와서 영구 정지) 그걸 메우려고 예외 패치를
@@ -3989,6 +4109,15 @@ function ctxApiUrl(ctx: IServerCtx, apiPath: string): string {
     if (!ctx.authToken) return url;
     return url + (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(ctx.authToken);
 }
+// 세션 페이지(Chat.html/Browser.html) URL: artgineUrl 기준이고, 원격이면 authToken을 실어야 한다.
+// 원격 페이지는 자기 origin의 localStorage도 세션 쿠키(서드파티 차단)도 비어 있어서, 이 토큰을 안 주면
+// 페이지가 스스로 인증할 방법이 없어 로그인 화면만 뜬다(Chat.ts/Browser.ts의 getPageAuthToken이 받는다).
+// 주의: 남에게 주는 공유 링크에는 절대 쓰지 말 것 - 토큰이 그대로 새어나간다.
+function ctxPageUrl(ctx: IServerCtx, relPath: string): string {
+    const url = ctx.artgineUrl + relPath;
+    if (!ctx.authToken) return url;
+    return url + (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(ctx.authToken);
+}
 // 원격 조회에는 타임아웃을 걸어 죽은/느린 원격 서버가 목록 갱신 전체를 막지 않게 한다(로컬은 same-origin이라 불필요).
 const REMOTE_FETCH_TIMEOUT_MS = 8000;
 function ctxFetch(ctx: IServerCtx, apiPath: string, init?: RequestInit): Promise<Response> {
@@ -4100,24 +4229,43 @@ let lastTermSessions: ITermSess[] | null = null;
 
 // Multiplexer에 떠 있는 세션을 사이드바에 표시한다. 메인 pane(트리에서 항상 children[0]로 내려간
 // 첫 leaf, 새 세션이 들어가는 칸)은 빨강, 나머지 서브 pane은 파랑. 여러 개가 동시에 켜진다.
-function tmuxPaneRole(key: string): 'main' | 'sub' | null {
-    if (!tmuxTreeReady) return null;
-    const mainId = tmuxFirstPaneId();
-    let role: 'main' | 'sub' | null = null;
+// pane별 고유색: 트리를 children[0]→children[1] 순서로 훑은 leaf 순서대로 팔레트 색을 배정한다.
+// 캐시 없이 호출마다 다시 계산하므로 분할/병합으로 pane 개수가 바뀌어도 항상 "지금 보이는 pane 개수"에
+// 맞는 색만 쓰인다(트리가 커봐야 몇 개 안 되는 pane이라 매번 훑어도 비용이 무시할 만하다).
+// 팔레트를 넘어서는 pane은 마지막 색을 재사용한다. 두 개로만 분할된 예전 레이아웃에서는 첫 pane=danger
+// (예전 "메인=빨강"), 둘째 pane=primary(예전 "서브=파랑")로 배정돼 기존 배색과 동일하게 보인다.
+const TMUX_PANE_COLOR_NAMES = ['danger', 'primary', 'success', 'warning', 'info', 'dark'];
+function tmuxLeafOrderIds(): string[] {
+    const ids: string[] = [];
     (function walk(p: ITmuxPane) {
-        if (role === 'main') return;
         if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
-        if (p.contentKey !== key) return;
-        role = p.id === mainId ? 'main' : 'sub';
+        ids.push(p.id);
     })(tmuxRoot);
-    return role;
+    return ids;
 }
-function sessActiveFromKey(key: string): { activeClass: string; isActive: boolean } {
-    const role = tmuxPaneRole(key);
-    return {
-        activeClass: role === 'main' ? 'ai-session-item-active-main' : 'ai-session-item-active-sub',
-        isActive: role != null,
-    };
+function tmuxPaneColorName(paneId: string): string {
+    const idx = tmuxLeafOrderIds().indexOf(paneId);
+    return TMUX_PANE_COLOR_NAMES[Math.max(0, Math.min(idx, TMUX_PANE_COLOR_NAMES.length - 1))];
+}
+// 사이드바/탭 강조와 Multiplexer pane 테두리에 공용으로 쓰는 인라인 CSS 커스텀 프로퍼티. rdpAccentStyle()과 동일 패턴.
+function tmuxPaneAccentStyle(paneId: string): string {
+    const name = tmuxPaneColorName(paneId);
+    return `--tmux-pane-accent:var(--bs-${name});--tmux-pane-accent-bg:var(--bs-${name}-bg-subtle);`;
+}
+function tmuxPaneIdForKey(key: string): string | null {
+    if (!tmuxTreeReady) return null;
+    let paneId: string | null = null;
+    (function walk(p: ITmuxPane) {
+        if (paneId) return;
+        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+        if (p.contentKey === key) paneId = p.id;
+    })(tmuxRoot);
+    return paneId;
+}
+function sessActiveFromKey(key: string): { activeClass: string; isActive: boolean; accentStyle?: string } {
+    const paneId = tmuxPaneIdForKey(key);
+    if (!paneId) return { activeClass: '', isActive: false };
+    return { activeClass: 'ai-session-item-active-pane', isActive: true, accentStyle: tmuxPaneAccentStyle(paneId) };
 }
 function refreshRdpHighlights() {
     for (const el of Array.from(rdpSidebarList.querySelectorAll<HTMLElement>('.ai-session-item'))) {
@@ -4155,8 +4303,7 @@ function flushSessionSidebar() {
             clearSessionItems();
             clearAgentGroups();
             otherSidebarList.innerHTML = '';
-            topTabOrder = [];
-            topTabStripEl.innerHTML = '';
+            tmuxSetTabEntries([], false);
             renderSignInPrompt(agentSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
         }
         return;
@@ -4203,7 +4350,7 @@ function flushSessionSidebar() {
 
     renderAgentGroups(agentEntries, frozen, hiddenByGroup);
     renderOtherList(otherEntries, frozen);
-    renderTopTabStrip([...agentEntries, ...otherEntries]);
+    tmuxSetTabEntries([...agentEntries, ...otherEntries], true);
 }
 
 // Agent: 경로별 그룹으로 렌더. 그룹 소스 = 등록된 경로(ctrlRootOpts) ∪ 실제 세션의 workingDir.
@@ -4395,7 +4542,7 @@ function editorFrameSrc(s: IEditorSession): string {
     return `${root}artgine/server/html/Editor.html?path=${encodeURIComponent(s.path)}&url=${encodeURIComponent(s.url)}`;
 }
 
-function editorOpenFile(path: string, baseUrl: string, url: string) {
+function editorOpenFile(path: string, baseUrl: string, url: string, activate: boolean = true) {
     const key = `editor:${baseUrl}|${path}`;
     let s = editorSessions.get(key);
     if (!s) {
@@ -4405,7 +4552,7 @@ function editorOpenFile(path: string, baseUrl: string, url: string) {
         s.url = url;
         s.openedAt = Date.now();
     }
-    editorActivatePane();
+    if (activate) editorActivatePane();
     showEditorFrame(key, editorFrameSrc(s));
     renderSessionSidebar();
 }
@@ -4487,7 +4634,7 @@ async function ctrlSaveOpenedSheet(filePath: string, base64: string, baseUrl: st
 // File 탭(file-opened)과 Terminal 탭(terminal-path-tapped)이 공유하는 단일 진입점.
 // html/htm만 Edit·Execute 확인창을 띄우고(새 창 실행 여부 선택), sqlite/db는 ORM 뷰어,
 // csv/xlsx/xls는 시트 뷰어로 열며, 그 외 소스는 기존처럼 바로 에디터로 연다.
-function promptSourceAction(fullPath: string, baseUrl: string, url: string) {
+function promptSourceAction(fullPath: string, baseUrl: string, url: string, activate: boolean = true) {
     const ext = fileExtOf(fullPath);
     if (ext === 'sqlite' || ext === 'db') {
         const token = baseUrl ? getAuthToken(baseUrl) : '';
@@ -4499,9 +4646,9 @@ function promptSourceAction(fullPath: string, baseUrl: string, url: string) {
         return;
     }
     const canExecute = ext === 'html' || ext === 'htm';
-    if (!canExecute) { editorOpenFile(fullPath, baseUrl, url); return; }
+    if (!canExecute) { editorOpenFile(fullPath, baseUrl, url, activate); return; }
 
-    const actions = [() => editorOpenFile(fullPath, baseUrl, url), () => executeOpenedSource(fullPath, url), () => {}];
+    const actions = [() => editorOpenFile(fullPath, baseUrl, url, activate), () => executeOpenedSource(fullPath, url), () => {}];
     const labels = [L('ctrl.edit', 'Edit'), L('ctrl.execute', 'Execute'), L('ctrl.cancel', 'Cancel')];
 
     const confirm = new CConfirm();
@@ -4733,8 +4880,7 @@ function chatStartNew(initialWorkingDir?: string, remoteId: string = '') {
             if (mdcopyCheck.checked) params.set('mdcopy', '1');
             if (!writeCheck.checked) params.set('write', '0');
             chatActivatePane();
-            // 원격이면 그 원격 오리진에서 Chat.html이 열려 스스로 인증한다(iframe src에 authToken 미부착).
-            showChatFrame(sessKey('chat', remoteId, sid), `${ctx.artgineUrl}artgine/server/html/Chat.html?${params.toString()}`);
+            showChatFrame(sessKey('chat', remoteId, sid), ctxPageUrl(ctx, `artgine/server/html/Chat.html?${params.toString()}`));
             chatRenderList();
             setTimeout(chatRenderList, 1500);
             setTimeout(chatRenderList, 4000);
@@ -4752,8 +4898,7 @@ function chatLoadSession(s: { remoteId: string; sessionId: string }) {
     const ctx = serverCtxOf(s.remoteId);
     if (!ctx) return;
     chatActivatePane();
-    // Chat.html은 원격이면 그 원격 오리진에서 로드되어 스스로 인증(자체 사인인)한다 - iframe src에는 authToken을 붙이지 않는다.
-    showChatFrame(sessKey('chat', s.remoteId, s.sessionId), `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`);
+    showChatFrame(sessKey('chat', s.remoteId, s.sessionId), ctxPageUrl(ctx, `artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`));
     renderSessionSidebar();
 }
 
@@ -4794,7 +4939,7 @@ function chatItemSpec(s: IChatSess): SessionItemSpec {
             if (activeChatFrameKey === key) { activeChatFrameKey = null; updateChatFramePlaceholder(); }
             chatRenderList();
         },
-        popup: { url: () => `${ctx?.artgineUrl ?? CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.remoteId}_${s.sessionId}` },
+        popup: { url: () => ctxPageUrl(ctx ?? localServerCtx(), `artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`), title: s.title, winName: `chat_${s.remoteId}_${s.sessionId}` },
     };
 }
 
@@ -4955,7 +5100,7 @@ function termItemSpec(s: ITermSess): SessionItemSpec {
     return {
         ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
-        shortLabel: s.key || s.mode || s.token,
+        shortLabel: `${s.mode.slice(0, 3)}-${s.token.slice(0, 5)}`,
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
             ${dot}
@@ -4973,7 +5118,7 @@ function termItemSpec(s: ITermSess): SessionItemSpec {
         onClick: () => termConnectSession(s),
         onShare: () => { if (ctx) termShowShareLink(ctx, s.token); },
         onDelete: () => termKillSession(s),
-        popup: { url: () => `${ctx?.apiUrl ?? CPath.WebRootUrl()}cmd/terminal-proxy?token=${s.token}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.remoteId}_${s.token.slice(0, 8)}` },
+        popup: { url: () => ctxApiUrl(ctx ?? localServerCtx(), `cmd/terminal-proxy?token=${s.token}`), title: s.key || s.mode || 'Terminal', winName: `term_${s.remoteId}_${s.token.slice(0, 8)}` },
     };
 }
 
@@ -5041,10 +5186,14 @@ async function termRenderList() {
                 if (activeTermFrameKey === newKey) activeTermFrameKey = key;
                 // 이 세션이 지금 Multiplexer 첫 pane에 떠 있었다면(term-new:로 막 열어 승격 전이었던 경우)
                 // pane.contentKey도 새 토큰 키로 맞춰준다 - 안 그러면 이후 tmuxClearIfShowing/라벨이
-                // 옛 임시 키를 찾다가 어긋난다.
+                // 옛 임시 키를 찾다가 어긋난다. pane.tabs도 같이 바꿔야 한다 - 옛 키가 tabs에 남으면
+                // tmuxSetTabEntries의 prune이 그 탭을 지우고, tabs에 없는 contentKey를 마지막 탭(기존 터미널)으로
+                // 되돌려 새 터미널이 잠깐 보이다 기존 터미널로 바뀐다.
                 let promoted = false;
                 (function walk(p: ITmuxPane) {
                     if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+                    const ti = p.tabs ? p.tabs.indexOf(newKey) : -1;
+                    if (ti >= 0) { p.tabs![ti] = key; promoted = true; }
                     if (p.contentKey === newKey) { p.contentKey = key; promoted = true; }
                 })(tmuxRoot);
                 if (promoted) { tmuxSyncPanePositions(); tmuxSaveLayout(); }
@@ -5345,7 +5494,7 @@ function browserLoadSession(remoteId: string, sessionId: string) {
     const ctx = serverCtxOf(remoteId);
     if (!ctx) return;
     browserActivatePane();
-    showBrowserFrame(sessKey('browser', remoteId, sessionId), `${ctx.artgineUrl}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`);
+    showBrowserFrame(sessKey('browser', remoteId, sessionId), ctxPageUrl(ctx, `artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`));
     renderSessionSidebar();
 }
 
@@ -5387,7 +5536,7 @@ function browserItemSpec(s: IBrowserSessionData): SessionItemSpec {
         onClick: () => browserLoadSession(s.remoteId, s.sessionId),
         onShare: () => browserShowShareLink(ctx, s.sessionId, s.url),
         onDelete: () => browserRemoveSession(s.remoteId, s.sessionId),
-        popup: { url: () => `${ctx?.artgineUrl ?? CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.remoteId}_${s.sessionId}` },
+        popup: { url: () => ctxPageUrl(ctx ?? localServerCtx(), `artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`), title: s.url, winName: `browser_${s.remoteId}_${s.sessionId}` },
     };
 }
 
@@ -5596,13 +5745,16 @@ async function sessionPollOnce() {
 // 다시 보이는 순간 그동안 쌓인 최신 데이터로 한 번 그려준다.
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderSessionSidebar(); });
 
-// Chat/Terminal/Browser/Editor/RDP 사이드바 강조는 Multiplexer 레이아웃(tmuxPaneRole) 기준.
+// Chat/Terminal/Browser/Editor/RDP 사이드바 강조는 Multiplexer 레이아웃(tmuxPaneIdForKey) 기준.
 // pane 내용이 바뀔 때마다 tmuxSaveLayout() → renderSessionSidebar/refreshRdpHighlights 가 맞춘다.
-
-// ---- Multiplexer 패널: 센터 영역을 tmux처럼 좌우/상하로 분할해 여러 iframe을 동시에 띄운다.
-// 트리는 leaf(콘텐츠 1칸)와 split(row/col 두 자식)로 구성된다. 분할/병합/콘텐츠 선택은 더 이상
-// 패널 안 오버레이가 아니라 상단 Multiplexer 드롭다운(tmuxRenderMenu)에서 하므로, 패널 자체는
-// 항상 "work 모드"처럼 오버레이 없이 iframe이 직접 입력을 받는다.
+// ---- Multiplexer 패널: VS Code 에디터 그룹처럼 센터 영역을 좌우/상하로 분할하고, 각 pane(그룹)은
+// 자기 탭 바에 열린 세션들을 나열한다. 트리는 leaf(탭 여러 개 + 활성 1개)와 split(row/col 두 자식 +
+// 비율)로 구성된다. 조작은 전부 pane 안에서 한다:
+//   - 탭 클릭 = 활성 전환, × / 휠클릭 = 탭 닫기(세션 삭제 아님 - iframe은 풀에 남아 다시 열면 재로드 없음)
+//   - 탭/사이드바 항목을 pane 위에 드래그: 가장자리(상/하/좌/우 25%)에 놓으면 그 방향으로 분할해 새 pane에
+//     넣고, 가운데에 놓으면 그 pane의 탭으로 추가(덮기). 탭 바 위에 놓으면 그 위치로 순서 이동.
+//   - 분할선 드래그 = 비율 조정. 마지막 탭이 빠져 빈 pane은 자동으로 닫힌다(루트 하나만 남으면 빈 채로 둠).
+// 한 세션(key)은 iframe이 하나뿐이라 언제나 정확히 한 pane의 탭 목록에만 존재한다(옮기면 원래 pane에서 빠짐).
 // 세션 iframe은 leaf(pane)의 DOM 자식이 아니다 - pane을 옮길 때마다 appendChild로 부모를 바꾸면
 // Chrome이 iframe을 무조건 재로드한다(display:block/none 여부와 무관 - 실측 확인됨). 그래서 모든
 // 세션 iframe은 #tmux-tree-root에 한 번만 붙이고 다시는 부모를 바꾸지 않는다. 대신 어느 pane에
@@ -5617,31 +5769,65 @@ interface ITmuxPane {
     id: string;
     split?: 'row' | 'col';
     children?: [ITmuxPane, ITmuxPane];
+    /** split 노드: children[0]이 차지하는 비율(TMUX_RATIO_MIN~MAX). 분할선 드래그로 바뀐다. */
+    ratio?: number;
+    /** leaf: 이 pane에 열린 콘텐츠 key 목록(탭 순서). */
+    tabs?: string[];
+    /** leaf: tabs 중 지금 화면에 보이는(활성) key. 없으면 null. */
     contentKey?: string | null;
 }
-const TMUX_LS_KEY = 'ctrl-tmux-layout-v1';
+type TmuxDropZone = 'center' | 'left' | 'right' | 'top' | 'bottom';
+const TMUX_LS_KEY = 'ctrl-tmux-layout-v2';
+const TMUX_LS_KEY_V1 = 'ctrl-tmux-layout-v1';
+const TMUX_TAB_DRAG_MIME = 'application/x-control-tmux-tab';
+const TMUX_RATIO_MIN = 0.1, TMUX_RATIO_MAX = 0.9;
+const TMUX_DROP_EDGE = 0.25;
+const TMUX_TAB_ICON: Record<string, string> = { chat: 'bi-chat-dots', term: 'bi-terminal', 'term-new': 'bi-terminal', browser: 'bi-browser-chrome', editor: 'bi-file-earmark-code', web: 'bi-globe', rdp: 'bi-display' };
 const tmuxPaneEls = new Map<string, HTMLElement>();
 const tmuxTreeRoot = CDOM.ID('tmux-tree-root') as HTMLDivElement;
 const tmuxTreeStruct = CDOM.ID('tmux-tree-struct') as HTMLDivElement;
 // key -> 지금까지 생성된 모든 세션 iframe(어느 pane에도 배정 안 되어 숨겨진 것 포함). 풀 자체는
 // 타입별로 나뉘어 있지만(termIframePool 등) "지금 화면에 보여야 하는지"를 한 번에 훑기 위한 통합 인덱스.
 const tmuxAllFrames = new Map<string, HTMLIFrameElement>();
+// 탭 라벨/아이콘의 소스. flushSessionSidebar가 사이드바 목록과 완전히 같은 entries를 넘겨준다
+// (tmuxSetTabEntries). 서버 목록에 없는 key(RDP, 아직 목록에 안 잡힌 새 세션 등)는 tmuxKeyLabel로 폴백.
+let tmuxTabEntries: { key: string; sortKey: number; spec: SessionItemSpec }[] = [];
+// 마지막으로 사용자가 만진 pane. 새 세션을 열면(tmuxPlaceFrame) 여기에 탭으로 추가된다(VS Code의
+// "활성 에디터 그룹"). 탭 바 클릭, 드롭, 그리고 iframe 클릭(window blur로 감지)으로 갱신된다.
+let tmuxActivePaneId: string | null = null;
 
+function tmuxClampRatio(r: number): number { return Math.max(TMUX_RATIO_MIN, Math.min(TMUX_RATIO_MAX, r)); }
+// localStorage에서 읽은 임의의 값을 안전한 트리로 정규화한다. v1(tabs 없음, contentKey만)도 여기서
+// 그대로 흡수된다(contentKey 하나짜리 탭 목록으로).
+function tmuxNormalize(p: any): ITmuxPane {
+    if (p && p.split && Array.isArray(p.children) && p.children.length === 2) {
+        return {
+            id: String(p.id || genUuid()),
+            split: p.split === 'col' ? 'col' : 'row',
+            ratio: tmuxClampRatio(typeof p.ratio === 'number' ? p.ratio : 0.5),
+            children: [tmuxNormalize(p.children[0]), tmuxNormalize(p.children[1])],
+        };
+    }
+    const tabs: string[] = Array.isArray(p?.tabs) ? p.tabs.filter((k: any) => typeof k === 'string' && k) : [];
+    const contentKey: string | null = typeof p?.contentKey === 'string' && p.contentKey ? p.contentKey : null;
+    if (contentKey && !tabs.includes(contentKey)) tabs.push(contentKey);
+    return { id: String(p?.id || genUuid()), tabs, contentKey: contentKey ?? (tabs.length ? tabs[tabs.length - 1] : null) };
+}
 function tmuxLoadLayout(): ITmuxPane {
     try {
-        const raw = localStorage.getItem(TMUX_LS_KEY);
-        if (raw) return JSON.parse(raw);
+        const raw = localStorage.getItem(TMUX_LS_KEY) ?? localStorage.getItem(TMUX_LS_KEY_V1);
+        if (raw) return tmuxNormalize(JSON.parse(raw));
     } catch (_) {}
-    return { id: genUuid(), contentKey: null };
+    return { id: genUuid(), tabs: [], contentKey: null };
 }
 function tmuxStrip(p: ITmuxPane): ITmuxPane {
-    if (p.split && p.children) return { id: p.id, split: p.split, children: [tmuxStrip(p.children[0]), tmuxStrip(p.children[1])] };
-    return { id: p.id, contentKey: p.contentKey ?? null };
+    if (p.split && p.children) return { id: p.id, split: p.split, ratio: p.ratio ?? 0.5, children: [tmuxStrip(p.children[0]), tmuxStrip(p.children[1])] };
+    return { id: p.id, tabs: [...(p.tabs ?? [])], contentKey: p.contentKey ?? null };
 }
 function tmuxSaveLayout() {
     try { localStorage.setItem(TMUX_LS_KEY, JSON.stringify(tmuxStrip(tmuxRoot))); } catch (_) {}
     tmuxRenderMenu();
-    // pane 콘텐츠가 바뀌면 사이드바 강조(메인=빨강/서브=파랑)를 바로 맞춘다.
+    // pane 콘텐츠가 바뀌면 사이드바 강조(pane별 고유색)를 바로 맞춘다.
     renderSessionSidebar();
     refreshRdpHighlights();
     tmuxUpdateWideMode();
@@ -5660,12 +5846,44 @@ function tmuxFindParent(node: ITmuxPane, id: string, parent: ITmuxPane | null = 
     if (node.children) { for (const c of node.children) { const f = tmuxFindParent(c, id, node); if (f) return f; } }
     return null;
 }
-// "첫 번째 pane" = 트리에서 항상 children[0]를 따라 내려간 leaf. 새 세션을 열면 이 pane과 교체된다.
+function tmuxLeaves(): ITmuxPane[] {
+    const out: ITmuxPane[] = [];
+    (function walk(p: ITmuxPane) {
+        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
+        out.push(p);
+    })(tmuxRoot);
+    return out;
+}
+// "첫 번째 pane" = 트리에서 항상 children[0]를 따라 내려간 leaf.
 function tmuxFirstPaneId(): string {
     let p = tmuxRoot;
     while (p.split && p.children) p = p.children[0];
     return p.id;
 }
+// 새 세션이 들어갈 pane: 마지막으로 만진 pane이 아직 살아 있으면 그곳, 아니면 첫 pane.
+function tmuxTargetPaneId(): string {
+    if (tmuxActivePaneId) { const p = tmuxFind(tmuxRoot, tmuxActivePaneId); if (p && !p.split) return p.id; }
+    return tmuxFirstPaneId();
+}
+function tmuxSetActivePane(paneId: string | null) {
+    if (tmuxActivePaneId === paneId) return;
+    tmuxActivePaneId = paneId;
+    tmuxRefreshActiveClass();
+}
+function tmuxRefreshActiveClass() {
+    tmuxPaneEls.forEach((el, id) => el.classList.toggle('tmux-leaf-active', id === tmuxActivePaneId && el.classList.contains('tmux-leaf')));
+}
+// iframe 안을 클릭하면 부모 문서는 클릭을 못 보고 window blur만 온다 - 그때 포커스가 간 iframe으로 pane을 찾는다.
+window.addEventListener('blur', () => {
+    setTimeout(() => {
+        const ae = document.activeElement;
+        if (!(ae instanceof HTMLIFrameElement)) return;
+        for (const [key, f] of tmuxAllFrames) {
+            if (f === ae) { const pid = tmuxFindPaneIdByKey(key); if (pid) tmuxSetActivePane(pid); return; }
+        }
+    }, 0);
+});
+
 function tmuxPoolForKey(key: string): { pool: Map<string, HTMLIFrameElement>, onCreate?: (f: HTMLIFrameElement, key: string) => void } | null {
     if (key.startsWith('term:') || key.startsWith('term-new:')) return { pool: termIframePool, onCreate: wirePooledFrameHotkeys };
     if (key.startsWith('chat:')) return { pool: chatIframePool, onCreate: wirePooledFrameHotkeys };
@@ -5685,7 +5903,7 @@ function tmuxEnsurePooledFrame(key: string): HTMLIFrameElement | null {
     const f = document.createElement('iframe');
     f.src = src;
     // 좌표는 tmuxSyncPanePositions가 매길 때까지 0크기로 숨겨둔다. #tmux-tree-root에 딱 한 번만
-    // 붙이고 이후로는 절대 다른 부모로 옮기지 않는다(재로드 방지 - 파일 상단 주석 참고).
+    // 붙이고 이후로는 절대 다른 부모로 옮기지 않는다(재로드 방지 - 섹션 상단 주석 참고).
     f.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;border:0;display:none;';
     spec.onCreate?.(f, key);
     spec.pool.set(key, f);
@@ -5693,56 +5911,171 @@ function tmuxEnsurePooledFrame(key: string): HTMLIFrameElement | null {
     tmuxTreeRoot.appendChild(f);
     return f;
 }
-// key가 정확히 하나의 pane에만 배정되도록 강제한다. 다른 pane이 이미 이 key를 갖고 있었다면 비운다
-// (안 그러면 두 pane이 같은 key를 동시에 들고 있는 상태가 남아, tmuxSyncPanePositions가 그중 트리
-// 순회상 나중에 만난 pane 위치로만 iframe을 옮기고 먼저 만난 쪽은 배정된 척하지만 실제론 빈 화면인
-// 핑퐁 버그가 생긴다). DOM 이동이 없으므로(좌표만 바뀜) 여기선 이동/재로드 걱정은 없다.
-function tmuxAssignPaneContent(paneId: string, key: string | null): void {
-    const affected = new Set<string>([paneId]);
-    (function walk(p: ITmuxPane) {
-        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
-        if (key && p.contentKey === key && p.id !== paneId) { p.contentKey = null; affected.add(p.id); }
-    })(tmuxRoot);
-    const pane = tmuxFind(tmuxRoot, paneId);
-    if (pane && !pane.split) pane.contentKey = key;
-    affected.forEach(tmuxRefreshEmptyState);
+
+// ---- 트리 변경 프리미티브. 전부 트리 데이터만 만지고 DOM은 건드리지 않는다 - 마무리는 tmuxCommit. ----
+
+// pane을 트리에서 떼어내고 형제가 부모 자리를 차지한다(형제가 분할 서브트리여도 그대로 승격).
+// 루트 leaf는 뗄 수 없으므로 비우기만 한다. 트리 구조가 바뀌었으면 true.
+function tmuxRemovePane(paneId: string): boolean {
+    const found = tmuxFindParent(tmuxRoot, paneId);
+    if (!found) return false;
+    if (!found.parent) { found.pane.tabs = []; found.pane.contentKey = null; return false; }
+    const parent = found.parent;
+    const sibling = parent.children![0].id === paneId ? parent.children![1] : parent.children![0];
+    const gp = tmuxFindParent(tmuxRoot, parent.id)?.parent;
+    if (!gp) tmuxRoot = sibling;
+    else gp.children![gp.children![0] === parent ? 0 : 1] = sibling;
+    if (tmuxActivePaneId === paneId) tmuxActivePaneId = null;
+    return true;
 }
-// pane의 "Empty — 콘텐츠 선택" 안내 문구를 그 pane의 현재 contentKey 상태에 맞춰 다시 그린다.
-// 트리 전체를 재빌드하지 않고 contentKey만 바뀌었을 때(tmuxAssignPaneContent 등) 쓴다.
-function tmuxRefreshEmptyState(paneId: string): void {
+// key를 exceptPaneId를 제외한 모든 pane의 탭 목록에서 뺀다. 그 pane에서 활성이었으면 이웃 탭을 활성으로
+// 올리고, 탭이 하나도 안 남은 pane은 닫는다. touched = 어딘가에서 실제로 빠졌는지, changed = 트리 구조 변경 여부.
+function tmuxDetachKey(key: string, exceptPaneId?: string): { touched: boolean; changed: boolean } {
+    let touched = false;
+    const emptied: string[] = [];
+    for (const p of tmuxLeaves()) {
+        if (p.id === exceptPaneId) continue;
+        const tabs = p.tabs ?? (p.tabs = []);
+        const idx = tabs.indexOf(key);
+        if (idx < 0 && p.contentKey !== key) continue;
+        touched = true;
+        if (idx >= 0) tabs.splice(idx, 1);
+        if (p.contentKey === key) p.contentKey = tabs.length ? tabs[Math.min(Math.max(idx, 0), tabs.length - 1)] : null;
+        if (!tabs.length) emptied.push(p.id);
+    }
+    let changed = false;
+    for (const id of emptied) if (tmuxRemovePane(id)) changed = true;
+    return { touched, changed };
+}
+// 변경 마무리: 구조가 바뀌었으면 트리 DOM 전체를 다시 짓고, 아니면 각 leaf의 탭 바/빈 안내만 갱신한 뒤
+// iframe 좌표를 맞추고 저장한다. iframe은 트리 DOM 자식이 아니라 전체 재빌드도 재로드를 일으키지 않는다.
+function tmuxCommit(structChanged: boolean) {
+    if (structChanged) tmuxRenderAll();
+    else { tmuxLeaves().forEach(p => tmuxRefreshLeaf(p.id)); tmuxSyncPanePositions(); tmuxRefreshActiveClass(); }
+    tmuxSaveLayout();
+}
+
+// pane에 key를 탭으로 추가(이미 있으면 그대로)하고 활성으로 만든다. 다른 pane에 있었으면 거기서 빠진다.
+function tmuxSetPaneContent(paneId: string, key: string | null) {
+    if (!key) { tmuxClosePane(paneId); return; }
     const pane = tmuxFind(tmuxRoot, paneId);
     if (!pane || pane.split) return;
-    const content = tmuxPaneEls.get(paneId)?.querySelector('.tmux-leaf-content') as HTMLElement | null;
-    if (!content) return;
-    content.querySelectorAll('.tmux-leaf-empty').forEach(e => e.remove());
-    if (!pane.contentKey) {
-        const empty = document.createElement('div');
-        empty.className = 'tmux-leaf-empty';
-        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — pick content from the Multiplexer menu');
-        content.appendChild(empty);
-    }
+    tmuxEnsurePooledFrame(key);
+    const { changed } = tmuxDetachKey(key, paneId);
+    const tabs = pane.tabs ?? (pane.tabs = []);
+    if (!tabs.includes(key)) tabs.push(key);
+    pane.contentKey = key;
+    tmuxActivePaneId = paneId;
+    tmuxCommit(changed);
 }
+// 탭 하나 닫기(세션은 삭제하지 않음). 마지막 탭이면 pane도 닫힌다.
+function tmuxCloseTab(paneId: string, key: string) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split) return;
+    const tabs = pane.tabs ?? (pane.tabs = []);
+    const idx = tabs.indexOf(key);
+    if (idx < 0) return;
+    tabs.splice(idx, 1);
+    if (pane.contentKey === key) pane.contentKey = tabs.length ? tabs[Math.min(idx, tabs.length - 1)] : null;
+    const changed = tabs.length ? false : tmuxRemovePane(paneId);
+    tmuxCommit(changed);
+}
+// pane 닫기(탭 전부 내림). 루트 하나뿐이면 빈 pane으로 남는다.
+function tmuxClosePane(paneId: string) {
+    tmuxCommit(tmuxRemovePane(paneId));
+}
+// key를 paneId의 탭 목록에서 beforeKey 앞(null이면 맨 뒤)으로 옮기고 활성화한다. 다른 pane에서 온 것이면 그쪽에서 빠진다.
+function tmuxMoveTabBefore(paneId: string, key: string, beforeKey: string | null) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split || key === beforeKey) return;
+    tmuxEnsurePooledFrame(key);
+    const { changed } = tmuxDetachKey(key, paneId);
+    const tabs = pane.tabs ?? (pane.tabs = []);
+    const from = tabs.indexOf(key);
+    if (from >= 0) tabs.splice(from, 1);
+    const to = beforeKey ? tabs.indexOf(beforeKey) : -1;
+    if (to < 0) tabs.push(key); else tabs.splice(to, 0, key);
+    pane.contentKey = key;
+    tmuxActivePaneId = paneId;
+    tmuxCommit(changed);
+}
+// leaf를 좌우(row)/상하(col)로 분할한다. opts.key가 있으면 그 세션을 새 pane에 넣고(다른 pane에 있었으면
+// 거기서 빠짐), before면 새 pane이 앞(왼쪽/위)에 온다. key 없이 분할하면 새 pane은 빈 채로 시작한다.
+function tmuxSplitPane(paneId: string, dir: 'row' | 'col', opts?: { key?: string; before?: boolean }) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split) return;
+    const key = opts?.key;
+    if (key) {
+        // 이 pane의 유일한 탭을 자기 옆으로 떼는 건 의미가 없다(빈 pane + 같은 내용).
+        if ((pane.tabs?.length ?? 0) <= 1 && pane.contentKey === key) return;
+        tmuxEnsurePooledFrame(key);
+        // pane 자신도 제외하지 않는다 - 이 pane의 탭이면 새 pane으로 옮겨가야 한다. 위에서 유일 탭 케이스를
+        // 걸렀으므로 이 pane이 비어 사라지는 일은 없다.
+        tmuxDetachKey(key);
+    }
+    const keep: ITmuxPane = { id: genUuid(), tabs: [...(pane.tabs ?? [])], contentKey: pane.contentKey ?? null };
+    const fresh: ITmuxPane = { id: genUuid(), tabs: key ? [key] : [], contentKey: key ?? null };
+    pane.split = dir;
+    pane.ratio = 0.5;
+    pane.children = opts?.before ? [fresh, keep] : [keep, fresh];
+    delete pane.tabs;
+    delete pane.contentKey;
+    // 새 pane을 활성으로 - 빈 채로 만들었어도 다음에 여는 세션이 거기 들어가게(VS Code와 동일).
+    tmuxActivePaneId = fresh.id;
+    tmuxCommit(true);
+}
+// 세션이 삭제됐는데 어느 pane의 탭이었다면 그 탭을 내린다. 풀에서 iframe을 지우는 각 삭제 처리부(f.remove() 직후)에서 호출한다.
+function tmuxClearIfShowing(key: string) {
+    const { touched, changed } = tmuxDetachKey(key);
+    if (touched) tmuxCommit(changed);
+}
+// 새 세션을 열거나 사이드바에서 세션을 클릭했을 때: 이미 어느 pane의 탭이면 그 pane에서 활성으로, 아니면
+// 마지막으로 만진 pane에 새 탭으로 추가한다. _f는 호출부(showPooledFrame) 시그니처 유지용.
+function tmuxPlaceFrame(key: string, _f: HTMLIFrameElement) {
+    tmuxSetPaneContent(tmuxFindPaneIdWithTab(key) ?? tmuxTargetPaneId(), key);
+    tmuxShowPanel();
+}
+// key가 지금 화면에 보이는(활성 탭인) pane id. 없으면 null.
+function tmuxFindPaneIdByKey(key: string): string | null {
+    return tmuxLeaves().find(p => p.contentKey === key)?.id ?? null;
+}
+// key를 탭으로(활성 여부 무관) 갖고 있는 pane id. 없으면 null.
+function tmuxFindPaneIdWithTab(key: string): string | null {
+    return tmuxLeaves().find(p => (p.tabs ?? []).includes(key))?.id ?? null;
+}
+
+// ---- iframe 좌표 동기화 ----
+
 // 지금 트리 상태(어느 pane이 어느 key를 보여줘야 하는지)에 맞춰, 화면에 보여야 하는 세션 iframe들의
 // 좌표를 그 pane의 leaf-content 위치로 옮기고, 어느 pane에도 배정 안 된 iframe은 숨긴다.
-// pane 위치가 바뀔 수 있는 모든 경우(분할/병합/콘텐츠 변경/리사이즈)마다 호출한다.
+// pane 위치가 바뀔 수 있는 모든 경우(분할/닫기/콘텐츠 변경/리사이즈)마다 호출한다.
 function tmuxSyncPanePositions(): void {
     const rootRect = tmuxTreeRoot.getBoundingClientRect();
     const assignedKeys = new Set<string>();
-    (function walk(p: ITmuxPane) {
-        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
-        if (!p.contentKey) return;
+    for (const p of tmuxLeaves()) {
+        if (!p.contentKey) continue;
         const f = tmuxEnsurePooledFrame(p.contentKey);
-        if (!f) return;
+        if (!f) continue;
         assignedKeys.add(p.contentKey);
         const leafContent = tmuxPaneEls.get(p.id)?.querySelector('.tmux-leaf-content') as HTMLElement | null;
-        if (!leafContent) return;
+        if (!leafContent) continue;
         const r = leafContent.getBoundingClientRect();
-        f.style.left = `${r.left - rootRect.left}px`;
-        f.style.top = `${r.top - rootRect.top}px`;
-        f.style.width = `${r.width}px`;
-        f.style.height = `${r.height}px`;
+        const left = `${r.left - rootRect.left}px`, top = `${r.top - rootRect.top}px`;
+        const width = `${r.width}px`, height = `${r.height}px`;
+        const moved = f.style.left !== left || f.style.top !== top || f.style.width !== width || f.style.height !== height;
+        f.style.left = left;
+        f.style.top = top;
+        f.style.width = width;
+        f.style.height = height;
         if (f.style.display !== 'block') { f.style.display = 'block'; postFrameVisible(f, true); }
-    })(tmuxRoot);
+        // 다른 pane에서 옮겨왔거나 크기가 바뀐 경우, 특히 web:(실제 외부 사이트) 같은 교차 출처 iframe은
+        // 브라우저가 새 좌표로 히트테스트를 갱신하기 전 한두 프레임 동안 옛 좌표로 클릭을 받아 "이동 직후
+        // 첫 클릭이 안 먹는" 현상이 생긴다. pointer-events를 한 번 껐다가 다음 프레임에 되살려서 갱신을 강제한다.
+        if (moved) {
+            f.style.pointerEvents = 'none';
+            requestAnimationFrame(() => { f.style.pointerEvents = ''; });
+        }
+    }
     tmuxAllFrames.forEach((f, key) => {
         if (!assignedKeys.has(key) && f.style.display !== 'none') {
             postFrameVisible(f, false);
@@ -5751,61 +6084,15 @@ function tmuxSyncPanePositions(): void {
     });
 }
 // 패널 크기가 바뀔 수 있는 외부 요인(창 리사이즈, 사이드바 토글 등)에 대응한다. 우리 코드가 직접
-// 트리 구조를 바꾸는 경우(분할/병합/콘텐츠 변경)는 각 함수가 끝에서 tmuxSyncPanePositions를 직접
-// 부르므로 이 옵저버는 그 외의 외부 리사이즈만 커버하면 된다.
+// 트리를 바꾸는 경우는 tmuxCommit이 끝에서 직접 맞추므로 이 옵저버는 그 외의 외부 리사이즈만 커버한다.
 new ResizeObserver(() => tmuxSyncPanePositions()).observe(tmuxTreeRoot);
-function tmuxPlaceInPane(paneId: string, key: string): void {
-    tmuxAssignPaneContent(paneId, key);
-    tmuxSyncPanePositions();
-}
-// key가 이미 어느 pane(예: 분할된 두 번째 pane)에 떠 있으면 그 pane id를 돌려준다.
-// 없으면 null — 이 경우에만 "첫 번째 pane과 교체" 기본 동작을 쓴다.
-function tmuxFindPaneIdByKey(key: string): string | null {
-    let found: string | null = null;
-    (function walk(p: ITmuxPane) {
-        if (found) return;
-        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
-        if (p.contentKey === key) found = p.id;
-    })(tmuxRoot);
-    return found;
-}
-// _f는 호출부(showPooledFrame 등) 시그니처를 유지하기 위해 남겨뒀을 뿐 더 이상 쓰지 않는다
-// (배정된 iframe은 tmuxSyncPanePositions가 알아서 찾아 좌표를 옮긴다).
-function tmuxPlaceFrame(key: string, _f: HTMLIFrameElement) {
-    // 이미 열려 있는 pane이 있으면(A/B 분할 상태에서 B를 다시 클릭한 경우 등) 그 pane을
-    // 그대로 두고 첫 pane과 바꾸지 않는다 — 안 그러면 그 pane이 비어버린다.
-    tmuxPlaceInPane(tmuxFindPaneIdByKey(key) ?? tmuxFirstPaneId(), key);
-    tmuxSaveLayout();
-    tmuxShowPanel();
-}
-// 세션이 삭제됐는데 그게 지금 화면(어느 pane이든)에 떠 있던 것이었다면 그 pane을 비운다.
-// 풀에서 iframe을 지우는 각 삭제 처리부(f.remove() 직후)에서 호출한다.
-function tmuxClearIfShowing(key: string) {
-    let changed = false;
-    (function walk(p: ITmuxPane) {
-        if (p.split && p.children) { walk(p.children[0]); walk(p.children[1]); return; }
-        if (p.contentKey !== key) return;
-        p.contentKey = null;
-        tmuxRefreshEmptyState(p.id);
-        changed = true;
-    })(tmuxRoot);
-    if (changed) {
-        tmuxSyncPanePositions();
-        tmuxSaveLayout();
-    }
-}
-function tmuxCollectIds(p: ITmuxPane, out: string[] = []): string[] {
-    out.push(p.id);
-    if (p.children) { tmuxCollectIds(p.children[0], out); tmuxCollectIds(p.children[1], out); }
-    return out;
-}
 
 // 선택된 콘텐츠 키(chat:xxx / term:xxx / browser:xxx / rdp:local / rdp:remote:xxx)를 실제 iframe src로 변환.
 // 기존 각 탭의 프레임 풀이 쓰는 것과 동일한 URL 규칙을 그대로 따른다(showChatFrame 등 호출부 참고).
 function tmuxKeyToSrc(key: string): string | null {
     if (key.startsWith('chat:')) {
         const p = parseSessKey(key); const ctx = serverCtxOf(p.remoteId);
-        return ctx ? `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(p.id)}` : null;
+        return ctx ? ctxPageUrl(ctx, `artgine/server/html/Chat.html?session=${encodeURIComponent(p.id)}`) : null;
     }
     if (key.startsWith('term:')) {
         const p = parseSessKey(key); const ctx = serverCtxOf(p.remoteId);
@@ -5813,7 +6100,7 @@ function tmuxKeyToSrc(key: string): string | null {
     }
     if (key.startsWith('browser:')) {
         const p = parseSessKey(key); const ctx = serverCtxOf(p.remoteId);
-        return ctx ? `${ctx.artgineUrl}artgine/server/html/Browser.html?session=${encodeURIComponent(p.id)}` : null;
+        return ctx ? ctxPageUrl(ctx, `artgine/server/html/Browser.html?session=${encodeURIComponent(p.id)}`) : null;
     }
     if (key === 'rdp:local') {
         return `${CPath.WebRootArtgineUrl()}artgine/server/html/RemoteDesktop.html`;
@@ -5832,51 +6119,275 @@ function tmuxKeyToSrc(key: string): string | null {
     }
     return null;
 }
+
+// ---- 트리 DOM ----
+
+// split 노드의 두 자식 flex-grow를 ratio대로 준다(분할선 폭을 뺀 나머지를 비율대로 나눔).
+function tmuxApplyRatio(splitEl: HTMLElement, pane: ITmuxPane) {
+    const r = tmuxClampRatio(pane.ratio ?? 0.5);
+    const kids = Array.from(splitEl.children).filter(c => !c.classList.contains('tmux-splitter')) as HTMLElement[];
+    if (kids[0]) kids[0].style.flex = `${r} 1 0`;
+    if (kids[1]) kids[1].style.flex = `${1 - r} 1 0`;
+}
+// 두 자식 사이의 분할선. 드래그하는 동안은 body.tmux-resizing으로 모든 세션 iframe의 pointer-events를
+// 꺼서(CSS) 마우스가 iframe 위를 지나도 이벤트를 뺏기지 않게 하고, 좌표 동기화는 rAF로 합류시킨다.
+function tmuxBuildSplitter(splitEl: HTMLElement, pane: ITmuxPane): HTMLElement {
+    const bar = document.createElement('div');
+    bar.className = 'tmux-splitter';
+    bar.addEventListener('pointerdown', (e: PointerEvent) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        bar.setPointerCapture(e.pointerId);
+        document.body.classList.add('tmux-resizing');
+        document.body.style.cursor = pane.split === 'row' ? 'col-resize' : 'row-resize';
+        let raf = 0;
+        const onMove = (ev: PointerEvent) => {
+            const rect = splitEl.getBoundingClientRect();
+            const t = pane.split === 'row' ? (ev.clientX - rect.left) / rect.width : (ev.clientY - rect.top) / rect.height;
+            pane.ratio = tmuxClampRatio(t);
+            tmuxApplyRatio(splitEl, pane);
+            if (!raf) raf = requestAnimationFrame(() => { raf = 0; tmuxSyncPanePositions(); });
+        };
+        const onUp = () => {
+            bar.removeEventListener('pointermove', onMove);
+            bar.removeEventListener('pointerup', onUp);
+            bar.removeEventListener('pointercancel', onUp);
+            document.body.classList.remove('tmux-resizing');
+            document.body.style.cursor = '';
+            tmuxSyncPanePositions();
+            tmuxSaveLayout();
+        };
+        bar.addEventListener('pointermove', onMove);
+        bar.addEventListener('pointerup', onUp);
+        bar.addEventListener('pointercancel', onUp);
+    });
+    return bar;
+}
+// 드롭존 안의 마우스 위치를 5구역으로 나눈다. 가장자리 25% 안쪽이면 가장 가까운 변, 아니면 center.
+function tmuxDropZoneAt(el: HTMLElement, e: DragEvent): TmuxDropZone {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return 'center';
+    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    const d: [TmuxDropZone, number][] = [['left', fx], ['right', 1 - fx], ['top', fy], ['bottom', 1 - fy]];
+    d.sort((a, b) => a[1] - b[1]);
+    return d[0][1] <= TMUX_DROP_EDGE ? d[0][0] : 'center';
+}
+// 드롭 결과 반영으로 트리를 다시 그리면(innerHTML 초기화) 드래그 중이던 원본 탭 엘리먼트가 DOM에서 사라져
+// dragend가 document까지 오지 않는다. Chrome은 drop과 dragend를 별개 IPC로 보내 setTimeout(0)으로 미뤄도
+// dragend보다 먼저 실행될 수 있으므로, body.tmux-dragging은 여기서 직접 풀어야 드롭존 오버레이가 남지 않는다.
+function tmuxAfterDrop(fn: () => void) {
+    document.body.classList.remove('tmux-dragging');
+    setTimeout(fn, 0);
+}
+// 드래그 중인 데이터가 우리 세션 key인지(사이드바 항목/탭). 텍스트 선택 같은 무관한 드래그는 거른다.
+function tmuxIsSessionDrag(e: DragEvent): boolean {
+    return document.body.classList.contains('tmux-dragging') && !!e.dataTransfer && (e.dataTransfer.types.includes(TMUX_TAB_DRAG_MIME) || e.dataTransfer.types.includes('text/plain'));
+}
 function tmuxBuildEl(pane: ITmuxPane): HTMLElement {
     if (pane.split && pane.children) {
         const el = document.createElement('div');
         el.className = `tmux-split tmux-split-${pane.split}`;
         el.dataset.paneId = pane.id;
         el.appendChild(tmuxBuildEl(pane.children[0]));
+        el.appendChild(tmuxBuildSplitter(el, pane));
         el.appendChild(tmuxBuildEl(pane.children[1]));
+        tmuxApplyRatio(el, pane);
         tmuxPaneEls.set(pane.id, el);
         return el;
     }
     const el = document.createElement('div');
     el.className = 'tmux-leaf';
     el.dataset.paneId = pane.id;
+    // 탭 바(위) + 콘텐츠 자리(아래). iframe 좌표는 leaf-content 기준이라 탭 바는 iframe에 덮이지 않는다.
+    const tabbar = document.createElement('div');
+    tabbar.className = 'tmux-leaf-tabbar';
+    tabbar.addEventListener('pointerdown', () => tmuxSetActivePane(pane.id));
+    el.appendChild(tabbar);
     const content = document.createElement('div');
     content.className = 'tmux-leaf-content';
     el.appendChild(content);
-    if (!pane.contentKey) {
-        const empty = document.createElement('div');
-        empty.className = 'tmux-leaf-empty';
-        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — pick content from the Multiplexer menu');
-        content.appendChild(empty);
+    // 사이드바/탭에서 쓰는 pane별 고유색을 pane 테두리에도 그려 "이 색 = 이 화면 자리"를 바로 알 수 있게 한다.
+    // 세션 iframe은 이 leaf의 자식이 아니라 #tmux-tree-root에 별도로 붙어(tmuxSyncPanePositions 좌표로만
+    // 겹쳐 보임) leaf-content를 완전히 덮어버리므로, z-index로 iframe 위에 뜨는 별도 오버레이를 둔다 -
+    // pointer-events:none이라 클릭/스크롤은 그대로 iframe으로 통과한다. 단일 pane일 때는 구분할 대상이 없어 생략.
+    if (tmuxRoot.split) {
+        const outline = document.createElement('div');
+        outline.className = 'tmux-leaf-outline';
+        outline.style.borderColor = `var(--bs-${tmuxPaneColorName(pane.id)})`;
+        el.appendChild(outline);
     }
-    // 사이드바 세션 아이템을 드래그해 놓는 자리. 평소엔 안 보이고(pointer-events도 안 받고) iframe을
-    // 그대로 조작할 수 있다가, body.tmux-dragging일 때만(세션 아이템 드래그 시작~끝) 나타나 드롭을 받는다.
+    // 세션 아이템/탭을 드래그해 놓는 자리(콘텐츠 영역만 - 탭 바는 자체적으로 드롭을 받는다). 평소엔 안 보이고
+    // (pointer-events도 안 받고) iframe을 그대로 조작할 수 있다가, body.tmux-dragging일 때만 나타나 드롭을 받는다.
     // iframe 위에 그냥 리스너를 달면 드롭 이벤트가 iframe 내부 문서로 새서 안 잡히므로 이 오버레이가 필요하다.
+    // 5구역(가장자리 4방향 = 그쪽으로 분할, 가운데 = 탭으로 추가)을 indicator로 미리 보여준다.
     const dropzone = document.createElement('div');
     dropzone.className = 'tmux-leaf-dropzone';
-    dropzone.addEventListener('dragover', (e: DragEvent) => { e.preventDefault(); dropzone.classList.add('tmux-leaf-dragover'); });
+    const indicator = document.createElement('div');
+    indicator.className = 'tmux-drop-indicator';
+    dropzone.appendChild(indicator);
+    let zone: TmuxDropZone = 'center';
+    dropzone.addEventListener('dragover', (e: DragEvent) => {
+        if (!tmuxIsSessionDrag(e)) return;
+        e.preventDefault();
+        zone = tmuxDropZoneAt(dropzone, e);
+        indicator.dataset.zone = zone;
+        dropzone.classList.add('tmux-leaf-dragover');
+    });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('tmux-leaf-dragover'));
     dropzone.addEventListener('drop', (e: DragEvent) => {
         e.preventDefault();
         dropzone.classList.remove('tmux-leaf-dragover');
         const key = e.dataTransfer?.getData('text/plain');
-        if (key) tmuxSetPaneContent(pane.id, key);
+        if (!key) return;
+        const z = zone;
+        tmuxAfterDrop(() => {
+            if (z === 'center') tmuxSetPaneContent(pane.id, key);
+            else tmuxSplitPane(pane.id, z === 'left' || z === 'right' ? 'row' : 'col', { key, before: z === 'left' || z === 'top' });
+            tmuxShowPanel();
+        });
     });
     el.appendChild(dropzone);
     tmuxPaneEls.set(pane.id, el);
+    tmuxRefreshLeaf(pane.id);
     return el;
+}
+// leaf의 탭 바와 빈 안내 문구를 지금 데이터에 맞춰 다시 그린다(트리 DOM 재빌드 없이).
+function tmuxRefreshLeaf(paneId: string) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    const el = tmuxPaneEls.get(paneId);
+    if (!pane || pane.split || !el) return;
+    const content = el.querySelector('.tmux-leaf-content') as HTMLElement | null;
+    if (content) {
+        content.querySelectorAll('.tmux-leaf-empty').forEach(e => e.remove());
+        if (!pane.contentKey) {
+            const empty = document.createElement('div');
+            empty.className = 'tmux-leaf-empty';
+            empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — drop a session here or pick one with the list button');
+            content.appendChild(empty);
+        }
+    }
+    const bar = el.querySelector('.tmux-leaf-tabbar') as HTMLElement | null;
+    if (bar) tmuxRenderTabBar(pane, bar);
+}
+// pane 탭 바: 열린 탭들(스크롤) + 오른쪽 고정 조작 버튼(좌우/상하 분할, 목록에서 고르기, pane 닫기).
+function tmuxRenderTabBar(pane: ITmuxPane, bar: HTMLElement) {
+    const specByKey = new Map(tmuxTabEntries.map(e => [e.key, e.spec] as const));
+    bar.innerHTML = '';
+    const tabs = document.createElement('div');
+    tabs.className = 'tmux-tabs';
+    for (const key of pane.tabs ?? []) {
+        const spec = specByKey.get(key);
+        const isActive = key === pane.contentKey;
+        const prefix = key.slice(0, key.indexOf(':'));
+        const tab = document.createElement('div');
+        tab.className = 'tmux-tab-item' + (isActive ? ' tmux-tab-active' : '');
+        if (isActive) tab.style.cssText = tmuxPaneAccentStyle(pane.id);
+        const label = spec?.shortLabel ?? tmuxKeyLabel(key);
+        tab.title = label;
+        tab.dataset.key = key;
+        tab.innerHTML = `<i class="bi ${TMUX_TAB_ICON[prefix] ?? 'bi-app'}"></i>`
+            + `<span class="text-truncate">${aiEscapeHtml(label)}</span>`
+            + `<button type="button" class="btn-close" aria-label="Close"></button>`;
+        tab.addEventListener('click', (ev) => {
+            if ((ev.target as HTMLElement).closest('.btn-close')) return;
+            tmuxSetPaneContent(pane.id, key);
+        });
+        // 휠(미들) 클릭 = 탭 닫기. 브라우저 기본 자동 스크롤(mousedown)도 막는다.
+        tab.addEventListener('mousedown', (ev: MouseEvent) => { if (ev.button === 1) ev.preventDefault(); });
+        tab.addEventListener('auxclick', (ev: MouseEvent) => { if (ev.button !== 1) return; ev.preventDefault(); tmuxCloseTab(pane.id, key); });
+        tab.querySelector('.btn-close')?.addEventListener('click', (ev) => { ev.stopPropagation(); tmuxCloseTab(pane.id, key); });
+        // 드래그: text/plain에 세션 key(사이드바 항목과 동일 - 어느 pane 드롭존이든 받는다) + 탭 전용 MIME.
+        tab.draggable = true;
+        tab.addEventListener('dragstart', (ev: DragEvent) => {
+            ev.dataTransfer?.setData('text/plain', key);
+            ev.dataTransfer?.setData(TMUX_TAB_DRAG_MIME, key);
+            if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copyMove';
+        });
+        // 다른 탭 위에 놓으면 그 탭 앞자리로(다른 pane에서 온 것도 포함).
+        tab.addEventListener('dragover', (ev: DragEvent) => {
+            if (!tmuxIsSessionDrag(ev)) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            tab.classList.add('tmux-tab-dragover');
+        });
+        tab.addEventListener('dragleave', () => tab.classList.remove('tmux-tab-dragover'));
+        tab.addEventListener('drop', (ev: DragEvent) => {
+            tab.classList.remove('tmux-tab-dragover');
+            const dragged = ev.dataTransfer?.getData('text/plain');
+            if (!dragged || dragged === key) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            tmuxAfterDrop(() => tmuxMoveTabBefore(pane.id, dragged, key));
+        });
+        tabs.appendChild(tab);
+    }
+    // 탭 사이 빈 공간(마지막 탭 뒤 등)에 놓으면 맨 뒤로.
+    tabs.addEventListener('dragover', (ev: DragEvent) => { if (tmuxIsSessionDrag(ev)) { ev.preventDefault(); tabs.classList.add('tmux-tabs-dragover'); } });
+    tabs.addEventListener('dragleave', () => tabs.classList.remove('tmux-tabs-dragover'));
+    tabs.addEventListener('drop', (ev: DragEvent) => {
+        tabs.classList.remove('tmux-tabs-dragover');
+        const dragged = ev.dataTransfer?.getData('text/plain');
+        if (!dragged) return;
+        ev.preventDefault();
+        tmuxAfterDrop(() => tmuxMoveTabBefore(pane.id, dragged, null));
+    });
+    bar.appendChild(tabs);
+
+    const actions = document.createElement('div');
+    actions.className = 'tmux-tab-actions';
+    const canClose = !!tmuxFindParent(tmuxRoot, pane.id)?.parent;
+    actions.innerHTML =
+        `<button type="button" class="btn btn-sm btn-link" data-act="split-h" title="${aiEscapeHtml(L('ctrl.tmux.splitH', 'Split right'))}"><i class="bi bi-layout-split"></i></button>` +
+        `<button type="button" class="btn btn-sm btn-link" data-act="split-v" title="${aiEscapeHtml(L('ctrl.tmux.splitV', 'Split down'))}"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>` +
+        `<button type="button" class="btn btn-sm btn-link" data-act="select" title="${aiEscapeHtml(L('ctrl.tmux.select', 'Open a session here'))}"><i class="bi bi-card-list"></i></button>` +
+        (canClose ? `<button type="button" class="btn btn-sm btn-link" data-act="close" title="${aiEscapeHtml(L('ctrl.tmux.closePane', 'Close pane'))}"><i class="bi bi-x-lg"></i></button>` : '');
+    actions.querySelector('[data-act="split-h"]')?.addEventListener('click', () => tmuxSplitPane(pane.id, 'row'));
+    actions.querySelector('[data-act="split-v"]')?.addEventListener('click', () => tmuxSplitPane(pane.id, 'col'));
+    actions.querySelector('[data-act="select"]')?.addEventListener('click', () => tmuxOpenSelectModal(pane.id));
+    actions.querySelector('[data-act="close"]')?.addEventListener('click', () => tmuxClosePane(pane.id));
+    bar.appendChild(actions);
+    // 활성 탭이 가로 스크롤 밖에 있으면 보이게(scrollIntoView는 바깥 패널까지 스크롤할 수 있어 직접 계산).
+    const act = tabs.querySelector('.tmux-tab-active') as HTMLElement | null;
+    if (act) {
+        const l = act.offsetLeft, r = l + act.offsetWidth;
+        if (l < tabs.scrollLeft) tabs.scrollLeft = l;
+        else if (r > tabs.scrollLeft + tabs.clientWidth) tabs.scrollLeft = r - tabs.clientWidth;
+    }
 }
 function tmuxRenderAll() {
     tmuxPaneEls.clear();
     tmuxTreeStruct.innerHTML = '';
     tmuxTreeStruct.appendChild(tmuxBuildEl(tmuxRoot));
     tmuxSyncPanePositions();
+    tmuxRefreshActiveClass();
     tmuxUpdateWideMode();
+}
+// 사이드바 렌더(flushSessionSidebar)마다 호출된다. 탭 라벨의 소스를 갱신하고, 서버 목록이 한 번이라도
+// 로드된 뒤라면 더 이상 존재하지 않는 세션의 탭(새로고침 전 레이아웃에 남아 있던 것)을 정리한다.
+// iframe이 이미 떠 있는 key와 rdp:는 서버 목록과 무관하게 유지한다. 탭을 드래그하는 동안은 DOM을 다시
+// 그리지 않는다(원본 탭이 사라지면 dragend가 안 와서 드롭존이 화면을 덮은 채 남는다 - tmuxAfterDrop 참고).
+function tmuxSetTabEntries(entries: { key: string; sortKey: number; spec: SessionItemSpec }[], prune: boolean) {
+    tmuxTabEntries = entries;
+    let changed = false;
+    if (prune && lastChatSessions && lastTermSessions) {
+        const known = new Set(entries.map(e => e.key));
+        const keep = (k: string) => known.has(k) || tmuxAllFrames.has(k) || k.startsWith('rdp:');
+        const emptied: string[] = [];
+        let pruned = false;
+        for (const p of tmuxLeaves()) {
+            const tabs = p.tabs ?? (p.tabs = []);
+            const next = tabs.filter(keep);
+            if (next.length === tabs.length) continue;
+            pruned = true;
+            p.tabs = next;
+            if (p.contentKey && !next.includes(p.contentKey)) p.contentKey = next.length ? next[next.length - 1] : null;
+            if (!next.length) emptied.push(p.id);
+        }
+        for (const id of emptied) if (tmuxRemovePane(id)) changed = true;
+        if (pruned) { tmuxCommit(changed); return; }
+    }
+    if (document.body.classList.contains('tmux-dragging')) return;
+    tmuxLeaves().forEach(p => tmuxRefreshLeaf(p.id));
 }
 // Multiplexer가 실제로 분할된 상태(pane 2개 이상)로 화면에 보이는 동안만 센터 컨테이너를 풀폭으로 넓힌다.
 // 분할 안 된 단일 pane이거나 다른 탭을 보는 중이면 기존 폭(both 모드 1200px 캡)을 그대로 유지한다.
@@ -5886,58 +6397,7 @@ function tmuxUpdateWideMode() {
     document.body.classList.toggle('tmux-split-wide', isSplit && isShown);
 }
 
-// 해당 leaf를 좌우(row)/상하(col)로 분할한다. iframe은 옮기지 않는다(애초에 leaf의 DOM 자식이
-// 아니므로) - tmuxSyncPanePositions가 새로 생긴 child1의 위치로 좌표만 옮겨준다.
-function tmuxSplitPane(paneId: string, dir: 'row' | 'col') {
-    const pane = tmuxFind(tmuxRoot, paneId);
-    if (!pane || pane.split) return;
-    const oldEl = tmuxPaneEls.get(pane.id);
-
-    const child1: ITmuxPane = { id: genUuid(), contentKey: pane.contentKey ?? null };
-    const child2: ITmuxPane = { id: genUuid(), contentKey: null };
-    pane.split = dir;
-    pane.children = [child1, child2];
-    delete pane.contentKey;
-
-    const splitEl = document.createElement('div');
-    splitEl.className = `tmux-split tmux-split-${dir}`;
-    splitEl.dataset.paneId = pane.id;
-    splitEl.appendChild(tmuxBuildEl(child1));
-    splitEl.appendChild(tmuxBuildEl(child2));
-
-    oldEl?.replaceWith(splitEl);
-    tmuxPaneEls.set(pane.id, splitEl);
-    tmuxSyncPanePositions();
-    tmuxSaveLayout();
-}
-
-// paneId와 그 형제를 부모 자리에서 하나의 leaf로 합친다. paneId 쪽 콘텐츠만 유지되고 형제 쪽
-// (중첩된 하위 트리 포함)은 버려진다. iframe은 옮기지 않는다 - tmuxSyncPanePositions가 병합된
-// leaf의 새 위치로 좌표만 옮겨준다(형제 쪽에서 버려진 세션의 iframe은 어느 pane에도 배정되지
-// 않으므로 다음 sync에서 자동으로 숨겨진다 - 지워지지 않으니 나중에 다시 열어도 재로드 없음).
-function tmuxMergePane(paneId: string) {
-    const found = tmuxFindParent(tmuxRoot, paneId);
-    if (!found || !found.parent) return; // 루트는 병합 대상 없음
-    const { pane, parent } = found;
-    const keptContentKey = pane.contentKey ?? null;
-
-    const staleIds = tmuxCollectIds(parent);
-    // tmuxBuildEl(new leaf)가 내부에서 tmuxPaneEls.set(parent.id, ...)로 맵을 덮어쓰기 전에
-    // 옛 split 컨테이너 엘리먼트를 먼저 잡아둬야 한다(순서를 바꾸면 self-replaceWith가 되어 아무 일도 안 일어남).
-    const parentEl = tmuxPaneEls.get(parent.id);
-    parent.split = undefined;
-    parent.children = undefined;
-    parent.contentKey = keptContentKey;
-
-    const newLeafEl = tmuxBuildEl(parent);
-    parentEl?.replaceWith(newLeafEl);
-    staleIds.forEach(id => { if (id !== parent.id) tmuxPaneEls.delete(id); });
-    tmuxPaneEls.set(parent.id, newLeafEl);
-    tmuxSyncPanePositions();
-    tmuxSaveLayout();
-}
-
-// 셀렉트: 지정된 leaf(paneId)에 표시할 기존 세션(Chat/Terminal/Browser/RDP)을 고르는 모달.
+// 목록에서 고르기: 지정된 leaf(paneId)에 열 기존 세션(Chat/Terminal/Browser/RDP/Editor/Web)을 고르는 모달.
 // 세션을 구분할 수 있는 값(제목/마지막 출력 등)을 primary로, 작업 폴더 등은 sub(작은 글씨)로 따로 보여준다
 // — 터미널은 사용자가 이름(key)을 안 붙인 경우가 많아 workingDir만 보여주면 서로 구별이 안 됐기 때문.
 function tmuxOpenSelectModal(paneId: string) {
@@ -5963,11 +6423,10 @@ function tmuxOpenSelectModal(paneId: string) {
                 <span class="d-block text-truncate">${aiEscapeHtml(it.label)}</span>
                 ${it.sub ? `<span class="d-block text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(it.sub)}</span>` : ''}
             </button>`).join('') : `<div class="small text-secondary fst-italic">${L('ctrl.tmux.noSessions', 'None')}</div>`}
-        </div>`).join('') +
-        `<button type="button" class="btn btn-sm btn-outline-danger w-100 mt-1" id="tmux-select-clear">${L('ctrl.tmux.clearPane', 'Clear')}</button>`;
+        </div>`).join('');
 
     const modal = new CModal();
-    modal.SetHeader(L('ctrl.tmux.select', 'Select content'));
+    modal.SetHeader(L('ctrl.tmux.select', 'Open a session here'));
     modal.SetBody(bodyHtml);
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetSize(420, 480);
@@ -5980,37 +6439,15 @@ function tmuxOpenSelectModal(paneId: string) {
                 modal.Close();
             });
         });
-        document.getElementById('tmux-select-clear')?.addEventListener('click', () => {
-            tmuxSetPaneContent(paneId, null);
-            modal.Close();
-        });
     }, MODAL_DOM_DELAY);
 }
-function tmuxSetPaneContent(paneId: string, key: string | null) {
-    const pane = tmuxFind(tmuxRoot, paneId);
-    if (!pane || pane.split) return;
-    if (key) tmuxEnsurePooledFrame(key);
-    // 옮기려는 세션이 이미 다른 pane에 떠 있으면, 그 pane이 비어버리지 않도록 두 pane의
-    // 콘텐츠를 맞바꾼다(대상 pane이 갖고 있던 콘텐츠를 원래 pane으로 되돌려준다).
-    const sourcePaneId = key ? tmuxFindPaneIdByKey(key) : null;
-    if (sourcePaneId && sourcePaneId !== paneId) {
-        const sourcePane = tmuxFind(tmuxRoot, sourcePaneId)!;
-        const displaced = pane.contentKey ?? null;
-        sourcePane.contentKey = displaced;
-        pane.contentKey = key;
-        tmuxRefreshEmptyState(sourcePaneId);
-        tmuxRefreshEmptyState(paneId);
-    } else {
-        tmuxAssignPaneContent(paneId, key);
-    }
-    tmuxSyncPanePositions();
-    tmuxSaveLayout();
-}
 
-// pane의 대표 라벨(메뉴 목록/모달에 쓰임). 원격 RDP/Editor는 구체적인 대상까지 보여준다.
-function tmuxPaneLabel(pane: ITmuxPane): string {
-    const key = pane.contentKey;
-    if (!key) return L('ctrl.tmux.emptyPane2', 'Empty');
+// 콘텐츠 key 하나의 대표 라벨(pane 탭/메뉴 목록/모달에 쓰임). 원격 RDP/Editor는 구체적인 대상까지 보여준다.
+function tmuxKeyLabel(key: string): string {
+    // 사이드바가 쓰는 이름(spec.shortLabel)과 반드시 동일해야 헷갈리지 않는다(Terminal이면 다들 "Terminal"로만
+    // 보여서 서로 구분이 안 됨 - 실제 짧은 이름을 그대로 재사용).
+    const tab = tmuxTabEntries.find(e => e.key === key);
+    if (tab) return tab.spec.shortLabel;
     if (key === 'rdp:local') return 'RDP · Local';
     if (key.startsWith('rdp:remote:')) {
         const remote = rdpRemotes.find(r => r.remoteId === key.slice(11));
@@ -6021,13 +6458,20 @@ function tmuxPaneLabel(pane: ITmuxPane): string {
         return s ? `Editor · ${s.path.split('/').pop() || s.path}` : 'Editor';
     }
     if (key.startsWith('chat:')) return 'Chat';
-    if (key.startsWith('term:')) return 'Terminal';
+    if (key.startsWith('term:') || key.startsWith('term-new:')) return 'Terminal';
     if (key.startsWith('browser:')) return 'Browser';
     if (key.startsWith('web:')) {
         const s = webSessions.get(key);
         return s ? `Web · ${s.url}` : 'Web';
     }
     return key;
+}
+// pane의 대표 라벨(메뉴 목록에 쓰임): 활성 탭 이름 + 나머지 탭 수.
+function tmuxPaneLabel(pane: ITmuxPane): string {
+    const key = pane.contentKey;
+    if (!key) return L('ctrl.tmux.emptyPane2', 'Empty');
+    const rest = (pane.tabs?.length ?? 1) - 1;
+    return tmuxKeyLabel(key) + (rest > 0 ? ` (+${rest})` : '');
 }
 function tmuxShowPanel() {
     (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('tmux-panel-tab')).show();
@@ -6066,73 +6510,40 @@ function tmuxToggleSidebar(side: 'left' | 'right') {
 appSidebar?.addEventListener('show.bs.offcanvas', () => { document.body.classList.remove('hide-left-sidebar'); updateSidebarMode(); });
 appSidebarRight?.addEventListener('show.bs.offcanvas', () => { document.body.classList.remove('hide-right-sidebar'); updateSidebarMode(); });
 
-// 같은 분할(split)에서 나온 두 pane은 같은 group 번호를 받는다(분할 트리 선행순회 중 split 노드를
-// 만날 때마다 번호를 하나씩 새로 매기고, 그 아래 두 자식 leaf에게 그대로 물려준다). 한 번도 분할된 적
-// 없는 단일 pane은 group 0(번호 표시 안 함).
-function tmuxCollectLeavesGrouped(): { pane: ITmuxPane; group: number }[] {
-    const out: { pane: ITmuxPane; group: number }[] = [];
-    let groupSeq = 0;
-    (function walk(p: ITmuxPane, group: number) {
-        if (p.split && p.children) {
-            const g = ++groupSeq;
-            walk(p.children[0], g);
-            walk(p.children[1], g);
-        } else {
-            out.push({ pane: p, group });
-        }
-    })(tmuxRoot, 0);
-    return out;
-}
-// Multiplexer 드롭다운(#tmux-dropdown-menu) 내용을 매번 새로 그린다: 좌/우 사이드바 켜기·끄기 토글 2개
-// (현재 상태에 따라 문구가 바뀐다) + 지금 트리의 leaf(pane) 목록(각각 상하/좌우 분할·병합·콘텐츠 선택
-// 버튼). 레이아웃이 바뀔 때마다 tmuxSaveLayout()에서 호출되고, 드롭다운을 열 때도 다시 그려
-// RDP/Editor 라벨과 사이드바 토글 문구를 최신으로 맞춘다.
-// 같은 분할에서 나온 pane끼리는 같은 번호를 붙이고, 번호(그룹)가 바뀌는 경계마다 구분선을 넣어
-// 어느 pane들이 같은 분할에서 나왔는지 한눈에 보이게 한다. 각 줄은 라벨이 잘리지 않도록
-// 위에 라벨, 아래에 조작 버튼을 두는 2단 구성이다.
+// Multiplexer 드롭다운(#tmux-dropdown-menu): 좌/우 사이드바 토글 2개(현재 상태에 따라 문구가 바뀐다) +
+// 레이아웃 초기화 + 지금 트리의 pane 목록(클릭 = 그 pane을 활성으로 두고 패널 보기). 분할/닫기/세션 고르기
+// 조작은 각 pane의 탭 바로 옮겨갔다. 레이아웃이 바뀔 때마다 tmuxSaveLayout()에서 호출되고, 드롭다운을
+// 열 때도 다시 그려 라벨과 사이드바 토글 문구를 최신으로 맞춘다.
 function tmuxRenderMenu() {
     const menu = CDOM.ID('tmux-dropdown-menu');
     if (!menu) return;
-    const entries = tmuxCollectLeavesGrouped();
-
-    let rowsHtml = '';
-    entries.forEach((entry, i) => {
-        if (i > 0 && entry.group !== entries[i - 1].group) rowsHtml += `<li><hr class="dropdown-divider"></li>`;
-        const { pane } = entry;
-        const canMerge = !!tmuxFindParent(tmuxRoot, pane.id)?.parent;
-        const numPrefix = entry.group > 0 ? `${aiEscapeHtml(String(entry.group))}. ` : '';
-        rowsHtml += `<li>
-            <div class="tmux-menu-pane" data-pane-id="${pane.id}">
-                <span class="tmux-menu-pane-label" data-act="show">${numPrefix}${aiEscapeHtml(tmuxPaneLabel(pane))}</span>
-                <div class="tmux-menu-pane-actions">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-act="split-h" data-CLan-title="ctrl.tmux.splitH" title="Split horizontal"><i class="bi bi-layout-split"></i></button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-act="split-v" data-CLan-title="ctrl.tmux.splitV" title="Split vertical"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
-                    ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-act="merge" data-CLan-title="ctrl.tmux.merge" title="Merge"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
-                    <button type="button" class="btn btn-sm btn-outline-primary" data-act="select" data-CLan-title="ctrl.tmux.select" title="Select content"><i class="bi bi-card-list"></i></button>
-                </div>
-            </div>
-        </li>`;
-    });
-
     const rightVisible = tmuxSidebarVisible('right');
     const leftVisible = tmuxSidebarVisible('left');
+    const rowsHtml = tmuxLeaves().map((pane, i) => {
+        const color = tmuxPaneColorName(pane.id);
+        return `<li><button type="button" class="dropdown-item text-truncate tmux-menu-pane" data-pane-id="${pane.id}"><i class="bi bi-square-fill me-1" style="color:var(--bs-${color});font-size:0.6rem;"></i>${i + 1}. ${aiEscapeHtml(tmuxPaneLabel(pane))}</button></li>`;
+    }).join('');
     menu.innerHTML =
         `<li><button type="button" class="dropdown-item" id="tmux-toggle-left-btn"><i class="bi bi-layout-sidebar-inset"></i> ${aiEscapeHtml(leftVisible ? L('ctrl.tmux.hideLeft', 'Turn off left side') : L('ctrl.tmux.showLeft', 'Turn on left side'))}</button></li>
         <li><button type="button" class="dropdown-item" id="tmux-toggle-right-btn"><i class="bi bi-layout-sidebar-inset-reverse"></i> ${aiEscapeHtml(rightVisible ? L('ctrl.tmux.hideRight', 'Turn off right side') : L('ctrl.tmux.showRight', 'Turn on right side'))}</button></li>
+        <li><button type="button" class="dropdown-item" id="tmux-reset-btn"><i class="bi bi-grid-1x2"></i> ${aiEscapeHtml(L('ctrl.tmux.resetLayout', 'Reset layout (single pane)'))}</button></li>
         <li><hr class="dropdown-divider"></li>` +
         rowsHtml;
-
     CDOM.ID('tmux-toggle-left-btn')?.addEventListener('click', () => tmuxToggleSidebar('left'));
     CDOM.ID('tmux-toggle-right-btn')?.addEventListener('click', () => tmuxToggleSidebar('right'));
+    // 초기화: 모든 pane의 탭을 하나로 모아 단일 pane으로 만든다(세션은 그대로, 배치만 리셋).
+    CDOM.ID('tmux-reset-btn')?.addEventListener('click', () => {
+        const leaves = tmuxLeaves();
+        const tabs: string[] = [];
+        for (const p of leaves) for (const k of p.tabs ?? []) if (!tabs.includes(k)) tabs.push(k);
+        const contentKey = leaves.find(p => p.id === tmuxActivePaneId)?.contentKey ?? leaves.find(p => p.contentKey)?.contentKey ?? null;
+        tmuxRoot = { id: genUuid(), tabs, contentKey };
+        tmuxActivePaneId = tmuxRoot.id;
+        tmuxCommit(true);
+        tmuxShowPanel();
+    });
     menu.querySelectorAll<HTMLElement>('.tmux-menu-pane').forEach(row => {
-        const paneId = row.dataset.paneId!;
-        row.querySelector('[data-act="show"]')?.addEventListener('click', () => tmuxShowPanel());
-        // 분할/병합/셀렉트는 드롭다운을 계속 열어둔 채로 이어서 조작할 수 있어야 하므로(연속 분할 등)
-        // 상위(document)까지 전파되는 걸 막아 Bootstrap의 바깥 클릭 자동 닫기를 피한다.
-        row.querySelector('[data-act="split-h"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxSplitPane(paneId, 'row'); tmuxShowPanel(); });
-        row.querySelector('[data-act="split-v"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxSplitPane(paneId, 'col'); tmuxShowPanel(); });
-        row.querySelector('[data-act="merge"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxMergePane(paneId); tmuxShowPanel(); });
-        row.querySelector('[data-act="select"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxOpenSelectModal(paneId); });
+        row.addEventListener('click', () => { tmuxSetActivePane(row.dataset.paneId!); tmuxShowPanel(); });
     });
     applyLanIn(menu);
 }
@@ -6538,6 +6949,11 @@ async function teamOpenModal() {
             <input id="team-limit-min" type="number" min="0" step="1" class="form-control form-control-sm" value="60">
             <div class="form-text" style="font-size:0.7rem;">${L('ctrl.lbl.stopHint', 'If any task fails, the whole team stops immediately regardless of time.')}</div>
         </div>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.remindMin', 'Stall reminder interval (min)')}</label>
+            <input id="team-remind-min" type="number" min="1" step="1" class="form-control form-control-sm" value="3">
+            <div class="form-text" style="font-size:0.7rem;">${L('ctrl.lbl.remindHint', 'If tasks are still pending and the leader stays quiet this long, the server wakes it to run check/watchdog.')}</div>
+        </div>
         <div class="d-flex justify-content-between">
             <button id="team-modal-create" class="btn btn-primary">${L('ctrl.create', 'Create')}</button>
             <button id="team-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
@@ -6639,6 +7055,7 @@ async function teamOpenModal() {
                     subAgents: subAgents.join(','),
                     autoAgents: JSON.stringify(autoRows),
                     limitMin: String(Number((container.querySelector<HTMLInputElement>('#team-limit-min')!).value) || 0),
+                    remindMin: String(Math.max(1, Number((container.querySelector<HTMLInputElement>('#team-remind-min')!).value) || 3)),
                 });
                 const r = await authedFetch(`${CPath.WebRootUrl()}cmd/start-team?${params.toString()}`);
                 const j = await r.json();

@@ -32,6 +32,7 @@ import {CSubject} from "../../subject/CSubject.js";
 import { CClipCoodi } from "../CAnimation.js";
 import {CLight} from "../CLight.js";
 import {CPaint} from "./CPaint.js";
+import { CPaintMerge } from "./CPaintMerge.js";
 
 
 
@@ -248,7 +249,7 @@ export class CPaint2D extends CPaint
 	{
 		this.mShaderAttrMap.get("billboard").mData.mF32A[0]=_enabel?1.0:0.0;
 		this.PushTag("billboard");
-		this.ClearCRPAuto();
+		this.ClearBatch();
 	}
 	
 	
@@ -374,7 +375,7 @@ export class CPaint2D extends CPaint
 		{
 			if(this.mTag.has("billboard") && this.mShaderAttrMap.get("billboard").mData.mF32A[0] != 2.0) {
 				this.mShaderAttrMap.get("billboard").mData.mF32A[0] = 2.0;
-				this.ClearCRPAuto();
+				this.ClearBatch();
 			}
 
 			let pos=CPoolGeo.ProductV3();
@@ -438,29 +439,6 @@ export class CPaint2D extends CPaint
 		}
 	}
 	
-	override EmptyRPChk()
-	{
-		if(this.mRenderPass.length==0)
-		{
-			var rp=new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
-			//2D에 경우 컬링 뒷면을 신경쓰는 경우가 없으므로 꺼버렸다.
-			rp.mCullFace = CRenderPass.eCull.None;
-			this.mRenderPass=[rp];
-		}
-		else if(this.mRenderPass[0].mShader=="")
-		{
-			this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey;
-		}
-		if(this.mTextureKey.length==0)
-		{
-			this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
-		}
-		// if(rp.mCullFace==null)
-		// {
-
-		// }
-			//rp.mCullFace = CRenderPass.eCull.None;
-	}
 
 	//Wind() {this.PushTag("wind"); }
 	
@@ -823,139 +801,7 @@ export class CPaint2D extends CPaint
 	override ResetDecal(_slot: number, _pos: CVec3 = null, _size: CVec3 = null, _dir: CVec3 = new CVec3(0, 0, -1), _imageRot: number = 0): void {
 		super.ResetDecal(_slot, _pos, _size, _dir, _imageRot);
 	}
-	// CacBound()
-	// {
-	// 	if(this.mTag.has("tail") && this.mSize!=null)
-	// 	{
-	// 		this.mBoundFMat.Import(this.mBound);
-	// 		this.mBoundFMat.GetCenter(this.mBoundFMatC);
-	// 		this.mBoundFMatR=this.mSize.x>this.mSize.y?this.mSize.x:this.mSize.y;
-	// 		this.mBoundFMatR*=1.5;
-	// 	}
-	// 	else
-	// 	{
-	// 		super.CacBound();
-	// 	}
-		
-	// }
-	// Camera()
-	// {
-	// 	if(this.mPosList!=null)
-	// 	{
-	// 		this.mBound.Reset();
-	// 		this.mBound.InitBound(this.mPosList);
-	// 		this.mBound.SetType(CBound.eType.Box);
-
-
-
-	// 		if(this.mUpdateFMat == false) return;
-
-	// 		if(this.mWMatMul==false)
-	// 		{
-	// 			this.GetFMat().SetV3(0,this.mPosList[0]);
-	// 			this.GetFMat().SetV3(1,this.mPosList[1]);
-	// 			this.GetFMat().SetV3(2,this.mPosList[2]);
-	// 			this.GetFMat().SetV3(3,this.mPosList[3]);
-				
-	// 		}
-	// 		else
-	// 		{
-	// 			let v0=CPoolGeo.ProductV3();
-	// 			let v1=CPoolGeo.ProductV3();
-	// 			let v2=CPoolGeo.ProductV3();
-	// 			let v3=CPoolGeo.ProductV3();
-
-	// 			let vd=CPoolGeo.ProductV3();
-				
-
-	// 			let pos = this.GetFMat().xyz;
-				
-	// 			this.mFMat.mF32A[0]=1;
-	// 			this.mFMat.mF32A[5]=1;
-	// 			this.mFMat.mF32A[10]=1;
-	// 			this.CacBound();
-	// 			CMath.V3AddV3(this.mPosList[0], pos, v0);
-	// 			CMath.V3AddV3(this.mPosList[1], pos, v1);
-	// 			CMath.V3AddV3(this.mPosList[2], pos, v2);
-	// 			CMath.V3AddV3(this.mPosList[3], pos, v3);
-
-	// 			this.GetFMat().SetV3(0,v0);
-	// 			this.GetFMat().SetV3(1,v1);
-	// 			this.GetFMat().SetV3(2,v2);
-	// 			this.GetFMat().SetV3(3,v3);
-				
-	// 			CPoolGeo.RecycleV3(v0);
-	// 			CPoolGeo.RecycleV3(v1);
-	// 			CPoolGeo.RecycleV3(v2);
-	// 			CPoolGeo.RecycleV3(v3);
-	// 			CPoolGeo.RecycleV3(vd);
-
-
-			
-				
-	// 		}
-	// 		this.mFMat.mF32A[3]=1;
-	// 		this.mFMat.mF32A[7]=1;
-	// 		this.mFMat.mF32A[11]=1;
-	// 		this.mFMat.mF32A[15]=1;
-
-	// 		return;
-	// 	}
-
-
-
-
-	// 	if(this.mRenPT.length==0)	return;
-	// 	var L_nor=new CVec3();
-	// 	var st=new CVec3(), ed=new CVec3();
 	
-	// 	// if(this.mTag.has("billboard"))
-	// 	// {
-	// 	// 	//일반 꼬리는 빌보드 기본이라서 다시 넣으면 중복 적용
-	// 	// 	CAlert.W("tail billboard not!");
-	// 	// }
-	// 	st=this.GetFMat().xyz;
-	// 	CMath.V3AddV3(this.mPos,st,st);
-	// 	ed=this.mBeforePos;
-	// 	CMath.V3AddV3(this.mPos,ed,ed);
-		
-	// 	L_nor=CMath.V3Cross(this.mRenPT[0].mCam.GetView(),CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)));
-	// 	//L_nor=new CVec3(1,0,0);//CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos));
-	// 	//this.PushTag("billboard");
-	// 	let v0=CMath.V3SubV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-	// 	let v1=CMath.V3AddV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-	// 	let v2=CMath.V3SubV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-	// 	let v3=CMath.V3AddV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-
-
-	// 	this.GetFMat().SetV3(0,v0);
-	// 	this.GetFMat().SetV3(1,v1);
-	// 	this.GetFMat().SetV3(2,v2);
-	// 	this.GetFMat().SetV3(3,v3);
-
-
-	// 	if(this.mLastHide)
-	// 	{
-	// 		this.mFMat.mF32A[3]=1;
-	// 		this.mFMat.mF32A[7]=1;
-	// 		this.mFMat.mF32A[11]=0;
-	// 		this.mFMat.mF32A[15]=0;
-	// 	}
-	// 	else
-	// 	{
-	// 		this.mFMat.mF32A[3]=1;
-	// 		this.mFMat.mF32A[7]=1;
-	// 		this.mFMat.mF32A[11]=1;
-	// 		this.mFMat.mF32A[15]=1;
-	// 	}
-		
-
-	// 	this.mBound.Reset();
-	// 	this.mBound.InitBound(CUtilRender.Mesh2DSize);
-	// 	this.mBound.SetType(CBound.eType.Box);
-	// 	this.mUpdateLMat=true;
-
-	// }
 	
 }
 
@@ -1036,20 +882,6 @@ export class CPaintHTML extends CPaint2D
 	// 	if(this.GetOwner()==null)	return;
 	// 	this.mElement.hidden=!this.GetOwner().IsEnable();
 	// }
-	override EmptyRPChk()
-	{
-		if(this.mRenderPass.length==0)
-		{
-			var rp=new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
-			//2D에 경우 컬링 뒷면을 신경쓰는 경우가 없으므로 꺼버렸다.
-			rp.mCullFace = CRenderPass.eCull.None;
-			this.mRenderPass=[rp];
-		}
-		else if(this.mRenderPass[0].mShader=="")
-		{
-			this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey;
-		}
-	}
 	override Update(_delay)
 	{
 		if(this.mRenPT.length==0 || this.mElement==null)	return;
@@ -1166,19 +998,19 @@ export class CPaintHTML extends CPaint2D
 }
 
 // 한가지 텍스쳐만 사용( 셰이더 공유하기 위함 )
-export class CPaint2DMerge extends CPaint
+export class CPaint2DMerge extends CPaintMerge
 {
 	mMatList : Array<CMat>;
-    mCodiList : Array<CVec4>;
-    mTexSize : CVec2=null;
-
-	mMeshDataNode : CMeshDataNode;
-	mHash : string;
+	mCodiList : Array<CVec4>;
+	mTexSize : CVec2=null;
 
 	mYSort : boolean = false;
 	mWindInfluence : CVec1 = new CVec1(0.0);
 
-	constructor(_texture : CFontRef|string, _matList : Array<CMat>, _codiList : Array<CVec4> = [])
+	protected mSlotCodi=new Float32Array(0);
+	protected mSlotCodiUse=new Uint8Array(0);
+
+	constructor(_texture : CFontRef|string, _matList : Array<CMat>=[], _codiList : Array<CVec4> = [])
 	{
 		super();
 
@@ -1198,7 +1030,7 @@ export class CPaint2DMerge extends CPaint
     override InitChk()
 	{
 		super.InitChk();
-		
+
 		if(this.mTexSize==null)
 		{
 			if(this.mOwner!=null && this.mTextureKey.length>0)
@@ -1213,7 +1045,7 @@ export class CPaint2DMerge extends CPaint
 				{
 					if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return;
 					this.mTexSize=new CVec2(tex.GetWidth(),tex.GetHeight());
-					
+
 				}
 				else if(tex instanceof CAtlas)
 				{
@@ -1223,31 +1055,55 @@ export class CPaint2DMerge extends CPaint
 				{
 					CAlert.E("나올수 없다!");
 				}
-				
+
 			}
 		}
-		
+
 
 	}
 
 	override Start(): void {
-		this.mMeshDataNode = new CMeshDataNode();
-		this.mMeshDataNode.ci = new CMeshCreateInfo();
-
-		this.mBound.Reset();
-		this.mBound.SetType(CBound.eType.Box);
-
-		this.mHash = "";
-		this.Merge();
+		this.BuildSlot();
+		for(let i=0;i<this.mMatList.length;++i)
+			this.PushSlot(this.mMatList[i],this.mCodiList[i]);
 	}
 
-	override Render(_vf: CShader): void {
-		var barr=this.RenderBatch(_vf,1);
-		if(barr==null)	return;
+	Push(_mat : CMat,_codi : CVec4=null) : number
+	{
+		if(this.mSlotReady==false)
+		{
+			this.mMatList.push(_mat);
+			this.mCodiList[this.mMatList.length-1]=_codi;
+			return this.mMatList.length-1;
+		}
+		return this.PushSlot(_mat,_codi);
+	}
+	override Modify(_slot : number,_mat : CMat,_codi : CVec4=undefined)
+	{
+		if(_codi===undefined)
+		{
+			super.Modify(_slot,_mat);
+			return;
+		}
+		if(this.IsUse(_slot)==false)	return;
+		this.SetSlotMat(_slot,_mat);
+		this.SetSlotCodi(_slot,_codi);
+		this.WriteSlot(_slot,true);
+		this.Dirty(_slot);
+	}
+	//YSort z는 슬롯을 쓸 때 CPaint2D.YSortRange 기준으로 구워진다. 범위를 옮겼으면 이걸로 다시 굽는다
+	RebuildYSort()
+	{
+		if(this.mYSort==false)	return;
+		for(let i=0;i<this.mSlotSize;++i)
+		{
+			if(this.mSlotUse[i]==0)	continue;
+			this.WriteSlot(i,false);
+			this.DirtyPos(i);
+		}
+	}
 
-		this.mOwner.GetFrame().BMgr().BatchOn();
-		this.Common(_vf);
-
+	protected override RenderAttr(_vf: CShader): void {
 		let wsa=new CShaderAttr("worldMat", this.GetFMat());
 		switch(this.mWorldMatType)
 		{
@@ -1259,14 +1115,9 @@ export class CPaint2DMerge extends CPaint
 
 		if(_vf.mUniform.get("windInfluence")!=null)
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
-		var dm=this.GetDrawMesh("Artgine/DM/2DM"+this.mHash,_vf,this.mMeshDataNode.ci);
-		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
-
-		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
 	}
 
-	Wind(_influence: number) 
+	Wind(_influence: number)
 	{
 		this.PushTag("wind");
 		this.mWindInfluence.x = _influence;
@@ -1276,194 +1127,135 @@ export class CPaint2DMerge extends CPaint
 		this.mYSort = _enable;
 	}
 
-	Merge() {
-        let GetTexCodiedUV=(_uv : CVec2, _texCodi : CVec4) : CVec2 =>{
-			let result : CVec2 = new CVec2(0.0,0.0);
-		
-			result.x = _uv.x*_texCodi.x+_texCodi.z;
-			result.y = _uv.y*_texCodi.y+_texCodi.w;
-		
-			result.x=Math.abs(result.x);
-			result.y=Math.abs(result.y);
-			return result;
-		}
-
-		let posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
-		let uvb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.UV);
-		let norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
-		let inb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Index);
-		if(posb.length == 0) {
-			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);   // pos
-            this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);   // sca
-			posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
-		}
-		if(uvb.length == 0) {
-			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.UV);
-			uvb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.UV);
-		}
-		if(norb.length == 0) {
-			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Normal);
-			norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
-		}
-		if(inb.length == 0) {
-			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Index);
-			inb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Index);
-		}
-
-		const rtDir = new CVec3(0.5, 0.5, 0);
-		const lbDir = new CVec3(-0.5, -0.5, 0);
-		const ltDir = new CVec3(-0.5, 0.5, 0);
-		const rbDir = new CVec3(0.5, -0.5, 0);
-
-        const uv0 = new CVec2(0, 0);
-        const uv1 = new CVec2(1, 0);
-        const uv2 = new CVec2(1, 1);
-        const uv3 = new CVec2(0, 1);
-
-		const nor = new CVec3(0, 0, 1);
-
-        const scaBR = new CVec3();
-        const scaBL = new CVec3();
-        const scaTR = new CVec3();
-        const scaTL = new CVec3();
-
-		for(let i = posb[0].bufF.Size(3); i < this.mMatList.length; i++)
+	private PushSlot(_mat : CMat,_codi : CVec4) : number
+	{
+		const slot=this.NewSlot("");
+		this.SetSlotMat(slot,_mat);
+		this.SetSlotCodi(slot,_codi);
+		this.WriteSlot(slot,true);
+		this.Dirty(slot);
+		return slot;
+	}
+	private SetSlotCodi(_slot : number,_codi : CVec4)
+	{
+		if(_codi==null)
 		{
-			const pMat = this.mMatList[i];
+			this.mSlotCodiUse[_slot]=0;
+			return;
+		}
+		this.mSlotCodiUse[_slot]=1;
+		this.mSlotCodi.set(_codi.mF32A,_slot*4);
+	}
+	protected override GrowSlotData(_cap: number): void {
+		const codi=new Float32Array(_cap*4);	codi.set(this.mSlotCodi);	this.mSlotCodi=codi;
+		const use=new Uint8Array(_cap);	use.set(this.mSlotCodiUse);	this.mSlotCodiUse=use;
+	}
+	protected override CreateChannel(): void {
+		const ci=this.mMeshDataNode.ci;
+		ci.Create(CVertexFormat.eIdentifier.Position);   // pos
+		ci.Create(CVertexFormat.eIdentifier.Position);   // sca
+		ci.Create(CVertexFormat.eIdentifier.UV);
+		ci.Create(CVertexFormat.eIdentifier.Normal);
+	}
+	protected override SlotVertex(_key: string): number	{	return 4;	}
+	protected override SlotIndex(_key: string): number	{	return 6;	}
+	protected override WriteIndex(_key: string, _iStart: number, _vStart: number): void {
+		const ib=this.Buf(CVertexFormat.eIdentifier.Index).bufI;
+		ib[_iStart+0]=_vStart+0;
+		ib[_iStart+1]=_vStart+1;
+		ib[_iStart+2]=_vStart+2;
+		ib[_iStart+3]=_vStart+2;
+		ib[_iStart+4]=_vStart+3;
+		ib[_iStart+5]=_vStart+0;
+	}
+	//YSort z 보정은 y에 비례하므로 y 이동량만큼 z도 같이 옮긴다(WriteSlot의 dz와 같은 식)
+	protected override TranslateSlot(_slot: number, _dx: number, _dy: number, _dz: number): void {
+		let dz=_dz;
+		if(this.mYSort)
+			dz-=_dy/(CPaint2D.YSortRange.y-CPaint2D.YSortRange.x)*CPaint2D.YSortZShift;
+		const p=this.F32(CVertexFormat.eIdentifier.Position);
+		const vs=this.mSlotVS[_slot];
+		for(let i=vs*3,e=(vs+4)*3;i<e;i+=3)
+		{
+			p[i]+=_dx;	p[i+1]+=_dy;	p[i+2]+=dz;
+			this.BoundPush(p[i],p[i+1],p[i+2]-0.5);
+			this.BoundPush(p[i],p[i+1],p[i+2]+0.5);
+		}
+	}
+	protected override WriteSlot(_slot: number,_static: boolean): void {
+		const I=CVertexFormat.eIdentifier;
+		const p=this.F32(I.Position), s=this.F32(I.Position,1);
+		const uv=this.F32(I.UV);
+		const nor=this.F32(I.Normal);
+		const m=this.mSlotMat, o=_slot*16;
+		const vs=this.mSlotVS[_slot];
 
-            CMath.MatDecomposeSca(pMat, scaTR);
+		const sx=Math.sqrt(m[o]*m[o]+m[o+1]*m[o+1]+m[o+2]*m[o+2]);
+		const sy=Math.sqrt(m[o+4]*m[o+4]+m[o+5]*m[o+5]+m[o+6]*m[o+6]);
+		const sz=Math.sqrt(m[o+8]*m[o+8]+m[o+9]*m[o+9]+m[o+10]*m[o+10]);
 
-            scaTL.x = -scaTR.x;
-            scaTL.y = scaTR.y;
-            scaTL.z = scaTR.z;
+		let dz=0;
+		if(this.mYSort)
+		{
+			const ySortOrigin = -0.5 * sy + 1;
+			const yVal = m[o+13] + ySortOrigin;
+			const yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
+			dz = yRatio * CPaint2D.YSortZShift;
+		}
 
-            scaBR.x = scaTR.x;
-            scaBR.y = -scaTR.y;
-            scaBR.z = scaTR.z;
-
-            scaBL.x = -scaTR.x;
-            scaBL.y = -scaTR.y;
-            scaBL.z = scaTR.z;
-
-			if(this.mYSort) {
-				const ySortOrigin = -0.5 * scaTR.y + 1;
-				const yVal = pMat.mF32A[13] + ySortOrigin;
-				const yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
-				pMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
-			}
-			this.mHash+=pMat.ToStr();
-
-            // posb
-			const lb = CMath.V3MulMatCoordi(lbDir, pMat);
-			const rb = CMath.V3MulMatCoordi(rbDir, pMat);
-			const rt = CMath.V3MulMatCoordi(rtDir, pMat);
-			const lt = CMath.V3MulMatCoordi(ltDir, pMat);
-			posb[0].bufF.Push(lb);
-			posb[0].bufF.Push(rb);
-			posb[0].bufF.Push(rt);
-			posb[0].bufF.Push(lt);
-            posb[1].bufF.Push(scaBL);
-            posb[1].bufF.Push(scaBR);
-            posb[1].bufF.Push(scaTR);
-            posb[1].bufF.Push(scaTL);
-			this.mBound.InitBound(lb);
-			this.mBound.InitBound(rb);
-			this.mBound.InitBound(rt);
-			this.mBound.InitBound(lt);
-
-            // uvb
-            let codi  : CVec4=new CVec4(1, 1, 0, 0);;;
-			if(this.mCodiList[i]!=null)
+		let cx=1, cy=1, cz=0, cw=0;
+		if(this.mSlotCodiUse[_slot]==1)
+		{
+			const c=this.mSlotCodi, co=_slot*4;
+			if(c[co] <= 1 && c[co+1] <= 1 && c[co+2] <= 1 && c[co+3] <= 1)
 			{
-				const v = this.mCodiList[i];
-				if(v.x <= 1 && v.y <= 1 && v.z <= 1 && v.w <= 1)
-				{
-					// mTexCodi UV 포맷: (scaleX, scaleY, offsetX, offsetY)
-					codi.Import(v);
-				}
-				else
-				{
-					// 픽셀 좌표 포맷: (x1, y1, x2, y2)
-                	codi.x = (v.z - v.x) / this.mTexSize.x;
-					codi.y = (v.w - v.y) / this.mTexSize.y;
-					codi.z = v.x / this.mTexSize.x;
-					codi.w = 1-(v.y / this.mTexSize.x)-codi.y;
-				}
-
-				//codi.y = (this.mCodiList[i].w - this.mCodiList[i].y - gMargin) / this.mTexSize.y;
-
-				// codi.z = (this.mCodiList[i].x + gMargin * 0.5) / this.mTexSize.x;
-				// codi.w = 1-(this.mCodiList[i].y + gMargin * 0.5) / this.mTexSize.y;
-
-				// this.mTexCodi.x = (_edX - _stX) / _imgW-_margin/_imgW;
-				// this.mTexCodi.y = (_edY - _stY) / _imgH-_margin/_imgH;
-
-				// this.mTexCodi.z = (_stX) / _imgW+(_margin*0.5)/_imgW;
-				// this.mTexCodi.w = 1-(_stY / _imgH)-this.mTexCodi.y-(_margin*0.5)/_imgH;
-
+				// mTexCodi UV 포맷: (scaleX, scaleY, offsetX, offsetY)
+				cx=c[co]; cy=c[co+1]; cz=c[co+2]; cw=c[co+3];
 			}
-		
-            let uvLB = GetTexCodiedUV(uv0, codi);
-            let uvRB = GetTexCodiedUV(uv1, codi);
-            let uvRT = GetTexCodiedUV(uv2, codi);
-            let uvLT = GetTexCodiedUV(uv3, codi);
+			else if(this.mTexSize!=null)
+			{
+				// 픽셀 좌표 포맷: (x1, y1, x2, y2)
+				cx = (c[co+2] - c[co]) / this.mTexSize.x;
+				cy = (c[co+3] - c[co+1]) / this.mTexSize.y;
+				cz = c[co] / this.mTexSize.x;
+				cw = 1-(c[co+1] / this.mTexSize.x)-cy;
+			}
+		}
+		const u0=Math.abs(cz), u1=Math.abs(cx+cz);
+		const v0=Math.abs(cw), v1=Math.abs(cy+cw);
 
-            // L과 B만 음수로 변환
-            uvLB.x = -uvLB.x;
-            uvLB.y = -uvLB.y;
-            uvRB.x =  uvRB.x;
-            uvRB.y = -uvRB.y;
-            uvRT.x =  uvRT.x;
-            uvRT.y =  uvRT.y;
-            uvLT.x = -uvLT.x;
-            uvLT.y =  uvLT.y;
-			
-			uvb[0].bufF.Push(uvLB);
-			uvb[0].bufF.Push(uvRB);
-			uvb[0].bufF.Push(uvRT);
-			uvb[0].bufF.Push(uvLT);
-
-            // norb
-			const rotatedNor = CMath.V3MulMatNormal(nor, pMat);
-			norb[0].bufF.Push(rotatedNor);
-			norb[0].bufF.Push(rotatedNor);
-			norb[0].bufF.Push(rotatedNor);
-			norb[0].bufF.Push(rotatedNor);
-
-			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 0);
-			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 1);
-			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 2);
-			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 2);
-			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 3);
-			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 0);
-
-			this.mMeshDataNode.ci.vertexCount += 4;
-			this.mMeshDataNode.ci.indexCount += 6;
+		// lb, rb, rt, lt 순서. UV는 L과 B만 음수로 넣는다
+		const dirX=CPaint2DMerge.sDirX, dirY=CPaint2DMerge.sDirY;
+		for(let k=0;k<4;++k)
+		{
+			const x=dirX[k], y=dirY[k];
+			const w=m[o+3]*x+m[o+7]*y+m[o+15];
+			const px=(m[o]*x+m[o+4]*y+m[o+12])/w;
+			const py=(m[o+1]*x+m[o+5]*y+m[o+13])/w;
+			const pz=(m[o+2]*x+m[o+6]*y+m[o+14]+dz)/w;
+			const v3=(vs+k)*3, v2=(vs+k)*2;
+			p[v3]=px; p[v3+1]=py; p[v3+2]=pz;
+			s[v3]=x<0?-sx:sx; s[v3+1]=y<0?-sy:sy; s[v3+2]=sz;
+			if(_static)	{	uv[v2]=x<0?-u0:u1; uv[v2+1]=y<0?-v0:v1;	}
+			nor[v3]=m[o+8]; nor[v3+1]=m[o+9]; nor[v3+2]=m[o+10];
+			this.BoundPush(px,py,pz-0.5);
+			this.BoundPush(px,py,pz+0.5);
 		}
 
-		this.mBound.mMin.z -= 0.5;
-		this.mBound.mMax.z += 0.5;
-
-		this.mMeshDataNode.ci.bound.Import(this.mBound);
-
-		this.mHash = CHash.HashCode(this.mHash) + "";
-	}
-
-	override EmptyRPChk(): void {
-		if(this.mRenderPass.length==0)
+		const t=this.F32(I.Tangent);
+		if(t!=null)
 		{
-			var rp=new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
-			//2D에 경우 컬링 뒷면을 신경쓰는 경우가 없으므로 꺼버렸다.
-			rp.mCullFace = CRenderPass.eCull.None;
-			this.mRenderPass=[rp];
-		}
-		else if(this.mRenderPass[0].mShader=="")
-		{
-			this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey;
-		}
-		if(this.mTextureKey.length==0)
-		{
-			this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
+			let tx=m[o], ty=m[o+1], tz=m[o+2];
+			const len=Math.sqrt(tx*tx+ty*ty+tz*tz);
+			if(len>0)	{	tx/=len; ty/=len; tz/=len;	}
+			for(let k=0;k<4;++k)
+			{
+				const v4=(vs+k)*4;
+				t[v4]=tx; t[v4+1]=ty; t[v4+2]=tz; t[v4+3]=1;
+			}
+			this.WriteBinormal(vs,4);
 		}
 	}
+	private static sDirX=[-0.5, 0.5, 0.5, -0.5];
+	private static sDirY=[-0.5, -0.5, 0.5, 0.5];
 }

@@ -51,8 +51,6 @@ export class CMat extends CFloat32 {
     }
     IsUnit() { return this.mUnit; }
     Unit() {
-        if (this.mUnit)
-            return;
         this.mF32A[0] = 1;
         this.mF32A[1] = 0;
         this.mF32A[2] = 0;

@@ -1,9 +1,9 @@
 import { AlphaModalFun, ColorModalFun, UnpackRGToGray } from "./ColorFun";
-import { ambientColor, envmapOn, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, cullMask, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envCount, envPos, EnvNearest, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, cullMask, sam2DCount, samCubeCount } from "./Light";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
 import { SDF } from "./SDF";
-import { Build, CVec2, CVec3, CVec4, Sam2DToColor, V4MulMatCoordi, Sam2DSize, Sam2DArrToV4, Sam2DArrTileToColor, Sam2DArrTileToNormal, Null, CMat3, screenPos, FloatToInt, IntToFloat, SaturateFloat, MappingTexToV3, max, mix, step, smoothstep, floor, sqrt, clamp, V2MulV2, V2DivV2, V2SubV2, V2AddV2, V2MulFloat, V2Abs, V2Floor, V3AddV3, V3Dot, V3Nor, V3SubV3, V3Mix, V3MulFloat, V3MulV3, V4Mix, BranchBegin, BranchEnd, BranchDefault, discard, V2Len, Attribute, SaturateV3, abs, V3Len, min, V2Mix, V2Fract, V4AddV4, V4MulFloat, V3Sqrt, } from "./Shader";
-import { bias, CalcShadow, jitter, normalBias, PCF, shadowCount, shadowOn, shadowRate, shadowWrite, texture16f, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowReadList, shadowInfoList, shadowCascadeDataList, shadowDivideList, PCFStep } from "./Shadow";
+import { Build, CVec2, CVec3, CVec4, Sam2DToColor, V4MulMatCoordi, Sam2DSize, Sam2DArrNearestToV4, Sam2DArrTileToColor, Sam2DArrTileToNormal, Null, CMat3, screenPos, FloatToInt, IntToFloat, SaturateFloat, MappingTexToV3, max, mix, step, smoothstep, floor, sqrt, clamp, V2MulV2, V2DivV2, V2SubV2, V2AddV2, V2MulFloat, V2Abs, V2Floor, V3AddV3, V3Dot, V3Nor, V3SubV3, V3Mix, V3MulFloat, V3MulV3, V4Mix, BranchBegin, BranchEnd, BranchDefault, discard, V2Len, Attribute, SaturateV3, abs, V3Len, min, V2Mix, V2Fract, V4AddV4, V4MulFloat, V3Sqrt, sin, } from "./Shader";
+import { bias, CalcShadow, jitter, normalBias, PCF, shadowCount, shadowOn, shadowRate, shadowWrite, texture16f, shadowZOffset, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow, shadowInfoList, PCFStep } from "./Shadow";
 import { exposure, Tonemap, tonemappingType } from "./ToneMapping";
 var worldMat = Null();
 var viewMat = Null();
@@ -24,6 +24,7 @@ var levelScale;
 var cellSize;
 var cellCount;
 var splatMatTexCodi;
+var splatMaterial;
 var heightScale;
 var splatSampler2D = 0.0;
 var heightSampler2D = 1.0;
@@ -31,6 +32,7 @@ var to_uv = Null();
 var to_worldPos = Null();
 var to_viewPos = Null();
 var to_normal = Null();
+var to_envIdx = Null();
 var time = Attribute(0, "time");
 var waterDeep = new CVec4(0.0, 0.0, 0.0, 0.0);
 var shallowColor = new CVec3(0.0, 0.0, 0.0);
@@ -46,17 +48,18 @@ Build("Artgine/Shader/Terrain", [], vs_main, [
     terrainOffset, terrainHeight,
     level, levelRepeat, levelScale,
     cellSize, cellCount, splatMatTexCodi, heightScale,
-    splatSampler2D, heightSampler2D
-], [out_position, to_uv, to_worldPos, to_normal], ps_main, [out_color]);
+    splatSampler2D, heightSampler2D, splatMaterial
+], [out_position, to_uv, to_worldPos, to_normal, to_envIdx], ps_main, [out_color]);
 Build("Artgine/Shader/TerrainShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
     worldMat, viewMat, projectMat, camMain,
     terrainOffset, terrainHeight,
     level, levelRepeat, levelScale,
     cellSize, cellCount, splatMatTexCodi, heightScale,
     splatSampler2D, heightSampler2D,
-    shadowWrite, shadowCount,
+    shadowWrite, shadowCount, shadowZOffset,
     shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-    shadowReadList, shadowInfoList, shadowCascadeDataList, shadowDivideList,
+    shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+    shadowInfoList,
 ], [out_position, to_viewPos, to_uv, to_worldPos], ps_main_shadow_write, [out_color]);
 Build("Artgine/Shader/TerrainShadowRead", ["shadowRead"], vs_main_shadow_read, [
     worldMat, viewMat, projectMat, camMain,
@@ -66,7 +69,8 @@ Build("Artgine/Shader/TerrainShadowRead", ["shadowRead"], vs_main_shadow_read, [
     splatSampler2D, heightSampler2D,
     shadowWrite, shadowCount,
     shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-    shadowReadList, shadowInfoList, shadowCascadeDataList, shadowDivideList,
+    shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+    shadowInfoList,
     shadowRate, PCF, PCFStep, texture16f, bias, normalBias, jitter,
     ligDir, ligCol, ligMask, ligCount,
     camPos
@@ -141,6 +145,18 @@ function SampleSplatmap(_splatBlend, _uv, _off) {
     }
     return L_cor;
 }
+function SplatMaterialConst(_splatBlend) {
+    var L_cor = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var blendAlpha = 1.0;
+    L_cor = V4AddV4(L_cor, V4MulFloat(splatMaterial[3], blendAlpha * _splatBlend.w));
+    blendAlpha -= blendAlpha * _splatBlend.w;
+    L_cor = V4AddV4(L_cor, V4MulFloat(splatMaterial[2], blendAlpha * _splatBlend.z));
+    blendAlpha -= blendAlpha * _splatBlend.z;
+    L_cor = V4AddV4(L_cor, V4MulFloat(splatMaterial[1], blendAlpha * _splatBlend.y));
+    blendAlpha -= blendAlpha * _splatBlend.y;
+    L_cor = V4AddV4(L_cor, V4MulFloat(splatMaterial[0], blendAlpha * _splatBlend.x));
+    return L_cor;
+}
 function SampleSplatmapNormal(_splatBlend, _uv, _off) {
     var L_cor = new CVec4(0.0, 0.0, 0.0, 0.0);
     var blendAlpha = 1.0;
@@ -206,25 +222,36 @@ function Caustics(_world, _flowDir, _ligDir, _ligCol) {
     var tex = SampleCaustics(uvw, 1.0 / 128.0, L, _ligCol);
     return SaturateV3(tex);
 }
-function WaterProcessing(_color, _caustics, _world) {
+function ShoreSlopeScale(_nor) {
+    var ny = abs(_nor.y);
+    return clamp(ny / max(sqrt(SaturateFloat(1.0 - ny * ny)), 0.001), 1.0, 40.0);
+}
+function WaterProcessing(_color, _caustics, _world, _slope, _lit) {
+    var deep = V3MulV3(deepColor, _lit);
+    var shallow = V3MulV3(shallowColor, _lit);
     var heightDiff = abs(waterDeep.x - _world.y);
     var depthBlend = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
     var dist = V3Len(V3SubV3(camPos, _world.xyz));
     var t = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
     var luma = (_color.x * 0.299 + _color.y * 0.587 + _color.z * 0.114);
-    var foamThreshold = min(waterDeep.z, waterDeep.z * waterHeight);
-    var foamMask = 1.0 - smoothstep(0.0, foamThreshold, heightDiff);
-    _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
+    var shoreNoise = NoiseGet(new CVec3(_world.x / 400.0, _world.z / 400.0, time * 0.05), SDF.eNoise.Perlin);
+    var waveK = SaturateFloat(V2Len(normalflowDir) / 1.5);
+    var lap = 0.5 + 0.5 * sin(time * (0.5 + 1.5 * waveK) + shoreNoise * 12.0);
+    var foamThreshold = min(waterDeep.z, min(waterDeep.z, waterDeep.z * waterHeight) * (0.4 + 0.9 * shoreNoise) * (0.6 + 0.6 * lap));
+    var foamMask = 1.0 - smoothstep(0.0, foamThreshold, heightDiff * _slope);
+    _color = V3Mix(deep, V3Mix(_color, shallow, 0.1), depthBlend);
     _caustics = V3MulFloat(_caustics, depthBlend * luma * (1.0 - foamMask));
     _color = V3AddV3(_color, _caustics);
-    _color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
+    _color = V3Mix(deep, _color, 0.6 * (1.0 - t));
     if (foamMask > 0.0) {
-        var foam = new CVec3(0.55, 0.58, 0.58);
+        var foam = V3MulV3(new CVec3(0.55, 0.58, 0.58), _lit);
         var foamFlowMag = V2Len(causticFlowDir);
-        var noise = NoiseGet(new CVec3(_world.x / 300.0 - causticFlowDir.x * time * 0.5, _world.z / 300.0 + causticFlowDir.y * time * 0.5, foamFlowMag * time * 0.3), SDF.eNoise.Perlin);
-        var edgeFade = foamMask * smoothstep(0.25, 1.0, noise);
-        _color = V3AddV3(_color, V3MulFloat(foam, 0.35 * edgeFade));
-        _color = V3Mix(_color, foam, 0.4 * edgeFade);
+        var noise = NoiseGet(new CVec3(_world.x / 120.0 + _world.y / 240.0 - causticFlowDir.x * time * 0.5, _world.z / 120.0 - _world.y / 240.0 + causticFlowDir.y * time * 0.5, foamFlowMag * time * 0.3 + time * 0.15), SDF.eNoise.PerlinFBM);
+        var foamLod = SaturateFloat(dist * 0.0012 / 50.0);
+        noise = noise + (0.45 - noise) * foamLod;
+        var edgeFade = foamMask * smoothstep(0.35 - 0.15 * foamLod, 0.65 + 0.15 * foamLod, noise + foamMask * 0.3) * smoothstep(0.0, 0.6, waveK);
+        _color = V3AddV3(_color, V3MulFloat(foam, 0.2 * edgeFade));
+        _color = V3Mix(_color, foam, 0.25 * edgeFade);
     }
     return _color;
 }
@@ -241,8 +268,8 @@ function vs_main(f3_ver) {
     nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
     var curUV = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
     var nextUV = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
-    var curSample = Sam2DLODBiCubicToColor(heightSampler2D, curUV, heightmapSize);
-    var nextSample = Sam2DLODBiCubicToColor(heightSampler2D, nextUV, heightmapSize);
+    var curSample = Sam2DToColor(heightSampler2D, curUV);
+    var nextSample = Sam2DToColor(heightSampler2D, nextUV);
     curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
     nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
     var curNor = UnpackNormal(new CVec2(curSample.z, curSample.w));
@@ -262,9 +289,21 @@ function vs_main(f3_ver) {
     }
     to_worldPos.x = clamp(to_worldPos.x, terrainMin.x, terrainMax.x);
     to_worldPos.z = clamp(to_worldPos.z, terrainMin.z, terrainMax.z);
+    to_envIdx.x = -1.0;
+    BranchBegin("env", "E", [envCount, envPos]);
+    to_envIdx.x = EnvNearest(to_worldPos.xyz, to_normal);
+    BranchEnd();
     out_position = V4MulMatCoordi(V4MulMatCoordi(to_worldPos, viewMat), projectMat);
 }
 function ps_main() {
+    BranchBegin("waterReflect", "waterReflect", [waterDeep]);
+    if (to_worldPos.y <= waterDeep.x)
+        discard;
+    BranchEnd();
+    BranchBegin("waterRefract", "waterRefract", [waterDeep]);
+    if (to_worldPos.y > waterDeep.x + waterDeep.z)
+        discard;
+    BranchEnd();
     var shadow = new CVec4(-1.0, -1.0, -1.0, -1.0);
     BranchBegin("shadow", "S", [shadowOn, screenSize]);
     if (shadowOn > 0.5) {
@@ -285,17 +324,23 @@ function ps_main() {
     var normal = new CVec3(0.0, 1.0, 0.0);
     var sunDir = new CVec3(0.0, 1.0, 0.0);
     var sunCol = new CVec3(1.0, 1.0, 1.0);
+    var waterLit = new CVec3(1.0, 1.0, 1.0);
     var gamma = 1.0;
-    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, cullMask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envmapOn, sam2DCount, samCubeCount]);
+    BranchBegin("terrainMat", "TM", []);
+    lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0);
+    BranchDefault();
+    lmaterial = SplatMaterialConst(splatBlend);
+    BranchEnd();
+    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, cullMask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envCount, envPos, sam2DCount, samCubeCount]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
     normal = MappingTexToV3(V3Nor(SampleSplatmapNormal(splatBlend, to_uv, 8.0).xyz));
     normal = CombineNormals(V3Nor(to_normal), new CVec3(normal.x, normal.z, normal.y));
-    lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0);
     dseMat = GetSunInfo();
     sunDir = dseMat[0];
     sunCol = dseMat[1];
-    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, cullMask.x);
+    waterLit = V3Sqrt(SaturateV3(V3AddV3(ambientColor, sunCol)));
+    dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
     L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
     BranchDefault();
     if (shadow.r > -0.5) {
@@ -309,16 +354,13 @@ function ps_main() {
     if (gamma > 1.1) {
         out_color.rgb = V3Sqrt(out_color.rgb);
     }
-    BranchBegin("waterReflect", "waterReflect", [waterDeep]);
-    if (to_worldPos.y <= waterDeep.x)
-        discard;
-    BranchEnd();
     var caustics;
-    BranchBegin("waterRefract", "waterRefract", [waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time, normalflowDir, normalRange]);
-    if (to_worldPos.y > waterDeep.x + waterDeep.z)
-        discard;
+    var shoreSlope = 1.0;
+    BranchBegin("waterProcessing", "waterProcessing", [waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time, normalflowDir, normalRange]);
     caustics = Caustics(to_worldPos.xyz, causticFlowDir, sunDir, sunCol);
-    out_color.rgb = WaterProcessing(out_color.rgb, caustics, to_worldPos);
+    shoreSlope = ShoreSlopeScale(V3Nor(to_normal));
+    out_color.rgb = WaterProcessing(out_color.rgb, caustics, to_worldPos, shoreSlope, waterLit);
+    out_color.a = 0.8 + 0.2 * sqrt(SaturateFloat(max(waterDeep.x - to_worldPos.y, 0.0) * shoreSlope / (max(waterDeep.z, 1.0) * 4.0)));
     BranchEnd();
 }
 function vs_main_shadow_write(f3_ver) {
@@ -334,8 +376,8 @@ function vs_main_shadow_write(f3_ver) {
     nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
     var curUV = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
     var nextUV = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
-    var curSample = Sam2DLODBiCubicToColor(heightSampler2D, curUV, heightmapSize);
-    var nextSample = Sam2DLODBiCubicToColor(heightSampler2D, nextUV, heightmapSize);
+    var curSample = Sam2DToColor(heightSampler2D, curUV);
+    var nextSample = Sam2DToColor(heightSampler2D, nextUV);
     curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
     nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
     var morphAlpha = GetMorphLerpK(curPos, camMain, worldCellSize, pWorldCellSize);
@@ -361,15 +403,16 @@ function vs_main_shadow_write(f3_ver) {
     out_position.z = min(out_position.z, out_position.w);
 }
 function ps_main_shadow_write() {
-    var shadowRead;
+    var shadowInfo;
     var lDir;
     BranchBegin("PointLightShadowF", "PLSF", [ligDir]);
-    shadowRead = Sam2DArrToV4(shadowReadList, shadowWrite.y);
-    lDir = Sam2DArrToV4(ligDir, shadowRead.x);
-    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowRead.z) / (shadowRead.w - shadowRead.z);
+    shadowInfo = Sam2DArrNearestToV4(shadowInfoList, shadowWrite.y * 4.0);
+    lDir = Sam2DArrNearestToV4(ligDir, shadowInfo.x);
+    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowInfo.z) / (shadowInfo.w - shadowInfo.z);
     out_color.a = 1.0;
     BranchDefault();
     out_color = to_viewPos;
+    out_color.z += shadowZOffset;
     out_color.a = 1.0;
     BranchEnd();
 }
@@ -386,8 +429,8 @@ function vs_main_shadow_read(f3_ver) {
     nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
     var curUV = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
     var nextUV = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
-    var curSample = Sam2DLODBiCubicToColor(heightSampler2D, curUV, heightmapSize);
-    var nextSample = Sam2DLODBiCubicToColor(heightSampler2D, nextUV, heightmapSize);
+    var curSample = Sam2DToColor(heightSampler2D, curUV);
+    var nextSample = Sam2DToColor(heightSampler2D, nextUV);
     curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
     nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
     var curNor = UnpackNormal(new CVec2(curSample.z, curSample.w));

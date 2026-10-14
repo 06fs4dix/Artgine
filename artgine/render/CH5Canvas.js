@@ -285,9 +285,10 @@ export class CH5CanvasInst {
         let errorcount = 0;
         for (let i = 0; i < _pVec.length; ++i) {
             if (_pVec[i].mParameter instanceof Array) {
+                const isText = _pVec[i].mName == "fillText" || _pVec[i].mName == "strokeText";
                 for (var j = 0; j < _pVec[i].mParameter.length; ++j) {
                     this.mPara[j] = _pVec[i].mParameter[j];
-                    if (typeof this.mPara[j] === "string" && this.mPara[j].match(/\.(png|jpg|jpeg|gif|webp)/i)) {
+                    if (!isText && typeof this.mPara[j] === "string" && this.mPara[j].match(/\.(png|jpg|jpeg|gif|webp)/i)) {
                         try {
                             const loadedImage = await new Promise((resolve, reject) => {
                                 const img = new Image();
@@ -379,7 +380,7 @@ export class CH5CanvasInst {
     }
     GetNewTex() {
         var tex = new CTexture();
-        tex.SetFilter(this.mLinear ? CTexture.eFilter.Linear : CTexture.eFilter.Neaest);
+        tex.SetFilter(this.mLinear ? CTexture.eFilter.Linear : CTexture.eFilter.Nearest);
         tex.SetWrap(CTexture.eWrap.Clamp);
         if (this.mCanvas.width == 0 || this.mCanvas.height == 0)
             return null;

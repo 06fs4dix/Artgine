@@ -1,9 +1,8 @@
+import { CUpdate } from "../../basic/Basic.js";
 import { CDOM } from "../../basic/CDOM.js";
 import { CJSON } from "../../basic/CJSON.js";
 import { CObject } from "../../basic/CObject.js";
-import { CVec2 } from "../../geometry/CVec2.js";
 import { CRenderPass } from "../../render/CRenderPass.js";
-import { CTexture } from "../../render/CTexture.js";
 import { CFile } from "../../system/CFile.js";
 export class CRPAuto extends CRenderPass {
     static eState = {
@@ -17,103 +16,49 @@ export class CRPAuto extends CRenderPass {
         this.mAnd.push(_con);
     }
     PushOr(_con) {
-        this.mOr.push(_con);
+        if (_con instanceof Array)
+            this.mOr.push(..._con);
+        else
+            this.mOr.push(_con);
     }
 }
 export class CRPMgr extends CObject {
-    mFrame;
     mRPArr = new Array();
     mSufArr = new Array();
     mTexMap = new Map();
+    mUpdate = CUpdate.eType.Not;
     IsShould(_member, _type) {
-        if (_member == "mFrame") {
+        if (_member == "mUpdate")
             return false;
-        }
         return super.IsShould(_member, _type);
-    }
-    SetFrame(_frame) {
-        this.mFrame = _frame;
-        this.Reset();
     }
     PushRP(_data) {
         this.mRPArr.push(_data);
+        this.mUpdate = CUpdate.eType.Updated;
         return _data;
     }
     PushSuf(_data) {
         this.mSufArr.push(_data);
-        if (this.mFrame != null) {
-            let tex = new CTexture();
-            this.mFrame.Res().Push(_data.GetTexKey(), tex);
-            tex.mFrameBuf.push(null);
-        }
+        this.mUpdate = CUpdate.eType.Updated;
         return _data;
     }
     PushTex(_key, _data) {
         this.mTexMap.set(_key, _data);
-        if (this.mFrame != null) {
-            this.mFrame.Res().Push(_key, _data);
-            _data.mFrameBuf.push(null);
-        }
+        this.mUpdate = CUpdate.eType.Updated;
         return _key;
+    }
+    RemoveRP(_data) {
+        const i = this.mRPArr.indexOf(_data);
+        if (i >= 0)
+            this.mRPArr.splice(i, 1);
+    }
+    RemoveSuf(_data) {
+        const i = this.mSufArr.indexOf(_data);
+        if (i >= 0)
+            this.mSufArr.splice(i, 1);
     }
     RemoveTex(_key) {
         this.mTexMap.delete(_key);
-        if (this.mFrame != null) {
-            this.mFrame.Res().Remove(_key);
-        }
-    }
-    RemoveRP(_data) {
-        for (let i = 0; i < this.mRPArr.length; ++i) {
-            if (this.mRPArr[i] == _data) {
-                this.mRPArr.splice(i, 1);
-                return;
-            }
-        }
-    }
-    RemoveSuf(_data) {
-        for (let i = 0; i < this.mSufArr.length; ++i) {
-            if (this.mSufArr[i] == _data) {
-                this.mSufArr.splice(i, 1);
-                return;
-            }
-        }
-    }
-    SaveTexture() {
-        for (let rp of this.mRPArr) {
-            const texKey = rp.mRenderTarget;
-            if (texKey == "" || this.mTexMap.has(texKey))
-                continue;
-            const tex = this.mFrame.Res().Find(texKey);
-            if (tex == null)
-                continue;
-            const newTex = new CTexture();
-            newTex.SetSize(tex.GetWidth(), tex.GetHeight());
-            newTex.SetOrg(tex.GetOrgWidth(), tex.GetOrgHeight());
-            newTex.SetAlpha(tex.GetAlpha());
-            newTex.SetAnti(tex.GetAnti());
-            newTex.SetFilter(tex.GetFilter());
-            newTex.PushInfo(tex.GetInfo());
-            if (tex.IsKey()) {
-                newTex.SetKey(tex.Key());
-            }
-            newTex.SetMipMap(tex.GetMipMap());
-            newTex.SetWrap(tex.GetWrap());
-            this.mTexMap.set(texKey, newTex);
-        }
-    }
-    Reset() {
-        if (this.mFrame == null)
-            return;
-        for (let [key, tex] of this.mTexMap) {
-            let size = null;
-            if (tex.HasOrg())
-                size = new CVec2(tex.GetOrgWidth(), tex.GetOrgHeight());
-            this.mFrame.Ren().BuildRenderTarget(tex.GetInfo(), size, key);
-        }
-    }
-    ExportCJSON() {
-        this.SaveTexture();
-        return super.ExportCJSON();
     }
     async LoadJSON(_file = null) {
         let buf = await CFile.Load(_file);

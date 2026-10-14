@@ -95,12 +95,15 @@ export class CDevice {
         FloatTex16: 10,
         FloatTex32: 11,
         ClipControl: 12,
+        TexelFetch: 13,
     };
     async BenchmarkScore() { return null; }
 }
 export class CDeviceGL extends CDevice {
     mGL;
     mKHR_parallel_shader_compile = 0;
+    mAnisoExt = null;
+    mAnisoMax = 1;
     constructor(_pf, _handle) {
         super(_pf, _handle);
         this.mGL = _handle.getContext("webgl2", { antialias: this.m_pf.mAnti, depth: true, stencil: true, "xrCompatible": _pf.mXR,
@@ -145,11 +148,15 @@ export class CDeviceGL extends CDevice {
             g_property.set(CDevice.eProperty.ClipControl, 0);
             CAlert.W("no EXT_clip_control");
         }
+        g_property.set(CDevice.eProperty.TexelFetch, CUtil.IsMobile() ? 0 : 1);
         ext = this.GL().getExtension('OES_texture_float_linear');
         if (ext == null) {
             CAlert.W("no OES_texture_float_linear");
             this.m_pf.mTexture16f = true;
         }
+        this.mAnisoExt = this.GL().getExtension('EXT_texture_filter_anisotropic');
+        if (this.mAnisoExt != null)
+            this.mAnisoMax = this.GL().getParameter(this.mAnisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
         CRenderPass.eBlend.FUNC_ADD = this.GL().FUNC_ADD;
         CRenderPass.eBlend.FUNC_SUBTRACT = this.GL().FUNC_SUBTRACT;
         CRenderPass.eBlend.FUNC_REVERSE_SUBTRACT = this.GL().FUNC_REVERSE_SUBTRACT;
@@ -174,8 +181,8 @@ export class CDeviceGL extends CDevice {
         var TexLay = this.GL().getParameter(this.GL().MAX_ARRAY_TEXTURE_LAYERS);
         var TexSize = this.GL().getParameter(this.GL().MAX_TEXTURE_SIZE);
         g_property.set(CDevice.eProperty.Sam2DMax, 11);
-        g_property.set(CDevice.eProperty.Sam2DArrMax, 3);
-        g_property.set(CDevice.eProperty.SamCubeMax, 2);
+        g_property.set(CDevice.eProperty.Sam2DArrMax, 4);
+        g_property.set(CDevice.eProperty.SamCubeMax, 1);
         g_property.set(CDevice.eProperty.Sam2dArrLayerMax, TexLay);
         g_property.set(CDevice.eProperty.VertexUniform, 1024);
         g_property.set(CDevice.eProperty.PixelUniform, 1024);
@@ -183,6 +190,7 @@ export class CDeviceGL extends CDevice {
         this.mStaticRP.mCullFace = CRenderPass.eCull.CCW;
         CConsol.Log(`MAX_VERTEX_UNIFORM_VECTORS : ${max_v_uniforms} MAX_FRAGMENT_UNIFORM_VECTORS : ${max_f_uniforms} 
 			MAX_TEXTURE_IMAGE_UNITS : ${texture_units} MAX_ARRAY_TEXTURE_LAYERS : ${TexLay} MAX_TEXTURE_SIZE : ${TexSize}`);
+        CConsol.Log("TexelFetch : " + (CDevice.GetProperty(CDevice.eProperty.TexelFetch) == 1 ? "on" : "off"));
     }
     async Init() {
         this.GL().frontFace(this.GL().CCW);
@@ -428,6 +436,7 @@ export class CDeviceGPU extends CDevice {
         g_property.set(CDevice.eProperty.FloatTex16, 1);
         g_property.set(CDevice.eProperty.FloatTex32, 1);
         g_property.set(CDevice.eProperty.ClipControl, 1);
+        g_property.set(CDevice.eProperty.TexelFetch, 1);
         this.mStaticRP.mDepthTest = true;
         this.mStaticRP.mDepthWrite = true;
         this.mStaticRP.mAlpha = true;

@@ -1,704 +1,550 @@
-import { CAlert } from "../basic/CAlert.js";
+import { CUpdate } from "../basic/Basic.js";
 import { CClass } from "../basic/CClass.js";
-import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModalFlex } from "../util/CModalUtil.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
-import { CMath } from "../geometry/CMath.js";
-import { CVec2 } from "../geometry/CVec2.js";
-import { CVec3 } from "../geometry/CVec3.js";
-import { CShader, CShaderList } from "../render/CShader.js";
 import { CShaderAttr } from "../render/CShaderAttr.js";
 import { CTexture } from "../render/CTexture.js";
-import { CCamCon2DFreeMove } from "../util/CCamCon.js";
-import { CChecker } from "../util/CChecker.js";
 import { CModal } from "../basic/CModal.js";
 import { CRPAuto } from "../app/canvas/CRPMgr.js";
-import { CAtelier } from "../app/CAtelier.js";
 import { CSurface } from "../app/subject/CSurface.js";
 var gModal;
-var gAtl;
 var gRPMgr;
-var gShaderListArr = [];
 var gShaderArr = [];
 var gTexArr = [];
+var gSelectedKey = null;
+var gSelectedType = null;
+var gGraphCols;
+var gGraphSvg;
+var gLeftPanel;
+var gRightPanel;
 export function RPMgrTool(_rpMgr) {
     gRPMgr = _rpMgr;
-    gModal = new CModalFlex([0.7, 0.3], "RPModal");
+    gSelectedKey = null;
+    gSelectedType = null;
+    gModal = new CModalFlex([0.65, 0.35], "RPModal");
     gModal.SetHeader("RPMgrTool");
-    gModal.SetSize(1000, 800);
-    gModal.Open();
+    gModal.SetSize(1300, 800);
     gModal.SetZIndex(CModal.eSort.Manual, CModal.eSort.ZIndexTool);
-    const maxHeight = "calc(100vh - 10px)";
-    const leftPanel = gModal.FindFlex(0);
-    const rightPanel = gModal.FindFlex(1);
-    [leftPanel, rightPanel].forEach(panel => {
-        panel.style.maxHeight = maxHeight;
-        panel.style.overflowY = "auto";
+    gModal.Open();
+    gLeftPanel = gModal.FindFlex(0);
+    gRightPanel = gModal.FindFlex(1);
+    [gLeftPanel, gRightPanel].forEach(panel => {
+        panel.style.maxHeight = "calc(100vh - 10px)";
+        panel.style.display = "flex";
+        panel.style.flexDirection = "column";
+        panel.style.overflow = "hidden";
     });
-    let canvas = CDOM.DataToDom(`
-        <div style="position: relative; width: 100%; height: 100%;">
-        <canvas id="RPLeft_can"
-                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 0;">
-        </canvas>
-        <div id="RPLeft_div"
-             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events:none;">
-        </div>
-      </div>
-    `);
-    leftPanel.append(canvas);
-    gModal.On(CEvent.eType.Close, () => {
-        if (gRPMgr.GetCanvas() != null) {
-            gRPMgr.GetCanvas().SetRPMgr(gRPMgr);
-        }
+    gLeftPanel.innerHTML = `
+		<div style="padding:6px; border-bottom:1px solid #ddd; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+			<button id="rp_add_rp" class="btn btn-sm btn-primary">+ RPAuto</button>
+			<select id="rp_add_suf_select" class="form-select form-select-sm" style="width:auto;"></select>
+			<button id="rp_add_suf" class="btn btn-sm btn-primary">+ Surface</button>
+			<button id="rp_add_tex" class="btn btn-sm btn-primary">+ Texture</button>
+		</div>
+		<div id="rp_graph_scroll" style="flex:1 1 auto; overflow:auto; position:relative; background:#f8f9fa;">
+			<div id="rp_graph_cols" style="position:relative; display:inline-flex; gap:60px; padding:24px;"></div>
+		</div>
+	`;
+    gRightPanel.innerHTML = `<div id="rp_inspector" style="padding:8px; overflow-y:auto; flex:1 1 auto;"></div>`;
+    const addRPBtn = gLeftPanel.querySelector("#rp_add_rp");
+    addRPBtn.onclick = () => {
+        const rp = new CRPAuto();
+        gRPMgr.PushRP(rp);
+        RPToolRPEx(rp);
+        Select(rp.ObjHash(), "rp");
+        RPToolBuildGraph();
+    };
+    const sufSelect = gLeftPanel.querySelector("#rp_add_suf_select");
+    for (let name of CClass.ExtendsList(CSurface, true)) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        sufSelect.appendChild(opt);
+    }
+    const addSufBtn = gLeftPanel.querySelector("#rp_add_suf");
+    addSufBtn.onclick = () => {
+        if (sufSelect.value == "")
+            return;
+        const suf = CClass.New(sufSelect.value);
+        gRPMgr.PushSuf(suf);
+        RPToolRPEx(suf.GetRP());
+        suf.EditChangeEx = () => RPToolBuildGraph();
+        Select(suf.ObjHash(), "suf");
+        RPToolBuildGraph();
+    };
+    const addTexBtn = gLeftPanel.querySelector("#rp_add_tex");
+    addTexBtn.onclick = () => {
+        const tex = new CTexture();
+        tex.SetKey(CUniqueID.Get());
+        gRPMgr.PushTex(tex.Key(), tex);
+        Select(tex.Key(), "tex");
+        RPToolBuildGraph();
+    };
+    gModal.On(CEvent.eType.Resize, () => RPToolDrawLines());
+    RPToolBuildGraph();
+}
+function Select(_key, _type) {
+    gSelectedKey = _key;
+    gSelectedType = _type;
+}
+function MarkDirty() {
+    gRPMgr.mUpdate = CUpdate.eType.Updated;
+}
+function RPToolGoto(_key, _type) {
+    Select(_key, _type);
+    RPToolBuildGraph();
+    requestAnimationFrame(() => {
+        gGraphCols.querySelector(`[data-key="${CSS.escape(_key)}"][data-type="${_type}"]`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
     });
-    gAtl = new CAtelier();
-    gAtl.mPF.mIAuto = true;
-    gAtl.Init([], "RPLeft_can", false).then(() => {
-        gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
-        RPToolInit();
-    });
-    gAtl.NewCanvas("RPTool");
-    gAtl.Canvas("RPTool").SetCameraKey("2D");
+}
+function RPToolBindTexGoto(_btn, _getKey) {
+    const refresh = () => {
+        const key = _getKey();
+        const exists = key != "" && gRPMgr.mTexMap.has(key);
+        _btn.disabled = !exists;
+        _btn.title = exists ? `${key}로 이동` : "존재하는 텍스쳐가 아님";
+    };
+    refresh();
+    _btn.onclick = () => RPToolGoto(_getKey(), "tex");
+    return refresh;
 }
 function RPToolResChk() {
-    gShaderListArr = [];
     gShaderArr = [];
     gTexArr = [""];
-    if (gRPMgr.GetCanvas() != null) {
-        for (let key of gRPMgr.GetCanvas().GetFrame().Res().Keys()) {
-            let value = gRPMgr.GetCanvas().GetFrame().Res().Find(key);
-            if (value instanceof CShaderList) {
-                gShaderListArr.push(key);
-            }
-            else if (value instanceof CShader) {
-                gShaderArr.push(key);
-            }
-            else if (value instanceof CTexture && value.IsFrameBuf()) {
-                gTexArr.push(key);
-            }
+    const shaderSet = new Set();
+    for (let rp of gRPMgr.mRPArr)
+        if (rp.mShader)
+            shaderSet.add(rp.mShader);
+    for (let suf of gRPMgr.mSufArr)
+        if (suf.GetRP().mShader)
+            shaderSet.add(suf.GetRP().mShader);
+    gShaderArr = Array.from(shaderSet);
+    for (let [key] of gRPMgr.mTexMap)
+        gTexArr.push(key);
+    for (let suf of gRPMgr.mSufArr)
+        gTexArr.push(suf.GetTexKey());
+    gTexArr = Array.from(new Set(gTexArr));
+}
+function RPToolBindTexCombo(_input, _box, _onChange) {
+    const renderList = () => {
+        const q = _input.value.trim().toLowerCase();
+        const matches = gTexArr.filter(t => t != "" && (q == "" || t.toLowerCase().includes(q)));
+        if (matches.length == 0) {
+            _box.style.display = "none";
+            return;
         }
-    }
-    else {
-        for (let [key, value] of gRPMgr.mTexMap) {
-            gTexArr.push(key);
-        }
-        for (let value of gRPMgr.mSufArr) {
-            gTexArr.push(value.GetTexKey());
-        }
-        for (let key of gAtl.Frame().Res().Keys()) {
-            let value = gRPMgr.GetCanvas().GetFrame().Res().Find(key);
-            if (value instanceof CShaderList) {
-                gShaderListArr.push(key);
-            }
-            else if (value instanceof CShader) {
-                gShaderArr.push(key);
-            }
-        }
-    }
+        _box.innerHTML = matches.map(t => `<button type="button" class="list-group-item list-group-item-action py-1 px-2" style="font-size:12px;">${t}</button>`).join("");
+        _box.querySelectorAll("button").forEach(btn => {
+            btn.onclick = () => {
+                _input.value = btn.textContent;
+                _box.style.display = "none";
+                _onChange();
+            };
+        });
+        _box.style.display = "block";
+    };
+    _input.addEventListener("focus", renderList);
+    _input.addEventListener("input", () => { _onChange(); renderList(); });
+    _input.addEventListener("keydown", (e) => { if (e.key == "Escape")
+        _box.style.display = "none"; });
+    _input.addEventListener("blur", () => setTimeout(() => _box.style.display = "none", 150));
 }
 function RPToolRPEx(_rp) {
     _rp.EditFormEx = (_pointer, _body, _input) => {
         if (_pointer.member == "mShader") {
-            let sList = [];
-            sList.push(...gShaderListArr);
-            sList.push(...gShaderArr);
-            _body.append(CUtilObj.Select(_pointer, _input, sList, sList, true));
+            _body.append(CUtilObj.Select(_pointer, _input, gShaderArr, gShaderArr, true));
         }
     };
-    _rp.EditChangeEx = (_pointer, _child) => {
-        RPToolLeftInit();
+    _rp.EditChangeEx = () => {
+        RPToolBuildGraph();
     };
 }
 function RPInOutTexForm(_rp, _reFun) {
     const hash = _rp.ObjHash();
-    const texContainer = document.createElement('div');
-    texContainer.className = 'mb-3';
+    const texContainer = document.createElement("div");
+    texContainer.className = "mb-3";
     texContainer.innerHTML = `
-        <div class="card mb-2">
-            <div class="card-header">
-                <h6 class="mb-0">InTex</h6>
-            </div>
-            <div class="card-body p-1">
-                <button class="btn btn-primary btn-sm" id="add_intex_${hash}">[add]</button>
-                <div id="intex_inputs_${hash}"></div>
-            </div>
-        </div>
-        <div class="card mb-2">
-            <div class="card-header">
-                <h6 class="mb-0">OutTex</h6>
-            </div>
-            <div class="card-body p-1">
-                <div class="mb-2">
-                    <div class="d-flex gap-2 mb-2 align-items-center">
-                        <input type="text" class="form-control form-control-sm" placeholder="datalist" list="outtex_datalist_${hash}" id="outtex_target_${hash}">
-                        <datalist id="outtex_datalist_${hash}">
-                            ${gTexArr.map(tex => `<option value="${tex}">`).join('')}
-                        </datalist>
-                    </div>
-                    <div class="d-flex gap-2 align-items-center">
-                        <input type="number" class="form-control form-control-sm" placeholder="number" style="width: 80px;" id="outtex_level_${hash}">
-                        <input type="text" class="form-control form-control-sm" placeholder="0,1,2" id="outtex_use_${hash}">
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+		<div class="card mb-2">
+			<div class="card-header py-1"><h6 class="mb-0">In</h6></div>
+			<div class="card-body p-1">
+				<button class="btn btn-primary btn-sm" id="add_intex_${hash}">[add]</button>
+				<div id="intex_inputs_${hash}"></div>
+			</div>
+		</div>
+		<div class="card mb-2">
+			<div class="card-header py-1"><h6 class="mb-0">Out</h6></div>
+			<div class="card-body p-1">
+				<div class="d-flex gap-2 mb-2 align-items-center">
+					<div class="position-relative" style="flex:1 1 auto; min-width:140px;">
+						<input type="text" class="form-control form-control-sm" placeholder="텍스쳐 검색 또는 직접 입력" id="outtex_target_${hash}" autocomplete="off">
+						<div class="list-group" id="outtex_suggest_${hash}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:20; max-height:160px; overflow-y:auto; box-shadow:0 2px 6px rgba(0,0,0,.15);"></div>
+					</div>
+					<button type="button" class="btn btn-outline-success btn-sm" id="outtex_goto_${hash}" title="텍스쳐로 이동" style="min-width: 28px;">→</button>
+				</div>
+				<div class="d-flex gap-2 align-items-center">
+					<input type="number" class="form-control form-control-sm" placeholder="level" style="width: 80px;" id="outtex_level_${hash}">
+					<input type="text" class="form-control form-control-sm" placeholder="use: 0,1,2" id="outtex_use_${hash}">
+				</div>
+			</div>
+		</div>
+	`;
     for (let attr of _rp.mShaderAttr) {
-        if (attr.mType == -2) {
-            const inputsContainer = texContainer.querySelector(`#intex_inputs_${hash}`);
-            const inputGroup = document.createElement('div');
-            inputGroup.className = 'mb-2';
-            const datalistId = `intex_datalist_${hash}_${Date.now()}`;
-            inputGroup.innerHTML = `
-                <div class="d-flex gap-2 mb-2 align-items-center">
-                    <input type="text" class="form-control form-control-sm" placeholder="datalist" list="${datalistId}" value="${attr.mKey || ''}">
-                    <datalist id="${datalistId}">
-                        ${gTexArr.map(tex => `<option value="${tex}">`).join('')}
-                    </datalist>
-                    <input type="number" class="form-control form-control-sm" placeholder="number" style="width: 80px;" value="${attr.mEach || 0}">
-                    <button class="btn btn-danger btn-sm" style="min-width: 24px;">×</button>
-                </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <input type="text" class="form-control form-control-sm" placeholder="true,false" value="${attr.mData && attr.mData.length > 0 ? attr.mData.map(b => b.toString()).join(',') : ''}">
-                </div>
-            `;
-            const textInput = inputGroup.querySelector('input[type="text"]');
-            const numberInput = inputGroup.querySelector('input[type="number"]');
-            const dataInput = inputGroup.querySelectorAll('input[type="text"]')[1];
-            textInput.addEventListener('input', () => {
-                attr.mKey = textInput.value;
-            });
-            numberInput.addEventListener('input', () => {
-                attr.mEach = parseFloat(numberInput.value) || 0;
-            });
-            dataInput.addEventListener('input', () => {
-                const inputValue = dataInput.value.trim();
-                if (inputValue) {
-                    const boolValues = inputValue.split(',').map(s => s.trim().toLowerCase()).filter(s => s !== '');
-                    attr.mData = boolValues.map(s => s === 'true');
-                }
-                else {
-                    attr.mData = [];
-                }
-            });
-            const removeBtn = inputGroup.querySelector('.btn-danger');
-            removeBtn.addEventListener('click', () => {
-                const index = _rp.mShaderAttr.indexOf(attr);
-                if (index > -1) {
-                    _rp.mShaderAttr.splice(index, 1);
-                }
-                _reFun();
-            });
-            inputsContainer.appendChild(inputGroup);
-        }
-    }
-    const addInTexBtn = texContainer.querySelector(`#add_intex_${hash}`);
-    if (addInTexBtn) {
-        addInTexBtn.addEventListener('click', () => {
-            const newAttr = new CShaderAttr(-2, "");
-            newAttr.mData = [];
-            _rp.mShaderAttr.push(newAttr);
+        if (attr.mType != -2)
+            continue;
+        const inputsContainer = texContainer.querySelector(`#intex_inputs_${hash}`);
+        const inputGroup = document.createElement("div");
+        inputGroup.className = "mb-2";
+        inputGroup.innerHTML = `
+			<div class="d-flex gap-2 mb-1 align-items-center">
+				<div class="position-relative" style="flex:1 1 auto; min-width:140px;">
+					<input type="text" class="form-control form-control-sm" placeholder="텍스쳐 검색 또는 직접 입력" value="${attr.mKey || ""}" autocomplete="off">
+					<div class="list-group" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:20; max-height:160px; overflow-y:auto; box-shadow:0 2px 6px rgba(0,0,0,.15);"></div>
+				</div>
+				<input type="number" class="form-control form-control-sm" placeholder="off" style="width: 70px; flex:0 0 auto;" value="${attr.mEach || 0}">
+				<button type="button" class="btn btn-outline-success btn-sm" title="텍스쳐로 이동" style="min-width: 28px; flex:0 0 auto;">→</button>
+				<button class="btn btn-danger btn-sm" style="min-width: 24px; flex:0 0 auto;">×</button>
+			</div>
+		`;
+        const textInput = inputGroup.querySelector('input[type="text"]');
+        const suggestBox = inputGroup.querySelector(".list-group");
+        const numberInput = inputGroup.querySelector('input[type="number"]');
+        const gotoBtn = inputGroup.querySelector(".btn-outline-success");
+        const refreshGoto = RPToolBindTexGoto(gotoBtn, () => textInput.value.trim());
+        const applyKey = () => { attr.mKey = textInput.value; _rp.Reset(); MarkDirty(); refreshGoto(); };
+        RPToolBindTexCombo(textInput, suggestBox, applyKey);
+        numberInput.addEventListener("input", () => { attr.mEach = parseFloat(numberInput.value) || 0; _rp.Reset(); MarkDirty(); });
+        const removeBtn = inputGroup.querySelector(".btn-danger");
+        removeBtn.addEventListener("click", () => {
+            const index = _rp.mShaderAttr.indexOf(attr);
+            if (index > -1)
+                _rp.mShaderAttr.splice(index, 1);
+            _rp.Reset();
+            MarkDirty();
             _reFun();
         });
+        inputsContainer.appendChild(inputGroup);
     }
+    const addInTexBtn = texContainer.querySelector(`#add_intex_${hash}`);
+    addInTexBtn.addEventListener("click", () => {
+        const newAttr = new CShaderAttr(-2, "");
+        newAttr.mData = [];
+        _rp.mShaderAttr.push(newAttr);
+        MarkDirty();
+        _reFun();
+    });
     const renderTargetInput = texContainer.querySelector(`#outtex_target_${hash}`);
+    const renderTargetSuggest = texContainer.querySelector(`#outtex_suggest_${hash}`);
     const renderTargetLevelInput = texContainer.querySelector(`#outtex_level_${hash}`);
     const renderTargetUseInput = texContainer.querySelector(`#outtex_use_${hash}`);
-    if (renderTargetInput && renderTargetLevelInput && renderTargetUseInput) {
-        renderTargetInput.value = _rp.mRenderTarget || '';
-        renderTargetLevelInput.value = _rp.mRenderTargetLevel?.toString() || '0';
-        const useValues = _rp.mRenderTargetUse && _rp.mRenderTargetUse.size > 0 ?
-            Array.from(_rp.mRenderTargetUse).join(',') : '';
-        renderTargetUseInput.value = useValues;
-        renderTargetInput.addEventListener('input', () => {
-            _rp.mRenderTarget = renderTargetInput.value;
-        });
-        renderTargetLevelInput.addEventListener('input', () => {
-            _rp.mRenderTargetLevel = parseInt(renderTargetLevelInput.value) || 0;
-        });
-        renderTargetUseInput.addEventListener('input', () => {
-            const inputValue = renderTargetUseInput.value.trim();
-            _rp.mRenderTargetUse.clear();
-            if (inputValue) {
-                const numbers = inputValue.split(',').map(s => s.trim()).filter(s => s !== '');
-                for (const numStr of numbers) {
-                    const num = parseInt(numStr);
-                    if (!isNaN(num)) {
-                        _rp.mRenderTargetUse.add(num);
-                    }
-                }
+    const renderTargetGotoBtn = texContainer.querySelector(`#outtex_goto_${hash}`);
+    renderTargetInput.value = _rp.mRenderTarget || "";
+    renderTargetLevelInput.value = _rp.mRenderTargetLevel?.toString() || "0";
+    renderTargetUseInput.value = _rp.mRenderTargetUse && _rp.mRenderTargetUse.size > 0 ?
+        Array.from(_rp.mRenderTargetUse).join(",") : "";
+    const refreshOutGoto = RPToolBindTexGoto(renderTargetGotoBtn, () => renderTargetInput.value.trim());
+    const applyRenderTarget = () => { _rp.mRenderTarget = renderTargetInput.value; _rp.Reset(); MarkDirty(); refreshOutGoto(); };
+    RPToolBindTexCombo(renderTargetInput, renderTargetSuggest, applyRenderTarget);
+    renderTargetLevelInput.addEventListener("input", () => { _rp.mRenderTargetLevel = parseInt(renderTargetLevelInput.value) || 0; MarkDirty(); });
+    renderTargetUseInput.addEventListener("input", () => {
+        _rp.mRenderTargetUse.clear();
+        const inputValue = renderTargetUseInput.value.trim();
+        if (inputValue) {
+            for (let numStr of inputValue.split(",").map(s => s.trim()).filter(s => s !== "")) {
+                const num = parseInt(numStr);
+                if (!isNaN(num))
+                    _rp.mRenderTargetUse.add(num);
             }
-        });
-    }
+        }
+        MarkDirty();
+    });
     return texContainer;
 }
-function RPToolRPAutoInit(_rp) {
-    const hash = _rp.ObjHash();
-    const collapseId = `collapse_${hash}`;
-    const html = CDOM.DataToDom(`
-        <div class="card mb-2" id="cardRight_${hash}">
-            <div class="card-header d-flex justify-content-between align-items-center"
-                 style="cursor: pointer;"
-                 data-bs-toggle="collapse"
-                 data-bs-target="#${collapseId}"
-                 aria-expanded="false"
-                 aria-controls="${collapseId}">
-                <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
-                    <div class="fw-bold text-primary text-truncate">${hash}</div>
-                    <div class="text-truncate">${_rp.mPriority}-${_rp.mShader}</div>
-                </div>
-                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto; flex-shrink: 0; min-width: 24px;"></button>
-            </div>
-            <div class="collapse" id="${collapseId}">
-                <div class="card-body p-1" id="${collapseId}_body"></div>
-            </div>
-        </div>
-    `);
-    const body = html.querySelector(`#${collapseId}_body`);
-    if (body) {
-        body.append(RPInOutTexForm(_rp, () => {
-            const parent = gModal.FindFlex(1)?.querySelector("#tab-content");
-            if (parent) {
-                parent.innerHTML = "";
-                RPToolRightRPTabInit(parent);
-            }
-        }));
-        body.append(_rp.EditInit(null));
-    }
-    const closeBtn = html.querySelector(".btn-close");
-    closeBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        gRPMgr.RemoveRP(_rp);
-        const parent = gModal.FindFlex(1)?.querySelector("#tab-content");
-        parent.innerHTML = "";
-        RPToolRightRPTabInit(parent);
-    });
-    RPToolRPEx(_rp);
-    return html;
-}
-function RPToolTexInit(_tex) {
-    const hash = _tex.ObjHash();
-    const collapseId = `collapse_${hash}`;
-    const html = CDOM.DataToDom(`
-        <div class="card mb-2" id="cardRight_${hash}">
-            <div class="card-header d-flex justify-content-between align-items-center"
-                 style="cursor: pointer;"
-                 data-bs-toggle="collapse"
-                 data-bs-target="#${collapseId}"
-                 aria-expanded="false"
-                 aria-controls="${collapseId}">
-                <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
-                    <input type="text" class="form-control form-control-sm mb-1" id="${collapseId}_key_input" value="${_tex.Key() || ""}" style="width:100%; max-width: 200px;" />
-                </div>
-                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto; flex-shrink: 0; min-width: 24px;"></button>
-            </div>
-            <div class="collapse" id="${collapseId}">
-                <div class="card-body" id="${collapseId}_body"></div>
-            </div>
-        </div>
-    `);
-    const body = html.querySelector(`#${collapseId}_body`);
-    if (body) {
-        body.append(_tex.EditInit(null));
-    }
-    const keyInput = html.querySelector(`#${collapseId}_key_input`);
-    if (keyInput) {
-        keyInput.addEventListener('change', () => {
-            const newKey = keyInput.value.trim();
-            if (newKey) {
-                gRPMgr.RemoveTex(_tex.Key());
-                _tex.SetKey(newKey);
-                gRPMgr.PushTex(newKey, _tex);
-            }
-        });
-    }
-    const closeBtn = html.querySelector(".btn-close");
-    closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        gRPMgr.RemoveTex(_tex.Key());
-        const parent = gModal.FindFlex(1)?.querySelector("#tab-content");
-        parent.innerHTML = "";
-        RPToolRightTexTabInit(parent);
-    });
-    return html;
-}
-function RPToolSufInit(_suf) {
-    const hash = _suf.ObjHash();
-    const collapseId = `collapse_${hash}`;
-    const html = CDOM.DataToDom(`
-        <div class="card mb-2" id="cardRight_${hash}">
-            <div class="card-header d-flex justify-content-between align-items-center"
-                 style="cursor: pointer;"
-                 data-bs-toggle="collapse"
-                 data-bs-target="#${collapseId}"
-                 aria-expanded="false"
-                 aria-controls="${collapseId}">
-                <div class="flex-grow-1 fw-bold text-primary" style="min-width: 0; overflow: hidden; text-truncate;">${_suf.ObjHash()}</div>
-                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto; flex-shrink: 0; min-width: 24px;"></button>
-            </div>
-            <div class="collapse" id="${collapseId}">
-                <div class="card-body p-1" id="${collapseId}_body"></div>
-            </div>
-        </div>
-    `);
-    const body = html.querySelector(`#${collapseId}_body`);
-    if (body) {
-        body.append(RPInOutTexForm(_suf.mRenderPass, () => {
-            const parent = gModal.FindFlex(1)?.querySelector("#tab-content");
-            if (parent) {
-                parent.innerHTML = "";
-                RPToolRightSufTabInit(parent);
-            }
-        }));
-        body.append(_suf.EditInit(null));
-    }
-    const closeBtn = html.querySelector(".btn-close");
-    closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        gRPMgr.RemoveSuf(_suf);
-        const parent = gModal.FindFlex(1)?.querySelector("#tab-content");
-        parent.innerHTML = "";
-        RPToolRightSufTabInit(parent);
-    });
-    RPToolRPEx(_suf.GetRP());
-    _suf.EditChangeEx = () => {
-        const parent = gModal.FindFlex(1)?.querySelector("#tab-content");
-        parent.innerHTML = "";
-        RPToolRightSufTabInit(parent);
+function RPToolCollectNodes() {
+    const nodes = [];
+    for (let [key, tex] of gRPMgr.mTexMap)
+        nodes.push({ key, type: "tex", tex, level: 0 });
+    for (let rp of gRPMgr.mRPArr)
+        nodes.push({ key: rp.ObjHash(), type: "rp", rp, level: -1 });
+    for (let suf of gRPMgr.mSufArr)
+        nodes.push({ key: suf.ObjHash(), type: "suf", rp: suf.GetRP(), suf, level: -1 });
+    const findProducerLevel = (_texKey) => {
+        for (let n of nodes)
+            if (n.type != "tex" && n.rp.mRenderTarget == _texKey && n.level >= 0)
+                return n.level;
+        for (let n of nodes)
+            if (n.type == "tex" && n.key == _texKey)
+                return n.level;
+        return -1;
     };
-    return html;
-}
-function RPToolRightRPTabInit(container) {
-    RPToolResChk();
-    RPToolLeftInit();
-    const addHTML = CDOM.DataToDom(`
-        <div class="mb-3">
-            <button id="btn_add_rp" class="btn btn-primary">RPAuto Add</button>
-        </div>
-    `);
-    container.appendChild(addHTML);
-    const addBtn = addHTML.querySelector("#btn_add_rp");
-    addBtn.onclick = () => {
-        container.innerHTML = "";
-        const newRP = new CRPAuto();
-        gRPMgr.PushRP(newRP);
-        RPToolRightRPTabInit(container);
-    };
-    gRPMgr.mRPArr.forEach((rp) => {
-        container.appendChild(RPToolRPAutoInit(rp));
-    });
-}
-function RPToolRightTexTabInit(container) {
-    RPToolResChk();
-    const addHTML = CDOM.DataToDom(`
-        <div class="mb-3">
-            <button id="btn_add_tex" class="btn btn-primary">RenderTarget Add</button>
-        </div>
-    `);
-    container.appendChild(addHTML);
-    const addBtn = addHTML.querySelector("#btn_add_tex");
-    addBtn.onclick = () => {
-        container.innerHTML = "";
-        const newTex = new CTexture();
-        newTex.SetKey(CUniqueID.Get());
-        gRPMgr.PushTex(newTex.Key(), newTex);
-        RPToolRightTexTabInit(container);
-    };
-    gRPMgr.mTexMap.forEach((tex) => {
-        container.appendChild(RPToolTexInit(tex));
-    });
-}
-function RPToolRightSufTabInit(container) {
-    RPToolLeftInit();
-    const addHTML = CDOM.DataToDom(`
-        <div class="mb-3 d-flex align-items-center gap-2">
-            <select id="suf_select" class="form-select form-select-sm"></select>
-            <button id="btn_add_suf" class="btn btn-primary btn-sm">Add Surface</button>
-        </div>
-    `);
-    container.appendChild(addHTML);
-    let ext = CClass.ExtendsList(CSurface);
-    const select = addHTML.querySelector("#suf_select");
-    ext.forEach(cls => {
-        const option = document.createElement("option");
-        option.value = cls.constructor.name;
-        option.textContent = cls.constructor.name;
-        select.appendChild(option);
-    });
-    const addBtn = addHTML.querySelector("#btn_add_suf");
-    addBtn.onclick = () => {
-        container.innerHTML = "";
-        const selectedClass = select.value;
-        if (selectedClass) {
-            const newSuf = CClass.New(selectedClass);
-            gRPMgr.PushSuf(newSuf);
-        }
-        RPToolRightSufTabInit(container);
-    };
-    gRPMgr.mSufArr.forEach((suf) => {
-        container.appendChild(RPToolSufInit(suf));
-    });
-}
-function RPToolInit() {
-    RPToolLeftInit();
-    RPToolRightInit();
-}
-function RPToolRightInit() {
-    const rightPanel = gModal.FindFlex(1);
-    rightPanel.innerHTML = "";
-    const tabs = CDOM.DataToDom(`
-        <ul class="nav nav-tabs mb-2" id="rpTabMenu">
-            <li class="nav-item"><a class="nav-link active" id="tab-rp" href="#">RP</a></li>
-            <li class="nav-item"><a class="nav-link" id="tab-suf" href="#">Suf</a></li>
-            <li class="nav-item"><a class="nav-link" id="tab-tex" href="#">Tex</a></li>
-        </ul>
-        <div id="tab-content" class="tab-content"></div>
-    `);
-    rightPanel.appendChild(tabs);
-    const contentDiv = rightPanel.querySelector("#tab-content");
-    const switchTab = (target) => {
-        ["rp", "suf", "tex"].forEach(id => {
-            const tab = document.getElementById(`tab-${id}`);
-            if (tab)
-                tab.classList.toggle("active", id === target);
-        });
-        contentDiv.innerHTML = "";
-        if (target === "rp")
-            RPToolRightRPTabInit(contentDiv);
-        if (target === "suf")
-            RPToolRightSufTabInit(contentDiv);
-        if (target === "tex")
-            RPToolRightTexTabInit(contentDiv);
-    };
-    ["rp", "suf", "tex"].forEach(id => {
-        const tab = document.getElementById(`tab-${id}`);
-        if (tab)
-            tab.addEventListener("click", e => {
-                e.preventDefault();
-                switchTab(id);
-            });
-    });
-    switchTab("rp");
-}
-var gLeftInit = false;
-async function RPToolLeftInit() {
-    if (gLeftInit == true)
-        return;
-    gLeftInit = true;
-    gAtl.Canvas("RPTool").Clear();
-    const leftPanel = CDOM.ID("RPLeft_div");
-    const marginX = 50;
-    const marginY = 50;
-    let rpArr = [];
-    for (let rp of gRPMgr.mRPArr) {
-        rpArr.push({ key: rp.ObjHash(), value: rp });
-    }
-    for (let suf of gRPMgr.mSufArr) {
-        rpArr.push({ key: suf.ObjHash(), value: suf.GetRP() });
-    }
-    rpArr.sort((a, b) => a.value.mPriority - b.value.mPriority);
-    let rp2Arr = [];
-    for (let { key, value } of rpArr) {
-        let inDependencies = [];
-        for (let sa of value.mShaderAttr) {
-            if (sa.mType == -2) {
-                inDependencies.push(sa.mKey);
-            }
-        }
-        let outData = value.mRenderTarget;
-        if (inDependencies.length > 0) {
+    let changed = true;
+    let guard = 0;
+    while (changed && guard++ < nodes.length + 2) {
+        changed = false;
+        for (let n of nodes) {
+            if (n.type == "tex")
+                continue;
+            const inKeys = n.rp.mShaderAttr.filter(sa => sa.mType == -2).map(sa => sa.mKey);
             let maxLevel = -1;
-            for (let inDep of inDependencies) {
-                for (let level = 0; level < rp2Arr.length; level++) {
-                    if (rp2Arr[level].some(item => item.value.mRenderTarget === inDep)) {
-                        maxLevel = Math.max(maxLevel, level);
-                    }
-                }
+            for (let inKey of inKeys)
+                maxLevel = Math.max(maxLevel, findProducerLevel(inKey));
+            const newLevel = maxLevel + 1;
+            if (n.level != newLevel) {
+                n.level = newLevel;
+                changed = true;
             }
-            let targetLevel = maxLevel + 1;
-            if (!rp2Arr[targetLevel]) {
-                rp2Arr[targetLevel] = [];
-            }
-            rp2Arr[targetLevel].push({ key, value });
-        }
-        else {
-            if (!rp2Arr[0]) {
-                rp2Arr[0] = [];
-            }
-            rp2Arr[0].push({ key, value });
         }
     }
-    for (let { key, value } of rpArr) {
-        let cardBodyTop = 'In : ';
-        let cardBodyCenter = '';
-        let cardBodyBottom = 'Out : ';
-        if (value.mDepthTest != null)
-            cardBodyCenter += `<div>DepthTest: ${value.mDepthTest}</div>`;
-        if (value.mDepthWrite != null)
-            cardBodyCenter += `<div>DepthWrite: ${value.mDepthWrite}</div>`;
-        if (value.mAlpha != null)
-            cardBodyCenter += `<div>Alpha: ${value.mAlpha}</div>`;
-        if (value.mCullFace != null)
-            cardBodyCenter += `<div>CullFace: ${value.mCullFace}</div>`;
-        if (value.mCamera != null)
-            cardBodyCenter += `<div>Camera: ${value.mCamera}</div>`;
-        if (value.mCullFrustum != true)
-            cardBodyCenter += `<div>CullFrustum: ${value.mCullFrustum}</div>`;
-        if (value.mClearDepth != null)
-            cardBodyCenter += `<div>ClearDepth: ${value.mClearDepth}</div>`;
-        if (value.mClearColor != null)
-            cardBodyCenter += `<div>ClearColor: ${value.mClearColor}</div>`;
-        if (value.mBlitType != 0)
-            cardBodyCenter += `<div>BlitType: ${value.mBlitType}</div>`;
-        if (value.mLine != null)
-            cardBodyCenter += `<div>Line: ${value.mLine}</div>`;
-        if (value.mTag.size != 0)
-            cardBodyCenter += `<div>Tag: ${[...value.mTag].join(",")}</div>`;
-        for (let sa of value.mShaderAttr) {
-            if (sa.mType == -2) {
-                cardBodyTop += sa.mKey + " Off-" + sa.mEach + "<br>";
-            }
-            else
-                cardBodyCenter += `<div>${sa.ToLog()}</div>`;
+    for (let n of nodes) {
+        if (n.type != "tex")
+            continue;
+        let minConsumer = Infinity;
+        for (let m of nodes) {
+            if (m.type == "tex")
+                continue;
+            if (m.rp.mShaderAttr.some(sa => sa.mType == -2 && sa.mKey == n.key))
+                minConsumer = Math.min(minConsumer, m.level);
         }
-        if (value.mRenderTarget != "") {
-            cardBodyBottom += value.mRenderTarget + " ";
-            for (let use of value.mRenderTargetUse) {
-                cardBodyBottom += use + " ";
-            }
-            cardBodyBottom += "Levle-" + value.mRenderTargetLevel;
-        }
-        let header = "";
-        if (gRPMgr.mRPArr.some(rp => rp.ObjHash() === value.ObjHash())) {
-            header = `
-               
-                    <span style="color: blue;">CAutoRP</span> : ${value.mPriority}<br>${key}
-              
-            `;
-        }
-        else {
-            header = `
-                
-                    <span style="color: red;">CSurface</span> : ${value.mPriority}<br>${key}
-                
-            `;
-        }
-        let cardHtml = `
-            <div class="card mb-2" id="cardLeft_${key}">
-                <div class="card-header fw-bold"
-                    data-key="${key}"
-                    data-type="${gRPMgr.mRPArr.some(rp => rp.ObjHash() === value.ObjHash()) ? "rp" : "suf"}"
-                
-                >${header}</div>
-                <div class="card-body p-2">
-                    <div class="card-body-top">
-                        ${cardBodyTop || ""}
-                    </div>
-                    <div class="card-body-center border-top pt-2 mt-2">
-                        ${cardBodyCenter || ""}
-                    </div>
-                    <div class="card-body-bottom border-top pt-2 mt-2 text-muted small">
-                        ${cardBodyBottom || ""}
-                    </div>
-                </div>
-            </div>
-        `;
-        let sub = gAtl.Canvas("RPTool").PushSub(new CSubject());
-        sub.SetKey(key);
-        let html = CDOM.DataToDom(cardHtml);
-        html.style.pointerEvents = "auto";
-        html.style.cursor = "pointer";
-        sub.PushComp(new CPaintHTML(html, null, leftPanel));
-        sub.SetPos(new CVec3(0, 0, 0));
+        n.level = minConsumer == Infinity ? 0 : Math.max(0, minConsumer - 1);
     }
-    let currentX = 0;
-    let columnMaxWidth = 0;
-    for (let level = 0; level < rp2Arr.length; level++) {
-        let currentY = 0;
-        let levelMaxWidth = 0;
-        for (let { key, value } of rp2Arr[level]) {
-            let sub = gAtl.Canvas("RPTool").Find(key);
-            let pt = sub.FindComp(CPaintHTML);
-            if (pt == null) {
-                CAlert.E(key + "error");
-                gAtl.Canvas("RPTool").Find(key);
-            }
-            await CChecker.Exe(async () => (pt.mAttach ? false : true), 1);
-            let size = new CVec2();
-            let html = pt.GetElement();
-            size.x = html.clientWidth + 10 || 150;
-            size.y = html.clientHeight + 10 || 100;
-            pt.SetSize(size);
-            pt.SetPivot(new CVec3(1, -1, 1));
-            sub.SetPos(new CVec3(currentX, -currentY, 0));
-            currentY += size.y + marginY;
-            levelMaxWidth = Math.max(levelMaxWidth, size.x);
-            let headerDiv = html.querySelector(".card-header");
-            headerDiv.addEventListener("click", () => {
-                let type = headerDiv.getAttribute("data-type");
-                let id = headerDiv.getAttribute("data-key");
-                let activeTab = document.querySelector(".nav-tabs .nav-link.active");
-                let targetTab = document.getElementById(type === "rp" ? "tab-rp" : "tab-suf");
-                if (targetTab && targetTab !== activeTab) {
-                    targetTab.click();
-                }
-                setTimeout(() => {
-                    let cardElem = document.getElementById(`cardRight_${id}`);
-                    if (cardElem) {
-                        const trigger = cardElem.querySelector('[data-bs-toggle="collapse"]');
-                        if (trigger) {
-                            let isExpanded = trigger.getAttribute('aria-expanded') === 'true';
-                            if (!isExpanded) {
-                                trigger.click();
-                            }
-                        }
-                        cardElem.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }
-                }, 100);
-            });
-        }
-        currentX += levelMaxWidth + marginX;
-        columnMaxWidth = Math.max(columnMaxWidth, levelMaxWidth);
-    }
-    gLeftInit = false;
-    RPToolLeftLine();
+    return nodes;
 }
-function RPToolLeftLine() {
-    let rpArr = [];
-    for (let rp of gRPMgr.mRPArr) {
-        rpArr.push({ key: rp.ObjHash(), value: rp });
+function RPToolTexUsers(_texKey) {
+    const users = [];
+    for (let rp of gRPMgr.mRPArr)
+        if (rp.mShaderAttr.some(sa => sa.mType == -2 && sa.mKey == _texKey))
+            users.push({ key: rp.ObjHash(), type: "rp", label: `RP·P${rp.mPriority}` });
+    for (let suf of gRPMgr.mSufArr)
+        if (suf.GetRP().mShaderAttr.some(sa => sa.mType == -2 && sa.mKey == _texKey))
+            users.push({ key: suf.ObjHash(), type: "suf", label: `Suf·P${suf.GetRP().mPriority}` });
+    return users;
+}
+function RPToolBuildGraph() {
+    RPToolResChk();
+    const nodes = RPToolCollectNodes();
+    const cols = gLeftPanel.querySelector("#rp_graph_cols");
+    cols.innerHTML = "";
+    gGraphCols = cols;
+    gGraphSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    gGraphSvg.style.position = "absolute";
+    gGraphSvg.style.top = "0";
+    gGraphSvg.style.left = "0";
+    gGraphSvg.style.pointerEvents = "none";
+    gGraphSvg.style.overflow = "visible";
+    const marker = `
+		<defs>
+			<marker id="rp_arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+				<path d="M0,0 L6,3 L0,6 Z" fill="#6c757d"/>
+			</marker>
+		</defs>`;
+    gGraphSvg.innerHTML = marker;
+    cols.appendChild(gGraphSvg);
+    const maxLevel = nodes.reduce((m, n) => Math.max(m, n.level), 0);
+    for (let level = 0; level <= maxLevel; level++) {
+        const colDiv = document.createElement("div");
+        colDiv.className = "rp_graph_col";
+        colDiv.style.display = "flex";
+        colDiv.style.flexDirection = "column";
+        colDiv.style.gap = "20px";
+        colDiv.style.position = "relative";
+        colDiv.style.zIndex = "1";
+        for (let n of nodes.filter(n => n.level == level))
+            colDiv.appendChild(RPToolNodeCard(n));
+        cols.appendChild(colDiv);
     }
-    for (let suf of gRPMgr.mSufArr) {
-        rpArr.push({ key: suf.ObjHash(), value: suf.GetRP() });
+    requestAnimationFrame(() => RPToolDrawLines());
+    RPToolInspector();
+}
+function RPToolNodeColor(_type) {
+    if (_type == "tex")
+        return { border: "#28a745", label: "CTexture", labelColor: "green" };
+    if (_type == "suf")
+        return { border: "#dc3545", label: "CSurface", labelColor: "red" };
+    return { border: "#0d6efd", label: "CAutoRP", labelColor: "blue" };
+}
+function RPToolNodeCard(_node) {
+    const color = RPToolNodeColor(_node.type);
+    const selected = _node.key == gSelectedKey && _node.type == gSelectedType;
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.key = _node.key;
+    card.dataset.type = _node.type;
+    card.style.width = "220px";
+    card.style.cursor = "pointer";
+    card.style.borderColor = color.border;
+    card.style.borderWidth = selected ? "3px" : "1px";
+    card.style.boxShadow = selected ? `0 0 0 2px ${color.border}55` : "none";
+    let bodyHtml = "";
+    if (_node.type == "tex") {
+        const users = RPToolTexUsers(_node.key);
+        bodyHtml = `
+			<div class="fw-bold text-truncate" title="${_node.key}" style="font-size:11px;">${_node.key}</div>
+			<div class="small text-muted">${_node.tex.IsFrameBuf() ? "FrameBuf" : "Texture"}</div>
+			<div class="small border-top pt-1 mt-1">${users.length ? "Used by: " + users.map(u => u.label).join(", ") : `<span class="text-muted">(unused)</span>`}</div>
+		`;
     }
-    let FindTex = (_find) => {
-        for (let { key, value } of rpArr) {
-            if (value.mRenderTarget == _find)
-                return key;
+    else {
+        const rp = _node.rp;
+        let inHtml = "";
+        for (let sa of rp.mShaderAttr)
+            if (sa.mType == -2)
+                inHtml += `<div>▶ ${sa.mKey}</div>`;
+        let outHtml = rp.mRenderTarget ? `<div>${rp.mRenderTarget} ▶</div>` : `<div class="text-muted">(screen) ▶</div>`;
+        bodyHtml = `
+			<div class="small">${inHtml}</div>
+			<div class="small text-muted border-top pt-1 mt-1">P${rp.mPriority} · ${rp.mShader || "-"}${rp.mTag.size ? " · " + [...rp.mTag].join(",") : ""}</div>
+			<div class="small border-top pt-1 mt-1">${outHtml}</div>
+		`;
+    }
+    card.innerHTML = `
+		<div class="card-header py-1 px-2 d-flex justify-content-between align-items-center">
+			<span class="fw-bold text-truncate" style="color:${color.labelColor}; font-size:12px;">${color.label}</span>
+			<button class="btn btn-sm btn-close" style="min-width:20px;"></button>
+		</div>
+		<div class="card-body p-2" style="font-size:12px;">${bodyHtml}</div>
+	`;
+    card.querySelector(".card-body").addEventListener("click", () => {
+        Select(_node.key, _node.type);
+        RPToolBuildGraph();
+    });
+    card.querySelector(".card-header span").addEventListener("click", () => {
+        Select(_node.key, _node.type);
+        RPToolBuildGraph();
+    });
+    card.querySelector(".btn-close").addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (_node.type == "tex")
+            gRPMgr.RemoveTex(_node.key);
+        else if (_node.type == "suf")
+            gRPMgr.RemoveSuf(_node.suf);
+        else
+            gRPMgr.RemoveRP(_node.rp);
+        MarkDirty();
+        if (gSelectedKey == _node.key) {
+            gSelectedKey = null;
+            gSelectedType = null;
         }
+        RPToolBuildGraph();
+    });
+    return card;
+}
+function RPToolDrawLines() {
+    if (gGraphCols == null || gGraphSvg == null)
+        return;
+    const containerRect = gGraphCols.getBoundingClientRect();
+    gGraphSvg.setAttribute("width", gGraphCols.scrollWidth + "");
+    gGraphSvg.setAttribute("height", gGraphCols.scrollHeight + "");
+    gGraphSvg.querySelectorAll("line").forEach(l => l.remove());
+    const cardRect = (_key, _type) => {
+        const el = gGraphCols.querySelector(`[data-key="${CSS.escape(_key)}"][data-type="${_type}"]`);
+        if (el == null)
+            return null;
+        const r = el.getBoundingClientRect();
+        return { right: r.right - containerRect.left, left: r.left - containerRect.left, midY: r.top - containerRect.top + r.height / 2 };
+    };
+    const findProducer = (_texKey) => {
+        for (let rp of gRPMgr.mRPArr)
+            if (rp.mRenderTarget == _texKey)
+                return { key: rp.ObjHash(), type: "rp" };
+        for (let suf of gRPMgr.mSufArr)
+            if (suf.GetRP().mRenderTarget == _texKey)
+                return { key: suf.ObjHash(), type: "suf" };
+        if (gRPMgr.mTexMap.has(_texKey))
+            return { key: _texKey, type: "tex" };
         return null;
     };
-    for (let { key, value } of rpArr) {
-        let color = new CColor(Math.random(), Math.random(), Math.random(), CColor.eModel.RGBAdd);
-        for (let sa of value.mShaderAttr) {
-            if (sa.mType == -2) {
-                let texObj = FindTex(sa.mKey);
-                let org = gAtl.Canvas("RPTool").Find(key);
-                let tar = gAtl.Canvas("RPTool").Find(texObj);
-                if (org != null && tar != null) {
-                    const line = gAtl.Canvas("RPTool").PushSub(new CSubject());
-                    let trail = line.PushComp(new CPaintTrail(gAtl.Frame().Pal().GetBlackTex()));
-                    trail.SetLen(5);
-                    trail.SetLastHide(false);
-                    let orgSize = org.FindComp(CPaintHTML).mOrgSize;
-                    let tarSize = tar.FindComp(CPaintHTML).mOrgSize;
-                    trail.SetStaticPosList([CMath.V3AddV3(org.GetPos(), new CVec3(orgSize.x * 0.5, -orgSize.y * 0.5)),
-                        CMath.V3AddV3(tar.GetPos(), new CVec3(tarSize.x * 0.5, -tarSize.y * 0.5))]);
-                    trail.SetColorModel(color);
-                }
-            }
+    const drawEdge = (_from, _toKey, _toType) => {
+        const a = cardRect(_from.key, _from.type);
+        const b = cardRect(_toKey, _toType);
+        if (a == null || b == null)
+            return;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", a.right + "");
+        line.setAttribute("y1", a.midY + "");
+        line.setAttribute("x2", (b.left - 6) + "");
+        line.setAttribute("y2", b.midY + "");
+        line.setAttribute("stroke", "#6c757d");
+        line.setAttribute("stroke-width", "2");
+        line.setAttribute("marker-end", "url(#rp_arrow)");
+        gGraphSvg.appendChild(line);
+    };
+    const allRP = [];
+    for (let rp of gRPMgr.mRPArr)
+        allRP.push({ key: rp.ObjHash(), type: "rp", rp });
+    for (let suf of gRPMgr.mSufArr)
+        allRP.push({ key: suf.ObjHash(), type: "suf", rp: suf.GetRP() });
+    for (let { key, type, rp } of allRP) {
+        for (let sa of rp.mShaderAttr) {
+            if (sa.mType != -2)
+                continue;
+            const producer = findProducer(sa.mKey);
+            if (producer != null)
+                drawEdge(producer, key, type);
         }
     }
+}
+function RPToolInspector() {
+    const div = gRightPanel.querySelector("#rp_inspector");
+    div.innerHTML = "";
+    if (gSelectedKey == null) {
+        div.innerHTML = `<div class="text-muted p-2">좌측 그래프에서 노드를 선택하세요.</div>`;
+        return;
+    }
+    if (gSelectedType == "tex") {
+        const tex = gRPMgr.mTexMap.get(gSelectedKey);
+        if (tex == null) {
+            gSelectedKey = null;
+            RPToolInspector();
+            return;
+        }
+        const users = RPToolTexUsers(tex.Key());
+        const wrap = document.createElement("div");
+        wrap.innerHTML = `<h6 class="text-success mb-2">CTexture</h6>
+			<div class="mb-2 d-flex align-items-center gap-2">
+				<span class="text-muted">Key</span>
+				<input type="text" class="form-control form-control-sm" id="rp_tex_key" value="${tex.Key()}">
+			</div>
+			<div class="text-muted small mb-1">Used by (${users.length})</div>
+			${users.length ?
+            `<ul class="list-group mb-2">${users.map(u => `<li class="list-group-item list-group-item-action p-1" style="cursor:pointer; font-size:12px;" data-jkey="${u.key}" data-jtype="${u.type}">${u.label}</li>`).join("")}</ul>` :
+            `<div class="text-muted small mb-2">(사용하는 RP 없음)</div>`}`;
+        const keyInput = wrap.querySelector("#rp_tex_key");
+        keyInput.addEventListener("change", () => {
+            const newKey = keyInput.value.trim();
+            if (newKey == "" || newKey == tex.Key())
+                return;
+            gRPMgr.RemoveTex(tex.Key());
+            tex.SetKey(newKey);
+            gRPMgr.PushTex(newKey, tex);
+            gSelectedKey = newKey;
+            RPToolBuildGraph();
+        });
+        wrap.querySelectorAll("[data-jkey]").forEach(li => {
+            li.addEventListener("click", () => RPToolGoto(li.dataset.jkey, li.dataset.jtype));
+        });
+        wrap.append(tex.EditInit(null));
+        div.append(wrap);
+        return;
+    }
+    let rp = null;
+    let suf = null;
+    if (gSelectedType == "rp")
+        rp = gRPMgr.mRPArr.find(r => r.ObjHash() == gSelectedKey) ?? null;
+    else
+        suf = gRPMgr.mSufArr.find(s => s.ObjHash() == gSelectedKey) ?? null;
+    if (suf != null)
+        rp = suf.GetRP();
+    if (rp == null) {
+        gSelectedKey = null;
+        RPToolInspector();
+        return;
+    }
+    const title = gSelectedType == "suf" ? "CSurface" : "CAutoRP";
+    const wrap = document.createElement("div");
+    wrap.innerHTML = `<h6 class="mb-2" style="color:${gSelectedType == "suf" ? "red" : "blue"};">${title}</h6>`;
+    wrap.append(RPInOutTexForm(rp, () => RPToolBuildGraph()));
+    wrap.append((suf ?? rp).EditInit(null));
+    div.append(wrap);
 }

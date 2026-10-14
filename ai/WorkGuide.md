@@ -24,13 +24,12 @@ node ai/tool/work.js get <id>
 node ai/tool/work.js check <팀키> [시작시각]
 node ai/tool/work.js push <from> <to> <content...>
 node ai/tool/work.js status <id> <status>
-node ai/tool/work.js result <id> <status> <result...>
 node ai/tool/work.js watchdog
 node ai/tool/work.js team-end <팀키>
 node ai/tool/work.js start-team <provider> <model|-> <subAgents|-> <autoAgents_json|-> <limitMin|-> <goal...>
 ```
 
-- `content` / `result` / `retryText` / `command` 안의 줄바꿈은 실제 Enter 대신 리터럴 `\n` 으로 넣는다.
+- `content` / `retryText` / `command` 안의 줄바꿈은 실제 Enter 대신 리터럴 `\n` 으로 넣는다.
 - 선택 인자에서 “비움”을 명시하려면 `-` 를 쓸 수 있다 (`workingDir`, `retryText`, `traits_json`, `permissions_json`).
 - **JSON 인자(PowerShell)**: `option_json` / `traits_json` / `permissions_json` 은 따옴표가 벗겨지지 않게  
   `'{\"delay\":60,\"count\":1}'` 형태로 넘긴다. (bash에서는 `'{"delay":60,"count":1}'` 로 충분)
@@ -114,28 +113,37 @@ node ai/tool/work.js del-sched nightly-report
 
 서브 에이전트(또는 팀 메인)에게 **지금 당장** 일을 넣을 때 사용. 서버 디스패치 틱이 `ready` 의뢰를 세션에 전송한다.
 
+워크오더는 **명령과 상태만** 담는다. 결과 본문은 없다 — 처리 내역/최종 답변은 대화 로그(`provider_log`)가 정본이고,
+`get`이 `assignee`의 로그 중 그 의뢰 구간(표식 `[WorkOrder #<id>]`이 든 질문 행 ~ 같은 assignee의 다음 의뢰 `logId`)을 꺼내 보여준다.
+
+| 필드 | 설명 |
+|------|------|
+| id / status | 식별자 / 상태 |
+| requester | 요청자 (팀키, `scheduler:<name>`, `retry:<key>` 등) |
+| assignee | 처리자 key — 로그 조회 키 |
+| createdAt | 생성 시각 (YYYYMMDDHHmmss) |
+| content | 보낼 명령문 |
+| logId | 배분 시점의 `provider_log` 마지막 id (배분 전 0) |
+
 | status | 의미 |
 |--------|------|
 | ready | 대기 |
 | working | 처리 중 |
-| done | 완료 |
-| failed | 실패 |
+| done | 완료 — **서버가 자동 판정**: 지시문 첫 줄의 표식 `[WorkOrder #<id>]`이 든 질문 행 뒤에 최종 답변 행이 로그에 들어오면 done (배분 직전 `/clear`의 응답은 표식이 없어 걸리지 않는다). 로그에 못 잡히면 안전망: 세션 30초 idle → done |
+| failed | 실패 — 에이전트가 스스로 `status <id> failed`로 선언 (서버는 failed를 done으로 덮어쓰지 않는다) |
 
 ```
 node ai/tool/work.js push main coder 이 버그 수정해줘\n파일: foo.ts
-→ {id,status,requester,assignee,createdAt,content,result}
+→ {id,status,requester,assignee,createdAt,content,logId}
 
 node ai/tool/work.js list-work
 node ai/tool/work.js list-work ready 20
 → [...]
 
 node ai/tool/work.js get 12
-→ {id,...} | null
+→ {id,...,logId, answer: "<최종 답변>"|null, logs:[{id,role:"assistant",text,createdAt}|{id,role:"tool",tool,file,createdAt}]} | null
 
-node ai/tool/work.js status 12 working
-→ ok
-
-node ai/tool/work.js result 12 done 수정 완료
+node ai/tool/work.js status 12 failed
 → ok
 
 node ai/tool/work.js check main
@@ -146,6 +154,9 @@ node ai/tool/work.js check main 20260725120000
 - `push <from> <to> <content...>`: `from`=requester, `to`=assignee(에이전트 key). content는 나머지 인자 합침.
 - `check`: requester=`팀키` 인 의뢰만 집계. 시작시각 생략 시 해당 팀 첫 의뢰 시각 사용.
 - 스케줄러가 만든 의뢰의 requester 는 `scheduler:<name>` 형태다.
+- 배분 시 서버는 `/clear`와 지시문을 넣은 뒤 **화면에 실제로 찍혔는지(에코) 확인하고** Enter로 제출한다. 끝내 안 들어가면 의뢰를 `ready`로 되돌려 다음 틱에 다시 배분한다. 완료 알림도 같은 방식이며, 안 들어가면 다음 틱에 다시 보낸다.
+- `get`의 `answer`는 그 구간의 마지막 assistant 행이다. 처리 중에 부르면 지금까지의 로그가 보인다.
+- 로그 key 매칭에 실패한 답변(`key=''`)은 같은 CLI 세션의 행으로 보충한다. 그래도 못 잡으면 세션이 30초 이상 idle일 때 안전망으로 done이 된다(아래 "감시" 참조) — 이 경우 `get`의 `answer`는 null이고 결과는 완료 알림의 화면 내용에만 있다.
 
 ---
 
@@ -158,9 +169,11 @@ node ai/tool/work.js check main 20260725120000
 ### 시작 (start-team)
 
 ```
-node ai/tool/work.js start-team <provider> <model|-> <subAgents|-> <autoAgents_json|-> <limitMin|-> <goal...>
-→ {ok:true, token, teamKey, startedAt, autoAgents:[...]}
+node ai/tool/work.js start-team [--remindMin=N] <provider> <model|-> <subAgents|-> <autoAgents_json|-> <limitMin|-> <goal...>
+→ {ok:true, token, teamKey, startedAt, remindMin, autoAgents:[...]}
 ```
+
+- `--remindMin=N` (선택): 정체 알림 간격(분, 1 이상). 생략 시 기본 3분. 위치 인자와 섞여도 되지만 goal 앞에 둔다.
 
 - `provider`: `claude`|`codex`|`antigravity`|`opencode`|`grok`
 - `model`: 감독 세션 모델. 생략은 `-`
@@ -175,6 +188,39 @@ curl.exe는 Windows에서 커맨드라인 인자를 ANSI 코드페이지(CP949 �
 깨진 바이트로 그대로 저장된다(디코딩이 아니라 애초에 잘못된 바이트가 인코딩된 것). `start-team`은 Node
 프로세스 안에서 `URLSearchParams`로 직접 인코딩해 호출하므로 이 경로를 우회한다.
 
+### 운영 루프 — 알림 기반 (반복 확인 금지)
+
+감독은 `check`를 반복 실행하거나 `sleep`으로 기다리지 않는다. 발주했으면 **답변(차례)을 끝내고 기다린다.**
+의뢰가 끝나면 서버가 감독 세션에 알림 메시지를 넣어 깨운다.
+
+1. **발주**: `push <팀키> <사원key> <task>`. 서로 다른 사원에게 보낸 의뢰는 병렬로 돈다. 같은 사원에게 여러 건을 보내면 하나씩 차례로 전달된다.
+2. **차례 종료**: 발주를 마쳤으면 그대로 답변을 끝낸다. 다음 행동은 알림이 오면 한다.
+3. **알림 수신**: 아래 두 가지가 `/clear` 없이 감독 세션에 입력으로 들어온다(감독의 맥락은 유지된다).
+4. **처리**: `get <id>`로 결과(`answer`)를 읽고 → 다음 발주, 또는 종료 판정 → 다시 2로.
+
+**완료 알림** — 감독이 낸 의뢰가 `done`/`failed`가 되면:
+```
+[WorkOrder Notice]
+#3 done (team:6b54e877-claude1) -> node ai/tool/work.js get 3
+#4 failed (team:6b54e877-claude2) -> node ai/tool/work.js get 4
+```
+- `failed`가 하나라도 있으면 팀을 즉시 멈춘다(재시도 없음) → `team-end`.
+
+**정체 알림** — 미완료(`ready`/`working`) 의뢰가 남아 있는데 감독이 `remindMin`분(기본 3분, 팀 시작 시 설정) 이상 조용하고, 그동안 끝난 의뢰가 없으면:
+```
+[WorkOrder Notice]
+No task finished in the last 3 min. Outstanding: #5 working (team:6b54e877-claude1), #6 ready (team:6b54e877-claude2)
+Run check and watchdog now, then continue.
+```
+- `check`로 시간 제한을 판정하고, `watchdog`으로 세션이 사라진 사원의 의뢰를 회수한다. 둘 다 이 알림을 받았을 때만 실행하면 된다.
+- 미완료 의뢰가 남아 있는 동안 감독이 조용하면 `remindMin`분마다 다시 온다. 미완료 의뢰가 없으면 오지 않는다 — 그때는 감독이 이미 다음 발주나 종료를 했어야 한다.
+
+**서버 규칙**
+- 알림 대상은 의뢰의 `requester`와 같은 key를 가진 **살아있는 세션**이다. 팀 의뢰는 `requester`가 팀키라 감독에게 간다. 세션이 없는 요청자(`scheduler:<name>`, `retry:<key>`, 수동 `push`의 임의 이름)에게는 알림이 없다.
+- 감독이 출력 중이거나 승인 대기 중이면 보내지 않고, 조용해질 때까지 모았다가 한 번에 보낸다.
+- 알림을 보낸 이력은 서버 메모리에만 있다. 재시작하면 워크오더와 함께 사라진다.
+- 팀이 아닌 요청자(사원이 다른 사원에게 `push`한 경우 등)의 정체 알림 간격은 기본값 3분이다.
+
 ### 사원 key를 다룰 때 주의 — 전체 key를 그대로 쓸 것
 
 자동 생성 사원의 key는 `<팀키>-<provider><번호>` 형태다(예: `team:6b54e877-claude1`). `work.js push`의
@@ -188,10 +234,13 @@ push하면 `_dispatchWorkOrders`가 그 key로 세션을 찾지 못해(`_findByK
 
 ```
 node ai/tool/work.js team-end team:xxxxxxxx
-→ {ok:true, teamKey, removed:[...]}
+→ {ok:true, teamKey, removed:[...], cancelled:[...]}
 ```
 
+- `removed`: 정리한 자동 생성 사원 key. `cancelled`: 이 팀이 낸 미완료(`ready`/`working`) 의뢰 id — `failed`로 닫히고, 감독이 스스로 끝낸 것이라 완료 알림은 가지 않는다. 메인 세션이 사라져 `_tickTeamCleanup`이 정리할 때도 같다.
+
 - 팀이 **어떤 이유로든** 멈추면 **가장 마지막 단계로** 실행한다. 종료 사유는 세 가지: 목표 달성 / 작업 하나라도 `failed` / 시간 초과(`check`의 `elapsedMin` > `timeLimitMin`).
+- 시간 초과는 알림을 받을 때마다(완료·정체 알림 모두) `check`로 판정한다. 정체 알림 간격(`remindMin`)만큼 초과 감지가 늦을 수 있다.
 - 실행하지 않으면 사원 세션이 그대로 남고, 서버 틱의 `_ensureSubAgentSessions`가 **죽여도 계속 되살려** 머신을 점유한다.
 
 > ⚠️ **임시 사원은 DB가 아니라 서버 메모리(`gTeamTempAgents`)에 있다.**
@@ -206,21 +255,28 @@ node ai/tool/work.js team-end team:xxxxxxxx
 메인 세션이 `team-end` 없이 사라진 경우(사용자가 터미널 kill, CLI 자체 종료, pty 크래시)는
 `_tickTeamCleanup`이 대신 정리하지만, 정상 종료 시 이것에 의존하지 않는다.
 
-### 감시 (watchdog) — 주기 실행
+### 감시 (watchdog) — 정체 알림을 받았을 때 실행
 
 ```
 node ai/tool/work.js watchdog
 ```
 
-사원 프로세스가 크래시하거나 승인 대기로 멈추면 그 작업은 **`working`에 영원히 남고**
-`check`로는 절대 `done`/`failed`가 되지 않아 감독이 무한 대기한다. `watchdog`은 그런 좀비를 찾아
-세션을 죽이고 작업을 `ready`로 되돌려 재배분한다. `dispatch → check → watchdog → collect`를 반복한다.
+사원 세션이 사라지면(크래시 등) 그 작업은 **`working`에 영원히 남고** 완료 알림도 오지 않는다.
+대신 정체 알림이 오므로, 그때 `watchdog`을 실행한다. `watchdog`은 담당 세션이 없는 `working` 의뢰를
+`ready`로 되돌린다 — 사원은 서버가 되살리고, 되살아난 세션에 재배분된다.
+세션이 살아있는 의뢰는 건드리지 않는다(죽이지 않는다). 살아있는데 끝난 의뢰는 서버가 닫는다:
+- 1순위: 최종 답변이 대화 로그에 들어오면 done (`get`의 `answer`로 결과 확인)
+- 안전망: 로그에 못 잡혀도 세션이 기존 상태 판정(Control의 DONE 알림과 같은 기준)으로 30초 이상 idle이면 done.
+  이때는 로그에 결과가 없으므로 완료 알림에 `no answer in the log` 표시와 그 순간의 터미널 화면이 함께 실린다.
+- 승인 대기(`permission`) 중인 사원은 끝난 것으로 보지 않는다 — 사람(또는 메신저) 승인이 필요하다.
 
 ## 흐름 요약
 
 ```
 set-agent  → DB 카탈로그 등록 → (서버) 세션 자동 기동
 set-sched  → DB 스케줄 등록  → (서버) 조건 충족 시 push 상당 WorkOrder 생성
-push       → DB 의뢰 즉시 생성 → (서버) ready 의뢰를 세션에 전송
-list-*/get/check/status/result → 조회·상태 관리
+push       → DB 의뢰 즉시 생성 → (서버) ready 의뢰를 세션에 전송 → (서버) 최종 답변이 로그에 들어오면 done
+           → (서버) 요청자 세션이 살아있으면 완료 알림 / 미완료가 남은 채 remindMin분 조용하면 정체 알림
+get        → 의뢰 + 그 구간의 대화 로그(최종 답변 = 결과)
+list-*/check/status → 조회·상태 관리 (실패 선언은 status <id> failed)
 ```

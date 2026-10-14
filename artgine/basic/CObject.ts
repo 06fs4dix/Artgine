@@ -136,9 +136,37 @@ export class CPointer
 }
 
 
+// 진짜 new CObject()(및 그 서브클래스: CSubject/CVoxelMap 등) 시점에만 채워지는
+// 인스턴스 화이트리스트. Proxy(instance)처럼 원본을 감싼 별개의 객체는 이 WeakSet에
+// 절대 들어있을 수 없다(참조 동일성 기반이라 속성 접근 흉내로는 못 피함) — ASM_MAIN.ts의
+// _chkInstanceIdentity가 이걸로 "정상 new된 진짜 인스턴스인지"를 검증한다.
+// gInstanceTracking이 꺼져있으면(기본값) 생성자에서 WeakSet.add를 아예 안 해서 비용이
+// 없다 — SetInstanceTracking(true)로 켰을 때만 등록이 시작된다.
+const gKnownInstances = new WeakSet<any>();
+let gInstanceTracking = false;
+
 export class CObject implements IMember,IRecycle,IStream,ICJSON
 {
+	constructor()
+	{
+		if (gInstanceTracking)
+			gKnownInstances.add(this);
+	}
 
+	// 인스턴스 신원 추적 on/off. 끈 상태에서는 생성자 비용이 없고, IsKnownInstance도
+	// (WeakSet이 비어있을 수밖에 없으므로) 항상 true를 돌려줘서 ASM_MAIN 쪽 검증이
+	// 꺼짐 상태에서는 아무 영향도 주지 않는다(정상 호출이 깨지지 않음).
+	static SetInstanceTracking(_enabled: boolean): void
+	{
+		gInstanceTracking = _enabled;
+	}
+
+	static IsKnownInstance(_obj: any): boolean
+	{
+		if (!gInstanceTracking)
+			return true;
+		return gKnownInstances.has(_obj);
+	}
 
 	Icon(){		return "";	}
 	Key()	: string

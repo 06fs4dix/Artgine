@@ -378,14 +378,16 @@ export class CH5CanvasInst
     	{
 			if(_pVec[i].mParameter instanceof Array)
 			{
+				//텍스트 명령의 글자 내용은 이미지 경로가 아니다. "logo.png" 같은 글자가 이미지 로드로 오인되면 await 로 멈춰서, await 없이 호출한 쪽이 빈 캔버스를 가져간다
+				const isText=_pVec[i].mName=="fillText" || _pVec[i].mName=="strokeText";
 				for(var j=0;j<_pVec[i].mParameter.length;++j)
 				{
 					this.mPara[j]=_pVec[i].mParameter[j];
-					
+
 					// ==========================================
 					// [수정된 이미지 로드 및 파라미터 교체 로직]
 					// 파라미터가 문자열이고 이미지 확장자를 포함하는지 확인합니다.
-					if(typeof this.mPara[j] === "string" && this.mPara[j].match(/\.(png|jpg|jpeg|gif|webp)/i))
+					if(!isText && typeof this.mPara[j] === "string" && this.mPara[j].match(/\.(png|jpg|jpeg|gif|webp)/i))
 					{
 						try {
 							// Promise를 사용해 표준 이미지 로드를 대기(await)합니다.
@@ -471,7 +473,7 @@ export class CH5CanvasInst
 	GetNewTex()
 	{
 		var tex=new CTexture();
-		tex.SetFilter(this.mLinear?CTexture.eFilter.Linear:CTexture.eFilter.Neaest);
+		tex.SetFilter(this.mLinear?CTexture.eFilter.Linear:CTexture.eFilter.Nearest);
 		tex.SetWrap(CTexture.eWrap.Clamp);
 		
 		//생길수 없는 버그다!!

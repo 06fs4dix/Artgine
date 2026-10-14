@@ -2,7 +2,6 @@ import { CUpdate } from "../../../basic/Basic.js";
 import { CMat } from "../../../geometry/CMat.js";
 import { CVec1 } from "../../../geometry/CVec1.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
-import { CRPAuto } from "../../canvas/CRPMgr.js";
 import { CPaint } from "./CPaint.js";
 export class CPaintTerrain extends CPaint {
     mTerrainOffset;
@@ -98,10 +97,5 @@ export class CPaintTerrain extends CPaint {
         var dm = this.GetDrawMesh("Artgine/DM/GeoClipmap" + cellCount, _vf, this.mOwner.GetFrame().Pal().Terrain());
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
-    }
-    EmptyRPChk() {
-        if (this.mRenderPass.length == 0) {
-            this.mRenderPass = [new CRPAuto(this.mOwner.GetFrame().Pal().SlTerrainKey())];
-        }
     }
 }

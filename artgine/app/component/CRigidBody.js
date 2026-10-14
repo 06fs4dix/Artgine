@@ -10,6 +10,7 @@ export class CRigidBody extends CGeometryComp {
     mForceArr = new Array();
     mForceGravity = null;
     mStopover = null;
+    mDamping = CPhysics.LinearDamping;
     mGravity = 0;
     mFall = false;
     mJump = false;
@@ -151,8 +152,31 @@ export class CRigidBody extends CGeometryComp {
                     i--;
                 }
             }
+            this.AdvanceStopoverForce();
         }
         return move;
+    }
+    AdvanceStopoverForce() {
+        const stopover = this.mStopover;
+        if (stopover == null || this.Find(stopover.mKey) != null)
+            return false;
+        const ownerPos = this.GetOwner().GetPos();
+        let added = false;
+        do {
+            const tPos = stopover.mPos[stopover.mIndex];
+            if (tPos == null) {
+                this.mStopover = null;
+                break;
+            }
+            if (tPos.Equals(ownerPos)) {
+                stopover.mIndex++;
+                continue;
+            }
+            stopover.mDir = CMath.V3Nor(CMath.V3SubV3(tPos, ownerPos));
+            this.Push(new CForce(stopover.mKey, stopover.mDir, stopover.mVelocity));
+            added = true;
+        } while (this.Find(stopover.mKey) == null);
+        return added;
     }
     Remove(_key) {
         for (var i = 0; i < this.mForceArr.length; ++i) {

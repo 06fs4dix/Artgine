@@ -138,7 +138,8 @@ export class CDevice
 		FloatTex32:11,
 
 		ClipControl:12,
-		
+		TexelFetch:13,
+
 	}
 	//2060 Super : BenchmarkScore: 142  ALU:89ms  FILL:81ms  GEO:27ms
 	//se2 : BenchmarkScore: 8  ALU:1837ms  FILL:1141ms  GEO:191ms
@@ -150,6 +151,8 @@ export class CDeviceGL extends CDevice
 {
 	public mGL : RenderingContext;
 	mKHR_parallel_shader_compile : any=0;
+	mAnisoExt : any=null;
+	mAnisoMax=1;
 	constructor(_pf : CPreferences,_handle : HTMLCanvasElement)
 	{
 		super(_pf,_handle);
@@ -211,15 +214,20 @@ export class CDeviceGL extends CDevice
         else 
 		{
 			g_property.set(CDevice.eProperty.ClipControl,0);
-            CAlert.W("no EXT_clip_control");		
+            CAlert.W("no EXT_clip_control");
         }
-        
+		//일부 모바일 GL 드라이버는 sampler2DArray 배열 texelFetch를 실행하다 리셋된다(context lost). 감지할 방법이 없어 모바일은 texture()로 읽는다
+		g_property.set(CDevice.eProperty.TexelFetch,CUtil.IsMobile() ? 0 : 1);
+
 		ext = this.GL().getExtension('OES_texture_float_linear');
-		if (ext==null) 
-		{	    
-			CAlert.W("no OES_texture_float_linear");	
-			this.m_pf.mTexture16f=true;	
+		if (ext==null)
+		{
+			CAlert.W("no OES_texture_float_linear");
+			this.m_pf.mTexture16f=true;
 		}
+		this.mAnisoExt = this.GL().getExtension('EXT_texture_filter_anisotropic');
+		if (this.mAnisoExt!=null)
+			this.mAnisoMax = this.GL().getParameter(this.mAnisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
 		
 		
 		CRenderPass.eBlend.FUNC_ADD=this.GL().FUNC_ADD;
@@ -252,8 +260,8 @@ export class CDeviceGL extends CDevice
 		var TexSize=this.GL().getParameter(this.GL().MAX_TEXTURE_SIZE);
 		
 		g_property.set(CDevice.eProperty.Sam2DMax,11);
-		g_property.set(CDevice.eProperty.Sam2DArrMax,3);
-		g_property.set(CDevice.eProperty.SamCubeMax,2);
+		g_property.set(CDevice.eProperty.Sam2DArrMax,4);
+		g_property.set(CDevice.eProperty.SamCubeMax,1);
 		g_property.set(CDevice.eProperty.Sam2dArrLayerMax,TexLay);
 		
 		g_property.set(CDevice.eProperty.VertexUniform,1024);
@@ -267,6 +275,7 @@ export class CDeviceGL extends CDevice
 		
 		CConsol.Log(`MAX_VERTEX_UNIFORM_VECTORS : ${max_v_uniforms} MAX_FRAGMENT_UNIFORM_VECTORS : ${max_f_uniforms} 
 			MAX_TEXTURE_IMAGE_UNITS : ${texture_units} MAX_ARRAY_TEXTURE_LAYERS : ${TexLay} MAX_TEXTURE_SIZE : ${TexSize}`);
+		CConsol.Log("TexelFetch : "+(CDevice.GetProperty(CDevice.eProperty.TexelFetch)==1 ? "on" : "off"));
 		
 
 	}
@@ -633,6 +642,7 @@ export class CDeviceGPU extends CDevice
 		g_property.set(CDevice.eProperty.FloatTex32,1);
 		//클립 공간이 원래 0..1 이라 GL 의 clip_control 에 해당하는 보정이 필요 없다
 		g_property.set(CDevice.eProperty.ClipControl,1);
+		g_property.set(CDevice.eProperty.TexelFetch,1);
 
 		this.mStaticRP.mDepthTest=true;
 		this.mStaticRP.mDepthWrite=true;

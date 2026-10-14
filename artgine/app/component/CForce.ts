@@ -49,14 +49,20 @@ export class CForce extends CObject
 	{
 		if(typeof _DirBegin =="number")
 		{
-			this.mDMulVBegin.mF32A[0]=_DirBegin*_VelEnd;
-			this.mDMulVBegin.mF32A[1]=_VelBegin*_VelEnd;
-			this.mDMulVBegin.mF32A[2]=_DirEnd*_VelEnd;
+			//숫자 오버로드는 (x,y,z,vel) 순서라 인자 이름과 자리가 다르다. 벡터 2인자 버전과 같게 방향·속도까지 바꾼다
+			//(일반 힘의 Cac은 mDirection*mVelocity만 쓰므로 mDMulVBegin만 바꾸면 효과가 없다)
+			this.mDirection.mF32A[0]=_DirBegin;
+			this.mDirection.mF32A[1]=_VelBegin;
+			this.mDirection.mF32A[2]=_DirEnd;
+			this.mVelocity=_VelEnd;
+			this.mDMulVBegin = CMath.V3MulFloat(this.mDirection,_VelEnd);
+			this.mDMulVEnd = null;
 		}
 		else
 		{
 			this.mDMulVBegin = CMath.V3MulFloat(_DirBegin,_VelBegin);
-			this.mDirection=_DirBegin;
+			//참조로 잡으면 보간 중 Cac이 mDirection에 쓰는 값이 넘긴 벡터(전역 CPhysics.GravityDir 등)를 덮어쓴다
+			this.mDirection.Import(_DirBegin);
 			this.mVelocity=_VelBegin;
 			if(_DirEnd==null)
 				this.mDMulVEnd = null;

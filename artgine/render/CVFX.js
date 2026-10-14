@@ -8,16 +8,14 @@ class Description {
     Max = new Array();
     Step = new Array();
     Value = new Array();
-    Use = new Array();
 }
-function MakeDesc(_text = [], _min = [], _max = [], _step = [], _value = [], _use = []) {
+function MakeDesc(_text = [], _min = [], _max = [], _step = [], _value = []) {
     const d = new Description();
     d.Text = _text;
     d.Min = _min;
     d.Max = _max;
     d.Step = _step;
     d.Value = _value;
-    d.Use = _use;
     return d;
 }
 const SLOT_SIZE = 5;
@@ -26,6 +24,9 @@ const USED_SLOTS = [0, 1, 2];
 export class CVFX extends CMat {
     static lDesc = new Array();
     static eVFX = SDF.eVFX;
+    static IsTap(_type) {
+        return _type == SDF.eVFX.Aberrate || _type == SDF.eVFX.Outline || _type == SDF.eVFX.Blur;
+    }
     constructor(_F32A = null) {
         super([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     }
@@ -88,12 +89,13 @@ export class CVFX extends CMat {
                 this.mF32A[base + i] = 0;
         };
         const isAllowedInSlot = (val, slot) => {
-            if (val === 0)
+            if (!CVFX.IsTap(val))
                 return true;
-            const use = CVFX.lDesc[val]?.Use;
-            if (!use || use.length === 0)
-                return true;
-            return use[slot] === true;
+            for (const s of USED_SLOTS) {
+                if (s !== slot && CVFX.IsTap(getEffectVal(s)))
+                    return false;
+            }
+            return true;
         };
         const root = document.createElement("div");
         root.className = "d-flex flex-column gap-2";
@@ -239,13 +241,13 @@ export class CVFX extends CMat {
     }
 }
 CVFX.lDesc[SDF.eVFX.Distort] = MakeDesc(["Strength_X", "Strength_Y"], [0, 0], [0.5, 0.5], [0.02, 0.02], [0.05, 0.05]);
-CVFX.lDesc[SDF.eVFX.Aberrate] = MakeDesc(["Base_Strength", "Added_Strength"], [0, 0], [0.1, 0.1], [0.01, 0.01], [0.1, 0.05], [true, false, false]);
-CVFX.lDesc[SDF.eVFX.Outline] = MakeDesc(["R", "G", "B"], [0, 0, 0], [1, 1, 1], [0.1, 0.1, 0.1], [1, 0, 0], [true, false, false]);
+CVFX.lDesc[SDF.eVFX.Aberrate] = MakeDesc(["Base_Strength", "Added_Strength"], [0, 0], [0.1, 0.1], [0.01, 0.01], [0.1, 0.05]);
+CVFX.lDesc[SDF.eVFX.Outline] = MakeDesc(["R", "G", "B"], [0, 0, 0], [1, 1, 1], [0.1, 0.1, 0.1], [1, 0, 0]);
 CVFX.lDesc[SDF.eVFX.Pixel] = MakeDesc(["Size_X", "Size_Y"], [0, 0], [32, 32], [1, 1], [2, 2]);
-CVFX.lDesc[SDF.eVFX.Noise] = MakeDesc(["Type", "Speed", "Mix Ratio", "Repeat"], [["Perlin", "Perlin Normal", "PerlinFBM_Cloud", "Blue", "Gaussian"], 0, 0, 0.2], [[SDF.eNoise.Perlin, SDF.eNoise.PerlinNormal, SDF.eNoise.PerlinFBM3, SDF.eNoise.Blue, SDF.eNoise.Gaussian], 16, 1, 32], [1, 0.1, 0.05, 0.1], [1, 8, 0.5, 1], [true, false, false]);
+CVFX.lDesc[SDF.eVFX.Noise] = MakeDesc(["Type", "Speed", "Mix Ratio", "Repeat"], [["Perlin", "Perlin Normal", "PerlinFBM_Cloud", "Blue", "Gaussian"], 0, 0, 0.2], [[SDF.eNoise.Perlin, SDF.eNoise.PerlinNormal, SDF.eNoise.PerlinFBM3, SDF.eNoise.Blue, SDF.eNoise.Gaussian], 16, 1, 32], [1, 0.1, 0.05, 0.1], [1, 8, 0.5, 1]);
 CVFX.lDesc[SDF.eVFX.Scanline] = MakeDesc(["NumOfLines", "Speed"], [0, 0], [100, 50], [5, 1], [25, 5]);
 CVFX.lDesc[SDF.eVFX.LookUpTable] = MakeDesc(["Index", "Dither"], [SDF.eUni.V4LookUpTable0, 0], [SDF.eUni.V4LookUpTable5, 1], [1, 0.05], [SDF.eUni.V4LookUpTable0, 0]);
-CVFX.lDesc[SDF.eVFX.Blur] = MakeDesc(["Type", "Count"], [1, 1], [4, 4], [1, 1], [2, 2], [true, false, false]);
+CVFX.lDesc[SDF.eVFX.Blur] = MakeDesc(["Type", "Count"], [1, 1], [4, 4], [1, 1], [2, 2]);
 CVFX.lDesc[SDF.eVFX.Decal] = MakeDesc(["R", "G", "B", "A"], [0, 0, 0, 0], [1, 1, 1, 1], [0.1, 0.1, 0.1, 0.1], [1, 1, 1, 1]);
 CVFX.lDesc[SDF.eVFX.DecalTexture] = MakeDesc(["TexOff", "Blend"], [0, 0], [9, 1], [1, 0.1], [0, 1]);
 for (const [text, val] of Object.entries(SDF.eVFX)) {

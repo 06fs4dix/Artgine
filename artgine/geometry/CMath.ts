@@ -173,18 +173,6 @@ export class CMath
 		CPoolGeo.RecycleV3(dummy);
 		return len;
 	}
-	//타일러 급수 기반
-	static ApproxSqrt(x: number): number {
-		return x * (0.41731 + 0.59016 / (x + 1e-6));
-	}
-	static V3DistancePseudo(_a : CVec3, _b : CVec3)
-	{
-		
-		const x = _a.mF32A[0] - _b.mF32A[0];
-		const y = _a.mF32A[1] - _b.mF32A[1];
-		const z = _a.mF32A[2] - _b.mF32A[2];
-		return CMath.ApproxSqrt(x * x + y * y + z * z);
-	}
 	// static Distance(_a:CVec3,_b:CVec3):number
 	// {
 	// 	return this.V3Distance(_a,_b);

@@ -2,7 +2,7 @@ import { CVec3 } from "../../geometry/CVec3.js";
 import { CAtlas } from "../../util/CAtlas.js";
 import { CCollider } from "../component/CCollider.js";
 import { CPaintVoxel } from "../component/paint/CPaintVoxel.js";
-import { CSubject } from "./CSubject.js";
+import { CSubjectMap } from "./CSubjectMap.js";
 import { CObject } from "../../basic/CObject.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CUtil } from "../../basic/CUtil.js";
@@ -122,26 +122,25 @@ export class CVTileMold extends CObject {
         this.mColorArr.fill(0);
     }
 }
-export class CVoxelMap extends CSubject {
+export class CVoxelMap extends CSubjectMap {
     mToolMode = false;
     mAtlas = new CAtlas("Voxel/");
     mBuf = new CMapBuf();
     mTileMap = new Map();
     mTileRoleArr = new Array();
     mTileMoldArr = new Array();
-    mColliderArr = Array();
-    mPaintArr = new Array();
     mDiv = 16;
     mPlane = new Array();
     mUpdateRes = true;
     mUpdateModify = new Set();
     mLight = false;
+    mTag = ["shadow", "light"];
     static SunValue = 1.0;
     mLayer = new Array();
     IsShould(_member, _type) {
         if (_member == "mComArr" && _type == CObject.eShould.Editer)
             return true;
-        if (_member == "mPaint" || _member == "mUpdateRes" || _member == "mPlane" || _member == "mColliderArr" || _member == "mComArr")
+        if (_member == "mPaint" || _member == "mUpdateRes" || _member == "mPlane" || _member == "mComArr")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -254,11 +253,15 @@ export class CVoxelMap extends CSubject {
     RefreshRes() {
     }
     Update(_update) {
+        if (this.mUpdateRes || this.mUpdateModify.size > 0)
+            this.ColWake();
         if (this.mUpdateRes)
             this.RefreshRes();
         if (this.mUpdateModify.size > 0)
             this.RefreshModify();
+        super.Update(_update);
     }
+    PushMapComp(_com) { }
     PickBox(_ray) {
         return null;
     }

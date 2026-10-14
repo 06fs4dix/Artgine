@@ -197,14 +197,24 @@ export class CMemo {
         const stat = fs.statSync(file);
         return { id, preview: CMemo.BuildPreview(_text), date: stat.mtimeMs };
     }
+    static RemoveDirIfEmpty(_dir) {
+        const remaining = fs.readdirSync(_dir).filter(f => f.endsWith('.txt') || f.endsWith('.enc'));
+        if (remaining.length > 0)
+            return false;
+        const meta = path.join(_dir, CMemo.sMetaFile);
+        if (fs.existsSync(meta))
+            fs.unlinkSync(meta);
+        fs.rmdirSync(_dir);
+        return true;
+    }
     static async Delete(_key, _id, _password = null) {
         const dir = CMemo.KeyDir(_key);
         CMemo.RequireKey(dir, _password);
         const file = CMemo.FilePath(_key, _id);
         if (!fs.existsSync(file)) {
-            return false;
+            return { deleted: false, keyDeleted: false };
         }
         fs.unlinkSync(file);
-        return true;
+        return { deleted: true, keyDeleted: CMemo.RemoveDirIfEmpty(dir) };
     }
 }

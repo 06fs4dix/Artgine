@@ -5,7 +5,9 @@ import {CVec4} from "../geometry/CVec4.js";
 import { CUpdate } from "../basic/Basic.js";
 import {CPoolGeo} from "../geometry/CPoolGeo.js";
 import { CTexture } from "./CTexture.js";
-import { CAlpha, CColor } from "../canvas/component/CColor.js";
+import { CColor } from "./CColor.js";
+import { CAlpha } from "./CAlpha.js";
+
 
 export class CMeshCopyNode implements IMat
 {
@@ -28,9 +30,7 @@ export class CMeshCopyNode implements IMat
 	
 	public textureOff : Array<number>;
 	updateTex=false;
-	//public texture : Array<CTexture>;
-	//public materialOff : Array<number>;
-	
+
 	constructor()
 	{
 		this.bpos=null;
@@ -58,24 +58,19 @@ export class CMeshCopyNode implements IMat
 	
 		CMath.MatScale(this.sca,sm);
 		CMath.QutToMat(this.rot,rm);
-		//CMath.QutToMat(CMath.EulerToQut(this.rot.xyz),rm.dt);
-			
-		
+
 
 		CMath.MatMul(sm, rm,this.pst,true);
 		CPoolGeo.RecycleMat(sm);
 		CPoolGeo.RecycleMat(rm);
-		
 
-		
 
 		this.pst.mF32A[12] = this.pos.x;
 		this.pst.mF32A[13] = this.pos.y;
 		this.pst.mF32A[14] = this.pos.z;
 		this.pst.UnitCheck();
 		this.updateMat=CUpdate.eType.Updated;
-		//this.CA=this.CA;
-		
+
 	}
 	GetMat(): CMat {
 		return this.pst;

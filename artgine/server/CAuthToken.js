@@ -55,6 +55,20 @@ export function removeAuthToken(origin) {
     delete store[origin];
     writeStore(store);
 }
+export function getPageAuthToken(origin) {
+    try {
+        const t = new URL(location.href).searchParams.get('authToken');
+        if (t)
+            return t;
+    }
+    catch { }
+    return getAuthToken(origin);
+}
+export function withAuthToken(url, token) {
+    if (!token)
+        return url;
+    return url + (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(token);
+}
 async function postJson(url, body) {
     const res = await fetch(url, {
         method: 'POST',
@@ -87,12 +101,13 @@ export async function authLogin(webRootUrl, passwordHash, onPending) {
     }
     return { ok: false, msg: '2FA approval timed out' };
 }
-export async function checkAuthed(webRootUrl) {
+export async function checkAuthed(webRootUrl, _token) {
     const base = webRootUrl.replace(/\/+$/, '') + '/';
-    const token = getAuthToken(webRootUrl);
+    const stored = getAuthToken(webRootUrl);
+    const token = _token || stored;
     try {
         const j = await postJson(base + 'auth/check', token ? { token } : {});
-        if (!j?.authed && token)
+        if (!j?.authed && stored && token === stored)
             removeAuthToken(webRootUrl);
         return !!j?.authed;
     }

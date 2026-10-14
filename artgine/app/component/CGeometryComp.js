@@ -12,16 +12,26 @@ export class CGeometryInfo {
     }
     Fixed(_update) {
         this.mFixedComp.Sort((a, b) => { return a.mSysc - b.mSysc; });
-        for (let i = 0; i < _update.FixedCount(); ++i) {
+        const count = _update.FixedCount();
+        for (let i = 0; i < count; ++i) {
             for (let j = 0; j < this.mFixedComp.Size(); ++j) {
                 let comp = this.mFixedComp.Find(j);
+                if (comp.IsDestroy())
+                    continue;
                 comp.Fixed(_update);
             }
             for (let j = 0; j < this.mFixedComp.Size(); ++j) {
                 let comp = this.mFixedComp.Find(j);
+                if (comp.IsDestroy())
+                    continue;
                 comp.BuildGI();
             }
+            const su = this.mOctree.mStaticUpdate;
+            if (i < count - 1)
+                this.mOctree.mStaticUpdate = false;
             this.mOctree.Build();
+            if (i < count - 1)
+                this.mOctree.mStaticUpdate = su;
         }
         this.mFixedComp.Clear();
     }

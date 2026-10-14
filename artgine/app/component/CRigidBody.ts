@@ -36,8 +36,15 @@ export class CRigidBody extends CGeometryComp
 
 
 	// private mElastic = false;//탄성
-	// private mDamping = 0;//감쇠/마찰력
 	// private mMass = 0;//질량
+
+	//충돌로 밀린 힘(BounceKey)이 초당 줄어드는 속도. 등감속이라 v -= mDamping*dt로 깎는다.
+	//표준 linear damping(v에 비례하는 지수 감쇠)과 수식이 다르니 주의.
+	//밀려나는 거리 = v²/(2*mDamping). 크게 줄수록 부딪혀도 제자리에 선다.
+	//접촉면의 성질인 마찰(CCollider.mFriction)과 달리 물체 자신의 성질이라 접지와 무관하게 걸린다.
+	//대상은 충돌이 만든 힘 하나뿐이다. 중력/걷기/점프/사용자가 던진 힘은 건드리지 않는다
+	//(그쪽을 멈추는 건 접지 마찰 mGroundFriction의 몫이다).
+	mDamping = CPhysics.LinearDamping;
 
 	
 	private mGravity : number = 0;//중력
@@ -265,7 +272,7 @@ export class CRigidBody extends CGeometryComp
 		else
 		{
 			//this.m_path = move;
-			
+
 			this.mStopover=move;
 
 
@@ -277,9 +284,52 @@ export class CRigidBody extends CGeometryComp
 					i--;
 				}
 			}
+
+			//옛 힘을 지운 그 자리에서 바로 다음 목표 지점용 새 힘도 붙인다. 원래는 Fixed()가 다음
+			//물리 틱에야 늦게 붙였는데, Push()~다음 Fixed() 사이 "힘이 하나도 없는" 한 틱짜리 공백이
+			//생겨서 그 틱만 이동량이 0이 되어 애니메이션이 walk<->idle로 깜빡이는 원인이 됐다
+			//(FindPos()를 자주 부를수록 눈에 띄게 심해짐 — VillageRPG AI 재접근 주기 단축 때 발견).
+			this.AdvanceStopoverForce();
 		}
 		return move;
-		
+
+	}
+
+	//mStopover가 있는데 아직 그 키의 힘이 없으면, 다음 목표 지점을 찾아 방향/힘을 새로 붙인다.
+	//Push(CStopover)가 옛 힘을 지운 직후와, Fixed()가 매 틱 확인할 때 양쪽에서 공유해서 쓴다 —
+	//두 곳에 복사해두면 나중에 한쪽만 고치고 다른 쪽을 놓치는 사고가 나기 쉽다.
+	//반환값: 이번 호출에서 실제로 새 힘을 붙였으면 true다. Fixed()는 이 값이 true인 틱엔 바로 이어서
+	//추월 검사를 하지 않는다 — 막 붙인 힘을 같은 틱에 바로 다시 지워버리는 낭비를 막기 위함이다.
+	AdvanceStopoverForce() : boolean
+	{
+		const stopover=this.mStopover;
+		if(stopover==null || this.Find(stopover.mKey)!=null)	return false;
+
+		const ownerPos=this.GetOwner().GetPos();
+		let added=false;
+		do
+		{
+			const tPos=stopover.mPos[stopover.mIndex];
+
+			if(tPos==null)
+			{
+				this.mStopover=null;
+				break;
+			}
+
+			if(tPos.Equals(ownerPos))
+			{
+				stopover.mIndex++;
+				continue;
+			}
+
+			stopover.mDir=CMath.V3Nor(CMath.V3SubV3(tPos,ownerPos));
+			this.Push(new CForce(stopover.mKey,stopover.mDir,stopover.mVelocity));
+			added=true;
+
+		}while(this.Find(stopover.mKey)==null)
+
+		return added;
 	}
 	Remove(_key)
 	{

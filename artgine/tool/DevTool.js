@@ -38,9 +38,11 @@ import { CRigidBody } from "../app/component/CRigidBody.js";
 import { CPaint } from "../app/component/paint/CPaint.js";
 import { CCollider } from "../app/component/CCollider.js";
 import { CLight } from "../app/component/CLight.js";
-import { CPaint2D } from "../app/component/paint/CPaint2D.js";
+import { CPaint2D, CPaint2DMerge } from "../app/component/paint/CPaint2D.js";
 import { CLocation } from "../app/subject/CLocation.js";
-import { CPaint3D } from "../app/component/paint/CPaint3D.js";
+import { CPaint3D, CPaint3DMerge } from "../app/component/paint/CPaint3D.js";
+import { CPaintVoxel } from "../app/component/paint/CPaintVoxel.js";
+import { CPaintTerrain } from "../app/component/paint/CPaintTerrain.js";
 import { CBrush } from "../app/canvas/CBrush.js";
 import { CColor } from "../render/CColor.js";
 import { CAlpha } from "../render/CAlpha.js";
@@ -59,6 +61,9 @@ let gBoundZX = new CBound();
 let gBoundTick = 40;
 let gDragBound = 0;
 let gMouse = null;
+let gDownMouse = null;
+let gPickMouse = null;
+const gClickSlop = 3;
 let gBTargetWidth = 0;
 let gBTargetHeight = 0;
 let gBWidth = 0;
@@ -399,15 +404,15 @@ function DevToolRender() {
     let alpha = new CAlpha();
     let FunRenSub = (_sub, _font = false) => {
         if (_font) {
-            gAtl.Frame().Dev().SetDepthTest(true);
+            gAtl.Frame().Dev().SetDepthTest(false);
             gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             var fr = CFont.TextToTexName(gAtl.Frame().Ren(), _sub.Key(), new CFontOption(32, "white", "black", 2));
             color.x = 1;
             color.y = 1;
             color.z = 1;
             color.w = SDF.eColorModel.None;
-            wmat.mF32A[0] = fr.mRXSize / 100;
-            wmat.mF32A[5] = fr.mRYSize / 100;
+            wmat.mF32A[0] = fr.mRXSize * 2;
+            wmat.mF32A[5] = fr.mRYSize * 2;
             wmat.mF32A[10] = 1;
             wmat.xyz = CMath.V3AddV3(_sub.GetPos(), new CVec3(fr.mRXSize * 0.5, fr.mRYSize * 0.5));
             render.SendGPU(shader, color, "colorModel");
@@ -495,6 +500,7 @@ function DevToolRender() {
                 localMat.mF32A[0] = lsize.x;
                 localMat.mF32A[5] = lsize.y;
                 localMat.mF32A[10] = lsize.z;
+                localMat.UnitCheck();
                 CMath.MatMul(localMat, cl.GetBW().mMat, wmat);
                 MatToMat12Fun(wmat);
                 render.SendGPU(shader, wMatSA);
@@ -760,6 +766,8 @@ function DevToolDrop(_drop) {
                         if (mesh?.texture instanceof Array) {
                             for (let ti = 0; ti < mesh.texture.length; ++ti) {
                                 const texPath = mesh.texture[ti];
+                                if (texPath.indexOf("&") != -1)
+                                    continue;
                                 const texName = texPath.split("/").pop()?.toLowerCase() ?? "";
                                 if (textureMap.has(texName)) {
                                     mesh.texture[ti] = textureMap.get(texName);
@@ -882,6 +890,8 @@ function DevToolUpdate(_delay) {
         SubjectRigidBodyClear(subject);
         gMouse = mouse;
     }
+    if (gAtl.Frame().Input().KeyDown(CInput.eKey.LButton) && gDownMouse == null)
+        gDownMouse = gAtl.Frame().Input().Mouse().Export();
     if (gAtl.Frame().Input().KeyDown(CInput.eKey.LButton) && gDragBound == 0 && gLeftSelect instanceof CSubject &&
         CInput.eDragState.None == gAtl.Frame().Input().DragState()) {
         let ray = gAtl.Brush().GetCamDev().GetRay(gAtl.Frame().Input().Mouse().x, gAtl.Frame().Input().Mouse().y);
@@ -917,69 +927,94 @@ function DevToolUpdate(_delay) {
         gAddMove.Zero();
         if (gAtl.Brush().GetCamDev().GetCamCon() != null)
             gAtl.Brush().GetCamDev().GetCamCon().SetInput(gAtl.Frame().Input());
-        if (gDragBound == 4) {
-            gDragBound = 0;
+        let upMouse = gAtl.Frame().Input().Mouse().Export();
+        let dragged = gDownMouse != null &&
+            (Math.abs(upMouse.x - gDownMouse.x) > gClickSlop || Math.abs(upMouse.y - gDownMouse.y) > gClickSlop);
+        let wasDragBound = gDragBound;
+        gDownMouse = null;
+        gDragBound = 0;
+        if (wasDragBound == 4)
             return;
-        }
-        if (gDragBound != 0 || gAtl.Frame().Input().DragState() != CInput.eDragState.None) {
-            gDragBound = 0;
+        if (dragged)
             return;
-        }
-        let selectLen = 1000000000;
-        let selectSub = null;
-        let bselectSub = null;
-        let ray = gAtl.Brush().GetCamDev().GetRay(gAtl.Frame().Input().Mouse().x, gAtl.Frame().Input().Mouse().y);
-        if (gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z < -0.9)
+        let ray = gAtl.Brush().GetCamDev().GetRay(upMouse.x, upMouse.y);
+        let flatZ = gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z < -0.9;
+        if (flatZ)
             ray.GetOriginal().z += 1000;
-        for (let canvas of gAtl.mCanvasMap.values()) {
-            for (let subject of canvas.GetSubMap().values()) {
-                if (subject.mSelect == false)
+        let FunEmptyBound = (_bound) => {
+            return _bound.GetType() == CBound.eType.Null ||
+                _bound.mMin.x > _bound.mMax.x || _bound.mMin.y > _bound.mMax.y || _bound.mMin.z > _bound.mMax.z;
+        };
+        let FunDepth = (_bound) => {
+            if (flatZ == false)
+                return CMath.V3Distance(ray.GetOriginal(), ray.GetPosition());
+            return -(_bound.mMin.z + _bound.mMax.z) * 0.5;
+        };
+        let FunContainer = (_pt) => {
+            return _pt instanceof CPaint2DMerge || _pt instanceof CPaint3DMerge ||
+                _pt instanceof CPaintVoxel || _pt instanceof CPaintTerrain;
+        };
+        let candArr = [];
+        let FunAdd = (_sub, _tier, _depth, _bound) => {
+            for (let each0 of candArr) {
+                if (each0.sub != _sub)
                     continue;
-                let ptArr = subject.FindComps(CPaint);
-                let clArr = subject.FindComps(CCollider);
-                for (let pt of ptArr) {
-                    if (selectSub == subject)
-                        continue;
-                    let bound = pt.GetBoundFMat();
-                    if (CUtilMath.RayBoxIS(bound.mMin, bound.mMax, ray)) {
-                        let len = CMath.V3Distance(ray.GetOriginal(), ray.GetPosition());
-                        if (len < selectLen) {
-                            bselectSub = selectSub;
-                            selectLen = len;
-                            selectSub = subject;
-                            gSelectBound = bound;
-                            break;
-                        }
-                        else if (bselectSub == null)
-                            bselectSub = subject;
-                    }
+                if (_tier < each0.tier || (_tier == each0.tier && _depth < each0.depth)) {
+                    each0.tier = _tier;
+                    each0.depth = _depth;
+                    each0.bound.Import(_bound);
                 }
-                for (let cl of clArr) {
-                    if (selectSub == subject)
+                return;
+            }
+            let copy = new CBound();
+            copy.Import(_bound);
+            candArr.push({ sub: _sub, tier: _tier, depth: _depth, bound: copy });
+        };
+        let FunPick = (_sub) => {
+            if (_sub.mSelect) {
+                for (let pt of _sub.FindComps(CPaint)) {
+                    let bound = pt.GetBoundFMat();
+                    if (FunEmptyBound(bound))
                         continue;
+                    if (CUtilMath.RayBoxIS(bound.mMin, bound.mMax, ray) == false)
+                        continue;
+                    FunAdd(_sub, FunContainer(pt) ? 1 : 0, FunDepth(bound), bound);
+                }
+                for (let cl of _sub.FindComps(CCollider)) {
                     let bound = cl.GetBW();
-                    if (bound.mWBound.GetType() != CBound.eType.Null && CUtilMath.RayBoxIS(bound.mWBound.mMin, bound.mWBound.mMax, ray)) {
-                        let len = CMath.V3Distance(ray.GetOriginal(), ray.GetPosition());
-                        if (len < selectLen) {
-                            bselectSub = selectSub;
-                            selectLen = len;
-                            selectSub = subject;
-                            gSelectBound = bound.mWBound;
-                            break;
-                        }
-                        else if (bselectSub == null)
-                            bselectSub = subject;
-                    }
+                    if (FunEmptyBound(bound.mWBound))
+                        continue;
+                    if (CUtilMath.RayBoxIS(bound.mWBound.mMin, bound.mWBound.mMax, ray) == false)
+                        continue;
+                    FunAdd(_sub, 0, FunDepth(bound.mWBound), bound.mWBound);
                 }
             }
+            for (let child of _sub.mChild)
+                FunPick(child);
+        };
+        for (let canvas of gAtl.mCanvasMap.values()) {
+            for (let subject of canvas.GetSubMap().values())
+                FunPick(subject);
         }
-        if (selectSub != null) {
-            if (gLeftSelect == selectSub && bselectSub != null)
-                selectSub = bselectSub;
-            LeftSelect(selectSub);
-        }
-        else
+        if (candArr.length == 0) {
+            gPickMouse = null;
             LeftSelect(null);
+            return;
+        }
+        candArr.sort((a, b) => a.tier != b.tier ? a.tier - b.tier : a.depth - b.depth);
+        let idx = 0;
+        if (gPickMouse != null && gLeftSelect instanceof CSubject &&
+            Math.abs(upMouse.x - gPickMouse.x) <= gClickSlop && Math.abs(upMouse.y - gPickMouse.y) <= gClickSlop) {
+            for (let i = 0; i < candArr.length; ++i) {
+                if (candArr[i].sub != gLeftSelect)
+                    continue;
+                idx = (i + 1) % candArr.length;
+                break;
+            }
+        }
+        gPickMouse = upMouse;
+        gSelectBound.Import(candArr[idx].bound);
+        LeftSelect(candArr[idx].sub);
     }
     if (gAtl.Frame().Input().KeyUp(CInput.eKey.Esc)) {
         LeftSelect(null);
@@ -1790,7 +1825,7 @@ function LeftSelect(_obj) {
         return;
     }
     let li = CDOM.ID(_obj.ObjHash() + "_li");
-    const curCard = li.querySelector(".card");
+    const curCard = li?.querySelector(".card");
     if (curCard)
         curCard.classList.add("bg-info-subtle");
     const rightPanel = gModal.FindFlex(2);

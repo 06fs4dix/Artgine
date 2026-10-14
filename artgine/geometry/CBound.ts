@@ -20,8 +20,8 @@ export class CBound extends CObject
 	constructor()
 	{
 		super();
-		this.mMin=new CVec3(100000,100000,100000);
-		this.mMax=new CVec3(-100000,-100000,-100000);
+		this.mMin=new CVec3(1e30,1e30,1e30);
+		this.mMax=new CVec3(-1e30,-1e30,-1e30);
 		this.mType=CBound.eType.Null;
 		this.mPos = new CArray<CVec3>();
 	}
@@ -50,7 +50,7 @@ export class CBound extends CObject
 		if(_pointer.member == "mType")
 		{
 		
-			let textArr = ["Box","Sphere","Polytope","Null"], valArr = [0,1,2,4];
+			let textArr = ["Box","Sphere","GJK","Triangle","Null"], valArr = [0,1,2,5,4];
 			_input.hidden=true;
 			let select=document.createElement("select") as HTMLSelectElement;
 			select.className="form-select";
@@ -86,11 +86,11 @@ export class CBound extends CObject
 
 	Reset()
 	{
-		this.mMin.mF32A[0]=100000;this.mMin.mF32A[1]=100000;this.mMin.mF32A[2]=100000;
-		this.mMax.mF32A[0]=-100000;this.mMax.mF32A[1]=-100000;this.mMax.mF32A[2]=-100000;
+		this.mMin.mF32A[0]=1e30;this.mMin.mF32A[1]=1e30;this.mMin.mF32A[2]=1e30;
+		this.mMax.mF32A[0]=-1e30;this.mMax.mF32A[1]=-1e30;this.mMax.mF32A[2]=-1e30;
 
 		this.mType=CBound.eType.Null;
-		//if(this.GetType()==CBound.eType.Polytope)
+		//if(this.GetType()==CBound.eType.GJK)
 		this.mPos.Clear();
 	}
 	private ResetBoxMinMax(_vec : CVec3)
@@ -115,6 +115,10 @@ export class CBound extends CObject
 	{
 		if(typeof _vInfo == "number" )
 		{
+			//정점으로 초기화하는 경로(ResetBoxMinMax)와 달리 여기선 타입이 Null로 남아,
+			//충돌 분기에서 Box-Box 전용 경로를 못 타고 GJK로 떨어진다
+			if(this.mType == CBound.eType.Null)
+				this.mType=CBound.eType.Box;
 			this.mMin.x=-_vInfo;
 			this.mMin.y=-_vInfo;
 			this.mMin.z=-_vInfo;
@@ -143,14 +147,14 @@ export class CBound extends CObject
 		{
 			for (var each0 of _vInfo)
 			{
-				if(this.GetType()==CBound.eType.Polytope)
+				if(this.GetType()==CBound.eType.GJK || this.GetType()==CBound.eType.Triangle)
 					this.mPos.Push(each0);
 				this.ResetBoxMinMax(each0);
 			}
 		}
 		else
 		{
-			//if(this.GetType()==CBound.eType.Polytope)
+			//if(this.GetType()==CBound.eType.GJK)
 			if(_push)	this.mPos.Push(_vInfo);
 			
 			this.ResetBoxMinMax(_vInfo);
@@ -274,24 +278,30 @@ export class CBound extends CObject
 		dummy.mMin = this.mMin.Export();
 		dummy.mMax = this.mMax.Export();
 		dummy.mType=this.mType;
-		for(var each0 of this.mPos.mArray)
+		//mArray를 그대로 돌면 안 된다. Clear()는 mLength만 0으로 되돌리고 배열은 남기므로,
+		//한 번 줄어든 뒤에는 mArray에 예전 잔여 항목이 그대로 붙어 있다. Size()까지만 돈다.
+		for(let i=0;i<this.mPos.Size();++i)
 		{
-			dummy.mPos.Push(each0);
+			dummy.mPos.Push(this.mPos.Find(i));
 		}
-		
+
 		return dummy as any;
 	}
 	override Import(_tar : CBound)
 	{
+		//자기 자신을 넣는 호출이 있다(CCollider.SetOwner). 아래에서 mPos를 비우고 다시 채우므로
+		//그대로 두면 원본을 비운 뒤 빈 걸 읽어 결과가 사라진다. 자기 복사는 할 일이 없다.
+		if(_tar==this)	return;
 		this.mMin.Import(_tar.mMin);
 		this.mMax.Import(_tar.mMax);
 		this.mType=_tar.mType;
 		this.mPos.Clear();
-		for(var each0 of _tar.mPos.mArray)
+		//Export와 같은 이유로 mArray가 아니라 Size()까지만 돈다
+		for(let i=0;i<_tar.mPos.Size();++i)
 		{
-			this.mPos.Push(each0);
+			this.mPos.Push(_tar.mPos.Find(i));
 		}
-		
+
 	}
 	
 
@@ -302,8 +312,13 @@ export namespace CBound
 	export enum eType{
 		Box=0,
 		Sphere=1,
-		Polytope=2,
+		//mPos를 "하나의 볼록(convex) 형체"로 보고 GJK/EPA로 처리한다.
+		//오목한 형체에 쓰면 파인 부분이 볼록껍질로 메워져 실제와 다르게 충돌한다.
+		GJK=2,
 		Voxel=3,
 		Null=4,
+		//mPos를 3개씩 끊어 실제 삼각형 리스트로 보고 삼각형 단위로 정밀 충돌한다.
+		//오목해도 정확하지만 삼각형 수만큼 검사하므로 정적 메시용이다.
+		Triangle=5,
 	};
 }

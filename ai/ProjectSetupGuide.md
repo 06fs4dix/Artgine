@@ -162,7 +162,7 @@ import "../../../plugin/ShadowPlane/ShadowPlane.js"
 ```typescript
 // CSubject 상속 후 Start()에서 조립
 this.mPT = this.PushComp(new CPaint2D("Res/sprite.png", new CVec2(100,100)));
-this.mPT.mAutoLoad.mFilter = CTexture.eFilter.Neaest; // 픽셀아트
+this.mPT.mAutoLoad.mFilter = CTexture.eFilter.Nearest; // 픽셀아트
 this.mPT.SetYSort(true);
 this.mRB = this.PushComp(new CRigidBody());
 this.mCL = this.PushComp(new CCollider(this.mPT));

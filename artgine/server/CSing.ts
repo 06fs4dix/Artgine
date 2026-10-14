@@ -109,7 +109,7 @@ export class CSing
             if(write)
             {
                 gInfoMap.set(_key,data);
-                CStorage.Set(_key,JSON.stringify({time:new CTimer().mBegin,data:data}));
+                CStorage.Set(_key,JSON.stringify({time:new Date().getTime(),data:data}));
             }
 
             resolve(data);            
@@ -145,7 +145,7 @@ export class CSing
             if(write)
             {
                 gInfoMap.set(_key,data);
-                CStorage.Set(_key,JSON.stringify({time:new CTimer().mBegin,data:data}));
+                CStorage.Set(_key,JSON.stringify({time:new Date().getTime(),data:data}));
             }
 
             resolve(data);            

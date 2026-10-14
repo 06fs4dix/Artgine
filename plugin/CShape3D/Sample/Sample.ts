@@ -116,7 +116,7 @@ Main.PushSub(new CShape3D({
     rp.mDepthWrite = false;
     rp.mPaintSort = CRenderPass.ePaintSort.Revers;
     rp.PushAnd(new CCondition("mTag", "==", "alphaModel"));
-    gAtl.Brush().SetAutoRP("alphaRP", rp);
+    gAtl.Brush().PushAutoRP("alphaRP", rp);
 
     // Plane behind
     Main.PushSub(new CShape3D({

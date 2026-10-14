@@ -1,8 +1,6 @@
 import { CAniFlow } from "../../artgine/app/component/CAniFlow.js";
-import { CAtelier } from "../../artgine/app/CAtelier.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CCollider } from "../../artgine/app/component/CCollider.js";
-import { CCondition } from "../../artgine/util/CCondition.js";
 import { CForce } from "../../artgine/app/component/CForce.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CLight } from "../../artgine/app/component/CLight.js";
@@ -123,12 +121,6 @@ export class CShape2D extends CSubject {
             this.PushComp(new CAniFlow(_opt.animation));
         }
         this.mPaint.PushTag(CShape2D.sDefaultTag);
-        if (!CShape2D.sDefaultRPRegistered) {
-            const defRP = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
-            defRP.PushAnd(new CCondition("mTag[" + CShape2D.sDefaultTag + "]"));
-            CAtelier.Main().Brush().SetAutoRP("CShape2D_Default", defRP);
-            CShape2D.sDefaultRPRegistered = true;
-        }
         this.PushComp(this.mPaint);
     }
     GetPaint() { return this.mPaint; }

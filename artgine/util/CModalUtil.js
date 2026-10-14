@@ -21,6 +21,7 @@ export class CModalBackGround extends CModal {
         this.SetZIndex(CModal.eSort.Manual, _zIndex);
         this.SetBG(Bootstrap.eColor.transparent);
         this.SetTitle(CModal.eTitle.None);
+        this.SetCloseEsc(false);
         this.Open();
         this.FullSwitch();
         this.mDebugMode = true;
@@ -1312,6 +1313,13 @@ export class CModalTerminal extends CModal {
 }
 export class CModalMusic extends CModal {
     static sDefaultMediaImage = '512x512.png';
+    static sDownloadRetryMs = 5000;
+    static sDownloadRetryMax = 60;
+    static sAutoWaitMs = 15000;
+    static sStallMs = 10000;
+    static sResumeRetryMs = 3000;
+    static sResumeRetryMax = 5;
+    static sPrefetchRemainSec = 60;
     mPaths;
     mSaveFn;
     mMediaImage;
@@ -1331,9 +1339,17 @@ export class CModalMusic extends CModal {
     mLyricsBtn;
     mLyricsEl;
     mLyricsUrl = '';
+    mCur = null;
+    mNext = null;
+    mNextIndex = -1;
+    mPrefetchPending = false;
+    mPlaySeq = 0;
+    mResumeCount = 0;
+    mResumeTimer = 0;
+    mStallTimer = 0;
     constructor(paths = [], saveFn, mediaImage, aiEnabled = false, aiSearchFn, lyricsEnFn) {
         super(null);
-        this.mPaths = [...paths];
+        this.mPaths = [...new Set(paths)];
         this.mSaveFn = saveFn ?? ((p) => CStorage.Set("SoundList", JSON.stringify({ fullPath: p })));
         this.mMediaImage = mediaImage ?? CModalMusic.sDefaultMediaImage;
         this.mAiEnabled = aiEnabled;
@@ -1404,6 +1420,17 @@ export class CModalMusic extends CModal {
             navigator.mediaSession.playbackState = 'paused'; });
         this.mAudio.addEventListener('play', () => { if ('mediaSession' in navigator)
             navigator.mediaSession.playbackState = 'playing'; });
+        this.mAudio.addEventListener('error', () => this._OnStall('error'));
+        this.mAudio.addEventListener('waiting', () => this._ArmStallWatch());
+        this.mAudio.addEventListener('playing', () => this._ClearStallWatch());
+        this.mAudio.addEventListener('timeupdate', () => {
+            this._ClearStallWatch();
+            if (this.mPrefetchPending && this.mAudio.duration > 0 && this.mAudio.duration - this.mAudio.currentTime <= CModalMusic.sPrefetchRemainSec)
+                this._StartPendingPrefetch();
+        });
+        this.mAudio.addEventListener('canplaythrough', () => this._StartPendingPrefetch());
+        this.mRandomChk.addEventListener('change', () => { if (this.mCur)
+            this._SetNext(this._PickNext(this.mLastPlay), !this.mPrefetchPending); });
         if ('mediaSession' in navigator) {
             navigator.mediaSession.setActionHandler('play', () => this.mAudio.play());
             navigator.mediaSession.setActionHandler('pause', () => this.mAudio.pause());
@@ -1426,10 +1453,9 @@ export class CModalMusic extends CModal {
     }
     SetList(paths) {
         this.mRandomPool = [];
-        this.mPaths = [...paths];
+        this.mPaths = [...new Set(paths)];
         this.mLastPlay = 0;
-        this.mAudio.pause();
-        this.mNowPlayingEl.textContent = '';
+        this._Stop();
         this._Persist();
     }
     Delete(target) {
@@ -1442,20 +1468,27 @@ export class CModalMusic extends CModal {
         }
         if (indices.size === 0)
             return;
+        const nextPath = this.mNext ? this.mNext.path : (this.mNextIndex >= 0 && this.mNextIndex < this.mPaths.length ? this.mPaths[this.mNextIndex] : '');
         for (const i of [...indices].sort((a, b) => b - a)) {
             this.mPaths.splice(i, 1);
             if (i < this.mLastPlay)
                 this.mLastPlay--;
             else if (i === this.mLastPlay) {
-                this.mAudio.pause();
+                this._Stop();
                 this.mLastPlay = 0;
-                this.mNowPlayingEl.textContent = '';
             }
+        }
+        if (this.mCur && this.mPaths.length > 0) {
+            const ni = nextPath ? this.mPaths.indexOf(nextPath) : -1;
+            if (ni >= 0)
+                this.mNextIndex = ni;
+            else
+                this._SetNext(this._PickNext(this.mLastPlay), !this.mPrefetchPending);
         }
         this._Persist();
     }
     GetList() { return [...this.mPaths]; }
-    Play(index) {
+    Play(index, _auto = false) {
         if (this.mPaths.length === 0)
             return;
         const items = this.mListEl.querySelectorAll('li');
@@ -1464,11 +1497,51 @@ export class CModalMusic extends CModal {
         items[index]?.classList.add('list-group-item-dark');
         if ('audioSession' in navigator)
             navigator.audioSession.type = 'playback';
+        const seq = ++this.mPlaySeq;
+        this._ClearResume();
         const path = this.mPaths[index];
         const name = CModalMusic._FileName(path);
-        this.mAudio.src = path;
         if (this.mLyricsEl && this.mLyricsEl.style.display !== 'none' && this.mLyricsUrl !== path)
             this._LoadLyrics(path);
+        let cur;
+        if (this.mNext && this.mNext.path === path) {
+            cur = this.mNext;
+            this.mNext = null;
+        }
+        else if (this.mCur && this.mCur.path === path)
+            cur = this.mCur;
+        else
+            cur = this._NewSlot(path, _auto);
+        if (this.mCur !== cur)
+            this._DropSlot(this.mCur);
+        this.mCur = cur;
+        if (cur.url) {
+            this._SetNext(this._PickNext(index));
+            this._StartAudio(cur.url, name);
+            return;
+        }
+        if (!_auto) {
+            this._SetNext(this._PickNext(index), false);
+            this._StartAudio(path, name);
+            return;
+        }
+        this._SetNext(this._PickNext(index));
+        this.mNowPlayingEl.textContent = '⬇ ' + name;
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), CModalMusic.sAutoWaitMs));
+        Promise.race([cur.promise, timeout])
+            .then(url => { if (seq === this.mPlaySeq)
+            this._StartAudio(url, name); })
+            .catch(e => {
+            if (seq !== this.mPlaySeq)
+                return;
+            console.warn('CModalMusic.Play: blob 대기 실패, 스트리밍 폴백:', e);
+            this._StartAudio(path, name);
+        });
+    }
+    _StartAudio(src, name) {
+        this._ClearStallWatch();
+        this.mResumeCount = 0;
+        this.mAudio.src = src;
         this.mAudio.play()
             .then(() => {
             this.mNowPlayingEl.textContent = '♫ ' + name;
@@ -1487,6 +1560,145 @@ export class CModalMusic extends CModal {
             }
         })
             .catch(e => console.warn('CModalMusic.Play:', e));
+    }
+    _Stop() {
+        this.mPlaySeq++;
+        this._ClearResume();
+        this._DropSlot(this.mCur);
+        this.mCur = null;
+        this._DropSlot(this.mNext);
+        this.mNext = null;
+        this.mNextIndex = -1;
+        this.mPrefetchPending = false;
+        this.mAudio.pause();
+        this.mNowPlayingEl.textContent = '';
+    }
+    _NewSlot(path, download = true) {
+        const ctrl = new AbortController();
+        const slot = { path, url: '', ctrl, promise: null };
+        if (!download) {
+            slot.promise = Promise.reject(new Error('stream only'));
+            slot.promise.catch(() => { });
+            return slot;
+        }
+        slot.promise = CModalMusic._Download(path, ctrl).then(url => {
+            if (ctrl.signal.aborted) {
+                URL.revokeObjectURL(url);
+                throw new Error('aborted');
+            }
+            slot.url = url;
+            return url;
+        });
+        slot.promise.catch(() => { });
+        return slot;
+    }
+    _DropSlot(slot) {
+        if (!slot)
+            return;
+        slot.ctrl.abort();
+        if (slot.url) {
+            URL.revokeObjectURL(slot.url);
+            slot.url = '';
+        }
+    }
+    static async _Download(path, ctrl) {
+        let crossOrigin = false;
+        try {
+            crossOrigin = new URL(path, location.href).origin !== location.origin;
+        }
+        catch { }
+        for (let tryCnt = 0;; tryCnt++) {
+            try {
+                const res = await fetch(path, { signal: ctrl.signal });
+                if (!res.ok)
+                    throw new Error('HTTP ' + res.status);
+                const blob = await res.blob();
+                return URL.createObjectURL(blob);
+            }
+            catch (e) {
+                if (ctrl.signal.aborted || crossOrigin || tryCnt >= CModalMusic.sDownloadRetryMax)
+                    throw e;
+                await new Promise(r => setTimeout(r, CModalMusic.sDownloadRetryMs));
+            }
+        }
+    }
+    _SetNext(idx, prefetch = true) {
+        this.mNextIndex = idx;
+        const path = idx >= 0 && idx < this.mPaths.length ? this.mPaths[idx] : '';
+        if (this.mNext && this.mNext.path === path) {
+            this.mPrefetchPending = false;
+            return;
+        }
+        this._DropSlot(this.mNext);
+        this.mNext = null;
+        const need = !!path && !(this.mCur && this.mCur.path === path && this.mCur.url);
+        if (!need) {
+            this.mPrefetchPending = false;
+            return;
+        }
+        if (prefetch) {
+            this.mPrefetchPending = false;
+            this.mNext = this._NewSlot(path);
+        }
+        else
+            this.mPrefetchPending = true;
+    }
+    _StartPendingPrefetch() {
+        if (!this.mPrefetchPending || !this.mCur)
+            return;
+        this.mPrefetchPending = false;
+        this._SetNext(this.mNextIndex);
+    }
+    _ArmStallWatch() {
+        if (this.mStallTimer)
+            return;
+        this.mStallTimer = window.setTimeout(() => {
+            this.mStallTimer = 0;
+            if (!this.mAudio.paused && !this.mAudio.ended && this.mAudio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA)
+                this._OnStall('stall');
+        }, CModalMusic.sStallMs);
+    }
+    _ClearStallWatch() {
+        if (this.mStallTimer) {
+            clearTimeout(this.mStallTimer);
+            this.mStallTimer = 0;
+        }
+    }
+    _ClearResume() {
+        this._ClearStallWatch();
+        if (this.mResumeTimer) {
+            clearTimeout(this.mResumeTimer);
+            this.mResumeTimer = 0;
+        }
+        this.mResumeCount = 0;
+    }
+    _OnStall(reason) {
+        this._ClearStallWatch();
+        if (this.mPaths.length === 0 || !this.mCur || this.mResumeTimer)
+            return;
+        const seq = this.mPlaySeq;
+        const src = this.mAudio.currentSrc || this.mAudio.src;
+        const pos = this.mAudio.currentTime || 0;
+        console.warn('CModalMusic 끊김 복구:', reason, src, pos.toFixed(1));
+        if (src.startsWith('blob:') || this.mResumeCount >= CModalMusic.sResumeRetryMax) {
+            this.mResumeTimer = window.setTimeout(() => { this.mResumeTimer = 0; if (seq === this.mPlaySeq)
+                this._Next(); }, 1000);
+            return;
+        }
+        this.mResumeCount++;
+        const resume = () => {
+            this.mResumeTimer = 0;
+            if (seq !== this.mPlaySeq)
+                return;
+            this.mAudio.src = this.mCur.url || this.mCur.path;
+            this.mAudio.addEventListener('loadedmetadata', () => { if (seq === this.mPlaySeq)
+                this.mAudio.currentTime = pos; }, { once: true });
+            this.mAudio.play().catch(e => console.warn('CModalMusic resume:', e));
+        };
+        if (this.mCur.url)
+            resume();
+        else
+            this.mResumeTimer = window.setTimeout(resume, CModalMusic.sResumeRetryMs);
     }
     static _FileName(path) {
         const clean = path.split('?')[0].split('#')[0];
@@ -1509,28 +1721,34 @@ export class CModalMusic extends CModal {
         return '...' + decoded.slice(-(max - 3));
     }
     _Next() {
+        if (this.mPaths.length === 0)
+            return;
+        let i = this.mNextIndex;
+        if (i < 0 || i >= this.mPaths.length || (this.mNext && this.mPaths[i] !== this.mNext.path))
+            i = this._PickNext(this.mLastPlay);
+        this.Play(i, true);
+    }
+    _PickNext(cur) {
+        const n = this.mPaths.length;
+        if (n === 0)
+            return -1;
         if (this.mRandomChk.checked) {
-            while (this.mPaths.length > 0) {
+            for (;;) {
                 if (this.mRandomPool.length === 0)
                     this.mRandomPool = [...this.mPaths];
                 const sel = Math.trunc(Math.random() * this.mRandomPool.length);
                 const key = this.mRandomPool.splice(sel, 1)[0];
                 const i = this.mPaths.indexOf(key);
-                if (i >= 0) {
-                    this.Play(i);
-                    return;
-                }
+                if (i >= 0)
+                    return i;
             }
         }
-        else {
-            this.Play(this.mLastPlay + 1 >= this.mPaths.length ? 0 : this.mLastPlay + 1);
-        }
+        return cur + 1 >= n ? 0 : cur + 1;
     }
     _ClearAll() {
         this.mRandomPool = [];
         this.mPaths = [];
-        this.mAudio.pause();
-        this.mNowPlayingEl.textContent = '';
+        this._Stop();
         this.mLastPlay = 0;
         this._Persist();
     }
@@ -1576,9 +1794,12 @@ export class CModalMusic extends CModal {
                 CAlert.Info('검색 결과가 없습니다.');
             }
             else {
+                const playIdx = this.mPaths.length;
                 this.Add(urls);
                 this.mAiInput.value = '';
                 this.mAiPanel.style.display = 'none';
+                if (playIdx < this.mPaths.length)
+                    this.Play(playIdx);
             }
         }
         catch (e) {

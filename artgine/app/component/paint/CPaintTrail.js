@@ -2,7 +2,6 @@ import { CBound } from "../../../geometry/CBound.js";
 import { CFloat32Mgr } from "../../../geometry/CFloat32Mgr.js";
 import { CVec1 } from "../../../geometry/CVec1.js";
 import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
-import { CRenderPass } from "../../../render/CRenderPass.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CUtilRender } from "../../../render/CUtilRender.js";
 import { CPaint } from "./CPaint.js";
@@ -16,12 +15,6 @@ export class CPaintTrail extends CPaint {
         super();
         this.mTextureKey.push(_tex);
         this.PushTag("trail");
-    }
-    EmptyRPChk() {
-        if (this.mRenderPass.length == 0) {
-            var rp = new CRenderPass(this.mOwner.GetFrame().Pal().Sl2D().mKey);
-            this.mRenderPass = [rp];
-        }
     }
     GetDrawMesh(_meshKey, _shader) {
         var drawMesh = this.mOwner.GetFrame().Res().Find(this.mCurrentTargetSize + _meshKey + _shader.mKey);
@@ -46,8 +39,7 @@ export class CPaintTrail extends CPaint {
             this.mCurrentTargetSize = neededSize;
             this.mOut.Resize(this.mCurrentTargetSize * 4 * 2);
             this.mIsOutChanged = true;
-            this.ClearBatch();
-            this.mCamCullUpdate = true;
+            this.ClearBatch(false);
         }
         else {
             this.mIsOutChanged = false;

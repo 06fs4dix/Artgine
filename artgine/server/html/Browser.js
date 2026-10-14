@@ -1,11 +1,14 @@
 import { CPath } from "../../basic/CPath.js";
 import { CHash } from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, authLogin, checkAuthed, getPageAuthToken, withAuthToken } from "../CAuthToken.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 const params = new URLSearchParams(location.search);
 const SESSION_ID = params.get('session') || '';
 const READONLY = params.get('readonly') === '1';
-let authToken = getAuthToken(CPath.WebRootUrl());
+let authToken = getPageAuthToken(CPath.WebRootUrl());
+function pwUrl(apiPath) {
+    return withAuthToken(CPath.WebRootUrl() + apiPath, authToken);
+}
 let pollTimer = null;
 let pollMs = 3000;
 let logOffset = 0;
@@ -36,12 +39,12 @@ function initResetControl() {
     btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
-            const listRes = await fetch(CPath.WebRootUrl() + 'PlayWright/list');
+            const listRes = await fetch(pwUrl('PlayWright/list'));
             const listJson = await listRes.json();
             const session = listJson.sessions?.find(s => s.sessionId === SESSION_ID);
             if (!listJson.ok || !session)
                 throw new Error('Session not found');
-            const resetRes = await fetch(CPath.WebRootUrl() + 'PlayWright/reset', {
+            const resetRes = await fetch(pwUrl('PlayWright/reset'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -65,6 +68,51 @@ function initResetControl() {
         catch {
             btn.textContent = 'Failed';
             setTimeout(() => { btn.textContent = 'Reset'; }, 1500);
+        }
+        finally {
+            btn.disabled = false;
+        }
+    });
+}
+function appendLog(text, cls = '') {
+    const div = document.createElement('div');
+    div.className = cls;
+    div.textContent = text;
+    logArea.appendChild(div);
+    logArea.scrollTop = logArea.scrollHeight;
+}
+function initCaptureControl() {
+    if (!controlsBar)
+        return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline-secondary py-0 px-2';
+    btn.textContent = 'Capture';
+    controlsBar.appendChild(btn);
+    btn.addEventListener('click', async () => {
+        const src = screenshot.src;
+        const b64 = src.startsWith('data:') ? src.replace(/^data:[^,]*base64,/, '') : '';
+        if (!b64) {
+            appendLog('[capture] no image', 'text-danger');
+            return;
+        }
+        const d = new Date();
+        const p = (n) => String(n).padStart(2, '0');
+        const name = `capture_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.jpg`;
+        btn.disabled = true;
+        try {
+            const res = await fetch(CPath.WebRootUrl() + 'File/Upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: 'temp/', name: [name], data: [b64], token: authToken })
+            });
+            const j = await res.json();
+            if (!j.ok)
+                throw new Error(j.msg || 'Upload failed');
+            appendLog(`[capture] temp/${name}`, 'text-info');
+        }
+        catch (e) {
+            appendLog(`[capture] failed: ${e.message}`, 'text-danger');
         }
         finally {
             btn.disabled = false;
@@ -133,9 +181,10 @@ async function tryLogin(pw) {
 }
 async function checkAuth() {
     const hadToken = !!authToken;
-    const valid = await checkAuthed(CPath.WebRootUrl());
+    const valid = await checkAuthed(CPath.WebRootUrl(), authToken);
     if (valid) {
-        authToken = getAuthToken(CPath.WebRootUrl());
+        if (!authToken)
+            authToken = getAuthToken(CPath.WebRootUrl());
         hideOverlay();
         boot();
     }
@@ -167,7 +216,7 @@ async function poll() {
         return;
     }
     try {
-        const screenReq = fetch(CPath.WebRootUrl() + 'PlayWright/screenshot', {
+        const screenReq = fetch(pwUrl('PlayWright/screenshot'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -175,7 +224,7 @@ async function poll() {
                 args: [{ type: 'jpeg', quality: screenshotQuality }]
             })
         });
-        const logsReq = consoleVisible ? fetch(CPath.WebRootUrl() + 'PlayWright/logs', {
+        const logsReq = consoleVisible ? fetch(pwUrl('PlayWright/logs'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: SESSION_ID, fromOffset: logOffset })
@@ -213,6 +262,8 @@ function boot() {
     }
     if (READONLY)
         inputModeRow.style.display = 'none';
+    const heldKeys = new Map();
+    let keyChain = Promise.resolve();
     rateSlider.addEventListener('input', () => {
         pollMs = parseFloat(rateSlider.value) * 1000;
         rateLabel.textContent = `${rateSlider.value}s`;
@@ -246,67 +297,35 @@ function boot() {
             return;
         }
         e.preventDefault();
-        if (e.ctrlKey && e.key.toLowerCase() === 'c') {
-            try {
-                const evalRes = await fetch(CPath.WebRootUrl() + 'PlayWright/eval', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: SESSION_ID, expr: 'window.getSelection()?.toString() ?? ""' })
-                });
-                const evalJson = await evalRes.json();
-                const selected = typeof evalJson.result === 'string' ? evalJson.result : '';
-                if (selected)
-                    await navigator.clipboard.writeText(selected).catch(() => { });
-            }
-            catch { }
-            try {
-                await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: SESSION_ID, fn: 'keyboard.press', args: ['Control+C'] })
-                });
-            }
-            catch { }
+        if (e.key.length === 1 && e.key.charCodeAt(0) > 0x7e) {
+            queueKey(() => pwExec('keyboard.type', [e.key]));
             return;
         }
-        if (e.ctrlKey && e.key.toLowerCase() === 'v') {
-            try {
-                const text = await navigator.clipboard.readText();
-                if (text) {
-                    await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ sessionId: SESSION_ID, fn: 'keyboard.type', args: [text] })
-                    });
-                }
-            }
-            catch { }
-            return;
-        }
-        const fn = e.key.length === 1 ? 'keyboard.type' : 'keyboard.press';
-        try {
-            await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId: SESSION_ID, fn, args: [e.key] })
-            });
-        }
-        catch { }
+        const key = e.key;
+        heldKeys.set(e.code, key);
+        queueKey(() => pwExec('keyboard.down', [key]));
     });
-    kbBridge.addEventListener('paste', async (e) => {
+    kbBridge.addEventListener('keyup', (e) => {
+        const key = heldKeys.get(e.code);
+        if (key == null)
+            return;
+        heldKeys.delete(e.code);
+        e.preventDefault();
+        queueKey(() => pwExec('keyboard.up', [key]));
+    });
+    kbBridge.addEventListener('blur', releaseAllKeys);
+    inputToggle.addEventListener('change', () => { if (!inputToggle.checked)
+        releaseAllKeys(); });
+    kbBridge.addEventListener('paste', (e) => {
         if (!inputMode)
             return;
         e.preventDefault();
         const text = e.clipboardData?.getData('text');
         kbBridge.value = '';
-        if (text) {
-            try {
-                await pwExec('keyboard.type', [text]);
-            }
-            catch { }
-        }
+        if (text)
+            queueKey(() => pwExec('keyboard.type', [text]));
     });
-    kbBridge.addEventListener('input', async (e) => {
+    kbBridge.addEventListener('input', (e) => {
         if (!inputMode)
             return;
         const ie = e;
@@ -314,34 +333,29 @@ function boot() {
             return;
         const inputType = ie.inputType;
         kbBridge.value = '';
-        try {
-            if (inputType === 'deleteContentBackward') {
-                await pwExec('keyboard.press', ['Backspace']);
-                return;
-            }
-            if (inputType === 'deleteContentForward') {
-                await pwExec('keyboard.press', ['Delete']);
-                return;
-            }
-            if (inputType === 'insertLineBreak') {
-                await pwExec('keyboard.press', ['Enter']);
-                return;
-            }
-            if (ie.data)
-                await pwExec('keyboard.type', [ie.data]);
+        if (inputType === 'deleteContentBackward') {
+            queueKey(() => pwExec('keyboard.press', ['Backspace']));
+            return;
         }
-        catch { }
+        if (inputType === 'deleteContentForward') {
+            queueKey(() => pwExec('keyboard.press', ['Delete']));
+            return;
+        }
+        if (inputType === 'insertLineBreak') {
+            queueKey(() => pwExec('keyboard.press', ['Enter']));
+            return;
+        }
+        const data = ie.data;
+        if (data)
+            queueKey(() => pwExec('keyboard.type', [data]));
     });
-    kbBridge.addEventListener('compositionend', async (e) => {
+    kbBridge.addEventListener('compositionend', (e) => {
         kbBridge.value = '';
         if (!inputMode)
             return;
-        if (e.data) {
-            try {
-                await pwExec('keyboard.type', [e.data]);
-            }
-            catch { }
-        }
+        const data = e.data;
+        if (data)
+            queueKey(() => pwExec('keyboard.type', [data]));
     });
     screenshot.addEventListener('dragstart', e => e.preventDefault());
     function toNativeCoords(e) {
@@ -362,14 +376,23 @@ function boot() {
         return { cx, cy };
     }
     async function pwExec(fn, args) {
-        await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
+        await fetch(pwUrl('PlayWright/exec'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: SESSION_ID, fn, args })
         });
     }
+    function queueKey(task) {
+        keyChain = keyChain.then(task).catch(() => { });
+    }
+    function releaseAllKeys() {
+        const keys = [...heldKeys.values()];
+        heldKeys.clear();
+        for (const key of keys)
+            queueKey(() => pwExec('keyboard.up', [key]));
+    }
     async function pwEval(expr) {
-        const r = await fetch(CPath.WebRootUrl() + 'PlayWright/eval', {
+        const r = await fetch(pwUrl('PlayWright/eval'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: SESSION_ID, expr })
@@ -517,4 +540,5 @@ loginPw.addEventListener('keydown', (e) => { if (e.key === 'Enter')
 initQualityControl();
 initConsoleControl();
 initResetControl();
+initCaptureControl();
 checkAuth();

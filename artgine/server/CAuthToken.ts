@@ -60,6 +60,27 @@ export function removeAuthToken(origin: string): void {
     writeStore(store);
 }
 
+// ---- 크로스 오리진(원격 서버) 페이지용 토큰 ------------------------------------------------------
+// 원격 서버의 iframe/팝업은 자기 origin의 localStorage도, 세션 쿠키도 비어 있다: 부모(Control)가 가진
+// 토큰은 Control origin의 localStorage에 있고, 원격 쿠키는 서드파티 쿠키라 iframe에 전달되지 않는다.
+// 그래서 부모가 URL에 ?authToken= 으로 실어 보낸 토큰을 쓴다(CTerminalRouter가 터미널 페이지에
+// window.__AUTH_TOKEN__을 주입하던 것과 같은 자격증명 전달 방식).
+// 로컬(same-origin)은 URL에 authToken이 없으므로 기존 localStorage 경로로 그대로 폴백된다.
+export function getPageAuthToken(origin: string): string {
+    try {
+        const t = new URL(location.href).searchParams.get('authToken');
+        if (t) return t;
+    } catch { /* location이 없는 환경(Node 등) */ }
+    return getAuthToken(origin);
+}
+
+// 토큰이 있을 때만 ?authToken= 을 덧붙인다. 토큰이 ''(로컬)이면 URL을 그대로 돌려주므로
+// same-origin 쿠키 인증 동작이 바뀌지 않는다. Control.ts의 ctxApiUrl()과 동일한 규칙.
+export function withAuthToken(url: string, token: string): string {
+    if (!token) return url;
+    return url + (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(token);
+}
+
 // ---- 로그인 (2차 인증 포함) ----------------------------------------------------------------------
 // 서버에 2차 인증이 켜져 있으면 auth/login은 비밀번호가 맞아도 곧장 인증하지 않고 pending2FA:true와
 // 함께 토큰을 준다. 그 토큰은 메신저로 간 승인 링크를 사람이 누르기 전까지 아무 권한이 없으므로,
@@ -107,12 +128,17 @@ export async function authLogin(webRootUrl: string, passwordHash: string, onPend
     return { ok: false, msg: '2FA approval timed out' };
 }
 
-export async function checkAuthed(webRootUrl: string): Promise<boolean> {
+// _token: 저장된 토큰 대신 검사할 토큰(원격 iframe이 URL로 받은 authToken). 생략하면 기존처럼 localStorage를 본다.
+export async function checkAuthed(webRootUrl: string, _token?: string): Promise<boolean> {
     const base = webRootUrl.replace(/\/+$/, '') + '/';
-    const token = getAuthToken(webRootUrl);
+    const stored = getAuthToken(webRootUrl);
+    // ''(로컬처럼 URL 토큰이 없는 경우)도 "안 넘긴 것"으로 보고 저장된 토큰으로 폴백한다.
+    const token = _token || stored;
     try {
         const j = await postJson(base + 'auth/check', token ? { token } : {}) as { authed?: boolean };
-        if (!j?.authed && token) removeAuthToken(webRootUrl);
+        // 정리는 "localStorage에 있던 그 토큰이 무효"일 때만 한다. URL로 받은 남의 토큰이 무효였다고
+        // 이 origin에 저장된 멀쩡한 토큰까지 지우면 안 된다.
+        if (!j?.authed && stored && token === stored) removeAuthToken(webRootUrl);
         return !!j?.authed;
     } catch {
         return false;

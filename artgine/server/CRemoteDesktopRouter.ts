@@ -6,7 +6,8 @@ import { CAuthServer } from './CAuthServer.js';
 /*
 Remote Desktop Router
 - /RemoteDesktop/exec       POST  명령 실행 { fn, args }                       → { ok, result }
-- /RemoteDesktop/screenshot POST  화면 캡처 { quality?, monitor? }              → { ok, result: Buffer }  (monitor: 0=primary(기본값), 1=두번째...)
+- /RemoteDesktop/screenshot POST  화면 캡처 { format?, quality?, monitor?, clip? } → { ok, result: { type:'base64', format, data } }  (format: 'jpeg'(기본값)|'png', quality는 jpeg 전용, monitor: 0=primary(기본값), 1=두번째..., clip: {x,y,width,height} 모니터 기준)
+- /RemoteDesktop/record     POST  연속 캡처 + 입력 타임라인 { duration?, frames?, interval?, times?, inputs?, clip?, monitor?, format?, quality? } → { ok, mode, format, fps, truncated?, frames:[{t, data}], inputs:[{at, tStart, tEnd, ok}] }
 - /RemoteDesktop/input      POST  시간 기반 입력(hold/drag) { key, time?, windowTitle?, points? } → { ok, result }
 - /RemoteCMD/Exec        POST  원격 PC에서 콘솔 명령 실행 { cmd, path }          → { ok, stdout, stderr }
 - /RemoteDesktop/remotes     POST  저장된 원격 목록 조회 {}                        → { ok, list }
@@ -16,12 +17,13 @@ Remote Desktop Router
 localStorage로 떨어져 그 브라우저에만 남으므로, 서버를 거쳐야 Env.json에 영속된다.
 */
 
-@URLPatterns(["/RemoteDesktop/exec", "/RemoteDesktop/screenshot", "/RemoteDesktop/input", "/RemoteCMD/Exec", "/RemoteDesktop/remotes", "/RemoteDesktop/remotes-set"])
+@URLPatterns(["/RemoteDesktop/exec", "/RemoteDesktop/screenshot", "/RemoteDesktop/record", "/RemoteDesktop/input", "/RemoteCMD/Exec", "/RemoteDesktop/remotes", "/RemoteDesktop/remotes-set"])
 export class CRemoteDesktopRouter extends CAuthServer {
     constructor() {
         super();
         this.On("/RemoteDesktop/exec",        this.onExec.bind(this));
         this.On("/RemoteDesktop/screenshot",  this.onScreenshot.bind(this));
+        this.On("/RemoteDesktop/record",      this.onRecord.bind(this));
         this.On("/RemoteDesktop/input",       this.onInput.bind(this));
         this.On("/RemoteCMD/Exec",            this.onCmd.bind(this));
         this.On("/RemoteDesktop/remotes",     this.onRemotes.bind(this));
@@ -33,6 +35,7 @@ export class CRemoteDesktopRouter extends CAuthServer {
 
     async onExec(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onScreenshot(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
+    async onRecord(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onInput(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onCmd(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onRemotes(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }

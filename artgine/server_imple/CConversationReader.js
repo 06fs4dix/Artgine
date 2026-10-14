@@ -98,7 +98,7 @@ function _soleLiveKey(provider, cwd, live) {
     const peers = _peersOf(provider, cwd, live);
     return peers.length === 1 ? peers[0].key : '';
 }
-function _matchKey(provider, cwd, text, live) {
+function _matchKey(provider, cwd, text, live, prevKey) {
     const peers = _peersOf(provider, cwd, live);
     if (peers.length === 0)
         return '';
@@ -114,6 +114,8 @@ function _matchKey(provider, cwd, text, live) {
     }
     if (hits.length > 1)
         return '';
+    if (prevKey && peers.some(s => s.key === prevKey))
+        return prevKey;
     const withUnused = peers.filter(s => s.inputs.some(i => !i.used));
     if (withUnused.length === 1) {
         const input = withUnused[0].inputs.find(i => !i.used);
@@ -127,7 +129,7 @@ function _matchKey(provider, cwd, text, live) {
 }
 function _resolveKey(provider, cwd, text, live, prevKey) {
     if (text != null) {
-        const k = _matchKey(provider, cwd, text, live);
+        const k = _matchKey(provider, cwd, text, live, prevKey);
         if (k)
             return k;
     }

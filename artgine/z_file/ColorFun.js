@@ -1,6 +1,6 @@
 import { NoiseGet, NoiseValue3, SampleNoise, SampleNoiseVec2 } from "./Noise";
 import { SDF } from "./SDF";
-import { abs, clamp, max, min, mod, pow, sign, sin, CMat, CVec2, CVec3, CVec4, Sam2DSize, Sam2DToColor, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3Clamp, V3Floor, V3MulFloat, V3MulV3, V3SubV3, V4AddV4, V4MulFloat, V4MulV4, step, V3Abs, V3Fract, V4Mix, V3Mix, SaturateV3, floor, screenPos, V4DivV4, FloatToInt, Null, Sam2DToV4, sqrt, V2Dot, V2Mod, V4MulMatCoordi, V3Nor, V3Cross, cos, Sam2DArrV4, Sam2DArrToV4, fract, V3Sqrt } from "./Shader";
+import { abs, clamp, max, min, mod, pow, sign, sin, CMat, CVec2, CVec3, CVec4, Sam2DSize, Sam2DToColor, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3Clamp, V3Floor, V3MulFloat, V3MulV3, V3SubV3, V4AddV4, V4MulFloat, V4MulV4, step, V3Abs, V3Fract, V4Mix, V3Mix, SaturateV3, floor, screenPos, FloatToInt, IntToFloat, Null, Sam2DToV4, sqrt, V2Dot, V2Mod, V4MulMatCoordi, V3Nor, V3Cross, cos, Sam2DArrV4, Sam2DArrNearestToV4, fract, V3Sqrt } from "./Shader";
 import { Tonemap } from "./ToneMapping";
 export function GetTexCodiedUV(_uv, _texCodi) {
     var result = new CVec2(0.0, 0.0);
@@ -218,58 +218,47 @@ export var LUT4 = new Sam2DArrV4(1, SDF.eUni.V4LookUpTable4);
 export var LUT5 = new Sam2DArrV4(1, SDF.eUni.V4LookUpTable5);
 export var vfxMat0 = Null();
 export var vfxMat1 = Null();
-function VFXDown0(_uv, _value, _time, _worldPos) {
-    var para = new CVec4(_value[0].y, _value[0].z, _value[0].w, _value[1].x);
-    var type = _value[0].x;
-    var outColor = Sam2DToColor(0.0, _uv);
-    if (type < SDF.eVFX.Distort + 0.5) {
-        var distortedUV = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
-        outColor = Sam2DToColor(0.0, distortedUV);
-    }
-    else if (type < SDF.eVFX.Aberrate + 0.5) {
-        var line = max(0.0, sin(_uv.y * 3.8 + _time * 1.4) * sin(_uv.y * 0.6 + _time * 2.3));
-        var aberration_strength = (0.1 + line) * para.y + para.x;
-        var r = Sam2DToColor(0.0, new CVec2(_uv.x - aberration_strength, _uv.y));
-        var g = Sam2DToColor(0.0, _uv);
-        var b = Sam2DToColor(0.0, new CVec2(_uv.x + aberration_strength, _uv.y));
-        outColor = SaturateV4(new CVec4(r.r, g.g, b.b, max(r.a, max(g.a, b.a))));
-    }
-    else if (type < SDF.eVFX.Outline + 0.5) {
-        var org = Sam2DToColor(0.0, _uv);
-        if (org.a <= 0.99) {
-            var size = Sam2DSize(0.0);
-            size.x = 1.0 / size.x;
-            size.y = 1.0 / size.y;
-            var lc = Sam2DToColor(0.0, new CVec2(_uv.x - size.x, _uv.y));
-            var rc = Sam2DToColor(0.0, new CVec2(_uv.x + size.x, _uv.y));
-            var tc = Sam2DToColor(0.0, new CVec2(_uv.x, _uv.y - size.y));
-            var bc = Sam2DToColor(0.0, new CVec2(_uv.x, _uv.y + size.y));
-            if (lc.a > 0.0 || rc.a > 0.0 || tc.a > 0.0 || bc.a > 0.0) {
-                outColor = new CVec4(para.xyz, 1.0);
-            }
-            else
-                outColor = org;
-        }
-        else
-            outColor = org;
-    }
-    else if (type < SDF.eVFX.Pixel + 0.5) {
-        var pixelatedUV = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
-        outColor = Sam2DToColor(0.0, pixelatedUV);
-    }
-    else if (type < SDF.eVFX.Noise + 0.5) {
+function VFXSlotType(_value, _slot) {
+    if (_slot < 0.5)
+        return _value[0].x;
+    if (_slot < 1.5)
+        return _value[1].y;
+    return _value[2].z;
+}
+function VFXSlotPara(_value, _slot) {
+    if (_slot < 0.5)
+        return new CVec4(_value[0].y, _value[0].z, _value[0].w, _value[1].x);
+    if (_slot < 1.5)
+        return new CVec4(_value[1].z, _value[1].w, _value[2].x, _value[2].y);
+    return new CVec4(_value[2].w, _value[3].x, _value[3].y, _value[3].z);
+}
+function VFXIsTap(_type) {
+    if (abs(_type - SDF.eVFX.Aberrate) < 0.5 || abs(_type - SDF.eVFX.Outline) < 0.5 || abs(_type - SDF.eVFX.Blur) < 0.5)
+        return 1.0;
+    return 0.0;
+}
+function VFXUV(_uv, _type, _para, _time) {
+    if (abs(_type - SDF.eVFX.Distort) < 0.5)
+        return GetDistortedUV(_uv, new CVec2(_para.x, _para.y), _time);
+    if (abs(_type - SDF.eVFX.Pixel) < 0.5)
+        return GetPixelatedUV(Sam2DSize(0.0), new CVec2(_para.x, _para.y), _uv);
+    return _uv;
+}
+function VFXColor(_color, _uv, _type, _para, _slot, _time, _worldPos) {
+    var outColor = _color;
+    if (abs(_type - SDF.eVFX.Noise) < 0.5) {
         var noiseColor = new CVec3(0.0, 0.0, 0.0);
-        var frame = _time * para.y / 60.0;
-        if (para.x > SDF.eNoise.Gaussian - 0.5) {
-            var xi = _uv.x * para.w * 128.0;
-            var yi = _uv.y * para.w * 128.0;
+        var frame = _time * _para.y / 60.0;
+        if (_para.x > SDF.eNoise.Gaussian - 0.5) {
+            var xi = _uv.x * _para.w * 128.0;
+            var yi = _uv.y * _para.w * 128.0;
             var zi = frame * 128.0;
             noiseColor.x = NoiseValue3(new CVec3(xi, yi, zi));
             noiseColor.y = noiseColor.x;
             noiseColor.z = noiseColor.x;
         }
-        else if (para.x > SDF.eNoise.Blue - 0.5) {
-            var coord = V2Floor(V2Mod(V2MulFloat(V2AddV2(_uv, new CVec2(frame, frame)), para.w * 64.0), 64.0));
+        else if (_para.x > SDF.eNoise.Blue - 0.5) {
+            var coord = V2Floor(V2Mod(V2MulFloat(V2AddV2(_uv, new CVec2(frame, frame)), _para.w * 64.0), 64.0));
             var index = coord.y * 64.0 + coord.x;
             var modIndex = mod(index, 2048.0);
             var v4 = Sam2DToV4(new CVec2(11, SDF.eNoise.Blue), modIndex);
@@ -277,72 +266,56 @@ function VFXDown0(_uv, _value, _time, _worldPos) {
             noiseColor.y = noiseColor.x;
             noiseColor.z = noiseColor.x;
         }
-        else if (para.x > SDF.eNoise.PerlinFBM3 - 0.5) {
-            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinFBM3);
+        else if (_para.x > SDF.eNoise.PerlinFBM3 - 0.5) {
+            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, _para.w), frame), SDF.eNoise.PerlinFBM3);
             noiseColor.y = noiseColor.x;
             noiseColor.z = noiseColor.x;
         }
-        else if (para.x > SDF.eNoise.PerlinNormal - 0.5) {
-            var noise = SampleNoiseVec2(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinNormal);
+        else if (_para.x > SDF.eNoise.PerlinNormal - 0.5) {
+            var noise = SampleNoiseVec2(new CVec3(V2MulFloat(_uv, _para.w), frame), SDF.eNoise.PerlinNormal);
             noiseColor.xyz = new CVec3(noise.x, sqrt(1.0 - V2Dot(noise, noise)), noise.y);
         }
         else {
-            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.Perlin);
+            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, _para.w), frame), SDF.eNoise.Perlin);
             noiseColor.y = noiseColor.x;
             noiseColor.z = noiseColor.x;
         }
-        outColor.rgb = V3MulV3(outColor.rgb, V3Mix(noiseColor, new CVec3(1, 1, 1), 1.0 - para.z));
+        outColor.rgb = V3MulV3(outColor.rgb, V3Mix(noiseColor, new CVec3(1, 1, 1), 1.0 - _para.z));
     }
-    else if (type < SDF.eVFX.Scanline + 0.5) {
-        outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
+    else if (abs(_type - SDF.eVFX.Scanline) < 0.5) {
+        outColor = AddScanLine(outColor, _uv, _time, _para.x, _para.y);
     }
-    else if (type < SDF.eVFX.LookUpTable + 0.5) {
+    else if (abs(_type - SDF.eVFX.LookUpTable) < 0.5) {
         var palSize = new CVec2(32.0, 32.0);
         var cellSize = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
-        var ditherStrength = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * para.y;
+        var ditherStrength = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * _para.y;
         outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
         var palIndex = MapToPaletteIndex(outColor.rgb, cellSize, palSize);
-        outColor = Sam2DArrToV4(new CVec3(1.0, para.x, 0.0), palIndex);
+        outColor = Sam2DArrNearestToV4(new CVec3(1.0, _para.x, 0.0), palIndex);
     }
-    else if (type < SDF.eVFX.Blur + 0.5) {
-        outColor = new CVec4(0.0, 0.0, 0.0, 0.0);
-        var fx = max(-para.x * 0.5, -2.0);
-        var fy = max(-para.y * 0.5, -2.0);
-        var count = 0.0;
-        var loopX;
-        var loopY;
-        loopX.dummy = FloatToInt(para.x);
-        loopY.dummy = FloatToInt(para.y);
-        var texScale = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
-        for (var y = 0; y < 4; y++) {
-            if (y < loopY.dummy) {
-                for (var x = 0; x < 4; x++) {
-                    if (x < loopX.dummy) {
-                        var uv = V2AddV2(_uv, V2MulV2(new CVec2(fx, fy), texScale));
-                        var bout = Sam2DToColor(0.0, uv);
-                        outColor = V4AddV4(outColor, bout);
-                        count += 1.0;
-                    }
-                    else
-                        break;
-                    fx += 1.0;
-                }
-                fx = -_value[2].x * 0.5;
-                fy += 1.0;
-            }
-            else
-                break;
+    else if (abs(_type - SDF.eVFX.Decal) < 0.5 || abs(_type - SDF.eVFX.DecalTexture) < 0.5) {
+        var decalDir;
+        var decalRot;
+        var decalSca;
+        var decalPos;
+        if (_slot < 0.5) {
+            decalDir = new CVec3(vfxMat0[0][0], vfxMat0[0][1], vfxMat0[0][2]);
+            decalRot = vfxMat0[0][3];
+            decalSca = new CVec3(vfxMat0[1][0], vfxMat0[1][1], vfxMat0[1][2]);
+            decalPos = new CVec3(vfxMat0[1][3], vfxMat0[2][0], vfxMat0[2][1]);
         }
-        if (count > 0.01) {
-            outColor = V4DivV4(outColor, new CVec4(count, count, count, count));
-            outColor = SaturateV4(outColor);
+        else if (_slot < 1.5) {
+            decalDir = new CVec3(vfxMat0[2][2], vfxMat0[2][3], vfxMat0[3][0]);
+            decalRot = vfxMat0[3][1];
+            decalSca = new CVec3(vfxMat0[3][2], vfxMat0[3][3], vfxMat1[0][0]);
+            decalPos = new CVec3(vfxMat1[0][1], vfxMat1[0][2], vfxMat1[0][3]);
         }
-    }
-    else if (type < SDF.eVFX.Decal + 0.5 || type < SDF.eVFX.DecalTexture + 0.5) {
-        var decalDir = new CVec3(vfxMat0[0][0], vfxMat0[0][1], vfxMat0[0][2]);
-        var decalRot = vfxMat0[0][3];
-        var decalSca = new CVec3(vfxMat0[1][0], vfxMat0[1][1], vfxMat0[1][2]);
-        var decalPos = new CVec3(vfxMat0[1][3], vfxMat0[2][0], vfxMat0[2][1]);
+        else {
+            decalDir = new CVec3(vfxMat1[1][0], vfxMat1[1][1], vfxMat1[1][2]);
+            decalRot = vfxMat1[1][3];
+            decalSca = new CVec3(vfxMat1[2][0], vfxMat1[2][1], vfxMat1[2][2]);
+            decalPos = new CVec3(vfxMat1[2][3], vfxMat1[3][0], vfxMat1[3][1]);
+        }
         var zAxis = V3Nor(decalDir);
         var up = abs(zAxis.y) > 1.0 - 1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
         var xAxis = V3Cross(up, zAxis);
@@ -362,15 +335,15 @@ function VFXDown0(_uv, _value, _time, _worldPos) {
         var decalUV = V4MulMatCoordi(_worldPos, decalMat);
         decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
         if (decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5) {
-            if (type < SDF.eVFX.Decal + 0.5) {
-                var decalColor = para;
+            if (abs(_type - SDF.eVFX.Decal) < 0.5) {
+                var decalColor = _para;
                 outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
             }
-            else if (type < SDF.eVFX.DecalTexture + 0.5) {
-                var decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
-                decalColor.a *= para.y;
-                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
-                if (para.z > 0.5 && decalColor.a > 0.001) {
+            else {
+                var decalTex = Sam2DToColor(_para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalTex.a *= _para.y;
+                outColor = new CVec4(V3Mix(outColor.rgb, decalTex.rgb, outColor.a * decalTex.a), outColor.a);
+                if (_para.z > 0.5 && decalTex.a > 0.001) {
                     outColor.r = 1.0 - outColor.r;
                     outColor.g = 1.0 - outColor.g;
                     outColor.b = 1.0 - outColor.b;
@@ -380,133 +353,130 @@ function VFXDown0(_uv, _value, _time, _worldPos) {
     }
     return outColor;
 }
-export function VFXDown1(_uv, _value, _time, _worldPos) {
-    var para = new CVec4(_value[1].z, _value[1].w, _value[2].x, _value[2].y);
-    var type = _value[1].y;
-    var outColor = VFXDown0(_uv, _value, _time, _worldPos);
-    if (type < SDF.eVFX.Distort + 0.5) {
-        var distortedUV = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
-        outColor = VFXDown0(distortedUV, _value, _time, _worldPos);
+function VFXChain(_uv, _end, _value, _time, _worldPos) {
+    var uv = _uv;
+    var uv1 = _uv;
+    var uv2 = _uv;
+    if (_end > 2.5) {
+        uv2 = uv;
+        uv = VFXUV(uv, _value[2].z, VFXSlotPara(_value, 2.0), _time);
     }
-    else if (type < SDF.eVFX.Pixel + 0.5) {
-        var pixelatedUV = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
-        outColor = VFXDown0(pixelatedUV, _value, _time, _worldPos);
+    if (_end > 1.5) {
+        uv1 = uv;
+        uv = VFXUV(uv, _value[1].y, VFXSlotPara(_value, 1.0), _time);
     }
-    else if (type < SDF.eVFX.Scanline + 0.5) {
-        outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
-    }
-    else if (type < SDF.eVFX.LookUpTable + 0.5) {
-        var palSize = new CVec2(32.0, 32.0);
-        var cellSize = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
-        var ditherStrength = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * para.y;
-        outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
-        var palIndex = MapToPaletteIndex(outColor.rgb, cellSize, palSize);
-        outColor = Sam2DToV4(new CVec2(11, para.x), palIndex);
-    }
-    else if (type < SDF.eVFX.Decal + 0.5 || type < SDF.eVFX.DecalTexture + 0.5) {
-        var decalDir = new CVec3(vfxMat0[2][2], vfxMat0[2][3], vfxMat0[3][0]);
-        var decalRot = vfxMat0[3][1];
-        var decalSca = new CVec3(vfxMat0[3][2], vfxMat0[3][3], vfxMat1[0][0]);
-        var decalPos = new CVec3(vfxMat1[0][1], vfxMat1[0][2], vfxMat1[0][3]);
-        var zAxis = V3Nor(decalDir);
-        var up = abs(zAxis.y) > 1.0 - 1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
-        var xAxis = V3Cross(up, zAxis);
-        var yAxis = V3Cross(zAxis, xAxis);
-        var rx = xAxis;
-        var ry = yAxis;
-        if (decalRot > 1e-8) {
-            var cosT = cos(decalRot);
-            var sinT = sin(decalRot);
-            rx = V3Nor(V3AddV3(V3MulFloat(xAxis, cosT), V3MulFloat(yAxis, sinT)));
-            ry = V3Nor(V3SubV3(V3MulFloat(yAxis, cosT), V3MulFloat(xAxis, sinT)));
-        }
-        var decalMat = new CMat(rx.x / decalSca.x, rx.y / decalSca.x, rx.z / decalSca.x, 0.0, ry.x / decalSca.y, ry.y / decalSca.y, ry.z / decalSca.y, 0.0, zAxis.x / decalSca.z, zAxis.y / decalSca.z, zAxis.z / decalSca.z, 0.0, 0.0, 0.0, 0.0, 1.0);
-        decalMat[3][0] = -(decalPos.x * decalMat[0][0] + decalPos.y * decalMat[0][1] + decalPos.z * decalMat[0][2]);
-        decalMat[3][1] = -(decalPos.x * decalMat[1][0] + decalPos.y * decalMat[1][1] + decalPos.z * decalMat[1][2]);
-        decalMat[3][2] = -(decalPos.x * decalMat[2][0] + decalPos.y * decalMat[2][1] + decalPos.z * decalMat[2][2]);
-        var decalUV = V4MulMatCoordi(_worldPos, decalMat);
-        decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
-        if (decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5) {
-            if (type < SDF.eVFX.Decal + 0.5) {
-                var decalColor = para;
-                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
-            }
-            else if (type < SDF.eVFX.DecalTexture + 0.5) {
-                var decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
-                decalColor.a *= para.y;
-                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
-                if (para.z > 0.5 && decalColor.a > 0.001) {
-                    outColor.r = 1.0 - outColor.r;
-                    outColor.g = 1.0 - outColor.g;
-                    outColor.b = 1.0 - outColor.b;
-                }
-            }
-        }
+    var uv0 = uv;
+    if (_end > 0.5)
+        uv = VFXUV(uv, _value[0].x, VFXSlotPara(_value, 0.0), _time);
+    var outColor = Sam2DToColor(0.0, uv);
+    for (var i = 0; i < 3; ++i) {
+        if (i >= FloatToInt(_end))
+            break;
+        var slot = IntToFloat(i);
+        var slotUV = slot < 0.5 ? uv0 : (slot < 1.5 ? uv1 : uv2);
+        outColor = VFXColor(outColor, slotUV, VFXSlotType(_value, slot), VFXSlotPara(_value, slot), slot, _time, _worldPos);
     }
     return outColor;
 }
 export function VFXDown2(_uv, _value, _time, _worldPos) {
-    var para = new CVec4(_value[2].w, _value[3].x, _value[3].y, _value[3].z);
-    var type = _value[2].z;
-    var outColor = VFXDown1(_uv, _value, _time, _worldPos);
-    if (type < SDF.eVFX.Distort + 0.5) {
-        var distortedUV = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
-        outColor = VFXDown1(distortedUV, _value, _time, _worldPos);
+    var tapSlot = 3.0;
+    if (VFXIsTap(_value[0].x) > 0.5)
+        tapSlot = 0.0;
+    else if (VFXIsTap(_value[1].y) > 0.5)
+        tapSlot = 1.0;
+    else if (VFXIsTap(_value[2].z) > 0.5)
+        tapSlot = 2.0;
+    var uv = _uv;
+    var uv1 = _uv;
+    if (tapSlot < 1.5)
+        uv = VFXUV(uv, _value[2].z, VFXSlotPara(_value, 2.0), _time);
+    if (tapSlot < 0.5) {
+        uv1 = uv;
+        uv = VFXUV(uv, _value[1].y, VFXSlotPara(_value, 1.0), _time);
     }
-    else if (type < SDF.eVFX.Pixel + 0.5) {
-        var pixelatedUV = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
-        outColor = VFXDown1(pixelatedUV, _value, _time, _worldPos);
+    var tapType = 0.0;
+    var para = new CVec4(0.0, 0.0, 0.0, 0.0);
+    if (tapSlot < 2.5) {
+        tapType = VFXSlotType(_value, tapSlot);
+        para = VFXSlotPara(_value, tapSlot);
     }
-    else if (type < SDF.eVFX.Scanline + 0.5) {
-        outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
+    var texel = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
+    var tapCount = 1.0;
+    var aberration = 0.0;
+    var blurCol = 1.0;
+    var blurStart = new CVec2(0.0, 0.0);
+    if (abs(tapType - SDF.eVFX.Aberrate) < 0.5) {
+        var line = max(0.0, sin(uv.y * 3.8 + _time * 1.4) * sin(uv.y * 0.6 + _time * 2.3));
+        aberration = (0.1 + line) * para.y + para.x;
+        tapCount = 3.0;
     }
-    else if (type < SDF.eVFX.LookUpTable + 0.5) {
-        var palSize = new CVec2(32.0, 32.0);
-        var cellSize = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
-        var ditherStrength = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * para.y;
-        outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
-        var palIndex = MapToPaletteIndex(outColor.rgb, cellSize, palSize);
-        outColor = Sam2DToV4(new CVec2(11, para.x), palIndex);
+    else if (abs(tapType - SDF.eVFX.Outline) < 0.5) {
+        tapCount = 5.0;
     }
-    else if (type < SDF.eVFX.Decal + 0.5 || type < SDF.eVFX.DecalTexture + 0.5) {
-        var decalDir = new CVec3(vfxMat1[1][0], vfxMat1[1][1], vfxMat1[1][2]);
-        var decalRot = vfxMat1[1][3];
-        var decalSca = new CVec3(vfxMat1[2][0], vfxMat1[2][1], vfxMat1[2][2]);
-        var decalPos = new CVec3(vfxMat1[2][3], vfxMat1[3][0], vfxMat1[3][1]);
-        var zAxis = V3Nor(decalDir);
-        var up = abs(zAxis.y) > 1.0 - 1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
-        var xAxis = V3Cross(up, zAxis);
-        var yAxis = V3Cross(zAxis, xAxis);
-        var rx = xAxis;
-        var ry = yAxis;
-        if (decalRot > 1e-8) {
-            var cosT = cos(decalRot);
-            var sinT = sin(decalRot);
-            rx = V3Nor(V3AddV3(V3MulFloat(xAxis, cosT), V3MulFloat(yAxis, sinT)));
-            ry = V3Nor(V3SubV3(V3MulFloat(yAxis, cosT), V3MulFloat(xAxis, sinT)));
+    else if (abs(tapType - SDF.eVFX.Blur) < 0.5) {
+        blurCol = clamp(floor(para.x), 1.0, 4.0);
+        tapCount = blurCol * clamp(floor(para.y), 1.0, 4.0);
+        blurStart = new CVec2(max(-para.x * 0.5, -2.0), max(-para.y * 0.5, -2.0));
+    }
+    var acc = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var org = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var edge = 0.0;
+    for (var i = 0; i < 16; ++i) {
+        if (i >= FloatToInt(tapCount))
+            break;
+        var tap = IntToFloat(i);
+        var off = new CVec2(0.0, 0.0);
+        if (abs(tapType - SDF.eVFX.Aberrate) < 0.5) {
+            off.x = (tap - 1.0) * aberration;
         }
-        var decalMat = new CMat(rx.x / decalSca.x, rx.y / decalSca.x, rx.z / decalSca.x, 0.0, ry.x / decalSca.y, ry.y / decalSca.y, ry.z / decalSca.y, 0.0, zAxis.x / decalSca.z, zAxis.y / decalSca.z, zAxis.z / decalSca.z, 0.0, 0.0, 0.0, 0.0, 1.0);
-        decalMat[3][0] = -(decalPos.x * decalMat[0][0] + decalPos.y * decalMat[0][1] + decalPos.z * decalMat[0][2]);
-        decalMat[3][1] = -(decalPos.x * decalMat[1][0] + decalPos.y * decalMat[1][1] + decalPos.z * decalMat[1][2]);
-        decalMat[3][2] = -(decalPos.x * decalMat[2][0] + decalPos.y * decalMat[2][1] + decalPos.z * decalMat[2][2]);
-        var decalUV = V4MulMatCoordi(_worldPos, decalMat);
-        decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
-        if (decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5) {
-            if (type < SDF.eVFX.Decal + 0.5) {
-                var decalColor = para;
-                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
-            }
-            else if (type < SDF.eVFX.DecalTexture + 0.5) {
-                var decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
-                decalColor.a *= para.y;
-                outColor = new CVec4(V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a), outColor.a);
-                if (para.z > 0.5 && decalColor.a > 0.001) {
-                    outColor.r = 1.0 - outColor.r;
-                    outColor.g = 1.0 - outColor.g;
-                    outColor.b = 1.0 - outColor.b;
-                }
-            }
+        else if (abs(tapType - SDF.eVFX.Outline) < 0.5) {
+            if (tap > 3.5)
+                off.y = texel.y;
+            else if (tap > 2.5)
+                off.y = -texel.y;
+            else if (tap > 1.5)
+                off.x = texel.x;
+            else if (tap > 0.5)
+                off.x = -texel.x;
         }
+        else if (abs(tapType - SDF.eVFX.Blur) < 0.5) {
+            off = V2MulV2(new CVec2(blurStart.x + mod(tap, blurCol), blurStart.y + floor(tap / blurCol)), texel);
+        }
+        var tc = VFXChain(V2AddV2(uv, off), tapSlot, _value, _time, _worldPos);
+        if (tap < 0.5)
+            org = tc;
+        if (abs(tapType - SDF.eVFX.Aberrate) < 0.5) {
+            if (tap < 0.5)
+                acc.r = tc.r;
+            else if (tap < 1.5)
+                acc.g = tc.g;
+            else
+                acc.b = tc.b;
+            acc.a = max(acc.a, tc.a);
+        }
+        else {
+            acc = V4AddV4(acc, tc);
+            if (tap > 0.5 && tc.a > 0.0)
+                edge = 1.0;
+        }
+        if (abs(tapType - SDF.eVFX.Outline) < 0.5 && org.a > 0.99)
+            break;
+    }
+    var outColor = org;
+    if (abs(tapType - SDF.eVFX.Aberrate) < 0.5) {
+        outColor = SaturateV4(acc);
+    }
+    else if (abs(tapType - SDF.eVFX.Outline) < 0.5) {
+        if (org.a <= 0.99 && edge > 0.5)
+            outColor = new CVec4(para.x, para.y, para.z, 1.0);
+    }
+    else if (abs(tapType - SDF.eVFX.Blur) < 0.5) {
+        outColor = SaturateV4(V4MulFloat(acc, 1.0 / tapCount));
+    }
+    for (var j = 0; j < 3; ++j) {
+        var slot = IntToFloat(j);
+        if (slot > tapSlot + 0.5)
+            outColor = VFXColor(outColor, slot < 1.5 ? uv1 : _uv, VFXSlotType(_value, slot), VFXSlotPara(_value, slot), slot, _time, _worldPos);
     }
     return outColor;
 }

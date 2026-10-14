@@ -11,6 +11,7 @@ let CRemoteDesktopRouter = class CRemoteDesktopRouter extends CAuthServer {
         super();
         this.On("/RemoteDesktop/exec", this.onExec.bind(this));
         this.On("/RemoteDesktop/screenshot", this.onScreenshot.bind(this));
+        this.On("/RemoteDesktop/record", this.onRecord.bind(this));
         this.On("/RemoteDesktop/input", this.onInput.bind(this));
         this.On("/RemoteCMD/Exec", this.onCmd.bind(this));
         this.On("/RemoteDesktop/remotes", this.onRemotes.bind(this));
@@ -20,13 +21,14 @@ let CRemoteDesktopRouter = class CRemoteDesktopRouter extends CAuthServer {
     _connectImpl() { }
     async onExec(_json, _req, _res) { return null; }
     async onScreenshot(_json, _req, _res) { return null; }
+    async onRecord(_json, _req, _res) { return null; }
     async onInput(_json, _req, _res) { return null; }
     async onCmd(_json, _req, _res) { return null; }
     async onRemotes(_json, _req, _res) { return null; }
     async onRemotesSet(_json, _req, _res) { return null; }
 };
 CRemoteDesktopRouter = __decorate([
-    URLPatterns(["/RemoteDesktop/exec", "/RemoteDesktop/screenshot", "/RemoteDesktop/input", "/RemoteCMD/Exec", "/RemoteDesktop/remotes", "/RemoteDesktop/remotes-set"])
+    URLPatterns(["/RemoteDesktop/exec", "/RemoteDesktop/screenshot", "/RemoteDesktop/record", "/RemoteDesktop/input", "/RemoteCMD/Exec", "/RemoteDesktop/remotes", "/RemoteDesktop/remotes-set"])
 ], CRemoteDesktopRouter);
 export { CRemoteDesktopRouter };
 import CRemoteDesktopRouter_imple from '../server_imple/CRemoteDesktopRouter.js';

@@ -1,5 +1,5 @@
 import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, vfxMat0, vfxMat1, BlendColor0, BlendColor1, BlendColor2, BlendColor3, BlendColor4, BlendColor5, BlendColor6, BlendColor7, BlendColor9, BlendColor8, BlendColor10, BlendColor11, BlendColor12, BlendColor13, BlendColor14, BlendColor15 } from "./ColorFun";
-import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envCount, envPos, EnvNearest, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
 import { Attribute, BranchBegin, BranchEnd, Build, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, V2MulV2, V2AddV2, V2DivV2, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V4AddV4, V4DivV4, V4MulFloat, V4MulMatCoordi, clamp, discard, max, pow } from "./Shader";
 import { shadowOn } from "./Shadow";
@@ -43,7 +43,7 @@ Build("Artgine/Shader/PostLight", ["light"], vs_main, [
     worldMat, viewMat, projectMat,
     viewMatInv3D, camPos3D,
     ligDir, ligCol, ligMask, ligCount,
-    ambientColor, sam2DCount, samCubeCount, envmapOn,
+    ambientColor, sam2DCount, samCubeCount, envCount, envPos,
     ligStep0, ligStep1, ligStep2, ligStep3,
     time, renType,
     sam2DDiffuse, sam2DPosition, sam2DNormal, sam2DSpecular, sam2DShadow
@@ -180,7 +180,11 @@ function ps_main_light() {
     var worldPos = V4MulMatCoordi(new CVec4(L_pos.xyz, 1.0), viewMatInv3D);
     var normal = MappingTexToV3(L_nor.rgb);
     var maskIndex = L_pos.w;
-    var dseMat = LightCac3D(camPos3D, worldPos, L_dif, normal, shadow, L_spc.y, L_spc.x, L_spc.z, maskIndex);
+    var envIdx = -1.0;
+    BranchBegin("env", "E", [envCount, envPos]);
+    envIdx = EnvNearest(worldPos.xyz, normal);
+    BranchEnd();
+    var dseMat = LightCac3D(worldPos, L_dif, normal, shadow, maskIndex, camPos3D, L_spc.y, L_spc.x, L_spc.z, envIdx);
     if (renType < 0.5) {
         out_color.rgb = dseMat[0];
         out_color.w = L_cor.w;
@@ -240,7 +244,7 @@ function PreFilter(_col) {
     var knee = threshold * softThreshold;
     var softness = brightness - (threshold - knee);
     softness = clamp(softness, 0.0, 2.0 * knee);
-    softness = softness * softness * (4.0 * knee + 0.00001);
+    softness = softness * softness / (4.0 * knee + 0.00001);
     var contribution = max(brightness - threshold, softness);
     contribution /= max(brightness, 0.00001);
     return V3MulFloat(_col, contribution);

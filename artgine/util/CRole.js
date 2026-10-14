@@ -16,6 +16,7 @@ export class CRole extends CObject {
             this.mExecute.push(_ex);
     }
     mPriority = 10000;
+    mBreak = false;
     mAnd = new Array;
     mOr = new Array;
     mExecute = new Array;
@@ -40,6 +41,7 @@ export class CRole extends CObject {
             }
         }
         this.mPriority = json["mPriority"] == null ? json["priority"] : json["mPriority"];
+        this.mBreak = json["mBreak"] == null ? (json["break"] ?? false) : json["mBreak"];
         let exe = json["mExcute"] == null ? json["exe"] : json["mExcute"];
         if (exe != null) {
             for (let ac of exe) {
@@ -118,6 +120,8 @@ export class CRoleMgr extends CObject {
                 for (let ac of pat.mExecute) {
                     ac.Excute(_target, false, null, null, "", _update);
                 }
+                if (pat.mBreak)
+                    break;
             }
         }
         for (let key of this.mStateArr) {

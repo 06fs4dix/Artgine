@@ -6,10 +6,8 @@ import { CVec3 } from "../../../geometry/CVec3.js";
 import { CVec4 } from "../../../geometry/CVec4.js";
 import { CMeshCreateInfo } from "../../../render/CMeshCreateInfo.js";
 import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
-import { CRenderPass } from "../../../render/CRenderPass.js";
 import { CVertexFormat } from "../../../render/CShader.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
-import { CRPAuto } from "../../canvas/CRPMgr.js";
 import { CPaint } from "./CPaint.js";
 export class CVoxPlane extends CObject {
     static eDir = {
@@ -49,13 +47,6 @@ export class CPaintVoxel extends CPaint {
         if (_member == "mMCI" || _member == "mMD")
             return false;
         return super.IsShould(_member, _type);
-    }
-    EmptyRPChk() {
-        if (this.mRenderPass.length == 0) {
-            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxelKey());
-            rp.mPriority = CRenderPass.ePriority.BackGround;
-            this.mRenderPass = [rp];
-        }
     }
     Start() {
         if (CUtil.IsNode())
@@ -146,8 +137,5 @@ export class CPaintVoxel extends CPaint {
             return;
         }
         barr[0] = batch;
-    }
-    ClearCRPAuto() {
-        super.ClearCRPAuto();
     }
 }

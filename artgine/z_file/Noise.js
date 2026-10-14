@@ -1,5 +1,5 @@
 import { SDF } from "./SDF";
-import { CVec2, CVec3, CVec4, CMat3, abs, floor, mix, mod, V2Mod, V2MulFloat, V2Floor, V3AddV3, V3Floor, V3Fract, V3MulFloat, V3MulV3, V3MulMat3Normal, V3Dot, V3SubV3, V3Step, V3Min, V3Max, V3Mod, V3Nor, V4MulV4, V4SubV4, V4AddV4, V4MulFloat, V4Floor, V4Abs, V4Step, V4Max, V4Dot, V4Mod, Hash13, Sam2DArrToV4, } from "./Shader";
+import { CVec2, CVec3, CVec4, CMat3, abs, floor, mix, mod, V2Mod, V2MulFloat, V2Floor, V3AddV3, V3Floor, V3Fract, V3MulFloat, V3MulV3, V3MulMat3Normal, V3Dot, V3SubV3, V3Step, V3Min, V3Max, V3Mod, V3Nor, V4MulV4, V4SubV4, V4AddV4, V4MulFloat, V4Floor, V4Abs, V4Step, V4Max, V4Dot, V4Mod, Hash13, Sam2DArrToV4, Sam2DArrNearestToV4, } from "./Shader";
 export function NoiseValue3(_v) {
     var p = V3Floor(_v);
     var f = V3Fract(_v);
@@ -160,7 +160,7 @@ export function NoiseGet(_uvw, _type) {
         var coord = V2Floor(V2Mod(_uvw.xy, 64.0));
         var index = coord.y * 64.0 + coord.x;
         var modIndex = mod(index, 2048.0);
-        var v4 = Sam2DArrToV4(new CVec3(1, 0.0, SDF.eNoise.Blue), modIndex);
+        var v4 = Sam2DArrNearestToV4(new CVec3(1, 0.0, SDF.eNoise.Blue), modIndex);
         return index < 2048.0 ? v4.x : v4.y;
     }
     else if (_type > SDF.eNoise.PerlinFBM3 - 0.5) {

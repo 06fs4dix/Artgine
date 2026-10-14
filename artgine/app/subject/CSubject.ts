@@ -16,10 +16,12 @@ import { CVec4 } from "../../geometry/CVec4.js"
 import { CFile } from "../../system/CFile.js"
 import { IFile } from "../../system/System.js"
 import { CFrame } from "../../util/CFrame.js"
+import { CSleep } from "../../util/CSleep.js"
 import { CComponent } from "../component/CComponent.js"
 
 import { CRouteMsg } from "../CRouteMsg.js"
 import { CPaint } from "../component/paint/CPaint.js"
+import { CCollider } from "../component/CCollider.js"
 
 import { CUtil } from "../../basic/CUtil.js"
 import { IProvider } from "../../util/CRole.js"
@@ -78,9 +80,28 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 	mSave=true;
 	//public m_updateRS : boolean=true;
 
+	//캔버스에 슬립 바운드가 있을 때만 쓰인다. 바운드 밖이면 주기마다 한 번만 업데이트된다(CCanvas.SleepSkip).
+	//잠든 동안은 컴포넌트도 멈추므로 움직이는 서브젝트에는 켜지 않는다.
+	mSleep : CSleep=null;
+	//CCanvas.SleepChk가 프레임마다 정한다. 캔버스 루프는 이것만 보고 업데이트를 건너뛴다.
+	mSleepSkip=false;
+
 	SetSave(_enable : boolean)
 	{
 		this.mSave=_enable;
+	}
+	//_cycle: 업데이트 주기(초, 밀리초 아님). 0 이하면 매 프레임
+	SetSleep(_cycle : number)
+	{
+		this.mSleepSkip=false;
+		if(_cycle<=0)
+		{
+			this.mSleep=null;
+			return;
+		}
+		this.mSleep=new CSleep(_cycle);
+		//같은 프레임에 켠 서브젝트가 한 프레임에 몰려 깨지 않게 시작 누적값을 흩는다
+		this.mSleep.Reset(Math.random()*_cycle);
 	}
 	constructor(_comArr =new Array<CComponent>())
 	{
@@ -137,8 +158,10 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 			
 			for(let pt of pVec as Array<CPaint>)
 			{
-				pt.ClearCRPAuto();
-				
+				pt.ClearBatch(false);
+
+				//mPTArr는 캔버스가 처음 GetCPaintVec()을 부를 때 채워진다. 생성된 프레임에 바로 Destroy하면 아직 null이다
+				if(this.mPTArr==null)	continue;
 				for(let i=0;i<this.mPTArr.length;++i)
 				{
 					if(this.mPTArr[i]==pt)
@@ -149,7 +172,16 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 				}
 			}
 			this.mPTArr = null;
-			
+
+			//풀 회수는 콜라이더 Destroy를 안 부르므로 옥트리 등록을 여기서 끊는다.
+			//남으면 다음 스텝에 죽은 오브젝트와 충돌하고, 재사용 시 직전 생의 충돌 상대를 넘겨받아 옛 자리에서 Trigger가 난다
+			let cVec = this.FindComps(CCollider, true);
+			for(let cl of cVec as Array<CCollider>)
+			{
+				let gi=cl.GetGI();
+				if(gi!=null && gi.mOctree!=null)	gi.mOctree.Remove(cl);
+			}
+
 			return;
 		}
 		//CConsol.Log("RecycleA : "+this.Key());
@@ -215,7 +247,7 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 		{
 			for(let pt of this.mPTArr as Array<CPaint>)
 			{
-				pt.ClearCRPAuto();
+				pt.ClearBatch(false);
 			}
 			this.mPTArr.length=0;
 			this.mPTArr = null;
@@ -225,7 +257,7 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 			let pVec=this.FindComps(CPaint,true);
 			for(let pt of pVec as Array<CPaint>)
 			{
-				pt.ClearCRPAuto();
+				pt.ClearBatch(false);
 			}
 		}
 		
@@ -330,7 +362,7 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 		if(_member=="mFrame" || _member=="mKeyChange" || _member=="mInMsg" || _member=="mOutMsg" || _member=="mBroMsg" || 
 			_member=="mPushArr" || _member=="mPushLock" || _member=="mUpdateComp" || _member=="mComEnableArr" || 
 			_member=="mDestroy" || _member=="mPTArr" || 
-			_member=="mCLArr" || _member=="mUpdateMat")
+			_member=="mCLArr" || _member=="mUpdateMat" || _member=="mSleep" || _member=="mSleepSkip")
 			return false;
 		if(_type==CObject.eShould.Proxy)
 		{
@@ -458,7 +490,7 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 		{
 			for(let pt of this.mPTArr as Array<CPaint>)
 			{
-				pt.ClearCRPAuto();
+				pt.ClearBatch(false);
 			}
 		}
 		if(this.mPTArr!=null)
@@ -566,26 +598,32 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 		
 	}
 	
-	GetCPaintVec(_vec=new Array<CComponent>)
+	GetCPaintVec(_vec=new Array<CComponent>,_collect=true)
 	{
-		
+
 		if(this.mPTArr==null || this.mPTArr.length == 0)
 		{
 			if(_vec!=null)
 				this.mPTArr=_vec;
 			if(this.mPTArr==null)	this.mPTArr=new Array();
 
-			for (let each0 of this.mComArr)
+			//꺼진 서브젝트(와 그 아래)는 수집하지 않는다. 그래도 배열 참조는 공유해 둬야
+			//다시 켤 때 SetEnable이 이 배열을 비워 루트가 재수집한다
+			let collect=_collect && this.mEnable;
+			if(collect)
 			{
-				if(each0.IsDestroy())
-					continue;
-				
-				if (each0.GetSysc() == CComponent.eSysn.Paint)//&&  (each0 as CPaint).GetCamera()!=null)
-					this.mPTArr.push(each0);
+				for (let each0 of this.mComArr)
+				{
+					if(each0.IsDestroy())
+						continue;
+
+					if (each0.GetSysc() == CComponent.eSysn.Paint)//&&  (each0 as CPaint).GetCamera()!=null)
+						this.mPTArr.push(each0);
+				}
 			}
 			for (let each0 of this.mChild)
 			{
-				each0.GetCPaintVec(this.mPTArr);
+				each0.GetCPaintVec(this.mPTArr,collect);
 			}
 		}
 		

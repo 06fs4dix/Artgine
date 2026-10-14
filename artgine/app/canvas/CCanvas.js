@@ -1,4 +1,5 @@
 import { CBlackBoardRef, CObject } from "../../basic/CObject.js";
+import { CUpdate } from "../../basic/Basic.js";
 import { CArray } from "../../basic/CArray.js";
 import { CSubject } from "../subject/CSubject.js";
 import { RenderQueTool } from "../../tool/RenderQueTool.js";
@@ -54,9 +55,12 @@ export class CCanvas extends CObject {
     mPause = false;
     mPushSub = new CArray();
     mSave = true;
+    mAutoRPMap = new Map();
+    mAutoRPUpdate = CUpdate.eType.Not;
     mFrame = null;
     mBrush;
     mPlugin = new Array();
+    mSleepBound = new Array();
     constructor(_fw, _brash, _GI) {
         super();
         this.mFrame = _fw;
@@ -76,9 +80,44 @@ export class CCanvas extends CObject {
     IsShould(_member, _type) {
         if (_member == "mBrush" || _member == "mRemoveList" || _member == "mFrame" || _member == "mPushSub" ||
             _member == "mBroMsg" || _member == "mBroLen" || _member == "mPacArr" ||
-            _member == "mKeyChangeList" || _member == "mGI" || _member == "mChangeRPMgr")
+            _member == "mKeyChangeList" || _member == "mGI" || _member == "mChangeRPMgr" || _member == "mSleepBound")
             return false;
         return super.IsShould(_member, _type);
+    }
+    PushSleepBound(_bound) {
+        this.mSleepBound.push(_bound);
+    }
+    ClearSleepBound() {
+        this.mSleepBound.length = 0;
+    }
+    SleepChk(_update) {
+        if (this.mSleepBound.length == 0)
+            return false;
+        if (this.mGI != null && this.mGI.mOctree.mStaticBuild)
+            return false;
+        const delay = _update.DeltaTime();
+        for (const sub of this.mSubMap.values()) {
+            const sleep = sub.mSleep;
+            if (sleep == null)
+                continue;
+            const pos = sub.GetPos();
+            let inside = false;
+            for (const b of this.mSleepBound) {
+                if (pos.x >= b.mMin.x && pos.x <= b.mMax.x && pos.y >= b.mMin.y && pos.y <= b.mMax.y && pos.z >= b.mMin.z && pos.z <= b.mMax.z) {
+                    inside = true;
+                    break;
+                }
+            }
+            if (inside) {
+                sub.mSleepSkip = false;
+                continue;
+            }
+            sleep.Add(delay);
+            sub.mSleepSkip = sleep.Is() == false;
+            if (sub.mSleepSkip)
+                sub.mBroMsg.Clear();
+        }
+        return true;
     }
     SetPause(_pause) {
         this.mPause = _pause;
@@ -121,6 +160,19 @@ export class CCanvas extends CObject {
     RenderOrder() { return new CArray(); }
     PTUpdate(_ptList) {
     }
+    RemoveAutoRP(_key) {
+        this.mAutoRPMap.delete(_key);
+        this.mAutoRPUpdate = CUpdate.eType.Updated;
+    }
+    PushAutoRP(_key, _val) {
+        this.mAutoRPMap.set(_key, _val);
+        this.mAutoRPUpdate = CUpdate.eType.Updated;
+        return _val;
+    }
+    FindAutoRP(_key) {
+        return this.mAutoRPMap.get(_key);
+    }
+    AutoRP() { return this.mAutoRPMap; }
     EditHTMLInit(_div) {
         super.EditHTMLInit(_div);
         var div = _div;

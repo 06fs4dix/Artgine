@@ -46,7 +46,7 @@ export class CPaint extends CComponent {
         Light: "light",
         ShadowReadOnly: "shadowReadOnly",
         Shadow: "shadow",
-        Wind: "Wind",
+        Wind: "wind",
         Parallax: "parallax",
     };
     static eCullMask = {
@@ -64,7 +64,8 @@ export class CPaint extends CComponent {
         Mask11: 0b000000000001000,
         Mask12: 0b000000000000100,
         Mask13: 0b000000000000010,
-        Mask14: 0b000000000000001
+        Mask14: 0b000000000000001,
+        Nothing: 0b000000000000000
     };
     mBW = new CBoundWorldPaint();
     mFMat;
@@ -75,7 +76,6 @@ export class CPaint extends CComponent {
     mVFX;
     mTexCodi;
     mAutoRPUpdate = true;
-    mCamCullUpdate = true;
     mBound = new CBound();
     mRenderPass = new Array();
     mRenPT = new Array();
@@ -120,7 +120,7 @@ export class CPaint extends CComponent {
     }
     SetEnable(_val) {
         if (this.mEnable != _val)
-            this.ClearCRPAuto();
+            this.ClearBatch(false);
         super.SetEnable(_val);
     }
     GetColorModel() { return this.mColorModel; }
@@ -153,6 +153,8 @@ export class CPaint extends CComponent {
         }
     }
     Destroy() {
+        if (this.IsDestroy())
+            return;
         if (this.GetRecycleType() != null) {
             this.Recycle();
             this.Reset();
@@ -163,13 +165,13 @@ export class CPaint extends CComponent {
         this.mFMat.ReleaseWASM();
         this.mLMat.ReleaseWASM();
         this.mBound.DeleteWASM();
-        this.ClearBatch();
+        this.ClearBatch(false);
     }
     Reset() {
         super.Reset();
         this.mFMat.Unit();
         this.mLMat.Unit();
-        this.ClearBatch();
+        this.ClearBatch(false);
         this.mTextureKey.length = 0;
         this.mBound.Reset();
         this.mBound.SetType(CBound.eType.Box);
@@ -190,12 +192,16 @@ export class CPaint extends CComponent {
             _member == "mRenPT" || _member == "mTagKey" ||
             _member == "mDefaultAttr" || _member == "mBatchMap" || _member == "mBatchLastArr" || _member == "mBatchLastVF" ||
             _member == "mBoundFMat" || _member == "mBoundFMatC" || _member == "mBoundFMatR" || _member == "mBound" ||
-            _member == "mAutoRPUpdate" || _member == "mCamCullUpdate" || _member == "mBW" ||
+            _member == "mAutoRPUpdate" || _member == "mBW" ||
             _member == "mColorModel" || _member == "mAlphaModel" || _member == "mVFX")
             return false;
         return super.IsShould(_member, _type);
     }
-    ClearBatch() {
+    ClearBatch(_delegate = true) {
+        if (_delegate) {
+            this.mAutoRPUpdate = true;
+            return;
+        }
         for (let ren of this.mRenPT) {
             if (ren != null) {
                 ren.mDistance = 0x7FFFFF00;
@@ -206,7 +212,13 @@ export class CPaint extends CComponent {
         for (let key of this.mBatchMap.keys()) {
             this.mBatchMap.set(key, null);
         }
-        this.mCamCullUpdate = true;
+        for (var i = 0; i < this.mRenderPass.length; ++i) {
+            if (this.mRenderPass[i] instanceof CRPAuto) {
+                this.mRenderPass.splice(i, 1);
+                i--;
+            }
+        }
+        this.mAutoRPUpdate = true;
     }
     IsUpdateFMat() { return this.mUpdateFMat; }
     UpdateLMat() { this.mUpdateLMat = true; }
@@ -216,7 +228,7 @@ export class CPaint extends CComponent {
         button.className = "btn btn-primary btn-sm";
         button.innerText = "Refresh";
         button.onclick = () => {
-            this.ClearCRPAuto();
+            this.ClearBatch(false);
         };
         _div.append(button);
     }
@@ -228,7 +240,7 @@ export class CPaint extends CComponent {
                 this.mShaderAttrMap.set("VFX", new CShaderAttr("VFX", new CVFX([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])));
                 this.mVFX = this.mShaderAttrMap.get("VFX").mData;
                 this.PushTag("vfx");
-                this.ClearBatch();
+                this.ClearBatch(false);
                 this.EditRefresh();
             };
             _body.append(btn);
@@ -321,7 +333,7 @@ export class CPaint extends CComponent {
     }
     SetOwner(_obj) {
         super.SetOwner(_obj);
-        this.ClearCRPAuto();
+        this.ClearBatch();
         this.SetTexture(this.mTextureKey);
     }
     SetMaterial(roughness = -1, metalric = -1, emissive = 1, ambientOcclusion = 1) {
@@ -367,6 +379,8 @@ export class CPaint extends CComponent {
     Refresh() {
         if (this.mShaderAttrMap.get("texCodi") == null)
             this.mShaderAttrMap.set("texCodi", new CShaderAttr("texCodi", this.mTexCodi));
+        if (this.mShaderAttrMap.get("cullMask") == null)
+            this.mShaderAttrMap.set("cullMask", new CShaderAttr("cullMask", new CVec4(CPaint.eCullMask.Default)));
         this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
         this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
         this.mCullMask = this.mShaderAttrMap.get("cullMask").mData;
@@ -409,26 +423,26 @@ export class CPaint extends CComponent {
         super.EditChange(_pointer, _child);
         if (_pointer.IsRef(this.mTextureKey)) {
             this.SetTexture(this.mTextureKey);
-            this.ClearBatch();
+            this.ClearBatch(false);
         }
         else if (_pointer.IsRef(this.mTag)) {
             this.mTagKey = null;
-            this.ClearCRPAuto();
+            this.ClearBatch(false);
         }
         else if (_pointer.member == "mColorModel") {
             this.PushTag("colorModel");
-            this.ClearCRPAuto();
+            this.ClearBatch(false);
         }
         else if (_pointer.member == "mAlphaModel") {
             this.PushTag("alphaModel");
-            this.ClearCRPAuto();
+            this.ClearBatch(false);
         }
         else if (_pointer.member == "mCullMask") {
-            this.ClearCRPAuto();
+            this.ClearBatch(false);
         }
         else if (_child) {
             if (_pointer.IsRef(this.mRenderPass)) {
-                this.ClearCRPAuto();
+                this.ClearBatch(false);
                 if (_pointer.target instanceof CRenderPass)
                     _pointer.target.Reset();
                 else
@@ -436,11 +450,11 @@ export class CPaint extends CComponent {
             }
             else if (_pointer.IsRef(this.mAlphaModel)) {
                 this.PushTag("alphaModel");
-                this.ClearCRPAuto();
+                this.ClearBatch(false);
             }
             else if (_pointer.IsRef(this.mColorModel)) {
                 this.PushTag("colorModel");
-                this.ClearCRPAuto();
+                this.ClearBatch(false);
             }
             else if (_pointer.IsRef(this.mVFX)) {
                 this.PushTag("vfx");
@@ -481,18 +495,6 @@ export class CPaint extends CComponent {
             this.mRenPT.push(null);
         }
     }
-    ClearCRPAuto() {
-        this.ClearBatch();
-        for (var i = 0; i < this.mRenderPass.length; ++i) {
-            if (this.mRenderPass[i] instanceof CRPAuto) {
-                this.mRenderPass.splice(i, 1);
-                i--;
-            }
-        }
-        this.mAutoRPUpdate = true;
-    }
-    EmptyRPChk() {
-    }
     ClassEqual(_type) { return _type == CPaint; }
     GetTag() { return this.mTag; }
     PushTag(_tag) {
@@ -500,13 +502,13 @@ export class CPaint extends CComponent {
             return false;
         this.mTag.add(_tag);
         this.mTagKey = null;
-        this.ClearCRPAuto();
+        this.ClearBatch();
         return true;
     }
     RemoveTag(_tag) {
         this.mTag.delete(_tag);
         this.mTagKey = null;
-        this.ClearCRPAuto();
+        this.ClearBatch();
     }
     GetDrawMesh(_meshKey, _shader, _ci, _modify = false) {
         var drawMesh = this.mOwner.GetFrame().Res().Find(_meshKey + _shader.ObjHash());
@@ -572,7 +574,7 @@ export class CPaint extends CComponent {
         if (typeof _key == "string")
             return this.mShaderAttrMap.get(_key);
         for (let sa of this.mShaderAttrMap.values()) {
-            if (sa.mEach == _key)
+            if (sa.mType == -2 && sa.mEach == _key)
                 return sa;
         }
         return null;
@@ -591,7 +593,7 @@ export class CPaint extends CComponent {
         this.mAlphaModel.mF32A[0] = _alpha.mF32A[0];
         this.mAlphaModel.mF32A[1] = _alpha.mF32A[1];
         if (as != this.IsAlphaState())
-            this.ClearCRPAuto();
+            this.ClearBatch();
         if (this.mTag.has("alphaModel") == false)
             this.ClearBatch();
         this.PushTag("alphaModel");
@@ -642,7 +644,7 @@ export class CPaint extends CComponent {
         }
     }
     Start() {
-        this.ClearCRPAuto();
+        this.ClearBatch();
     }
     StartChk() {
         this.InitChk();
@@ -758,10 +760,11 @@ export class CPaint extends CComponent {
                     texKey == "" || texKey == null)
                     continue;
                 let tex = this.mOwner.GetFrame().Res().Find(texKey);
-                if (tex != null && tex instanceof CTexture && i == 0) {
+                if (tex != null && tex instanceof CTexture) {
                     if (tex.GetAlpha())
                         this.mAlphaTex = true;
-                    continue;
+                    if (i == 0)
+                        continue;
                 }
                 if (tex == null)
                     this.mInit = false;
@@ -823,6 +826,10 @@ export class CPaint extends CComponent {
         if (this.mTextureKey.length == 0 || this.GetOwner().GetFrame() == null)
             return "";
         let tex = this.GetOwner().GetFrame().Res().Find(this.mTextureKey[0]);
+        if (tex == null || tex.GetBuf()[0] == null) {
+            CAlert.W(this.mTextureKey[0] + " : CPU 픽셀이 없어 캡처할 수 없다");
+            return "";
+        }
         let codi = this.GetLeftTopRightBottom(this.GetOwner().GetFrame());
         CH5Canvas.Init(codi.z - codi.x, codi.w - codi.y);
         let cmd = CH5Canvas.DrawBuf(tex.GetBuf()[0], 0, 0, tex.GetWidth(), tex.GetHeight(), codi);

@@ -600,7 +600,7 @@ export class CFileServer extends CAuthServer
         }
 
         const question = queries.join(', ');
-        let rows: { absolute_path?: string }[];
+        let rows: { path?: string }[];
         let reason = '';
         try {
             const { stdout } = await execFileAsync('node', ['ai/tool/music.js', 'exe', dbPath, question, 'claude', 'claude-sonnet-4-6'], { cwd: process.cwd() });
@@ -623,7 +623,7 @@ export class CFileServer extends CAuthServer
         const urls: string[] = [];
         const seen = new Set<string>();
         for (const row of rows) {
-            const abs = row.absolute_path;
+            const abs = row.path;
             if (!abs || seen.has(abs)) continue;
             seen.add(abs);
             const normAbs = fix(resolveAbs(abs));
@@ -639,10 +639,6 @@ export class CFileServer extends CAuthServer
     // 뮤직 모달 Lyrics 버튼. music.js lyrics-en은 원문만 찾고, 영어 번역은 이 프로세스(CAI 이미 로드됨)에서 한다.
     // lyrics-en 자식에서 CAI를 import하면 CWASM TDZ("Cannot access 'CWASM' before initialization")가 난다.
     async onMusicLyricsEn(_json: CJSON, _req: Request, _res: Response): Promise<string> {
-        if (!this.IsAuth(_json, _req)) {
-            _res.status(403);
-            return JSON.stringify({ ok: false, msg: "Unauthorized" });
-        }
         const url = String(_json.GetStr("url") ?? '').trim();
         if (!url) {
             return JSON.stringify({ ok: false, msg: "No url" });

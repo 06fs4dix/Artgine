@@ -11,7 +11,6 @@ class Description
     Max=new Array<number|Array<number>>();
     Step=new Array<number>();
     Value=new Array<number>();
-    Use=new Array<boolean>();  // 슬롯별 사용 가능 여부 [slot0, slot1, slot2] / 비어있으면 모든 슬롯 허용
 }
 
 // 기존 CDescription(_xDesc/_xMin/_xDefault...) 형태를
@@ -21,8 +20,7 @@ function MakeDesc(
     _min: Array<number|Array<string>> = [],
     _max: Array<number|Array<number>> = [],
     _step: Array<number> = [],
-    _value: Array<number> = [],
-    _use: Array<boolean> = []   // 비어있으면 모든 슬롯 허용
+    _value: Array<number> = []
 ): Description {
     const d = new Description();
     d.Text = _text;
@@ -30,7 +28,6 @@ function MakeDesc(
     d.Max = _max;
     d.Step = _step;
     d.Value = _value;
-    d.Use = _use;
     return d;
 }
 
@@ -57,6 +54,11 @@ export class CVFX extends CMat
 {
     static lDesc=new Array<Description>();
     static eVFX=SDF.eVFX;
+    //주변 픽셀을 읽는 효과. 셰이더(ColorFun.VFXIsTap)가 3슬롯 합쳐 1개만 처리한다
+    static IsTap(_type : number)
+    {
+        return _type == SDF.eVFX.Aberrate || _type == SDF.eVFX.Outline || _type == SDF.eVFX.Blur;
+    }
     constructor(_F32A : Float32Array|Array<number>|number=null)
     {
         super([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
@@ -137,23 +139,12 @@ export class CVFX extends CMat
             for(let i = 0; i < SLOT_SIZE; i++) this.mF32A[base + i] = 0;
         };
 
-        /*
-        const isUsedInOtherSlot = (val:number, selfSlot:number) => {
-            if(val === 0) return false;
-            for(const s of USED_SLOTS) {
-                if(s === selfSlot) continue;
-                if(getEffectVal(s) === val) return true;
-            }
-            return false;
-        };
-        */
-
-        // Use 배열이 비어있으면 모든 슬롯 허용, 아니면 해당 슬롯 인덱스 확인
         const isAllowedInSlot = (val:number, slot:number) => {
-            if(val === 0) return true;
-            const use = CVFX.lDesc[val]?.Use;
-            if(!use || use.length === 0) return true;
-            return use[slot] === true;
+            if(!CVFX.IsTap(val)) return true;
+            for(const s of USED_SLOTS) {
+                if(s !== slot && CVFX.IsTap(getEffectVal(s))) return false;
+            }
+            return true;
         };
 
         // ── UI 빌더 ───────────────────────────────────────────────
@@ -280,7 +271,7 @@ export class CVFX extends CMat
                 const opt = document.createElement("option");
                 opt.value = String(it.val);
                 opt.textContent = it.name;
-                if(/*isUsedInOtherSlot(it.val, slot) ||*/ !isAllowedInSlot(it.val, slot)) opt.disabled = true;
+                if(!isAllowedInSlot(it.val, slot)) opt.disabled = true;
                 select.appendChild(opt);
             }
 
@@ -353,71 +344,61 @@ CVFX.lDesc[SDF.eVFX.Distort] = MakeDesc(
     [0, 0], [0.5, 0.5],
     [0.02, 0.02],
     [0.05, 0.05]
-    // Use 미지정 → 모든 슬롯 허용
 );
 CVFX.lDesc[SDF.eVFX.Aberrate] = MakeDesc(
     ["Base_Strength", "Added_Strength"],
     [0, 0], [0.1, 0.1],
     [0.01, 0.01],
-    [0.1, 0.05],
-    [true, false, false]
+    [0.1, 0.05]
 );
 CVFX.lDesc[SDF.eVFX.Outline] = MakeDesc(
     ["R", "G", "B"],
     [0, 0, 0], [1, 1, 1],
     [0.1, 0.1, 0.1],
-    [1, 0, 0],
-    [true, false, false]  // 슬롯 0만 허용 (이웃 픽셀 접근 필요)
+    [1, 0, 0]
 );
 CVFX.lDesc[SDF.eVFX.Pixel] = MakeDesc(
     ["Size_X", "Size_Y"],
     [0, 0], [32, 32],
     [1, 1],
     [2, 2]
-    // Use 미지정 → 모든 슬롯 허용
 );
 CVFX.lDesc[SDF.eVFX.Noise] = MakeDesc(
     ["Type", "Speed", "Mix Ratio", "Repeat"],
     [["Perlin", "Perlin Normal", "PerlinFBM_Cloud", "Blue", "Gaussian"], 0, 0, 0.2], 
     [[SDF.eNoise.Perlin, SDF.eNoise.PerlinNormal, SDF.eNoise.PerlinFBM3, SDF.eNoise.Blue, SDF.eNoise.Gaussian], 16, 1, 32],
     [1, 0.1, 0.05, 0.1],
-    [1, 8, 0.5, 1],
-    [true, false, false]
+    [1, 8, 0.5, 1]
 );
 CVFX.lDesc[SDF.eVFX.Scanline] = MakeDesc(
     ["NumOfLines", "Speed"],
     [0, 0], [100, 50],
     [5, 1],
     [25, 5]
-    // Use 미지정 → 모든 슬롯 허용
 );
 CVFX.lDesc[SDF.eVFX.LookUpTable] = MakeDesc(
     ["Index", "Dither"],
     [SDF.eUni.V4LookUpTable0, 0], [SDF.eUni.V4LookUpTable5, 1],
     [1, 0.05],
     [SDF.eUni.V4LookUpTable0, 0]
-    // Use 미지정 → 모든 슬롯 허용
 );
 CVFX.lDesc[SDF.eVFX.Blur] = MakeDesc(
     ["Type", "Count"],
     [1, 1], [4, 4],
     [1, 1],
-    [2, 2],
-    [true, false, false]
+    [2, 2]
 );
 CVFX.lDesc[SDF.eVFX.Decal] = MakeDesc(
     ["R", "G", "B", "A"],
     [0, 0, 0, 0], [1, 1, 1, 1],
     [0.1, 0.1, 0.1, 0.1],
     [1, 1, 1, 1],
-    // Use 미지정 → 모든 슬롯 허용
 );
 CVFX.lDesc[SDF.eVFX.DecalTexture] = MakeDesc(
     ["TexOff", "Blend"],
     [0, 0], [9, 1],
     [1, 0.1],
     [0, 1],
-    // Use 미지정 → 모든 슬롯 허용
 );
 
 // enum은 (숫자->문자, 문자->숫자) 역매핑이 섞여서 들어오니 숫자 항목만 처리

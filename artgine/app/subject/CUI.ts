@@ -494,8 +494,22 @@ export class CUI extends CSubject
 				ev=CEvent.eType.Pick;
 			
 			let push=true;
-			let aDepth=this.GetPt().GetRenderPass()[0].mPriority+this.GetPt().GetFMat().z;
-			for(let i=0;i<gUIPDepth.length;++i)
+			// 렌더패스가 아직 배정되기 전일 수 있다. 이 엔진에서 mRenderPass가 빈 배열인 것은 오류가 아니라
+			// "자동 배정(CRPAuto) 대상"이라는 신호다 — CBrush.ts의 자동 패스 규칙들이 실제로
+			// CCondition("mRenderPass.length","==",0)을 매칭 조건으로 쓴다. 그래서 생성 직후 1~2프레임은
+			// 정상적으로 비어 있고, 그 사이에 픽 이벤트가 들어오면 예전 코드는 [0]을 그대로 읽어
+			// "Cannot read properties of undefined (reading 'mPriority')"로 프레임 업데이트가 통째로 죽었다.
+			// 비교할 우선순위 자체가 없는 상태이므로 이번 프레임은 픽 경쟁에서 빠지고(등록도 하지 않는다),
+			// 배정이 끝나는 다음 프레임부터 평소대로 참여한다.
+			const aPass=this.GetPt().GetRenderPass();
+			if(aPass.length==0)
+			{
+				push=false;
+				ev=CEvent.eType.Null;
+				this.mPick=null;
+			}
+			let aDepth=aPass.length==0?0:aPass[0].mPriority+this.GetPt().GetFMat().z;
+			for(let i=0;push && i<gUIPDepth.length;++i)
 			{
 				if(gUIPDepth[i]!=this && gUIPDepth[i].mLastPickMouse.mouse.key==this.mPick.mouse.key)
 				{
@@ -511,7 +525,11 @@ export class CUI extends CSubject
 					continue;
 				}
 
-				let bDepth=gUIPDepth[i].GetPt().GetRenderPass()[0].mPriority+gUIPDepth[i].GetPt().GetFMat().z;
+				// 위(aPass)와 같은 이유 — 아직 자동 배정 전이라 패스가 빈 항목은 깊이 비교에서 건너뛴다.
+				// 여기서 [0]을 그냥 읽으면 목록에 그런 항목이 하나만 있어도 프레임 전체가 죽는다.
+				const bPass=gUIPDepth[i].GetPt().GetRenderPass();
+				if(bPass.length==0) continue;
+				let bDepth=bPass[0].mPriority+gUIPDepth[i].GetPt().GetFMat().z;
 				//마우스가 같은걸 가리키고 있다면
 				if(gUIPDepth[i].mLastPickMouse.mouse.key==this.mPick.mouse.key)
 				{

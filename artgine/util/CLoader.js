@@ -14,6 +14,7 @@ import CParserGLTF from "./parser/CParserGLTF.js";
 import { CParserIMG } from "./parser/CParserIMG.js";
 import { CChecker } from "./CChecker.js";
 import { CFile } from "../system/CFile.js";
+import { CConsol } from "../basic/CConsol.js";
 import { CParserOBJ } from "./parser/CParserOBJ.js";
 import CParserSpine from "./parser/CParserSpine.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
@@ -27,6 +28,7 @@ export class CLoaderOption extends CObject {
     mFilter = CTexture.eFilter.Linear;
     mWrap = CTexture.eWrap.Clamp;
     mMipMap = CTexture.eMipmap.GL;
+    mAniso = 0;
     mColorTex = false;
     mAlphaCut = 0x09;
     mAlphaBleed = true;
@@ -35,6 +37,7 @@ export class CLoaderOption extends CObject {
     mTexBufRaw = false;
     mInch = false;
     mComputeNormal = true;
+    mMergeStatic = true;
     mIsBumpHeightmap = false;
     EditForm(_pointer, _div, _input) {
         if (_pointer.member == "mMipMap") {
@@ -76,6 +79,8 @@ export class CLoader {
     constructor(_renderer = null, _res = null) {
         this.mRender = _renderer;
         this.mRes = _res;
+        if (_renderer != null)
+            _renderer.mLoadSet = this.mLoadSet;
     }
     IsLoad(_key) {
         if (this.mRes.Find(_key) != null)
@@ -219,6 +224,8 @@ export class CLoader {
             });
         }
         this.mLoadSet.add(_file);
+        if (this.IsChannelKey(_file))
+            return await this.ChannelTexLoad(_file, _option);
         var pos = _file.lastIndexOf(".") + 1;
         var ext = _file.substr(pos, _file.length - pos).toLowerCase();
         if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "svg") {
@@ -256,6 +263,7 @@ export class CLoader {
         tex.SetFilter(_option.mFilter);
         tex.SetWrap(_option.mWrap);
         tex.SetMipMap(_option.mMipMap);
+        tex.SetAniso(_option.mAniso);
         tex.SetSize(1, 1);
         tex.CreateBuf();
         if (this.mRender != null && _option.mGPU)
@@ -276,8 +284,13 @@ export class CLoader {
             par.GetResult().SetFilter(_option.mFilter);
             par.GetResult().SetWrap(_option.mWrap);
             par.GetResult().SetMipMap(_option.mMipMap);
+            par.GetResult().SetAniso(_option.mAniso);
             if (this.mRender != null) {
-                this.mRender.BuildTexture(par.GetResult());
+                const gpuTex = par.GetResult();
+                Promise.resolve(this.mRender.BuildTexture(gpuTex)).then(() => {
+                    gpuTex.mKeepBuf = false;
+                    gpuTex.ReleaseBuf();
+                });
                 this.mRender.ReleaseTexture(tex);
             }
         }
@@ -313,11 +326,11 @@ export class CLoader {
         var ext = _file.substr(pos, _file.length - pos).toLowerCase();
         var par = null;
         if (ext == "fbx")
-            par = new CParserFBX(_option.mColorTex, _option.mComputeNormal);
+            par = new CParserFBX(_option.mColorTex, _option.mComputeNormal, _option.mMergeStatic);
         else if (ext == "obj")
-            par = new CParserOBJ(_option.mComputeNormal);
+            par = new CParserOBJ(_option.mComputeNormal, _option.mMergeStatic);
         else
-            par = new CParserGLTF(_option.mInch, _option.mColorTex, _option.mTexBufRaw, _option.mComputeNormal);
+            par = new CParserGLTF(_option.mInch, _option.mColorTex, _option.mTexBufRaw, _option.mComputeNormal, _option.mMergeStatic);
         par.SetBuffer(new Uint8Array(_buffer), _buffer.byteLength);
         await par.Load(_file);
         var mesh = par.GetResult();
@@ -332,7 +345,12 @@ export class CLoader {
             option.mWrap = CTexture.eWrap.Repeat;
         let path = _file.substring(0, _file.lastIndexOf("/")) + "/";
         let texMap = new Map();
+        let channelArr = new Array();
         for (let i = 0; i < mesh.texture.length; i++) {
+            if (typeof mesh.texture[i] == "string" && this.IsChannelKey(mesh.texture[i])) {
+                channelArr.push(i);
+                continue;
+            }
             if (mesh.texture[i] instanceof Uint8Array) {
                 let buf = mesh.texture[i];
                 let newName = path + CUniqueID.GetHash() + ".png";
@@ -379,6 +397,74 @@ export class CLoader {
         for (let [key, value] of texMap) {
             await this.LoadSwitch(key, value, option);
         }
+        for (let i of channelArr) {
+            mesh.texture[i] = mesh.texture[i].split("&").map((p) => /^#\d+$/.test(p) ? mesh.texture[Number(p.substring(1))] : p).join("&");
+            await this.Exe(mesh.texture[i], option);
+        }
+    }
+    IsChannelKey(_key) {
+        return _key.indexOf("&") != -1 && _key.indexOf("://") == -1 && _key.startsWith("base64:") == false;
+    }
+    async ChannelTexLoad(_key, _option) {
+        if (_option == null)
+            _option = new CLoaderOption();
+        const partArr = _key.split("&");
+        if (partArr.some((p) => p.startsWith("#"))) {
+            this.mLoadSet.delete(_key);
+            return null;
+        }
+        const srcArr = new Array(null, null, null, null);
+        const constArr = [0, 0, 0, 255];
+        let w = 1, h = 1;
+        for (let c = 0; c < 4 && c < partArr.length; ++c) {
+            const part = partArr[c];
+            if (/^\d+$/.test(part)) {
+                constArr[c] = Math.min(255, Number(part));
+                continue;
+            }
+            const src = await this.Exe(part, _option);
+            let buf = src instanceof CTexture ? src.GetBuf()[0] : null;
+            if (buf == null && src instanceof CTexture) {
+                const par = part.toLowerCase().endsWith(".tga") ? new CParserTGA() : new CParserIMG();
+                await par.Load(part);
+                const raw = par.GetResult();
+                buf = raw != null ? raw.GetBuf()[0] : null;
+            }
+            if (buf instanceof Uint8Array || buf instanceof Uint8ClampedArray) {
+                srcArr[c] = { buf: buf, w: src.GetWidth(), h: src.GetHeight() };
+                w = Math.max(w, src.GetWidth());
+                h = Math.max(h, src.GetHeight());
+            }
+            else
+                CConsol.Log("ChannelTexLoad fail : " + part);
+        }
+        const tex = new CTexture();
+        tex.SetSize(w, h);
+        tex.CreateBuf();
+        const dst = tex.GetBuf()[0];
+        for (let y = 0; y < h; ++y) {
+            for (let x = 0; x < w; ++x) {
+                const di = (y * w + x) * 4;
+                for (let c = 0; c < 4; ++c) {
+                    const src = srcArr[c];
+                    if (src == null)
+                        dst[di + c] = constArr[c];
+                    else
+                        dst[di + c] = src.buf[(Math.floor(y * src.h / h) * src.w + Math.floor(x * src.w / w)) * 4 + c];
+                }
+            }
+        }
+        tex.SetFilter(_option.mFilter);
+        tex.SetWrap(_option.mWrap);
+        tex.SetMipMap(_option.mMipMap);
+        tex.SetAniso(_option.mAniso);
+        tex.SetKey(_key);
+        if (this.mRender != null && _option.mGPU)
+            this.mRender.BuildTexture(tex);
+        if (this.mRes != null)
+            this.mRes.Push(_key, tex);
+        this.mLoadSet.delete(_key);
+        return tex;
     }
     VideoLoad(_file, _buffer) {
         this.mLoadSet.delete(_file);

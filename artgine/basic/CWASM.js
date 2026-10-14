@@ -81,10 +81,11 @@ function rebaseAllViews() {
 function checkMemoryGrow() {
     if (gMemory == null)
         return;
+    if (gLastBuffer != null && gLastBuffer.byteLength !== 0)
+        return;
     const buf = gMemory.buffer;
     if (buf === gLastBuffer)
         return;
-    const oldLen = gLastBufferLen;
     gLastBuffer = buf;
     gLastBufferLen = buf.byteLength;
     rebaseAllViews();
@@ -161,6 +162,7 @@ const OP = {
     tm4dw0: 62, qg5ww8: 63, iz0zj4: 64, kk1sw1: 65, xc3uy8: 66,
     qf4lz3: 67, gm0ix0: 68, em2jn0: 69, hb2me5: 70, ad5we2: 71,
     fj0pe9: 72, dq1eg7: 73, na7ca1: 74, ra1wx3: 75, yr8ly0: 76, mo3kp6: 77,
+    ff2nw7: 78,
 };
 const NAME_TO_OP = {
     "iustfhfs": OP.zy6ub2, "b4twdh": OP.zy6ub2, "j76892": OP.zy6ub2, "di3d3ti3": OP.zy6ub2,
@@ -240,7 +242,10 @@ const NAME_TO_OP = {
     "tg45fy82": OP.ra1wx3,
     "p99jx9s": OP.yr8ly0,
     "ob5a0ms7": OP.mo3kp6,
+    "qv7hbz3": OP.ff2nw7, "m2xkto9": OP.ff2nw7, "ubd41fs": OP.ff2nw7, "hzo9ec5": OP.ff2nw7,
 };
+const _jsCallDefault = (obj, name, args) => undefined;
+let jsCallM6 = _jsCallDefault;
 function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11) {
     checkMemoryGrow();
     switch (opCodeCache[linkId]) {
@@ -258,10 +263,13 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
             const obj = p0, methodIndex = p1;
             return obj[getKeyName(methodIndex)]();
         }
-        case 4:
-        case 6: {
+        case 4: {
             const obj = p0, methodIndex = p1, a0 = p2;
             return obj[getKeyName(methodIndex)](a0);
+        }
+        case 6: {
+            const obj = p0, methodIndex = p1, a0 = p2;
+            return jsCallM6(obj, getKeyName(methodIndex), [a0]);
         }
         case 5: {
             const obj = p0, methodIndex = p1, a0 = p2;
@@ -287,19 +295,34 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
             });
             return reqId;
         }
-        case 8:
-        case 10:
-        case 14:
+        case 8: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
+            return obj[getKeyName(methodIndex)](a0, a1);
+        }
+        case 10: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
+            return obj[getKeyName(methodIndex)](a0, a1);
+        }
+        case 14: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
+            return obj[getKeyName(methodIndex)](a0, a1);
+        }
         case 16: {
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
             return obj[getKeyName(methodIndex)](a0, a1);
         }
-        case 9:
+        case 9: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
+            return obj[getKeyName(methodIndex)](a0, readAsString(a1));
+        }
         case 15: {
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
             return obj[getKeyName(methodIndex)](a0, readAsString(a1));
         }
-        case 11:
+        case 11: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
+            return obj[getKeyName(methodIndex)](readAsString(a0), a1);
+        }
         case 13: {
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
             return obj[getKeyName(methodIndex)](readAsString(a0), a1);
@@ -308,20 +331,36 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3;
             return obj[getKeyName(methodIndex)](readAsString(a0), readAsString(a1));
         }
-        case 17:
+        case 17: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4;
+            obj[getKeyName(methodIndex)](a0, a1, a2);
+            return null;
+        }
         case 27: {
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4;
             obj[getKeyName(methodIndex)](a0, a1, a2);
             return null;
         }
-        case 18:
+        case 18: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6;
+            obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4);
+            return null;
+        }
         case 25: {
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6;
             obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4);
             return null;
         }
-        case 19:
-        case 24:
+        case 19: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5;
+            obj[getKeyName(methodIndex)](a0, a1, a2, a3);
+            return null;
+        }
+        case 24: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5;
+            obj[getKeyName(methodIndex)](a0, a1, a2, a3);
+            return null;
+        }
         case 28: {
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5;
             obj[getKeyName(methodIndex)](a0, a1, a2, a3);
@@ -340,14 +379,27 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
             const v = p0;
             return (typeof HTMLCanvasElement !== "undefined" && v instanceof HTMLCanvasElement) ? 1 : 0;
         }
-        case 23:
-        case 29:
-        case 32:
+        case 23: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4;
+            return obj[getKeyName(methodIndex)](a0, a1, a2);
+        }
+        case 29: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4;
+            return obj[getKeyName(methodIndex)](a0, a1, a2);
+        }
+        case 32: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4;
+            return obj[getKeyName(methodIndex)](a0, a1, a2);
+        }
         case 33: {
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4;
             return obj[getKeyName(methodIndex)](a0, a1, a2);
         }
-        case 26:
+        case 26: {
+            const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6, a5 = p7;
+            obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4, a5);
+            return null;
+        }
         case 34: {
             const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6, a5 = p7;
             obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4, a5);
@@ -373,6 +425,15 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
         }
         case 38: {
             const v = p0;
+            if (typeof v === "number")
+                return v;
+            if (typeof v === "boolean")
+                return v ? 1 : 0;
+            return 0;
+        }
+        case 78: {
+            const obj = p0, keyIndex = p1;
+            const v = obj[getKeyName(keyIndex)];
             if (typeof v === "number")
                 return v;
             if (typeof v === "boolean")
@@ -440,6 +501,8 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
             const obj = p0, keyIndex = p1;
             const raw = obj[getKeyName(keyIndex)];
             const str = (typeof raw === "string") ? raw : "";
+            if (str.length === 0)
+                return wasmNew(0);
             const byteLength = str.length * 2;
             const ptr = wasmNew(byteLength);
             const buf = new Uint16Array(gMemory.buffer, ptr, str.length);
@@ -466,6 +529,8 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
         case 59: {
             const arr = p0, i = p1;
             const str = (typeof arr[i] === "string") ? arr[i] : "";
+            if (str.length === 0)
+                return wasmNew(0);
             const byteLength = str.length * 2;
             const ptr = wasmNew(byteLength);
             const buf = new Uint16Array(gMemory.buffer, ptr, str.length);
@@ -476,6 +541,8 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
         case 60: {
             const v = p0;
             const str = (typeof v === "string") ? v : "";
+            if (str.length === 0)
+                return wasmNew(0);
             const byteLength = str.length * 2;
             const ptr = wasmNew(byteLength);
             const buf = new Uint16Array(gMemory.buffer, ptr, str.length);
@@ -486,6 +553,8 @@ function jsLinkDispatch(linkId, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11
         case 61: {
             const v = p0;
             const str = String(v);
+            if (str.length === 0)
+                return wasmNew(0);
             const byteLength = str.length * 2;
             const ptr = wasmNew(byteLength);
             const buf = new Uint16Array(gMemory.buffer, ptr, str.length);
@@ -664,6 +733,7 @@ function buildImportObject() {
             jsLinkONFFFFFFFFO_O: jsLinkDispatch, jsLinkONOOOOO_O: jsLinkDispatch, jsLinkONOOFO_O: jsLinkDispatch,
             jsLinkONS_N: jsLinkDispatch, jsLinkOO_N: jsLinkDispatch, jsLinkS_F: jsLinkDispatch,
             jsLinkO_F: jsLinkDispatch, jsLinkON_D: jsLinkDispatch,
+            jsLinkONOFFF_F: jsLinkDispatch,
         },
         env: {
             abort: (msgPtr, fileNamePtr, line, column) => {
@@ -683,6 +753,7 @@ async function instantiate(fileName, bytes) {
     return instance;
 }
 async function loadSingleton() {
+    const selfSrcPrefetch = CWASM.LoadArtgineBytes("artgine/basic/CWASM.js").catch(() => { });
     let simdBytes = null;
     try {
         const bytes = await CWASM.LoadArtgineBytes("artgine/wasm/ASM_SIMD.wasm");
@@ -691,6 +762,7 @@ async function loadSingleton() {
     }
     catch (e) {
     }
+    await selfSrcPrefetch;
     gIsSimd = simdBytes != null;
     gInstance = gIsSimd
         ? await instantiate("ASM_SIMD.wasm", simdBytes)
@@ -819,8 +891,8 @@ function liftDecodeString(pointer) {
     const end = start + (memoryU32[(pointer - 4) >>> 2] >>> 1);
     return String.fromCharCode(...memoryU16.subarray(start, end));
 }
-const RES_TAG_A = "952465336_3546857140";
-const RES_TAG_B = "3347165939_1147473823";
+const RES_TAG_A = "2204757308_4051816024";
+const RES_TAG_B = "2529968786_3530583902";
 const gArtgineBytesCache = new Map();
 export class CWASM {
     static async LoadArtgineBytes(_relPath) {
@@ -852,6 +924,9 @@ export class CWASM {
         new Uint8Array(gMemory.buffer, ptr, u8.byteLength).set(u8);
         return ptr;
     }
+    static GetNow() {
+        return Date.now();
+    }
     static GetElectronInfo() {
         const isElectron = typeof process !== "undefined" && !!process.versions
             && process.versions.electron != null;
@@ -871,6 +946,13 @@ export class CWASM {
         return (typeof process !== "undefined" && process.execArgv)
             ? process.execArgv.join(" ")
             : "";
+    }
+    static Eval(code) {
+        try {
+            eval(code);
+        }
+        catch (e) {
+        }
     }
     static GetResourcePath() {
         return "artgine/wasm/" + (gIsSimd ? "ASM_SIMD.wasm" : "ASM.wasm");
@@ -937,7 +1019,25 @@ export class CWASM {
     }
     static ProductF32A(_count) {
         checkMemoryGrow();
-        let F32A = g_F32A2.Pop();
+        let pool = null;
+        switch (_count) {
+            case 2:
+                pool = g_F32A2;
+                break;
+            case 3:
+                pool = g_F32A3;
+                break;
+            case 4:
+                pool = g_F32A4;
+                break;
+            case 16:
+                pool = g_F32A16;
+                break;
+            case 24:
+                pool = g_F32A24;
+                break;
+        }
+        let F32A = pool != null ? pool.Pop() : null;
         if (F32A == null)
             F32A = CWASM.NewF32A(_count);
         else
@@ -1081,6 +1181,17 @@ export class CWASM {
         buf[o + 12] = _maxy;
         buf[o + 13] = _maxz;
         buf[o + 14] = _isStatic ? 1 : 0;
+        _mgr["_insCount"] = count + 1;
+    }
+    static COctreeMgr_RemoveQueue(_mgr, _dataId) {
+        const count = _mgr["_insCount"] || 0;
+        octInsertBufEnsure(_mgr, count + 1);
+        const buf = _mgr["_insBuf"];
+        const o = count * OCT_INSERT_STRIDE;
+        for (let i = 0; i < OCT_INSERT_STRIDE; ++i)
+            buf[o + i] = 0;
+        buf[o + 0] = _dataId;
+        buf[o + 14] = 2;
         _mgr["_insCount"] = count + 1;
     }
     static COctreeMgr_Build(_handle, _mgr, _forceStaticUpdate) {

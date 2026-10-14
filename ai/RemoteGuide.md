@@ -53,10 +53,26 @@ node ai/tool/remote.js <HomeURL> upload <로컬파일경로> <원격디렉터리
 node ai/tool/remote.js <HomeURL> download <원격파일경로> [로컬저장경로]         # 정적 서빙 URL로 GET, 인증 불필요
 node ai/tool/remote.js <HomeURL> roots                                        # 작업 루트(RootPath) 목록 조회(File/Root), 인증 불필요
 node ai/tool/remote.js <HomeURL> restart                                      # 서버 재시작(File/Restart)
-node ai/tool/remote.js <HomeURL> screenshot [quality=75] [monitor=0]          # 화면 캡처 → screenshot.png 저장
-node ai/tool/remote.js <HomeURL> input <key|mouseButton> <time_ms> <windowTitle|-> [x y [x2 y2]]  # 시간 기반 입력(hold/drag)
-node ai/tool/remote.js <HomeURL> exec <fn> [args_json]                        # nut-js(mouse/keyboard/screen) dot-notation 직접 호출
+node ai/tool/remote.js <HomeURL> screenshot [options_json] [name]             # 화면 캡처 → temp/<name>.png|jpg 저장 (options: {"format":"png|jpeg","quality":75,"clip":{x,y,width,height},"monitor":0})
+node ai/tool/remote.js <HomeURL> record [options_json] [name]                 # 연속 캡처 + 입력 타임라인 → temp/<name>_NNN.png|jpg + JSON (ai/BrowserDebugGuide.md "record" 참고)
+node ai/tool/remote.js <HomeURL> input <key|mouseButton> <time_ms> <focus> [x y [x2 y2]]  # 시간 기반 입력(hold/drag), focus = 창 제목 | -
+node ai/tool/remote.js <HomeURL> exec <fn> [args_json]                        # nut-js(mouse/keyboard/screen/clipboard) dot-notation 직접 호출
 ```
+
+### browser.js와 공통 규격 (Common Spec with browser.js)
+
+`screenshot`/`input`/`exec`는 `ai/tool/browser.js`와 이름·인자 순서·출력이 같다. browser.js는 앞에 `<sid>`가 하나 더 붙는 것만 다르다.
+
+| 명령 | 형식 | remote.js 옵션 | browser.js 옵션 |
+|---|---|---|---|
+| screenshot | `screenshot [<sid>] [options_json] [name]` | 공통 옵션 + `monitor`(0~) | 공통 옵션 + `fullPage` |
+| record | `record [<sid>] [options_json] [name]` | 공통 옵션 + `monitor` | 공통 옵션 + `mode` |
+| input | `input [<sid>] <key\|mouseButton> <time_ms> <focus> [x y [x2 y2]]` | focus = 창 제목(부분 일치) \| `-`(미지정) | focus = `canvas` \| `page` \| `none` \| `-`(=canvas) |
+| exec | `exec [<sid>] <fn> [args_json]` | nut-js `mouse`/`keyboard`/`screen`/`clipboard` | Playwright `Page` |
+
+- 마우스 버튼은 양쪽 모두 `mouseLeft` / `mouseRight` / `mouseMiddle`.
+- `screenshot`의 분석 옵션(`avg`/`diff`)과 출력 JSON도 양쪽 동일하다(`ai/BrowserDebugGuide.md`의 "screenshot 분석 옵션" 참고).
+- `record`(연속 캡처 + 입력 동시 진행)도 양쪽 동일 규격이다(`ai/BrowserDebugGuide.md`의 "record" 참고). remote의 `inputs[].focus`는 창 제목이다. 연속 캡처는 원격 PC의 실제 화면/입력을 쓰므로 `clip`으로 범위를 좁혀 쓴다.
 
 - `login`을 제외한 모든 명령은 세션 쿠키 인증이 필요하다 — 먼저 그 HomeURL로 `login`부터 실행한다.
 - 서버 쪽에서 Windows cmd.exe 출력을 UTF-8로 강제 변환하므로(`chcp 65001` 자동 적용) `cmd` 결과의 한글이 깨지지 않는다.
@@ -102,11 +118,14 @@ node ai/tool/remote.js <HomeURL> restart
   - `args_json`은 그 메서드의 인자에 **위치 순서대로** 대응하는 배열(기본 `[]`)이다. nut-js의 `Point`는 `{"x":N,"y":N}`, `Button`은 숫자(`LEFT=0`/`MIDDLE=1`/`RIGHT=2`)로 표현한다.
     - 예: `mouse.setPosition(target: Point)` → `exec mouse.setPosition '[{"x":100,"y":100}]'`
     - 예: `mouse.click(btn: Button)` → `exec mouse.click [2]` (우클릭)
-- `screenshot`: `quality`(1~100, 기본 75)로 JPEG 압축률 지정. `monitor`: 0=주모니터(기본값), 1=두번째...
-- `input`: 키/마우스를 시간 기반(hold/drag)으로 실행한다. 좌표가 없으면 키보드, `x y`가 있으면 마우스 press, `x y x2 y2`가 있으면 드래그로 처리한다. 마우스 버튼은 `left|right|middle`. `windowTitle`을 지정하면(`-`는 미지정) 해당 창을 포그라운드로 올린 뒤 입력한다.
+- `screenshot`: 공통 옵션(`format`/`quality`/`clip`, `ai/BrowserDebugGuide.md` 참고) + `monitor`(0=주모니터(기본값), 1=두번째...). `format` 기본 `png`(무손실), `jpeg`면 `quality`(1~100, 기본 75)로 압축. `clip` 좌표는 대상 모니터 기준. 결과는 `temp/<name>.png|jpg`(name 생략 시 `screenshot`).
+  - 구 형식(`screenshot 75 0`)도 계속 동작하며 jpeg로 저장된다.
+  - 구버전 서버(format 미지원)는 항상 jpeg 전체 화면을 돌려준다 → `.jpg`로 저장된다.
+  - 예: `node ai/tool/remote.js <HomeURL> screenshot '{"monitor":1,"clip":{"x":0,"y":0,"width":800,"height":600}}' before`
+- `input`: 키/마우스를 시간 기반(hold/drag)으로 실행한다. 좌표가 없으면 키보드, `x y`가 있으면 마우스 press, `x y x2 y2`가 있으면 드래그로 처리한다. 마우스 버튼은 `mouseLeft|mouseRight|mouseMiddle`(구 이름 `left|right|middle`도 동작). `focus`에 창 제목(부분 일치)을 주면 해당 창을 포그라운드로 올린 뒤 입력하고, `-`는 미지정.
   - 키 유지: `node ai/tool/remote.js <HomeURL> input w 1000 -`
-  - 마우스 클릭/프레스: `node ai/tool/remote.js <HomeURL> input left 80 - 400 300`
-  - 마우스 드래그: `node ai/tool/remote.js <HomeURL> input left 800 - 400 300 520 300`
+  - 마우스 클릭/프레스: `node ai/tool/remote.js <HomeURL> input mouseLeft 80 - 400 300`
+  - 마우스 드래그: `node ai/tool/remote.js <HomeURL> input mouseLeft 800 - 400 300 520 300`
 
 ## 흐름 예시 (Usage Examples)
 
@@ -118,7 +137,7 @@ node ai/tool/remote.js <HomeURL> cmd dir
 → {"ok":true,"stdout":"...","stderr":""}
 
 node ai/tool/remote.js <HomeURL> screenshot
-→ Screenshot saved to screenshot.png
+→ Screenshot saved to <아티젠 디렉토리>/temp/screenshot.png
 
 node ai/tool/remote.js <HomeURL> exec mouse.setPosition '[{"x":400,"y":300}]'
 ```

@@ -1030,6 +1030,8 @@ export class CUtilRender {
             elemPerVert.set(vb.vfType, vb.bufF.Size(1) / vertCount);
         const outBufs = _ci.vertex.map(() => new CFloat32Mgr());
         const outPos = outBufs[_ci.vertex.findIndex(v => v.vfType === CVertexFormat.eIdentifier.Position)];
+        const extraBufs = _ci.vertex.filter(v => v.vfType !== CVertexFormat.eIdentifier.Position && v.vfType !== CVertexFormat.eIdentifier.UV &&
+            v.vfType !== CVertexFormat.eIdentifier.Normal && Number.isInteger(elemPerVert.get(v.vfType)) && elemPerVert.get(v.vfType) > 0);
         const q = (v, eps) => Math.round(v / eps);
         const makeKey = (i) => {
             const p = posBuf.V3(i);
@@ -1041,6 +1043,13 @@ export class CUtilRender {
             if (useNormal && norBuf) {
                 const n = norBuf.V3(i);
                 k += `|n:${q(n.x, norEps)},${q(n.y, norEps)},${q(n.z, norEps)}`;
+            }
+            for (const vb of extraBufs) {
+                const e = elemPerVert.get(vb.vfType);
+                const f = vb.bufF.GetArray();
+                k += `|${vb.vfType}:`;
+                for (let j = 0; j < e; ++j)
+                    k += f[i * e + j] + ",";
             }
             return k;
         };
@@ -1126,6 +1135,170 @@ export class CUtilRender {
             let n = accNormals[i];
             norBuf.V3(i, (CMath.V3Len(n) > 1e-6) ? CMath.V3Nor(n) : new CVec3(0, 1, 0));
         }
+    }
+    static CollectMeshLeaf(_PMat, _tNode, _out) {
+        let LMat = CMath.MatScale(_tNode.mData.sca);
+        if (_tNode.mData.rot.w >= 100000)
+            CMath.MatMul(LMat, CMath.MatRotation(_tNode.mData.rot), LMat);
+        else
+            CMath.MatMul(LMat, CMath.QutToMat(_tNode.mData.rot), LMat);
+        LMat.SetV3(3, _tNode.mData.pos);
+        let LPMat = CMath.MatMul(LMat, _PMat);
+        if (_tNode.mData.ci != null)
+            _out.push({ node: _tNode, mat: LPMat });
+        if (_tNode.mColleague != null)
+            CUtilRender.CollectMeshLeaf(_PMat, _tNode.mColleague, _out);
+        if (_tNode.mChild != null)
+            CUtilRender.CollectMeshLeaf(LPMat, _tNode.mChild, _out);
+    }
+    static MergeMeshLeaf(_LPMat, _tNode, _oCI, _bound, _texMap, _texList) {
+        {
+            let LPMat = _LPMat;
+            let tvb = _tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Position);
+            let tub = _tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.UV);
+            let tnb = _tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+            let ttb = _tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+            let tweb = _tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Weight);
+            let twib = _tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+            let tinb = _tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Index);
+            let ovb = _oCI.GetVFType(CVertexFormat.eIdentifier.Position);
+            let oub = _oCI.GetVFType(CVertexFormat.eIdentifier.UV);
+            let onb = _oCI.GetVFType(CVertexFormat.eIdentifier.Normal);
+            let otb = _oCI.GetVFType(CVertexFormat.eIdentifier.TexOff);
+            let oweb = _oCI.GetVFType(CVertexFormat.eIdentifier.Weight);
+            let owib = _oCI.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+            let oinb = _oCI.GetVFType(CVertexFormat.eIdentifier.Index);
+            if (ovb.length == 0) {
+                _oCI.Create(CVertexFormat.eIdentifier.Position);
+                ovb = _oCI.GetVFType(CVertexFormat.eIdentifier.Position);
+            }
+            if (oub.length == 0) {
+                _oCI.Create(CVertexFormat.eIdentifier.UV);
+                oub = _oCI.GetVFType(CVertexFormat.eIdentifier.UV);
+            }
+            if (onb.length == 0) {
+                _oCI.Create(CVertexFormat.eIdentifier.Normal);
+                onb = _oCI.GetVFType(CVertexFormat.eIdentifier.Normal);
+            }
+            if (otb.length == 0) {
+                _oCI.Create(CVertexFormat.eIdentifier.TexOff);
+                otb = _oCI.GetVFType(CVertexFormat.eIdentifier.TexOff);
+            }
+            if (oweb.length == 0) {
+                _oCI.Create(CVertexFormat.eIdentifier.Weight);
+                oweb = _oCI.GetVFType(CVertexFormat.eIdentifier.Weight);
+            }
+            if (owib.length == 0) {
+                _oCI.Create(CVertexFormat.eIdentifier.WeightIndex);
+                owib = _oCI.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+            }
+            if (oinb.length == 0) {
+                _oCI.Create(CVertexFormat.eIdentifier.Index);
+                oinb = _oCI.GetVFType(CVertexFormat.eIdentifier.Index);
+            }
+            let remap = new Array(_tNode.mData.textureOff.length);
+            for (let i = 0; i < _tNode.mData.textureOff.length; ++i) {
+                let g = _tNode.mData.textureOff[i];
+                let m = _texMap.get(g);
+                if (m == null) {
+                    m = _texList.length;
+                    _texMap.set(g, m);
+                    _texList.push(g);
+                }
+                remap[i] = m;
+            }
+            for (let i = 0; i < tvb[0].bufF.Size(3); ++i) {
+                let v = tvb[0].bufF.V3(i);
+                let u = tub.length > 0 ? tub[0].bufF.V2(i) : new CVec2(0, 0);
+                let n = tnb.length > 0 ? tnb[0].bufF.V3(i) : new CVec3(0, 1, 0);
+                let t = ttb.length > 0 ? ttb[0].bufF.V3(i) : new CVec3(-1, -1, -1);
+                ovb[0].bufF.Push(v);
+                oub[0].bufF.Push(u);
+                onb[0].bufF.Push(n);
+                let toff = new CVec3(-1, -1, -1);
+                if (t.x != -1)
+                    toff.x = remap[t.x];
+                if (t.y != -1)
+                    toff.y = remap[t.y];
+                if (t.z != -1)
+                    toff.z = remap[t.z];
+                otb[0].bufF.Push(toff);
+                if (tweb.length > 0) {
+                    oweb[0].bufF.Push(tweb[0].bufF.V4(i));
+                    owib[0].bufF.Push(twib[0].bufF.V4(i));
+                }
+                else {
+                    oweb[0].bufF.Push(new CVec4(0, 0, 0, 0));
+                    owib[0].bufF.Push(new CVec4(0, 0, 0, 0));
+                }
+            }
+            let tempv = new CVec3();
+            for (let i = _oCI.vertexCount; i < ovb[0].bufF.Size(3); ++i) {
+                let v = ovb[0].bufF.V3(i);
+                CMath.V3MulMatCoordi(v, LPMat, tempv);
+                ovb[0].bufF.X3(i, tempv.x);
+                ovb[0].bufF.Y3(i, tempv.y);
+                ovb[0].bufF.Z3(i, tempv.z);
+            }
+            let nMat = CMath.MatTranspose(CMath.MatInvert(LPMat));
+            let tempn = new CVec3();
+            for (let i = _oCI.vertexCount; i < onb[0].bufF.Size(3); ++i) {
+                let n = onb[0].bufF.V3(i);
+                CMath.V3MulMatNormal(n, nMat, tempn);
+                CMath.V3Nor(tempn, tempn);
+                onb[0].bufF.X3(i, tempn.x);
+                onb[0].bufF.Y3(i, tempn.y);
+                onb[0].bufF.Z3(i, tempn.z);
+            }
+            for (let i = 0; i < tinb[0].bufI.length; ++i) {
+                _bound.InitBound(ovb[0].bufF.V3(tinb[0].bufI[i] + _oCI.vertexCount));
+                oinb[0].bufI.push(tinb[0].bufI[i] + _oCI.vertexCount);
+            }
+            _oCI.vertexCount += _tNode.mData.ci.vertexCount;
+            _oCI.indexCount += _tNode.mData.ci.indexCount;
+        }
+    }
+    static MergeMeshTree(_mesh) {
+        if (_mesh.skin.length > 0 || _mesh.aniMap.size > 0 || _mesh.ik.size > 0 || _mesh.attacher.size > 0)
+            return false;
+        let leaves = new Array();
+        CUtilRender.CollectMeshLeaf(new CMat(), _mesh.meshTree, leaves);
+        if (leaves.length == 0)
+            return false;
+        let groupMap = new Map();
+        let groupOrder = new Array();
+        for (let leaf of leaves) {
+            let key = leaf.node.mData.textureOff.slice().sort((a, b) => a - b).join(",");
+            let arr = groupMap.get(key);
+            if (arr == null) {
+                arr = new Array();
+                groupMap.set(key, arr);
+                groupOrder.push(key);
+            }
+            arr.push(leaf);
+        }
+        let newTree = new CTree();
+        newTree.mData = new CMeshDataNode();
+        let groupIdx = 0;
+        for (let key of groupOrder) {
+            let oCI = new CMeshCreateInfo();
+            let bound = new CBound();
+            bound.SetType(CBound.eType.Box);
+            let texMap = new Map();
+            let texList = new Array();
+            for (let leaf of groupMap.get(key))
+                CUtilRender.MergeMeshLeaf(leaf.mat, leaf.node, oCI, bound, texMap, texList);
+            oCI.bound = bound;
+            let data = new CMeshDataNode();
+            data.rot.w = 1;
+            data.ci = oCI;
+            data.textureOff = texList;
+            let childTree = newTree.PushChild("merge" + groupIdx);
+            childTree.mData = data;
+            ++groupIdx;
+        }
+        _mesh.meshTree = newTree;
+        return true;
     }
     static MeshBoundUpdate(_mesh) {
         let Tree = new CTree();
@@ -1541,6 +1714,7 @@ function MeshNodeBoundUpdate(_skinMat, _node) {
     let mdd = _node.md.mData;
     if (mdd.ci != null && mdd.textureOff.length > 0) {
         mdd.ci.bound.SetType(CBound.eType.Box);
+        let newPos = new Array();
         let posb = mdd.ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
         let web = mdd.ci.GetVFType(CVertexFormat.eIdentifier.Weight)[0];
         let wib = mdd.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex)[0];
@@ -1570,7 +1744,9 @@ function MeshNodeBoundUpdate(_skinMat, _node) {
                     else
                         mat.Import(_node.mpi.mData.pst);
                     if (mat.IsZero() == false) {
-                        mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos, mat), true);
+                        let wpos = CMath.V3MulMatCoordi(pos, mat);
+                        mdd.ci.bound.InitBound(wpos, false);
+                        newPos.push(wpos);
                     }
                 }
             }
@@ -1599,9 +1775,16 @@ function MeshNodeBoundUpdate(_skinMat, _node) {
                 else
                     mat.Import(_node.mpi.mData.pst);
                 if (mat.IsZero() == false) {
-                    mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos, mat), true);
+                    let wpos = CMath.V3MulMatCoordi(pos, mat);
+                    mdd.ci.bound.InitBound(wpos, false);
+                    newPos.push(wpos);
                 }
             }
+        }
+        if (newPos.length > 0) {
+            mdd.ci.bound.mPos.Clear();
+            for (let i = 0; i < newPos.length; ++i)
+                mdd.ci.bound.mPos.Push(newPos[i]);
         }
     }
     CPoolGeo.RecycleMat(mat);

@@ -9,19 +9,7 @@ import {CPoolGeo} from "./CPoolGeo.js";
 import { CRay } from "./CRay.js";
 import {CVec3} from "./CVec3.js";
 import {CVec4} from "./CVec4.js";
-const RayBoxRIGHT = 0;
-const RayBoxLEFT = 1;
-const RayBoxMIDDLE = 2;
 const d_EPSILON = 1e-6;
-
-
-const _rbi_quadrant      = new CVec3();
-const _rbi_maxT          = new CVec3();
-const _rbi_candidatePlane= new CVec3();
-const _rbi_pOrigin       = new CVec3();
-const _rbi_pBoxMin       = new CVec3();
-const _rbi_pBoxMax       = new CVec3();
-const _rbi_pIntersect    = new CVec3();
 
 
 
@@ -52,7 +40,7 @@ export class CUtilMath
     static CameraPerspectiveFovLH_ReverseZ(fov, aspect, znear, zfar,_width,result=new CMat()) 
     {
         var yScale = (1.0 / Math.tan(fov * 0.5));
-        var q = zfar / (znear - zfar);
+        var q = znear / (znear - zfar);
   
         result.SetUnit(false);
         if(_width)
@@ -65,9 +53,9 @@ export class CUtilMath
             result.mF32A[0] = yScale;
             result.mF32A[5] = yScale / aspect;
         }
-        result.mF32A[10] = -q;
+        result.mF32A[10] = q;
         result.mF32A[11] = 1.0;
-        result.mF32A[14] = q * znear;
+        result.mF32A[14] = -q * zfar;
         return result;
     }
     static CameraPerspectiveFovRH(fov, aspect, znear, zfar,_width,result=new CMat()) 
@@ -295,89 +283,75 @@ export class CUtilMath
         return true;
     }
 
+    // 레이-AABB 교차 (슬랩 방식). 벡터 복사/정적 객체 없이 지역 number만 사용한다.
+    // ⚠ ASM 미러가 있다: big/artgine/wasm/geometry/ASMCMath.ts의 RayBoxIS와 같은 알고리즘으로
+    //   맞춰 둔 것이니, 한쪽만 고치지 말고 항상 양쪽을 같이 바꾼다.
+    // 판정 결과와 pa_ray.mVec3List[1](충돌점)에 기록되는 값은 이전 Woo 방식과 동일:
+    //  - 원점이 박스 내부 → true, 충돌점 = 원점
+    //  - 박스가 레이 뒤쪽 / 빗나감 → false
+    //  - 그 외 → true, 충돌점 = 박스 진입점
     static RayBoxIS(_min: CVec3, _max: CVec3, pa_ray: CRay)
     {
-        const quadrant      = _rbi_quadrant;
-        const maxT          = _rbi_maxT;
-        const candidatePlane= _rbi_candidatePlane;
-        const pIntersect    = _rbi_pIntersect;
+        const vl = pa_ray.mVec3List;
+        const d  = vl[0].mF32A;
+        const o  = vl[2].mF32A;
+        const a  = _min.mF32A;
+        const b  = _max.mF32A;
 
-        const vecList = pa_ray.GetVecList();
-        const pOrigin = _rbi_pOrigin;
-        const pBoxMin = _rbi_pBoxMin;
-        const pBoxMax = _rbi_pBoxMax;
+        let tmin = -Infinity, tmax = Infinity;
+        let dv: number, ov: number, lo: number, hi: number, t1: number, t2: number, tmp: number;
 
-        pOrigin.Import(vecList[2]);
-        pBoxMin.Import(_min);
-        pBoxMax.Import(_max);
-
-        const dir = vecList[0];
-
-        if (pBoxMin.mF32A[0] > pBoxMax.mF32A[0]) { pBoxMin.mF32A[0] = _max.mF32A[0]; pBoxMax.mF32A[0] = _min.mF32A[0]; }
-        if (pBoxMin.mF32A[1] > pBoxMax.mF32A[1]) { pBoxMin.mF32A[1] = _max.mF32A[1]; pBoxMax.mF32A[1] = _min.mF32A[1]; }
-        if (pBoxMin.mF32A[2] > pBoxMax.mF32A[2]) { pBoxMin.mF32A[2] = _max.mF32A[2]; pBoxMax.mF32A[2] = _min.mF32A[2]; }
-
-        let inside = true;
-        for (let i = 0; i < 3; ++i)
+        // X
+        dv = d[0]; ov = o[0]; lo = a[0]; hi = b[0];
+        if (lo > hi) { tmp = lo; lo = hi; hi = tmp; }
+        if (dv > d_EPSILON || dv < -d_EPSILON)
         {
-            if (pOrigin.mF32A[i] < pBoxMin.mF32A[i])
-            {
-                quadrant.mF32A[i]      = RayBoxLEFT;
-                candidatePlane.mF32A[i]= pBoxMin.mF32A[i];
-                inside = false;
-            }
-            else if (pOrigin.mF32A[i] > pBoxMax.mF32A[i])
-            {
-                quadrant.mF32A[i]      = RayBoxRIGHT;
-                candidatePlane.mF32A[i]= pBoxMax.mF32A[i];
-                inside = false;
-            }
-            else
-            {
-                quadrant.mF32A[i] = RayBoxMIDDLE;
-            }
+            t1 = (lo - ov) / dv; t2 = (hi - ov) / dv;
+            if (t1 > t2) { tmp = t1; t1 = t2; t2 = tmp; }
+            if (t1 > tmin) tmin = t1;
+            if (t2 < tmax) tmax = t2;
+            if (tmin > tmax || tmax < 0) return false;
         }
+        else if (ov < lo || ov > hi) return false;
 
-        if (inside)
+        // Y
+        dv = d[1]; ov = o[1]; lo = a[1]; hi = b[1];
+        if (lo > hi) { tmp = lo; lo = hi; hi = tmp; }
+        if (dv > d_EPSILON || dv < -d_EPSILON)
         {
-            pa_ray.mVec3List[1].mF32A[0] = pOrigin.mF32A[0];
-            pa_ray.mVec3List[1].mF32A[1] = pOrigin.mF32A[1];
-            pa_ray.mVec3List[1].mF32A[2] = pOrigin.mF32A[2];
-            return true;
+            t1 = (lo - ov) / dv; t2 = (hi - ov) / dv;
+            if (t1 > t2) { tmp = t1; t1 = t2; t2 = tmp; }
+            if (t1 > tmin) tmin = t1;
+            if (t2 < tmax) tmax = t2;
+            if (tmin > tmax || tmax < 0) return false;
         }
+        else if (ov < lo || ov > hi) return false;
 
-        for (let i = 0; i < 3; i++)
+        // Z
+        dv = d[2]; ov = o[2]; lo = a[2]; hi = b[2];
+        if (lo > hi) { tmp = lo; lo = hi; hi = tmp; }
+        if (dv > d_EPSILON || dv < -d_EPSILON)
         {
-            if (quadrant.mF32A[i] !== RayBoxMIDDLE
-                && (dir.mF32A[i] > d_EPSILON || dir.mF32A[i] < -d_EPSILON))
-                maxT.mF32A[i] = (candidatePlane.mF32A[i] - pOrigin.mF32A[i]) / dir.mF32A[i];
-            else
-                maxT.mF32A[i] = -1.0;
+            t1 = (lo - ov) / dv; t2 = (hi - ov) / dv;
+            if (t1 > t2) { tmp = t1; t1 = t2; t2 = tmp; }
+            if (t1 > tmin) tmin = t1;
+            if (t2 < tmax) tmax = t2;
+            if (tmin > tmax || tmax < 0) return false;
         }
+        else if (ov < lo || ov > hi) return false;
 
-        let whichPlane = 0;
-        if (maxT.mF32A[1] > maxT.mF32A[0]) whichPlane = 1;
-        if (maxT.mF32A[2] > maxT.mF32A[whichPlane]) whichPlane = 2;
-
-        if (maxT.mF32A[whichPlane] < 0.0) return false;
-
-        for (let i = 0; i < 3; i++)
+        const p = vl[1].mF32A;
+        if (tmin <= 0)
         {
-            if (whichPlane !== i)
-            {
-                pIntersect.mF32A[i] = pOrigin.mF32A[i] + maxT.mF32A[whichPlane] * dir.mF32A[i];
-                if (pIntersect.mF32A[i] < pBoxMin.mF32A[i] || pIntersect.mF32A[i] > pBoxMax.mF32A[i])
-                    return false;
-            }
-            else
-            {
-                pIntersect.mF32A[i] = candidatePlane.mF32A[i];
-            }
+            // 원점이 박스 내부
+            p[0] = o[0]; p[1] = o[1]; p[2] = o[2];
         }
-
-        pa_ray.mVec3List[1].mF32A[0] = pIntersect.mF32A[0];
-        pa_ray.mVec3List[1].mF32A[1] = pIntersect.mF32A[1];
-        pa_ray.mVec3List[1].mF32A[2] = pIntersect.mF32A[2];
+        else
+        {
+            p[0] = o[0] + d[0] * tmin;
+            p[1] = o[1] + d[1] * tmin;
+            p[2] = o[2] + d[2] * tmin;
+        }
         return true;
     }
     // static RayBoxIS(_min : CVec3,_max : CVec3,pa_ray : CRay)
@@ -1592,6 +1566,225 @@ static ColBoxBoxAABB(
     return out;
 }
 
+    //박스 A와 삼각형 리스트 B(_boundB.mPos를 3개씩 끊어 삼각형 하나로 본다)의 충돌.
+    //GJK는 점들을 하나의 볼록껍질로 뭉개서 보므로 오목한 형체(아치, 문틈)가 메워진다.
+    //여기서는 삼각형을 하나씩 검사하므로 오목해도 실제 면 그대로 충돌한다.
+    //반환값은 ColBoxBoxOBB와 같은 규약으로 A가 B로 파고든 방향의 MTV다.
+    //바닥+벽 모서리처럼 여러 삼각형에 동시에 닿으면 축별로 가장 깊은 값을 모아 한 벡터로 돌려준다.
+    //한 축만 골라 돌려주면 나머지 면은 다음 스텝으로 밀려 모서리에서 떨리기 때문이다.
+    //_moveDir은 박스가 이번 스텝에 움직인 변위(월드). 주면 스텝 직전에 있던 쪽으로 되밀어낸다 - 아래 참고.
+    static ColBoxTriMesh(_boundA: CBound, _matA: CMat, _boundB: CBound, _matB: CMat, _push: CVec3 = null, _moveDir: CVec3 = null): CVec3 | null
+    {
+        const posList = _boundB.mPos;
+        const triCount = Math.floor(posList.Size() / 3);
+        if (triCount == 0) return null;
+
+        //정점을 평탄 배열로 캐시해 둔다. mPos는 CArray<CVec3>라서 삼각형마다
+        //Find() -> CVec3 -> mF32A 를 세 번 타고 들어가는데, 삼각형을 걸러내는 루프에서
+        //그 접근 비용이 절반을 넘는다. 같은 루프가 평탄 배열이면 1.6배 빨랐다.
+        const flat = TriFlatCache(_boundB, triCount);
+
+        const mA = _matA.mF32A;
+        const mB = _matB.mF32A;
+
+        //---- A(박스)의 월드 OBB : 중심 / 단위축 / 반크기 ----
+        let u0x = mA[0], u0y = mA[1], u0z = mA[2];
+        let u1x = mA[4], u1y = mA[5], u1z = mA[6];
+        let u2x = mA[8], u2y = mA[9], u2z = mA[10];
+        const s0 = Math.sqrt(u0x * u0x + u0y * u0y + u0z * u0z);
+        const s1 = Math.sqrt(u1x * u1x + u1y * u1y + u1z * u1z);
+        const s2 = Math.sqrt(u2x * u2x + u2y * u2y + u2z * u2z);
+        if (s0 <= 0 || s1 <= 0 || s2 <= 0) return null;
+        u0x /= s0; u0y /= s0; u0z /= s0;
+        u1x /= s1; u1y /= s1; u1z /= s1;
+        u2x /= s2; u2y /= s2; u2z /= s2;
+
+        const aMin = _boundA.mMin, aMax = _boundA.mMax;
+        const ex = (aMax.x - aMin.x) * 0.5 * s0;
+        const ey = (aMax.y - aMin.y) * 0.5 * s1;
+        const ez = (aMax.z - aMin.z) * 0.5 * s2;
+
+        const alcx = (aMin.x + aMax.x) * 0.5;
+        const alcy = (aMin.y + aMax.y) * 0.5;
+        const alcz = (aMin.z + aMax.z) * 0.5;
+        const cx = mA[0] * alcx + mA[4] * alcy + mA[8] * alcz + mA[12];
+        const cy = mA[1] * alcx + mA[5] * alcy + mA[9] * alcz + mA[13];
+        const cz = mA[2] * alcx + mA[6] * alcy + mA[10] * alcz + mA[14];
+
+        //---- 선검사용 : 박스를 B의 로컬 공간에서 감싸는 구 ----
+        //삼각형마다 월드 변환을 하면 비싸므로, 박스 쪽을 로컬로 한 번 옮겨 두고
+        //로컬 좌표 그대로 비교해서 대부분의 삼각형을 값 비교만으로 걸러낸다.
+        const bs0 = Math.sqrt(mB[0] * mB[0] + mB[1] * mB[1] + mB[2] * mB[2]);
+        const bs1 = Math.sqrt(mB[4] * mB[4] + mB[5] * mB[5] + mB[6] * mB[6]);
+        const bs2 = Math.sqrt(mB[8] * mB[8] + mB[9] * mB[9] + mB[10] * mB[10]);
+        const bScaMin = Math.min(bs0, Math.min(bs1, bs2));
+        if (bScaMin <= 0) return null;
+
+        const iMat = CPoolGeo.ProductMat();
+        CMath.MatInvert(_matB, iMat);
+        const mI = iMat.mF32A;
+        const lcx = mI[0] * cx + mI[4] * cy + mI[8] * cz + mI[12];
+        const lcy = mI[1] * cx + mI[5] * cy + mI[9] * cz + mI[13];
+        const lcz = mI[2] * cx + mI[6] * cy + mI[10] * cz + mI[14];
+        CPoolGeo.RecycleMat(iMat);
+
+        //월드 반지름을 B의 최소 스케일로 나눠 로컬에서 넉넉하게(절대 작지 않게) 잡는다
+        const lr = Math.sqrt(ex * ex + ey * ey + ez * ez) / bScaMin;
+        const pMinX = lcx - lr, pMaxX = lcx + lr;
+        const pMinY = lcy - lr, pMaxY = lcy + lr;
+        const pMinZ = lcz - lr, pMaxZ = lcz + lr;
+
+        //삼각형 정점(박스 중심 기준 월드 좌표). TestAxis가 읽으므로 루프 밖에 둔다.
+        let v0x = 0, v0y = 0, v0z = 0;
+        let v1x = 0, v1y = 0, v1z = 0;
+        let v2x = 0, v2y = 0, v2z = 0;
+        //이번 스텝의 이동량(방향이 아니라 실제 변위다). 이전 위치를 되짚는 데 쓴다.
+        let mvx = 0, mvy = 0, mvz = 0;
+        if (_moveDir != null) { mvx = _moveDir.x; mvy = _moveDir.y; mvz = _moveDir.z; }
+
+        //13축을 모두 재서 가장 적게 움직여도 되는 축을 고른다(진짜 MTV).
+        //면 법선만 쓰면 삼각형을 무한 평면처럼 취급하게 되어, 모서리만 살짝 스친
+        //얇은 조각(45도 모따기 등)이 박스 크기만 한 밀어내기를 요구한다 - 경사로 끝처럼
+        //좁은 곳에서 옆으로 튕겨나가 못 올라가는 원인이 된다.
+        let bestPen = 0, bestX = 0, bestY = 0, bestZ = 0;
+        const TestAxis = (_axx: number, _axy: number, _axz: number): boolean =>
+        {
+            const len2 = _axx * _axx + _axy * _axy + _axz * _axz;
+            //퇴화축(길이 0)은 분리축이 될 수 없으므로 통과시킨다
+            if (len2 <= 1e-12) return true;
+            const inv = 1 / Math.sqrt(len2);
+            const nx = _axx * inv, ny = _axy * inv, nz = _axz * inv;
+
+            //박스를 이 축에 투영한 반지름
+            const r = ex * Math.abs(nx * u0x + ny * u0y + nz * u0z)
+                + ey * Math.abs(nx * u1x + ny * u1y + nz * u1z)
+                + ez * Math.abs(nx * u2x + ny * u2y + nz * u2z);
+
+            const d0 = v0x * nx + v0y * ny + v0z * nz;
+            const d1 = v1x * nx + v1y * ny + v1z * nz;
+            const d2 = v2x * nx + v2y * ny + v2z * nz;
+            const tMin = Math.min(d0, Math.min(d1, d2));
+            const tMax = Math.max(d0, Math.max(d1, d2));
+
+            //겹친 "길이"가 아니라 떼어놓는 데 필요한 "이동량"을 잰다.
+            //삼각형은 평면이라 자기 법선 축에서는 길이가 0이 되어, 겹친 길이로 재면 늘 0이 나온다.
+            const pen1 = r - tMin;//-축으로 pen1만큼 빠진다
+            const pen2 = tMax + r;//+축으로 pen2만큼 빠진다
+            if (pen1 <= 0 || pen2 <= 0) return false;
+
+            //어느 쪽으로 뺄지는 이번 스텝 직전에 있던 쪽으로 정한다. 가까운 쪽을 고르면
+            //면 중간을 넘는 순간 반대편으로 뒤집혀 벽을 뚫고 나간다(벽에 비빌 때 그렇다).
+            //이동량이 0이면 prevC가 0이라 자연스럽게 가까운 쪽으로 떨어진다.
+            const prevC = -(mvx * nx + mvy * ny + mvz * nz);
+            let useMinus: boolean;
+            if (prevC <= tMin) useMinus = true;       //직전에 -축 쪽에 있었다
+            else if (prevC >= tMax) useMinus = false; //직전에 +축 쪽에 있었다
+            else useMinus = (pen1 < pen2);            //이미 걸쳐 있었으면 가까운 쪽
+
+            const pen = useMinus ? pen1 : pen2;
+            if (bestPen == 0 || pen < bestPen)
+            {
+                bestPen = pen;
+                if (useMinus) { bestX = -nx; bestY = -ny; bestZ = -nz; }
+                else { bestX = nx; bestY = ny; bestZ = nz; }
+            }
+            return true;
+        };
+
+        const ua = [u0x, u0y, u0z, u1x, u1y, u1z, u2x, u2y, u2z];
+        const ea = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        let outX = 0, outY = 0, outZ = 0;
+        let hit = false;
+
+        for (let t = 0; t < triCount; ++t)
+        {
+            const f = t * 9;
+            const a0 = flat[f], a1 = flat[f + 1], a2 = flat[f + 2];
+            const b0 = flat[f + 3], b1 = flat[f + 4], b2 = flat[f + 5];
+            const c0 = flat[f + 6], c1 = flat[f + 7], c2 = flat[f + 8];
+
+            //로컬 선검사 : 세 점이 모두 한쪽으로 벗어나 있으면 볼 것도 없다
+            if (a0 < pMinX && b0 < pMinX && c0 < pMinX) continue;
+            if (a0 > pMaxX && b0 > pMaxX && c0 > pMaxX) continue;
+            if (a1 < pMinY && b1 < pMinY && c1 < pMinY) continue;
+            if (a1 > pMaxY && b1 > pMaxY && c1 > pMaxY) continue;
+            if (a2 < pMinZ && b2 < pMinZ && c2 < pMinZ) continue;
+            if (a2 > pMaxZ && b2 > pMaxZ && c2 > pMaxZ) continue;
+
+            v0x = mB[0] * a0 + mB[4] * a1 + mB[8] * a2 + mB[12] - cx;
+            v0y = mB[1] * a0 + mB[5] * a1 + mB[9] * a2 + mB[13] - cy;
+            v0z = mB[2] * a0 + mB[6] * a1 + mB[10] * a2 + mB[14] - cz;
+
+            v1x = mB[0] * b0 + mB[4] * b1 + mB[8] * b2 + mB[12] - cx;
+            v1y = mB[1] * b0 + mB[5] * b1 + mB[9] * b2 + mB[13] - cy;
+            v1z = mB[2] * b0 + mB[6] * b1 + mB[10] * b2 + mB[14] - cz;
+
+            v2x = mB[0] * c0 + mB[4] * c1 + mB[8] * c2 + mB[12] - cx;
+            v2y = mB[1] * c0 + mB[5] * c1 + mB[9] * c2 + mB[13] - cy;
+            v2z = mB[2] * c0 + mB[6] * c1 + mB[10] * c2 + mB[14] - cz;
+
+            ea[0] = v1x - v0x; ea[1] = v1y - v0y; ea[2] = v1z - v0z;
+            ea[3] = v2x - v1x; ea[4] = v2y - v1y; ea[5] = v2z - v1z;
+            ea[6] = v0x - v2x; ea[7] = v0y - v2y; ea[8] = v0z - v2z;
+
+            bestPen = 0;
+
+            //1) 삼각형 법선
+            const fnx = ea[1] * ea[5] - ea[2] * ea[4];
+            const fny = ea[2] * ea[3] - ea[0] * ea[5];
+            const fnz = ea[0] * ea[4] - ea[1] * ea[3];
+            if (TestAxis(fnx, fny, fnz) == false) continue;
+
+            //2) 박스의 3축
+            if (TestAxis(u0x, u0y, u0z) == false) continue;
+            if (TestAxis(u1x, u1y, u1z) == false) continue;
+            if (TestAxis(u2x, u2y, u2z) == false) continue;
+
+            //3) 박스축 x 삼각형변 9개
+            let sep = false;
+            for (let i = 0; i < 3 && sep == false; ++i)
+            {
+                const aix = ua[i * 3], aiy = ua[i * 3 + 1], aiz = ua[i * 3 + 2];
+                for (let j = 0; j < 3; ++j)
+                {
+                    const ejx = ea[j * 3], ejy = ea[j * 3 + 1], ejz = ea[j * 3 + 2];
+                    if (TestAxis(aiy * ejz - aiz * ejy,
+                        aiz * ejx - aix * ejz,
+                        aix * ejy - aiy * ejx) == false)
+                    {
+                        sep = true;
+                        break;
+                    }
+                }
+            }
+            if (sep) continue;
+            if (bestPen <= 0) continue;
+
+            const sx = bestX * bestPen, sy = bestY * bestPen, sz = bestZ * bestPen;
+
+            //이미 쌓인 분리량으로 해결되지 않고 남은 만큼만 더한다.
+            //축별 최댓값을 취하면 서로 다른 삼각형의 성분이 뒤섞여, 어느 면에도 맞지 않는
+            //방향이 나온다(평평한 바닥의 y와 옆 경사면의 z가 합쳐져 옆으로 밀리는 식).
+            //같은 평면의 삼각형이 여러 장이면 두 번째부터는 남는 게 없어 저절로 무시된다.
+            hit = true;
+            const sl = Math.sqrt(sx * sx + sy * sy + sz * sz);
+            if (sl > 1e-9)
+            {
+                const ux = sx / sl, uy = sy / sl, uz = sz / sl;
+                const remain = sl - (outX * ux + outY * uy + outZ * uz);
+                if (remain > 0) { outX += ux * remain; outY += uy * remain; outZ += uz * remain; }
+            }
+        }
+
+        if (hit == false) return null;
+
+        //outX/Y/Z는 "박스가 빠져나갈 방향"이고 반환 규약은 A->B(파고든 방향)이라 부호를 뒤집는다
+        const out = _push || new CVec3();
+        out.x = -outX; out.y = -outY; out.z = -outZ;
+        return out;
+    }
+
 
     // static ColBoxBoxOBB(_boundA: CBound, _matA: CMat, _boundB: CBound, _matB: CMat, _push: CVec3 = null): CVec3 | null
     // {
@@ -1778,7 +1971,8 @@ static ColBoxBoxAABB(
 
         var w=(pa_vec.length-1)*pa_persent;
         var s=Math.trunc(w);
-        var e=Math.trunc((w+1));
+        //w가 1에 극히 가까우면 w+1이 double 반올림으로 정확히 정수가 돼 배열 범위를 넘는다
+        var e=Math.min(s+1,pa_vec.length-1);
         var p=w%1;
         var t0=CPoolGeo.ProductV3();
         var t1=CPoolGeo.ProductV3();
@@ -1804,3 +1998,59 @@ static ColBoxBoxAABB(
 		return len;
 	}
 }
+
+//ColBoxTriMesh용 정점 평탄 배열 캐시.
+//바운드마다 지연 생성하고 WeakMap에 둔다(바운드가 사라지면 같이 사라진다).
+//무효화 판정이 까다롭다. mPos는 CVec3 "객체 참조"를 담고 있고, CPaint3D.FMatUpdate가
+//mBound.MatCoordi(mLMat)로 그 객체를 제자리에서 변형한다. 메시 CI 바운드와 객체를 공유하므로
+//크기만 보면 내용이 바뀐 걸 놓친다. 그래서 크기와 함께 몇 개 점을 표본으로 떠서 비교한다.
+//변형이 항등이면 값이 그대로라 캐시를 계속 써도 맞고, 아니면 표본이 달라져 다시 만든다.
+class CTriFlat
+{
+	public flat : Float64Array;
+	public triCount : number;
+	public sample : Float64Array;//표본 좌표 (인덱스 0, 1, 중간, 마지막)
+}
+const gTriFlatMap = new WeakMap<CBound, CTriFlat>();
+
+function TriFlatSample(_list, _triCount : number, _out : Float64Array)
+{
+	const last = _triCount * 3 - 1;
+	const idx = [0, 1, (last >> 1), last];
+	for (let k = 0; k < 4; ++k)
+	{
+		const p = _list.Find(idx[k]).mF32A;
+		_out[k * 3] = p[0]; _out[k * 3 + 1] = p[1]; _out[k * 3 + 2] = p[2];
+	}
+}
+function TriFlatCache(_bound : CBound, _triCount : number) : Float64Array
+{
+	const list = _bound.mPos;
+	let c = gTriFlatMap.get(_bound);
+	if (c != null && c.triCount == _triCount)
+	{
+		//표본이 그대로면 캐시 유효
+		const s = gTriFlatTmp;
+		TriFlatSample(list, _triCount, s);
+		let same = true;
+		for (let k = 0; k < 12; ++k) { if (s[k] != c.sample[k]) { same = false; break; } }
+		if (same) return c.flat;
+	}
+
+	if (c == null) { c = new CTriFlat(); gTriFlatMap.set(_bound, c); }
+	c.triCount = _triCount;
+	c.flat = new Float64Array(_triCount * 9);
+	for (let t = 0; t < _triCount; ++t)
+	{
+		for (let j = 0; j < 3; ++j)
+		{
+			const p = list.Find(t * 3 + j).mF32A;
+			const o = t * 9 + j * 3;
+			c.flat[o] = p[0]; c.flat[o + 1] = p[1]; c.flat[o + 2] = p[2];
+		}
+	}
+	c.sample = new Float64Array(12);
+	TriFlatSample(list, _triCount, c.sample);
+	return c.flat;
+}
+const gTriFlatTmp = new Float64Array(12);

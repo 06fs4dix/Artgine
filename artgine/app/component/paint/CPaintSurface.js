@@ -1,5 +1,4 @@
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
-import { CRPAuto } from "../../canvas/CRPMgr.js";
 import { CPaint } from "./CPaint.js";
 export class CPaintSurface extends CPaint {
     constructor(_rp, _size = null) {
@@ -14,12 +13,6 @@ export class CPaintSurface extends CPaint {
     InitChk() {
         super.InitChk();
         this.mBW.mRadian = 0xffffffff;
-    }
-    EmptyRPChk() {
-        if (this.mRenderPass.length == 0) {
-            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().GetShader("Artgine/Shader/2DBlit").mKey);
-            this.mRenderPass = [rp];
-        }
     }
     Update(_update) {
         if (this.mRenPT.length == 0)

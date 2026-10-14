@@ -109,14 +109,65 @@ export class CProviderLog {
         const cols = CProviderLog.sCols;
         const afterId = _afterId == null || isNaN(Number(_afterId)) ? -1 : Number(_afterId);
         // key = ? 이거나, (비어 있지 않은 sessionId가 key 소속 세션 집합에 속함)
-        const owned = `sessionId != '' AND sessionId IN (SELECT DISTINCT sessionId FROM ${t} WHERE key = ? AND sessionId != '')`;
+        const owned = CProviderLog.OwnedBy();
         const where = afterId >= 0
-            ? `WHERE id > ? AND (key = ? OR (${owned}))`
-            : `WHERE key = ? OR (${owned})`;
+            ? `WHERE id > ? AND (${owned})`
+            : `WHERE ${owned}`;
         const params = afterId >= 0 ? [afterId, _key, _key] : [_key, _key];
         const rows = await db.Recv(`SELECT ${cols} FROM ${t} ${where} ORDER BY id ASC`, params);
         if (rows == null) return [];
         return rows.map(CProviderLog.RowToRecord);
+    }
+
+    // 현재 마지막 id(행이 없으면 0). 워크오더 배분 시점에 찍어 그 의뢰의 로그 구간 시작점으로 쓴다.
+    public static async MaxId(): Promise<number> {
+        const db = await CProviderLog.Init();
+        const rows = await db.Recv(`SELECT MAX(id) FROM ${CProviderLog.sTable}`, []);
+        if (rows == null || rows.length === 0) return 0;
+        return Number(rows[0][0]) || 0;
+    }
+
+    // 워크오더 한 건의 처리 내역: _key 소속 행(ListForTerminalKey와 같은 기준) 중 _afterId < id < _beforeId.
+    // _beforeId가 0이면 끝까지.
+    public static async ListForKeyRange(_key: string, _afterId: number, _beforeId: number = 0): Promise<ProviderLogRecord[]> {
+        const db = await CProviderLog.Init();
+        const t = CProviderLog.sTable;
+        const before = _beforeId > 0 ? ' AND id < ?' : '';
+        const params: any[] = [_afterId, ...(_beforeId > 0 ? [_beforeId] : []), _key, _key];
+        const rows = await db.Recv(
+            `SELECT ${CProviderLog.sCols} FROM ${t} WHERE id > ?${before} AND (${CProviderLog.OwnedBy()}) ORDER BY id ASC`,
+            params
+        );
+        if (rows == null) return [];
+        return rows.map(CProviderLog.RowToRecord);
+    }
+
+    // _afterId 이후 _key의 user 행 중 본문에 _marker(CWorkOrder.Marker)가 든 첫 행의 id. 없으면 0.
+    public static async FindTaskRow(_key: string, _afterId: number, _marker: string): Promise<number> {
+        const db = await CProviderLog.Init();
+        const rows = await db.Recv(
+            `SELECT MIN(id) FROM ${CProviderLog.sTable} WHERE id > ? AND role = 'user' AND instr(text, ?) > 0 AND (${CProviderLog.OwnedBy()})`,
+            [_afterId, _marker, _key, _key]
+        );
+        if (rows == null || rows.length === 0) return 0;
+        return Number(rows[0][0]) || 0;
+    }
+
+    // _taskRowId(FindTaskRow) 이후 _key의 assistant(=턴 종료 최종 답변) 행이 있는지.
+    public static async HasFinalAfter(_key: string, _taskRowId: number): Promise<boolean> {
+        const db = await CProviderLog.Init();
+        const rows = await db.Recv(
+            `SELECT id FROM ${CProviderLog.sTable} WHERE id > ? AND role = 'assistant' AND (${CProviderLog.OwnedBy()}) LIMIT 1`,
+            [_taskRowId, _key, _key]
+        );
+        return rows != null && rows.length > 0;
+    }
+
+    // key가 직접 붙은 행 + 그 key가 한 번이라도 등장한 CLI sessionId의 행(key 매칭 실패로 key=''인 같은 대화 행).
+    // 바인딩 순서: (key, key).
+    private static OwnedBy(): string {
+        const t = CProviderLog.sTable;
+        return `key = ? OR (sessionId != '' AND sessionId IN (SELECT DISTINCT sessionId FROM ${t} WHERE key = ? AND sessionId != ''))`;
     }
 
     // 세션(sessionId) 단위 조회 — 한 대화를 통째로 꺼낼 때.

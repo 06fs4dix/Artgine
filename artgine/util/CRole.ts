@@ -26,6 +26,10 @@ export class CRole extends CObject
 
     }
     mPriority : number=10000;
+    // true면 이 룰이 조건 성립해서 실행된 뒤, 같은 틱(CRoleMgr.Update 한 번) 안에서 배열의 나머지(더 낮은
+    // 우선순위) 룰 평가를 중단한다. 기본값 false라 이 필드를 안 쓰는 기존 룰들의 동작(조건 맞는 룰을 전부
+    // 실행)은 그대로 유지된다 — 배타적(하나만 실행) 상태 전환이 필요한 곳에서만 명시적으로 true를 준다.
+    mBreak : boolean=false;
     mAnd =new Array<CCondition>;
     mOr =new Array<CCondition>;
     mExecute=new Array<CAction>;
@@ -54,6 +58,7 @@ export class CRole extends CObject
             }
         }
         this.mPriority=json["mPriority"]==null?json["priority"]:json["mPriority"];
+        this.mBreak=json["mBreak"]==null?(json["break"]??false):json["mBreak"];
 
 
         let exe=json["mExcute"]==null?json["exe"]:json["mExcute"];
@@ -174,13 +179,14 @@ export class CRoleMgr extends CObject
 
         for(let pat of this.mRoleArr)
         {
-            
+
             if(pat.IsCondition(this))
             {
                 for(let ac of pat.mExecute)
                 {
                     ac.Excute(_target,false,null,null,"",_update);
                 }
+                if(pat.mBreak)  break;
             }
         }
         for(let key of this.mStateArr)

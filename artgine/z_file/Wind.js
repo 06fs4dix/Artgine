@@ -1,6 +1,6 @@
 import { NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
-import { clamp, CVec2, CVec3, FloatToInt, IntToFloat, max, mix, Sam2DArrToV4, Sam2DArrV4, smoothstep, step, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
+import { clamp, CVec2, CVec3, FloatToInt, IntToFloat, max, mix, Sam2DArrNearestToV4, Sam2DArrV4, smoothstep, step, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 export var windInfluence = 0.0;
 export var windDir = new Sam2DArrV4(1, SDF.eUni.V4WindDir);
 export var windPos = new Sam2DArrV4(1, SDF.eUni.V4WindPos);
@@ -14,9 +14,9 @@ export function GetWind(_objPos, _size, _time) {
     for (var i = 0; i < SDF.TexSizeMax; i++) {
         if (i >= FloatToInt(windCount))
             break;
-        var wDir = Sam2DArrToV4(windDir, IntToFloat(i));
-        var wPos = Sam2DArrToV4(windPos, IntToFloat(i));
-        var wInfo = Sam2DArrToV4(windInfo, IntToFloat(i));
+        var wDir = Sam2DArrNearestToV4(windDir, IntToFloat(i));
+        var wPos = Sam2DArrNearestToV4(windPos, IntToFloat(i));
+        var wInfo = Sam2DArrNearestToV4(windInfo, IntToFloat(i));
         var pow = wDir.w * windInfluence / (100.0 * 100.0);
         if (pow < 0.01) {
             continue;

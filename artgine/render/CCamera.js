@@ -115,13 +115,13 @@ export class CCamera extends CObject {
     GetCross() { return this.mCross; }
     GetFront() { return CMath.V3Cross(this.mCross, this.mUp); }
     GetBillBoardMat() { return this.mBillboardMat; }
-    SetFov(_val) { this.mFov = _val; }
-    SetFar(_val) { this.mProjFar = _val; }
-    SetNear(_val) { this.mProjNear = _val; }
-    SetScreenWidthBase(_val) { this.mScreenWidthBase = _val; }
-    SetEye(pa_vec) { this.mEye.Import(pa_vec); }
-    SetLook(pa_vec) { this.mLook = pa_vec; }
-    SetUp(pa_vec) { this.mUp = pa_vec; }
+    SetFov(_val) { this.mFov = _val; this.mReset = true; }
+    SetFar(_val) { this.mProjFar = _val; this.mReset = true; }
+    SetNear(_val) { this.mProjNear = _val; this.mReset = true; }
+    SetScreenWidthBase(_val) { this.mScreenWidthBase = _val; this.mReset = true; }
+    SetEye(pa_vec) { this.mEye.Import(pa_vec); this.mReset = true; }
+    SetLook(pa_vec) { this.mLook = pa_vec; this.mReset = true; }
+    SetUp(pa_vec) { this.mUp = pa_vec; this.mReset = true; }
     GetFar() { return this.mProjFar; }
     GetViewMat() { return this.mViewMat; }
     GetProjMat() { return this.mProjMat; }
@@ -413,7 +413,7 @@ export class CCamera extends CObject {
         let rbRay = this.GetRay(_bound.mMax.x, _bound.mMin.y);
         let ltRay = this.GetRay(_bound.mMin.x, _bound.mMax.y);
         let bound = new CBound();
-        bound.SetType(CBound.eType.Polytope);
+        bound.SetType(CBound.eType.GJK);
         bound.InitBound(CMath.V3AddV3(lbRay.GetOriginal(), CMath.V3MulFloat(lbRay.GetDirect(), this.mProjNear)));
         bound.InitBound(CMath.V3AddV3(lbRay.GetOriginal(), CMath.V3MulFloat(lbRay.GetDirect(), this.mProjFar)));
         bound.InitBound(CMath.V3AddV3(rtRay.GetOriginal(), CMath.V3MulFloat(rtRay.GetDirect(), this.mProjNear)));

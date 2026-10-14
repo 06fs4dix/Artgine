@@ -39,6 +39,8 @@ export class CModalBackGround extends CModal
         this.SetZIndex(CModal.eSort.Manual,_zIndex);
         this.SetBG(Bootstrap.eColor.transparent);
         this.SetTitle(CModal.eTitle.None);
+        //화면 전체에 깔리는 배경/오버레이라 ESC 대상이 아니다. 높은 z로 떠 있어서 열어두면 아래 창의 ESC를 가로챈다.
+        this.SetCloseEsc(false);
         this.Open();
         this.FullSwitch();
         this.mDebugMode=true;
@@ -1740,6 +1742,13 @@ export class CModalTerminal extends CModal
 export class CModalMusic extends CModal
 {
     static readonly sDefaultMediaImage = '512x512.png';
+    static readonly sDownloadRetryMs  = 5000;   // 통째 다운로드 실패 시 재시도 간격
+    static readonly sDownloadRetryMax = 60;     // 통째 다운로드 최대 재시도 횟수(≈5분)
+    static readonly sAutoWaitMs       = 15000;  // 자동 넘김 시 다음 곡 다운로드 완료를 기다리는 상한
+    static readonly sStallMs          = 10000;  // 버퍼링(waiting) 후 이 시간 동안 진행이 없으면 끊김으로 판정
+    static readonly sResumeRetryMs    = 3000;   // 끊김 복구 재시도 간격
+    static readonly sResumeRetryMax   = 5;      // 끊김 복구 최대 재시도 횟수(초과 시 다음 곡)
+    static readonly sPrefetchRemainSec = 60;    // canplaythrough가 안 와도 남은 재생시간이 이 이하면 프리페치 강제 시작
 
     private mPaths: string[];
     private mSaveFn: (paths: string[]) => void;
@@ -1761,12 +1770,23 @@ export class CModalMusic extends CModal
     private mLyricsEl: HTMLElement;
     private mLyricsUrl = '';
 
+    // 모바일 망 전환(기지국 핸드오버) 중 스트리밍이 끊기는 문제 대응:
+    // 현재 곡과 미리 확정한 다음 곡을 통째로 받아(Blob) 재생하고, 스트리밍 중 끊기면 자동 복구한다.
+    private mCur: CModalMusic.Slot = null;    // 현재 곡 다운로드 슬롯
+    private mNext: CModalMusic.Slot = null;   // 다음 곡 프리페치 슬롯
+    private mNextIndex = -1;                  // 미리 확정한 다음 곡 인덱스
+    private mPrefetchPending = false;         // 스트리밍 재생 중: 현재 곡 버퍼가 안정된 뒤 프리페치를 시작하도록 보류 중
+    private mPlaySeq = 0;                     // Play 호출 세대(비동기 콜백 무효화용)
+    private mResumeCount = 0;
+    private mResumeTimer = 0;
+    private mStallTimer = 0;
+
     constructor(paths: string[] = [], saveFn?: (paths: string[]) => void, mediaImage?: string,
                 aiEnabled = false, aiSearchFn?: (queries: string[]) => Promise<{ urls: string[], reason: string }>,
                 lyricsEnFn?: (url: string) => Promise<{ lyrics: string }>)
     {
         super(null);
-        this.mPaths = [...paths];
+        this.mPaths = [...new Set(paths)];
         this.mSaveFn = saveFn ?? ((p: string[]) => CStorage.Set("SoundList", JSON.stringify({ fullPath: p })));
         this.mMediaImage = mediaImage ?? CModalMusic.sDefaultMediaImage;
         this.mAiEnabled = aiEnabled;
@@ -1841,6 +1861,20 @@ export class CModalMusic extends CModal
         this.mAudio.addEventListener('ended', () => this._Next());
         this.mAudio.addEventListener('pause', () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; });
         this.mAudio.addEventListener('play',  () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; });
+        // 끊김 감지: error는 즉시, waiting은 sStallMs 동안 진행이 없을 때만 복구 시도
+        this.mAudio.addEventListener('error',      () => this._OnStall('error'));
+        this.mAudio.addEventListener('waiting',    () => this._ArmStallWatch());
+        this.mAudio.addEventListener('playing',    () => this._ClearStallWatch());
+        this.mAudio.addEventListener('timeupdate', () => {
+            this._ClearStallWatch();
+            // 스트리밍 재생 중 보류한 프리페치: canplaythrough가 끝내 안 오더라도 곡 막바지엔 시작한다
+            if (this.mPrefetchPending && this.mAudio.duration > 0 && this.mAudio.duration - this.mAudio.currentTime <= CModalMusic.sPrefetchRemainSec)
+                this._StartPendingPrefetch();
+        });
+        // 스트리밍 버퍼가 끝까지 재생 가능할 만큼 찼을 때 비로소 다음 곡을 받기 시작한다(대역폭 경합 방지)
+        this.mAudio.addEventListener('canplaythrough', () => this._StartPendingPrefetch());
+        // 랜덤 옵션이 바뀌면 미리 확정한 다음 곡도 다시 고른다
+        this.mRandomChk.addEventListener('change', () => { if (this.mCur) this._SetNext(this._PickNext(this.mLastPlay), !this.mPrefetchPending); });
 
         if ('mediaSession' in navigator) {
             navigator.mediaSession.setActionHandler('play',          () => this.mAudio.play());
@@ -1869,10 +1903,9 @@ export class CModalMusic extends CModal
     SetList(paths: string[]): void
     {
         this.mRandomPool = [];
-        this.mPaths = [...paths];
+        this.mPaths = [...new Set(paths)];
         this.mLastPlay = 0;
-        this.mAudio.pause();
-        this.mNowPlayingEl.textContent = '';
+        this._Stop();
         this._Persist();
     }
 
@@ -1887,10 +1920,17 @@ export class CModalMusic extends CModal
         }
         if (indices.size === 0) return;
 
+        const nextPath = this.mNext ? this.mNext.path : (this.mNextIndex >= 0 && this.mNextIndex < this.mPaths.length ? this.mPaths[this.mNextIndex] : '');
         for (const i of [...indices].sort((a, b) => b - a)) {
             this.mPaths.splice(i, 1);
             if (i < this.mLastPlay) this.mLastPlay--;
-            else if (i === this.mLastPlay) { this.mAudio.pause(); this.mLastPlay = 0; this.mNowPlayingEl.textContent = ''; }
+            else if (i === this.mLastPlay) { this._Stop(); this.mLastPlay = 0; }
+        }
+        // 인덱스가 밀렸으므로 확정해 둔 다음 곡을 경로 기준으로 다시 찾는다. 삭제됐으면 새로 고른다.
+        if (this.mCur && this.mPaths.length > 0) {
+            const ni = nextPath ? this.mPaths.indexOf(nextPath) : -1;
+            if (ni >= 0) this.mNextIndex = ni;
+            else this._SetNext(this._PickNext(this.mLastPlay), !this.mPrefetchPending);
         }
         this._Persist();
     }
@@ -1898,7 +1938,12 @@ export class CModalMusic extends CModal
     /** 재생목록의 full URL 경로 배열을 반환한다. */
     GetList(): string[] { return [...this.mPaths]; }
 
-    Play(index: number): void
+    /**
+     * index 곡을 재생한다.
+     * _auto=false(사용자 조작): 제스처를 잃지 않도록 즉시 스트리밍 시작, 통째 다운로드는 복구용으로 백그라운드 진행.
+     * _auto=true(곡 끝나서 자동 넘김): 미리 받아둔 Blob으로 재생(네트워크 불필요). 아직이면 잠시 기다렸다가 스트리밍으로 폴백.
+     */
+    Play(index: number, _auto = false): void
     {
         if (this.mPaths.length === 0) return;
         const items = this.mListEl.querySelectorAll('li');
@@ -1907,11 +1952,52 @@ export class CModalMusic extends CModal
         items[index]?.classList.add('list-group-item-dark');
 
         if ('audioSession' in navigator) (navigator as any).audioSession.type = 'playback';
+        const seq = ++this.mPlaySeq;
+        this._ClearResume();
         const path = this.mPaths[index];
         const name = CModalMusic._FileName(path);
-        this.mAudio.src = path;
         if (this.mLyricsEl && this.mLyricsEl.style.display !== 'none' && this.mLyricsUrl !== path)
             this._LoadLyrics(path);
+
+        // 프리페치 슬롯이 이 곡이면 넘겨받고, 같은 곡 반복이면 현재 슬롯 유지.
+        // 그 외 사용자 조작이면 통째 다운로드 없이 스트리밍만(즉시 재생), 자동 넘김이면 새로 받는다.
+        let cur: CModalMusic.Slot;
+        if (this.mNext && this.mNext.path === path) { cur = this.mNext; this.mNext = null; }
+        else if (this.mCur && this.mCur.path === path) cur = this.mCur;
+        else cur = this._NewSlot(path, _auto);
+        if (this.mCur !== cur) this._DropSlot(this.mCur);
+        this.mCur = cur;
+
+        if (cur.url) {
+            // Blob 재생은 네트워크를 안 쓰므로 다음 곡 프리페치를 바로 시작
+            this._SetNext(this._PickNext(index));
+            this._StartAudio(cur.url, name);
+            return;
+        }
+        if (!_auto) {
+            // 스트리밍: 다음 곡은 확정만 해두고, 현재 곡 버퍼가 안정된(canplaythrough) 뒤에 받기 시작한다
+            this._SetNext(this._PickNext(index), false);
+            this._StartAudio(path, name);
+            return;
+        }
+
+        this._SetNext(this._PickNext(index));
+        this.mNowPlayingEl.textContent = '⬇ ' + name;
+        const timeout = new Promise<string>((_, rej) => setTimeout(() => rej(new Error('timeout')), CModalMusic.sAutoWaitMs));
+        Promise.race([cur.promise, timeout])
+            .then(url => { if (seq === this.mPlaySeq) this._StartAudio(url, name); })
+            .catch(e => {
+                if (seq !== this.mPlaySeq) return;
+                console.warn('CModalMusic.Play: blob 대기 실패, 스트리밍 폴백:', e);
+                this._StartAudio(path, name);
+            });
+    }
+
+    private _StartAudio(src: string, name: string): void
+    {
+        this._ClearStallWatch();
+        this.mResumeCount = 0;
+        this.mAudio.src = src;
         this.mAudio.play()
             .then(() => {
                 this.mNowPlayingEl.textContent = '♫ ' + name;
@@ -1927,6 +2013,139 @@ export class CModalMusic extends CModal
                 }
             })
             .catch(e => console.warn('CModalMusic.Play:', e));
+    }
+
+    /** 재생을 멈추고 다운로드/복구 상태를 모두 초기화한다. */
+    private _Stop(): void
+    {
+        this.mPlaySeq++;
+        this._ClearResume();
+        this._DropSlot(this.mCur);  this.mCur  = null;
+        this._DropSlot(this.mNext); this.mNext = null;
+        this.mNextIndex = -1;
+        this.mPrefetchPending = false;
+        this.mAudio.pause();
+        this.mNowPlayingEl.textContent = '';
+    }
+
+    /**
+     * 곡 슬롯을 만든다. download=true면 URL을 통째로 받아 ObjectURL을 만들고(실패 시 sDownloadRetryMs 간격 재시도),
+     * false면 스트리밍 전용(다운로드 없음, url은 영구히 비어 있음).
+     */
+    private _NewSlot(path: string, download = true): CModalMusic.Slot
+    {
+        const ctrl = new AbortController();
+        const slot: CModalMusic.Slot = { path, url: '', ctrl, promise: null };
+        if (!download) { slot.promise = Promise.reject(new Error('stream only')); slot.promise.catch(() => {}); return slot; }
+        slot.promise = CModalMusic._Download(path, ctrl).then(url => {
+            if (ctrl.signal.aborted) { URL.revokeObjectURL(url); throw new Error('aborted'); }
+            slot.url = url;
+            return url;
+        });
+        slot.promise.catch(() => {});  // 대기자가 없을 때 unhandled rejection 방지
+        return slot;
+    }
+
+    private _DropSlot(slot: CModalMusic.Slot): void
+    {
+        if (!slot) return;
+        slot.ctrl.abort();
+        if (slot.url) { URL.revokeObjectURL(slot.url); slot.url = ''; }
+    }
+
+    private static async _Download(path: string, ctrl: AbortController): Promise<string>
+    {
+        let crossOrigin = false;
+        try { crossOrigin = new URL(path, location.href).origin !== location.origin; } catch {}
+        for (let tryCnt = 0; ; tryCnt++) {
+            try {
+                const res = await fetch(path, { signal: ctrl.signal });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const blob = await res.blob();
+                return URL.createObjectURL(blob);
+            } catch (e) {
+                // 타 도메인은 CORS 거부와 망 단절을 구분할 수 없으므로 재시도하지 않는다(스트리밍으로 폴백)
+                if (ctrl.signal.aborted || crossOrigin || tryCnt >= CModalMusic.sDownloadRetryMax) throw e;
+                await new Promise(r => setTimeout(r, CModalMusic.sDownloadRetryMs));
+            }
+        }
+    }
+
+    /**
+     * 다음 곡을 미리 확정하고 프리페치를 시작한다. 이미 같은 경로를 받는 중이면 유지한다.
+     * prefetch=false면 인덱스만 확정하고 다운로드는 보류(현재 곡 버퍼가 안정되면 _StartPendingPrefetch가 시작).
+     */
+    private _SetNext(idx: number, prefetch = true): void
+    {
+        this.mNextIndex = idx;
+        const path = idx >= 0 && idx < this.mPaths.length ? this.mPaths[idx] : '';
+        if (this.mNext && this.mNext.path === path) { this.mPrefetchPending = false; return; }
+        this._DropSlot(this.mNext); this.mNext = null;
+        // 같은 곡 반복이면 현재 슬롯을 그대로 쓰므로 따로 받지 않는다
+        const need = !!path && !(this.mCur && this.mCur.path === path && this.mCur.url);
+        if (!need) { this.mPrefetchPending = false; return; }
+        if (prefetch) { this.mPrefetchPending = false; this.mNext = this._NewSlot(path); }
+        else this.mPrefetchPending = true;
+    }
+
+    /** 보류해 둔 다음 곡 프리페치를 시작한다(현재 곡 스트리밍 버퍼가 안정된 뒤 호출). */
+    private _StartPendingPrefetch(): void
+    {
+        if (!this.mPrefetchPending || !this.mCur) return;
+        this.mPrefetchPending = false;
+        this._SetNext(this.mNextIndex);
+    }
+
+    private _ArmStallWatch(): void
+    {
+        if (this.mStallTimer) return;
+        this.mStallTimer = window.setTimeout(() => {
+            this.mStallTimer = 0;
+            if (!this.mAudio.paused && !this.mAudio.ended && this.mAudio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA)
+                this._OnStall('stall');
+        }, CModalMusic.sStallMs);
+    }
+
+    private _ClearStallWatch(): void
+    {
+        if (this.mStallTimer) { clearTimeout(this.mStallTimer); this.mStallTimer = 0; }
+    }
+
+    private _ClearResume(): void
+    {
+        this._ClearStallWatch();
+        if (this.mResumeTimer) { clearTimeout(this.mResumeTimer); this.mResumeTimer = 0; }
+        this.mResumeCount = 0;
+    }
+
+    /**
+     * 재생 끊김 복구. 스트리밍 중이면 현재 위치를 기억한 뒤 통째 받은 Blob(있으면)이나 원래 URL로 다시 붙여 이어 재생한다.
+     * Blob 재생 자체가 실패한 건 네트워크 문제가 아니므로 다음 곡으로 넘어간다.
+     */
+    private _OnStall(reason: string): void
+    {
+        this._ClearStallWatch();
+        if (this.mPaths.length === 0 || !this.mCur || this.mResumeTimer) return;
+        const seq = this.mPlaySeq;
+        const src = this.mAudio.currentSrc || this.mAudio.src;
+        const pos = this.mAudio.currentTime || 0;
+        console.warn('CModalMusic 끊김 복구:', reason, src, pos.toFixed(1));
+
+        if (src.startsWith('blob:') || this.mResumeCount >= CModalMusic.sResumeRetryMax) {
+            this.mResumeTimer = window.setTimeout(() => { this.mResumeTimer = 0; if (seq === this.mPlaySeq) this._Next(); }, 1000);
+            return;
+        }
+        this.mResumeCount++;
+        const resume = () => {
+            this.mResumeTimer = 0;
+            if (seq !== this.mPlaySeq) return;
+            this.mAudio.src = this.mCur.url || this.mCur.path;
+            this.mAudio.addEventListener('loadedmetadata', () => { if (seq === this.mPlaySeq) this.mAudio.currentTime = pos; }, { once: true });
+            this.mAudio.play().catch(e => console.warn('CModalMusic resume:', e));
+        };
+        // Blob이 이미 준비됐으면 바로, 아니면 잠시 뒤 재접속
+        if (this.mCur.url) resume();
+        else this.mResumeTimer = window.setTimeout(resume, CModalMusic.sResumeRetryMs);
     }
 
     /** 경로 끝의 파일명만 추출 (mediaSession 표시용). */
@@ -1946,27 +2165,38 @@ export class CModalMusic extends CModal
         return '...' + decoded.slice(-(max - 3));
     }
 
+    /** 미리 확정해 둔 다음 곡(프리페치 완료분)을 재생한다. 확정된 게 없으면 새로 고른다. */
     private _Next(): void
     {
+        if (this.mPaths.length === 0) return;
+        let i = this.mNextIndex;
+        if (i < 0 || i >= this.mPaths.length || (this.mNext && this.mPaths[i] !== this.mNext.path))
+            i = this._PickNext(this.mLastPlay);
+        this.Play(i, true);
+    }
+
+    /** cur 다음에 틀 곡 인덱스를 고른다(랜덤이면 풀에서 하나 뽑고, 아니면 순차). */
+    private _PickNext(cur: number): number
+    {
+        const n = this.mPaths.length;
+        if (n === 0) return -1;
         if (this.mRandomChk.checked) {
-            while (this.mPaths.length > 0) {
+            for (;;) {
                 if (this.mRandomPool.length === 0) this.mRandomPool = [...this.mPaths];
                 const sel = Math.trunc(Math.random() * this.mRandomPool.length);
                 const key = this.mRandomPool.splice(sel, 1)[0];
                 const i   = this.mPaths.indexOf(key);
-                if (i >= 0) { this.Play(i); return; }
+                if (i >= 0) return i;
             }
-        } else {
-            this.Play(this.mLastPlay + 1 >= this.mPaths.length ? 0 : this.mLastPlay + 1);
         }
+        return cur + 1 >= n ? 0 : cur + 1;
     }
 
     private _ClearAll(): void
     {
         this.mRandomPool = [];
         this.mPaths = [];
-        this.mAudio.pause();
-        this.mNowPlayingEl.textContent = '';
+        this._Stop();
         this.mLastPlay = 0;
         this._Persist();
     }
@@ -2015,9 +2245,11 @@ export class CModalMusic extends CModal
             if (urls.length === 0) {
                 CAlert.Info('검색 결과가 없습니다.');
             } else {
+                const playIdx = this.mPaths.length;
                 this.Add(urls);
                 this.mAiInput.value = '';
                 this.mAiPanel.style.display = 'none';
+                if (playIdx < this.mPaths.length) this.Play(playIdx);
             }
         } catch (e) {
             console.warn('CModalMusic._AiSearch:', e);
@@ -2074,6 +2306,11 @@ export class CModalMusic extends CModal
             }
         }
     }
+}
+export namespace CModalMusic
+{
+    /** 곡 하나의 통째 다운로드 상태. url은 완료 후에만 채워지는 ObjectURL. */
+    export type Slot = { path: string; url: string; ctrl: AbortController; promise: Promise<string> };
 }
 
 // 서버 CORMRouter(/ORM/Exec)에 연결해 테이블 목록/데이터를 보여주는 읽기 전용 뷰어.

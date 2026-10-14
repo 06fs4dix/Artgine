@@ -1,5 +1,5 @@
 import { SDF } from "./SDF";
-import { CMat3, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, reflect, SamCubeLodToColor, SaturateFloat, Sam2DArrToV4, Sam2DArrV4, SamCubeSize, sqrt, abs, clamp, max, min, pow, mix, Exp2, log2, floor, V2AddV2, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat, round, } from "./Shader";
+import { CMat3, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, reflect, SaturateFloat, Sam2DArrNearestToV4, Sam2DArrV4, sqrt, abs, clamp, max, min, pow, mix, Exp2, log2, floor, V2AddV2, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat, round, Sam2DArrLodToCubeColor, Sam2DArrSize, } from "./Shader";
 export var ambientColor = new CVec3(0.2, 0.2, 0.2);
 export var material = new CVec4(0.0, 0.0, 0.0, 1.0);
 export var cullMask = new CVec4(0.0, 0.0, 0.0, 0.0);
@@ -11,7 +11,8 @@ export var ligStep0 = SDF.eLightStep0.HafeLambert;
 export var ligStep1 = SDF.eLightStep1.Phong;
 export var ligStep2 = SDF.eLightStep2.Emissive;
 export var ligStep3 = SDF.eLightStep3.None;
-export var envmapOn = 0.0;
+export var envCount = 0.0;
+export var envPos = new Sam2DArrV4(1, SDF.eUni.V4EnvPos);
 export var ligDir = new Sam2DArrV4(1, SDF.eUni.V4LightDir);
 export var ligCol = new Sam2DArrV4(1, SDF.eUni.V4LightColor);
 export var ligMask = new Sam2DArrV4(1, SDF.eUni.V4LightMask);
@@ -62,10 +63,53 @@ function FresnelSchlickRoughness(_nDotV, _F0, _roughness) {
     var oneMinusRoughnessVec3 = new CVec3(oneMinusRoughness, oneMinusRoughness, oneMinusRoughness);
     return V3AddV3(_F0, V3MulFloat(V3SubV3(V3Max(oneMinusRoughnessVec3, _F0), _F0), oneMinusCosTheta));
 }
+function SphereProjection(_dir, _pos, _center, _radius) {
+    var d = V3Nor(_dir);
+    if (_radius <= 0.0)
+        return d;
+    var l = V3SubV3(_pos, _center);
+    var b = V3Dot(l, d);
+    var h = b * b - (V3Dot(l, l) - _radius * _radius);
+    if (h < 0.0)
+        return d;
+    var t = sqrt(h) - b;
+    if (t < 0.0)
+        return d;
+    return V3AddV3(l, V3MulFloat(d, t));
+}
+function EnvSample(_p, _index, _nor, _refl, _pos, _maxLod, _roughness) {
+    var texOff = _index * 6.0;
+    var R = SphereProjection(_refl, _pos, _p.xyz, _p.w);
+    var irradiance = Sam2DArrLodToCubeColor(SDF.eTexSlot.ArrEnvmap, _nor, texOff, _maxLod).rgb;
+    var prefiltered = Sam2DArrLodToCubeColor(SDF.eTexSlot.ArrEnvmap, R, texOff, _roughness * _maxLod).rgb;
+    return new CMat3(irradiance, prefiltered, new CVec3(0.0, 0.0, 0.0));
+}
+export function EnvNearest(_world, _nor) {
+    var best = -1.0;
+    var bestDist = 1000000000000000.0;
+    for (var e = 0; e < SDF.TexSizeMax; ++e) {
+        if (e >= FloatToInt(envCount))
+            break;
+        var ep = Sam2DArrNearestToV4(envPos, IntToFloat(e));
+        var lp = V3SubV3(ep.xyz, _world);
+        var d = V3Len(lp);
+        if (ep.w > 0.0) {
+            if (d >= ep.w || (d > ep.w * 0.5 && V3Dot(_nor, lp) <= 0.0))
+                d = 1000000.0;
+            else
+                d = d - 1000000.0;
+        }
+        if (d < bestDist) {
+            bestDist = d;
+            best = IntToFloat(e);
+        }
+    }
+    return best;
+}
 function ComputeSpecularOcclusion(_nDotV, _ao, _roughness) {
     return SaturateFloat(pow(_nDotV + _ao, Exp2(-16.0 * _roughness - 1.0)) - 1.0 + _ao);
 }
-export function LightCac3D(campos, position, albedo, normal, shadow, roughness, ao, metalic, maskIndex) {
+export function LightCac3D(position, albedo, normal, shadow, maskIndex, campos, roughness, ao, metalic, envIdx) {
     normal = V3Nor(normal);
     var viewDir = V3Nor(V3SubV3(campos, position.xyz));
     var nDotV = SaturateFloat(V3Dot(normal, viewDir));
@@ -83,9 +127,9 @@ export function LightCac3D(campos, position, albedo, normal, shadow, roughness, 
     for (var i = 0; i < SDF.TexSizeMax; ++i) {
         if (i >= FloatToInt(ligCount))
             break;
-        var lDir = Sam2DArrToV4(ligDir, IntToFloat(i));
-        var lCol = Sam2DArrToV4(ligCol, IntToFloat(i));
-        var lMask = Sam2DArrToV4(ligMask, IntToFloat(i));
+        var lDir = Sam2DArrNearestToV4(ligDir, IntToFloat(i));
+        var lCol = Sam2DArrNearestToV4(ligCol, IntToFloat(i));
+        var lMask = Sam2DArrNearestToV4(ligMask, IntToFloat(i));
         if ((FloatToInt(lMask.x) & FloatToInt(maskIndex)) == 0)
             continue;
         if (abs(lDir.w) <= 0.5)
@@ -185,20 +229,23 @@ export function LightCac3D(campos, position, albedo, normal, shadow, roughness, 
     var DEnvAll;
     var SEnvAll;
     {
-        if (envmapOn < 0.5) {
+        var envBest = round(envIdx);
+        if (envBest < 0.0) {
             DEnvAll = V3MulV3(albedo.xyz, ambientColor);
         }
         else {
-            var maxReflectionLOD = floor(log2(SamCubeSize(0.0).x)) - 4.0;
-            var R = reflect(V3MulFloat(viewDir, -1.0), normal);
+            var envBestPos = Sam2DArrNearestToV4(envPos, envBest);
+            var maxReflectionLOD = max(0.0, floor(log2(Sam2DArrSize(SDF.eTexSlot.ArrEnvmap).x)) - 4.0);
+            var reflDir = reflect(V3MulFloat(viewDir, -1.0), normal);
             var baseReflectivity = new CVec3(0.04, 0.04, 0.04);
             var F0 = V3Mix(baseReflectivity, albedo.rgb, metalic);
             var F = FresnelSchlickRoughness(nDotV, F0, roughness);
             var kS = F;
             var kD = V3MulFloat(V3SubV3(new CVec3(1.0, 1.0, 1.0), kS), 1.0 - metalic);
-            var irradiance = SamCubeLodToColor(0.0, normal, maxReflectionLOD).rgb;
+            var envSam = EnvSample(envBestPos, envBest, normal, reflDir, position.xyz, maxReflectionLOD, orgRoughness);
+            var irradiance = envSam[0];
+            var prefilteredColor = envSam[1];
             DEnvAll = V3MulV3(V3MulV3(albedo.rgb, irradiance), kD);
-            var prefilteredColor = SamCubeLodToColor(0.0, R, orgRoughness * maxReflectionLOD).rgb;
             SEnvAll = V3MulV3(prefilteredColor, V3MulV3(kS, EnvBRDFApprox(F0, roughness, nDotV)));
         }
         DEnvAll = V3MulFloat(DEnvAll, ao);
@@ -212,8 +259,8 @@ export function GetSunInfo() {
     for (var i = 0; i < SDF.TexSizeMax; ++i) {
         if (i >= FloatToInt(ligCount))
             break;
-        var dir = Sam2DArrToV4(ligDir, IntToFloat(i));
-        var col = Sam2DArrToV4(ligCol, IntToFloat(i));
+        var dir = Sam2DArrNearestToV4(ligDir, IntToFloat(i));
+        var col = Sam2DArrNearestToV4(ligCol, IntToFloat(i));
         if (abs(dir.w) <= 0.5)
             continue;
         var isPointLight = dir.w > 1.1 ? 1.0 : 0.0;
@@ -233,9 +280,9 @@ export function LightCac2D(position, albedo, normal, shadow, maskIndex) {
     for (var i = 0; i < SDF.TexSizeMax; ++i) {
         if (i >= FloatToInt(ligCount))
             break;
-        var lDir = Sam2DArrToV4(ligDir, IntToFloat(i));
-        var lCol = Sam2DArrToV4(ligCol, IntToFloat(i));
-        var lMask = Sam2DArrToV4(ligMask, IntToFloat(i));
+        var lDir = Sam2DArrNearestToV4(ligDir, IntToFloat(i));
+        var lCol = Sam2DArrNearestToV4(ligCol, IntToFloat(i));
+        var lMask = Sam2DArrNearestToV4(ligMask, IntToFloat(i));
         if ((FloatToInt(lMask.x) & FloatToInt(maskIndex)) == 0)
             continue;
         if (abs(lDir.w) <= 0.5)
@@ -252,11 +299,12 @@ export function LightCac2D(position, albedo, normal, shadow, maskIndex) {
             var dist = V3Len(L);
             if (dist > lDir.w)
                 continue;
-            var attenuation = 1.0 - max(0.0, (dist - lCol.w) / (lDir.w - lCol.w));
+            var attenuation = 1.0 - clamp((dist - lCol.w) / (lDir.w - lCol.w), 0.0, 1.0);
             radiance = V3MulFloat(radiance, attenuation);
             var diffuse = albedo.rgb;
             if (norLen > 0.5) {
-                L.z = 0.0;
+                L.y = -L.y;
+                L.z = 1.0;
                 L = V3Nor(L);
                 var angle = max(0.0, V3Dot(normal, L));
                 diffuse = V3MulFloat(diffuse, angle);
@@ -265,6 +313,9 @@ export function LightCac2D(position, albedo, normal, shadow, maskIndex) {
         }
         else {
             L = V3Nor(L);
+            if (norLen > 0.5) {
+                normal = V3Nor(new CVec3(-normal.x, (normal.y + normal.z + 1.0) / 3.0, 0.0));
+            }
             var angle = max(0.0, V3Dot(normal, L));
             var diffuse = V3MulFloat(radiance, angle);
             DDirAll = V3AddV3(DDirAll, V3MulV3(albedo.rgb, diffuse));

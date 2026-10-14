@@ -10,7 +10,7 @@ import {
     sqrt,
     V2Dot,
     max,
-    Sam2DArrToV4,
+    Sam2DArrToV4, Sam2DArrNearestToV4,
 } from "./Shader";
 
 // 밸류 노이즈 함수 : 완전 랜덤
@@ -272,7 +272,7 @@ export function NoiseGet(_uvw : CVec3, _type : number) : number
         var coord : CVec2 = V2Floor(V2Mod(_uvw.xy, 64.0));
         var index : number = coord.y * 64.0 + coord.x;
         var modIndex : number = mod(index, 2048.0);
-        var v4 : CVec4 = Sam2DArrToV4(new CVec3(1, 0.0, SDF.eNoise.Blue), modIndex);
+        var v4 : CVec4 = Sam2DArrNearestToV4(new CVec3(1, 0.0, SDF.eNoise.Blue), modIndex);
         return index < 2048.0 ? v4.x : v4.y;
     }
     else if(_type > SDF.eNoise.PerlinFBM3 - 0.5)     // > 2.5

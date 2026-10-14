@@ -1,5 +1,5 @@
 import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, vfxMat0, vfxMat1, BlendColor0, BlendColor1, BlendColor2, BlendColor3, BlendColor4, BlendColor5, BlendColor6, BlendColor7, BlendColor9, BlendColor8, BlendColor10, BlendColor11, BlendColor12, BlendColor13, BlendColor14, BlendColor15 } from "./ColorFun";
-import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envCount,envPos, EnvNearest, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
 import { 
     Attribute, BranchBegin, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, ToV2, UV2, 
@@ -85,7 +85,7 @@ Build("Artgine/Shader/PostLight",["light"],
         worldMat,viewMat,projectMat,
         viewMatInv3D, camPos3D,
         ligDir,ligCol,ligMask,ligCount,
-        ambientColor,sam2DCount,samCubeCount,envmapOn,
+        ambientColor,sam2DCount,samCubeCount,envCount,envPos,
         ligStep0,ligStep1,ligStep2,ligStep3,
         time,renType,
         sam2DDiffuse,sam2DPosition,sam2DNormal,sam2DSpecular,sam2DShadow
@@ -257,7 +257,12 @@ function ps_main_light() {
     var normal : CVec3 = MappingTexToV3(L_nor.rgb);
     var maskIndex : number = L_pos.w;
     
-    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, normal, shadow, L_spc.y, L_spc.x, L_spc.z, maskIndex);
+    var envIdx : number = -1.0;
+    BranchBegin("env","E",[envCount,envPos]);
+    envIdx = EnvNearest(worldPos.xyz, normal);
+    BranchEnd();
+
+    var dseMat : CMat3 = LightCac3D(worldPos, L_dif, normal, shadow, maskIndex, camPos3D, L_spc.y, L_spc.x, L_spc.z, envIdx);
 
     if(renType < 0.5) {
         // 0 diffuse
@@ -341,7 +346,7 @@ function PreFilter(_col : CVec3) : CVec3 {
     var knee : number = threshold * softThreshold;
     var softness : number = brightness - (threshold - knee);
     softness = clamp(softness, 0.0, 2.0 * knee);
-    softness = softness * softness * (4.0 * knee + 0.00001);
+    softness = softness * softness / (4.0 * knee + 0.00001);
     var contribution : number= max(brightness - threshold, softness);
     contribution /= max(brightness, 0.00001);
     return V3MulFloat(_col, contribution);

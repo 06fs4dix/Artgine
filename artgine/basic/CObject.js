@@ -87,7 +87,21 @@ export class CPointer {
         return false;
     }
 }
+const gKnownInstances = new WeakSet();
+let gInstanceTracking = false;
 export class CObject {
+    constructor() {
+        if (gInstanceTracking)
+            gKnownInstances.add(this);
+    }
+    static SetInstanceTracking(_enabled) {
+        gInstanceTracking = _enabled;
+    }
+    static IsKnownInstance(_obj) {
+        if (!gInstanceTracking)
+            return true;
+        return gKnownInstances.has(_obj);
+    }
     Icon() { return ""; }
     Key() {
         if (this["mKey"] == null)

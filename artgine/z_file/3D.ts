@@ -3,7 +3,7 @@ import {
 	ToV2, ToV3, ToV4, Normal3, TexOff3, Tangent4, UV2, Vertex3, Weight4, WeightIndexI4, InverseMat3, 
 	LWVPMul, discard, screenPos, MappingV3ToTex,
 	Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, MatMix, MatTypeToMat,
-	Sam2DToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrToMat,
+	Sam2DToColor, Sam2DGradToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrNearestToMat,
     clamp, floor, min, abs, max, dFdy, dFdx, length, SaturateFloat, smoothstep,
 	V2SubV2, V2MulFloat, V2DivV2, V2AddV2, V2Len,
 	V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V3Len, V3Mix, V3SubV3, SaturateV3, V3Cross, V3Sqrt, V3MulV3,
@@ -11,10 +11,12 @@ import {
 	ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, 
 	BranchBegin,BranchEnd,BranchDefault,
 	Attribute, Null,
-    Sam2DArrToV4,
+    Sam2DArrNearestToV4,
     gl_Position,
     V4Dot,
     TransposeMat4,
+	sqrt,
+	sin,
 } from "./Shader"
 import {
 	SDF
@@ -36,7 +38,7 @@ import {
     PackGrayToRGBA
 } from "./ColorFun";
 import {
-	ambientColor,envmapOn,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligMask,ligStep0,ligStep1,ligStep2,ligStep3,
+	ambientColor,envCount,envPos,EnvNearest,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligMask,ligStep0,ligStep1,ligStep2,ligStep3,
     material,
     cullMask,
     sam2DCount,
@@ -45,20 +47,18 @@ import {
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
 	bias, normalBias, PCF, shadowCount, shadowOn, 
-	shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-    shadowRate, shadowReadList, shadowWrite, texture16f, 
+	shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+    shadowRate, shadowWrite, texture16f, shadowZOffset,
 	jitter,
     CalcShadow,
     CalcParallaxShadow,
     shadowInfoList,
-    shadowCascadeDataList,
     shadowNear,
     shadowFar,
     shadowTop,
     shadowBottom,
     shadowLeft,
     shadowRight,
-    shadowDivideList,
     PCFStep
 } from "./Shadow";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
@@ -72,6 +72,10 @@ var texCodi : CVec4=Null();
 var screenSize : CVec2;
 var skin : number=Null();
 var parallaxNormal : number=Attribute(0,"canvas");
+//x 이내는 전체 깊이, y까지 줄어들다 그 밖은 시차 반복을 건너뜀(노말맵은 유지)
+var parallaxDist : CVec2 = new CVec2(1500.0, 3000.0);
+//시차만큼 깊이(픽셀 위치)를 뒤로 미는 배율. 1 기본, 0이면 밀지 않음. 붙어 있는 면이 비쳐 보이면 줄인다
+var parallaxDepth : number = 1.0;
 
 var alphaCut : number = 0.01;
 
@@ -93,6 +97,7 @@ var to_tangent : ToV3=Null();
 var to_ref : ToV3=Null();
 var to_worldPos : ToV4=Null();
 var to_viewPos : ToV4=Null();
+var to_envIdx : ToV2=Null();
 
 //out
 var out_position : OutPosition=Null();
@@ -133,7 +138,7 @@ Build("Artgine/Shader/3DSkin",[],
 	vs_main,[
         worldMat,viewMat,projectMat,skin,sam2DCount
 	],
-	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
+	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_envIdx],
 	ps_main,[out_color]
 );
 //Simple
@@ -159,17 +164,17 @@ Build("Artgine/Shader/3DGBuffer", ["gBuf"],
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
 		worldMat,viewMat,projectMat,skin,
-        shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-        shadowReadList,shadowInfoList,shadowCascadeDataList,shadowDivideList,
-		shadowWrite,shadowCount,
-	], [out_position,to_uv,to_viewPos],
+        shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+        shadowInfoList,
+		shadowWrite,shadowCount,shadowZOffset,
+	], [out_position,to_uv,to_viewPos,to_ref],
 	ps_main_shadow_write,[out_color]
 );
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
 		worldMat,viewMat,projectMat,skin,
-        shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-        shadowReadList,shadowInfoList,shadowCascadeDataList,shadowDivideList,
+        shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+        shadowInfoList,
         shadowWrite,shadowCount,
 		shadowRate,PCF,PCFStep,texture16f,bias,normalBias,jitter,
         ligDir,ligCol,ligMask,ligCount,cullMask,
@@ -266,10 +271,10 @@ function GetWorldWeightMat(_weightArrMat : Sam2DArrMat,_weightBakeArrMat : numbe
 	{
 		if(_skin < SDF.eSkin.Bone + 0.5 && _weightArrMat.x>0.0)
 		{
-			var weightMat:CMat = FloatMulMat(_weight.x,Sam2DArrToMat(_weightArrMat,_weightIndex.x));
-			weightMat = MatAdd(FloatMulMat(_weight.y,Sam2DArrToMat(_weightArrMat,_weightIndex.y)),weightMat);
-			weightMat = MatAdd(FloatMulMat(_weight.z,Sam2DArrToMat(_weightArrMat,_weightIndex.z)),weightMat);
-			weightMat = MatAdd(FloatMulMat(_weight.w,Sam2DArrToMat(_weightArrMat,_weightIndex.w)),weightMat);
+			var weightMat:CMat = FloatMulMat(_weight.x,Sam2DArrNearestToMat(_weightArrMat,_weightIndex.x));
+			weightMat = MatAdd(FloatMulMat(_weight.y,Sam2DArrNearestToMat(_weightArrMat,_weightIndex.y)),weightMat);
+			weightMat = MatAdd(FloatMulMat(_weight.z,Sam2DArrNearestToMat(_weightArrMat,_weightIndex.z)),weightMat);
+			weightMat = MatAdd(FloatMulMat(_weight.w,Sam2DArrNearestToMat(_weightArrMat,_weightIndex.w)),weightMat);
 			woweMat = MatMul(weightMat,woweMat);
 			
 		}
@@ -325,9 +330,40 @@ function GetWorldWeightMat(_weightArrMat : Sam2DArrMat,_weightBakeArrMat : numbe
 // }
 function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _wor : CVec4, _camPos : CVec3, _texOff : CVec3) : CVec3 {
     var uvh : CVec3 = new CVec3(_uv, 0.0);
+	//UV가 한 방향으로 늘어난 면은 그 방향 오프셋이 실제 깊이보다 커져 번진다.
+	//화면 미분으로 탄젠트/바이노멀 방향 UV 밀도(su, sv)를 구해 밀도가 낮은 방향의 오프셋을 줄인다
+	var dpx : CVec3 = dFdx(_wor.xyz);
+	var dpy : CVec3 = dFdy(_wor.xyz);
+	var duvx : CVec2 = dFdx(_uv);
+	var duvy : CVec2 = dFdy(_uv);
     if(parallaxNormal>0.0001) {
-        var TBN : CMat3 = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
-		uvh = ParallaxNormal(V3MulMat3Normal(_camPos,TBN).xyz, V3MulMat3Normal(_wor.xyz,TBN).xyz, _texOff.y, _uv, parallaxNormal);
+		var tx : number = V3Dot(dpx, _tan);
+		var ty : number = V3Dot(dpy, _tan);
+		var bx : number = V3Dot(dpx, _bi);
+		var by : number = V3Dot(dpy, _bi);
+		var det : number = tx * by - ty * bx;
+		var aniso : CVec2 = new CVec2(1.0, 1.0);
+		//UV가 한 축으로 뭉친 삼각형은 탄젠트가 0/NaN이라 TBN 변환이 NaN이 되어 엉뚱한 텍스셀을 읽는다. NaN은 비교가 모두 거짓이라 아래 조건에서 걸러진다
+		//UV가 면 전체에서 상수인 면(UV 면적 0)은 CPU가 임의 탄젠트를 넣어 위 조건을 통과하지만, 화면 UV 미분이 0/±수ulp 노이즈라 aniso·분모가 쿼드마다 널뛴다. 시차 끔.
+		//ulp는 UV 절대값에 비례(uv=256이면 3e-5)하므로 미분을 ulp 단위로 재서 4~16ulp 사이를 램프로 끈다.
+		//이진 판정이면 UV가 큰 면에서 픽셀당 UV가 기준 근처인 거리에 쿼드마다 켜짐/꺼짐이 갈려 점 무늬·계단 경계가 생긴다
+		var valid : number = 0.0;
+		if(V3Len(_tan) > 0.5 && V3Len(_bi) > 0.5 && abs(det) > 0.0000001) {
+			valid = smoothstep(4.0, 16.0, (V2Len(duvx) + V2Len(duvy)) / (1.2e-7 * max(1.0, max(abs(_uv.x), abs(_uv.y)))));
+		}
+		if(abs(det) > 0.0000001) {
+			var su : number = abs((duvx.x * by - duvy.x * bx) / det);
+			var sv : number = abs((duvy.y * tx - duvx.y * ty) / det);
+			var sMax : number = max(max(su, sv), 0.0000001);
+			aniso = new CVec2(su / sMax, sv / sMax);
+		}
+		var toCam : CVec3 = V3SubV3(_camPos, _wor.xyz);
+		//노말이 카메라 반대쪽인 면(안쪽 노말·양면)은 접선공간 시선 z가 음수라 ParallaxNormal의 xy/(z+0.2)가 z≈-0.2 띠에서 발산한다. 노말을 카메라 쪽으로 뒤집는다
+		var facing : number = 1.0;
+		if(V3Dot(_nor, toCam) < 0.0) facing = -1.0;
+        var TBN : CMat3 = TransposeMat3(V3ToMat3(V3MulFloat(_tan, aniso.x), V3MulFloat(_bi, aniso.y), V3MulFloat(_nor, facing)));
+		var fade : number = valid * (1.0 - smoothstep(parallaxDist.x, parallaxDist.y, V3Len(toCam))) * smoothstep(0.08, 0.3, abs(V3Dot(_nor, V3Nor(toCam))));
+		uvh = ParallaxNormal(V3MulMat3Normal(_camPos,TBN).xyz, V3MulMat3Normal(_wor.xyz,TBN).xyz, _texOff.y, _uv, parallaxNormal * fade);
 		// if(uvh.x > 1.0 || uvh.y > 1.0 || uvh.x <= 0.0 || uvh.y <= 0.0)
 		// 	discard;
     }
@@ -335,13 +371,14 @@ function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec
 }
 
 
-function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _texOff : CVec3,sam2DCount :number) : CVec3 {
+//_dx,_dy: 밉 선택용 원래 UV 기울기. 시차로 밀린 UV의 기울기는 계단처럼 튀어 UV가 촘촘한 면에 점 노이즈가 생긴다
+function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _texOff : CVec3,sam2DCount :number, _dx : CVec2, _dy : CVec2) : CVec3 {
 	var N : CVec3 = _nor;
 	if(to_ref.y>0.5 && sam2DCount>1.5)
 	{
 		var TBN : CMat3 = V3ToMat3(_tan, _bi, _nor);
 
-		N=Sam2DToColor(to_ref.y,_uv).xyz;
+		N=Sam2DGradToColor(to_ref.y,_uv,_dx,_dy).xyz;
 		N=MappingTexToV3(N);
 		// N.y=-N.y;
 		if(V3Dot(N,new CVec3(0,0,1))>0.999)
@@ -414,8 +451,13 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 
 	// 바이노말은 cross로 재구성 (+ handedness = f4_tan.w)
 	to_binormal = V3Nor(V3MulFloat(V3Cross(to_normal, to_tangent),f4_tan.w));
-		
+
 	to_ref=f3_ref;
+
+	to_envIdx.x = -1.0;
+	BranchBegin("env","E",[envCount,envPos]);
+	to_envIdx.x = EnvNearest(to_worldPos.xyz, to_normal);
+	BranchEnd();
 }
 
 function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, f4_we : Weight4, f3_nor : Normal3, f4_tan : Tangent4, f3_ref : TexOff3) {
@@ -539,8 +581,18 @@ function Caustics(_world : CVec3, _flowDir : CVec2, _ligDir : CVec3, _ligCol : C
 	return SaturateV3(tex);
 }
 
-function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4) : CVec3
+// 수직 깊이 -> 해안선까지 수평 거리 배율(cot). 완만한 해변은 얕은 깊이가 넓게 퍼져 거품이 띠처럼 넓어지므로 보정한다
+function ShoreSlopeScale(_nor : CVec3) : number
 {
+    var ny : number = abs(_nor.y);
+    return clamp(ny / max(sqrt(SaturateFloat(1.0 - ny * ny)), 0.001), 1.0, 40.0);
+}
+
+//_lit: 물색·거품에 곱할 밝기(감마 공간). 이 색들은 조명을 안 받는 고정색이라 안 곱하면 밤에도 밝다
+function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4, _slope : number, _lit : CVec3) : CVec3
+{
+    var deep : CVec3 = V3MulV3(deepColor, _lit);
+	var shallow : CVec3 = V3MulV3(shallowColor, _lit);
     var heightDiff : number = abs(waterDeep.x - _world.y);
 
     var depthBlend : number = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
@@ -548,25 +600,36 @@ function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4) : CV
     var t : number = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
     var luma : number = (_color.x * 0.299 + _color.y * 0.587 + _color.z * 0.114);   // 바닥 색상이 너무 약하면 물리적으로는 맞는데 시각적으로 이상해 보여서 곱해줌
 
-    var foamThreshold : number = min(waterDeep.z, waterDeep.z * waterHeight);
-    var foamMask : number = 1.0 - smoothstep(0.0, foamThreshold, heightDiff);
+    var shoreNoise : number = NoiseGet(new CVec3(_world.x / 400.0, _world.z / 400.0, time * 0.05), SDF.eNoise.Perlin);
+    var waveK : number = SaturateFloat(V2Len(normalflowDir) / 1.5);
+    var lap : number = 0.5 + 0.5 * sin(time * (0.5 + 1.5 * waveK) + shoreNoise * 12.0);
+    // waterRefract 패스가 waterDeep.z 위를 discard하므로 띠가 그보다 두꺼워지면 윗부분이 잘린다
+    var foamThreshold : number = min(waterDeep.z, min(waterDeep.z, waterDeep.z * waterHeight) * (0.4 + 0.9 * shoreNoise) * (0.6 + 0.6 * lap));
+    var foamMask : number = 1.0 - smoothstep(0.0, foamThreshold, heightDiff * _slope);
 
-    _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
+    _color = V3Mix(deep, V3Mix(_color, shallow, 0.1), depthBlend);
 
     _caustics = V3MulFloat(_caustics, depthBlend * luma * (1.0 - foamMask));
     _color = V3AddV3(_color, _caustics);
-    
-    _color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
+
+    _color = V3Mix(deep, _color, 0.6 * (1.0 - t));
 
     // foam mask
     if(foamMask > 0.0) {
-        var foam : CVec3 = new CVec3(0.55, 0.58, 0.58);
+        var foam : CVec3 = V3MulV3(new CVec3(0.55, 0.58, 0.58), _lit);
 
-        var noise : number = NoiseGet(new CVec3(_world.x / 300.0 - normalflowDir.x * time * 0.1, _world.z / 300.0 + normalflowDir.y * time * 0.1, 0.0), SDF.eNoise.Perlin);
-        var edgeFade : number = foamMask * smoothstep(0.25, 1.0, noise);
+        var noise : number = NoiseGet(new CVec3(
+            _world.x / 120.0 + _world.y / 240.0 - normalflowDir.x * time * 0.1,
+            _world.z / 120.0 - _world.y / 240.0 + normalflowDir.y * time * 0.1,
+            time * 0.15
+        ), SDF.eNoise.PerlinFBM);
+        // 멀리서 노이즈 주기가 픽셀보다 작아지면 깜빡이므로 평균값으로 흐리고 경계를 넓힌다
+        var foamLod : number = SaturateFloat(dist * 0.0012 / 50.0);
+        noise = noise + (0.45 - noise) * foamLod;
+        var edgeFade : number = foamMask * smoothstep(0.35 - 0.15 * foamLod, 0.65 + 0.15 * foamLod, noise + foamMask * 0.3) * smoothstep(0.0, 0.6, waveK);
 
-        _color = V3AddV3(_color, V3MulFloat(foam, 0.35 * edgeFade));
-        _color = V3Mix(_color, foam, 0.4 * edgeFade);
+        _color = V3AddV3(_color, V3MulFloat(foam, 0.2 * edgeFade));
+        _color = V3Mix(_color, foam, 0.25 * edgeFade);
     }
 
     return _color;
@@ -574,6 +637,8 @@ function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4) : CV
 
 function ps_main()
 {
+	var uvDx : CVec2 = dFdx(to_uv);
+	var uvDy : CVec2 = dFdy(to_uv);
 	var shadow : CVec4 = new CVec4(-1.0, -1.0, -1.0, -1.0);
 	BranchBegin("shadow","S",[shadowOn, screenSize]);
 	if(shadowOn>0.5) {
@@ -586,36 +651,48 @@ function ps_main()
 	var uv : CVec2 = to_uv;
 	var uvh : CVec3;
 	var ratio : number;
-	BranchBegin("parallax","P",[parallaxNormal, camPos]);
+	BranchBegin("parallax","P",[parallaxNormal, camPos, parallaxDist, parallaxDepth]);
 	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
 	uv = uvh.xy;
 
 	world.xyz = V3SubV3(world.xyz, V3MulFloat(
-		V3Nor(V3SubV3(camPos, world.xyz)), 
-		V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(
+		V3Nor(V3SubV3(camPos, world.xyz)),
+		parallaxDepth * V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(1e-6, max(
 			length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)),
 			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
-		)
+		))
 	));
-
+	
 	// depth offset 적용
-	if(parallaxNormal > 0.0001) {
+	//깊이 출력을 쓰는 셰이더는 모든 경로에서 써야 한다(안 쓴 경로는 값이 정의되지 않음).
+	//안 밀 때 비율 계산으로 다시 만들면 부동소수 오차로 같은 평면에 겹친 면과 z-fighting이 나서 원래 깊이를 그대로 쓴다
+	if(parallaxNormal > 0.0001 && parallaxDepth > 0.0001) {
 		ratio = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
 		screenDepth = SDF.ClipControl > 0
 			? clamp(screenPos.z * ratio, 0.0, 1.0)
 			: clamp(((screenPos.z * 2.0 - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
 	}
-
+	else {
+		screenDepth = screenPos.z;
+	}	
 	BranchEnd();
 
-	var normal : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
+	BranchBegin("waterReflect","waterReflect",[waterDeep]);
+	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
+	BranchEnd();
+
+	BranchBegin("waterRefract","waterRefract",[waterDeep]);
+	if(world.y > waterDeep.x + waterDeep.z) discard;	// 물 높이보다 낮은 것만 랜더링
+	BranchEnd();
+
+	var normal : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount, uvDx, uvDy);
 
 	var L_cor : CVec4;
 
 	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
 	L_cor=VFXDown2(uv,VFX,time,world);
 	BranchDefault();
-	L_cor=Sam2DToColor(to_ref.x, uv);
+	L_cor=Sam2DGradToColor(to_ref.x, uv, uvDx, uvDy);
 	BranchEnd();
 
 
@@ -638,17 +715,19 @@ function ps_main()
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
 	var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
+	var waterLit : CVec3 = new CVec3(1.0, 1.0, 1.0);
     var gamma : number = 1.0;
-	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,cullMask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
+	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,cullMask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envCount,envPos,sam2DCount,samCubeCount]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
-	
-	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
+
+	lmaterial=GetMaterial(material,Sam2DGradToColor(to_ref.z,uv,uvDx,uvDy),sam2DCount);
 	dseMat = GetSunInfo();
 	sunDir = dseMat[0];
 	sunCol = dseMat[1];
-	
-	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, cullMask.x);
+	waterLit = SaturateV3(V3AddV3(ambientColor, sunCol));
+
+	dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
  
 	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
     
@@ -669,49 +748,55 @@ function ps_main()
         out_color.rgb = V3Sqrt(out_color.rgb);
     }
 
-	BranchBegin("waterReflect","waterReflect",[waterDeep]);
-	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
-	BranchEnd();
-
     var caustics : CVec3;
-	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time, normalflowDir, normalRange]);
-	if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
-	//out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir, sunDir, sunCol);
+	var shoreSlope : number = 1.0;
+	BranchBegin("waterProcessing","waterProcessing",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time, normalflowDir, normalRange]);
 	caustics = Caustics(world.xyz, causticFlowDir,sunDir,sunCol);
-	out_color.rgb = WaterProcessing(out_color.rgb, caustics, world);
+	shoreSlope = ShoreSlopeScale(V3Nor(to_normal));
+	out_color.rgb = WaterProcessing(out_color.rgb, caustics, world, shoreSlope, waterLit);
+	// 알파에 수면 아래 깊이를 싣는다. 물 셰이더가 0.75 미만을 빈 픽셀로 보므로 0.8~1.0으로 인코딩
+	// 8비트라 단계가 적어 접촉 거품에 계단이 생기므로, sqrt로 얕은 쪽에 정밀도를 몰아준다
+	out_color.a = 0.8 + 0.2 * sqrt(SaturateFloat(max(waterDeep.x - world.y, 0.0) * shoreSlope / (max(waterDeep.z, 1.0) * 4.0)));
 	BranchEnd();
 }
 
 
-function ps_main_gBuffer() 
+function ps_main_gBuffer()
 {
 	var uv : CVec2 = to_uv;
+	var uvDx : CVec2 = dFdx(to_uv);
+	var uvDy : CVec2 = dFdy(to_uv);
 
     var world : CVec4 = to_worldPos;
     var view : CVec4 = to_viewPos;
 
     var uvh : CVec3;
     var ratio : number;
-	BranchBegin("parallax","P",[parallaxNormal,camPos]);
+	BranchBegin("parallax","P",[parallaxNormal,camPos,parallaxDist,parallaxDepth]);
 	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
     uv = uvh.xy;
 
 	world.xyz = V3SubV3(world.xyz, V3MulFloat(
-		V3Nor(V3SubV3(camPos, world.xyz)), 
-		V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(
+		V3Nor(V3SubV3(camPos, world.xyz)),
+		parallaxDepth * V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(1e-6, max(
 			length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)),
 			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
-		)
+		))
 	));
 
     view.xyz = V4MulMatCoordi(world, viewMat).xyz;
 
 	// depth offset 적용
-	if(parallaxNormal > 0.0001) {
+	//깊이 출력을 쓰는 셰이더는 모든 경로에서 써야 한다(안 쓴 경로는 값이 정의되지 않음).
+	//안 밀 때 비율 계산으로 다시 만들면 부동소수 오차로 같은 평면에 겹친 면과 z-fighting이 나서 원래 깊이를 그대로 쓴다
+	if(parallaxNormal > 0.0001 && parallaxDepth > 0.0001) {
 		ratio = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
 		screenDepth = SDF.ClipControl > 0
 			? clamp(screenPos.z * ratio, 0.0, 1.0)
 			: clamp(((screenPos.z * 2.0 - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
+	}
+	else {
+		screenDepth = screenPos.z;
 	}
 
 	BranchEnd();
@@ -722,9 +807,9 @@ function ps_main_gBuffer()
 	L_cor=VFXDown2(uv,VFX,time,world);
 	BranchDefault();
 	if(sam2DCount == 1.0)
-		L_cor = Sam2DToColor(0.0, uv);
+		L_cor = Sam2DGradToColor(0.0, uv, uvDx, uvDy);
 	else
-		L_cor = Sam2DToColor(to_ref.x, uv);
+		L_cor = Sam2DGradToColor(to_ref.x, uv, uvDx, uvDy);
 	BranchEnd();
 	
 
@@ -746,11 +831,11 @@ function ps_main_gBuffer()
 	out_pos = new CVec4(view.xyz, cullMask.x);
 
 	// 1 normal
-	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
+	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount, uvDx, uvDy);
 	out_nor = new CVec4(MappingV3ToTex(N), 1.0);
 
     // 3 material (ao, roughness, metalic, emissive)
-    var lmaterial : CVec4=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
+    var lmaterial : CVec4=GetMaterial(material,Sam2DGradToColor(to_ref.z,uv,uvDx,uvDy),sam2DCount);
 	out_spc = lmaterial;
 	
     if(outputType < SDF.eGBuf.Albedo + 0.5) {
@@ -771,8 +856,9 @@ function ps_main_gBuffer()
 	}
 }
 
-function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2) 
+function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2, f3_ref : TexOff3)
 {
+	to_ref=f3_ref;
 	BranchBegin("codi","C",[texCodi]);
 	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
 	BranchDefault();
@@ -811,7 +897,8 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 }
 function ps_main_shadow_write() 
 {
-	var L_cor : CVec4 = Sam2DToColor(0.0, to_uv);
+	//슬롯 0 고정이면 텍스처가 여러 장인 메시(나무: 껍질 다음 잎)는 잎이 껍질 알파로 판정돼 알파 0 영역까지 그림자가 생긴다
+	var L_cor : CVec4 = Sam2DToColor(to_ref.x, to_uv);
 
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
@@ -823,19 +910,27 @@ function ps_main_shadow_write()
     if ( L_cor.a <= 0.01 ) discard;
 	BranchEnd();
 
-    var shadowInfo: CVec4;
+    var row0: CVec4;
     var lDir: CVec4;
     BranchBegin("PointLightShadowF","PLSF",[ligDir]);
-    shadowInfo = Sam2DArrToV4(shadowInfoList, shadowWrite.y);
-    lDir = Sam2DArrToV4(ligDir, shadowInfo.x);
-    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowInfo.z) / (shadowInfo.w - shadowInfo.z);
+    row0 = Sam2DArrNearestToV4(shadowInfoList, shadowWrite.y * 4.0);
+    lDir = Sam2DArrNearestToV4(ligDir, row0.x);
+    out_color.b = -V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) / row0.z;
     out_color.a = 1.0;
     BranchDefault();
     out_color = to_viewPos;
+    out_color.z += shadowZOffset;
     out_color.a = 1.0;
     BranchEnd();
 }
-function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2,f3_nor : Normal3,f4_tan : Tangent4,f3_bi : Binormal3,f3_ref : TexOff3) {
+function vs_main_shadow_read(f3_ver : Vertex3,f2_uv : UV2,f4_we : Weight4,f4_wi : WeightIndexI4,
+	f3_nor : Normal3,f4_tan : Tangent4,f3_ref : TexOff3)
+{
+	BranchBegin("codi","C",[texCodi]);
+	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+	BranchDefault();
+	to_uv.xy=f2_uv;
+	BranchEnd();
 
 	var wMat : CMat;
 	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
@@ -843,6 +938,7 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
+
 	var woweMat : CMat = wMat;
 	BranchBegin("weightMat","WG",[weightArrMat,weightBakeMat,weightBakeIndex]);
 	woweMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
@@ -856,25 +952,26 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 	BranchEnd();
 
 	to_worldPos = P;
-	to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
-	BranchBegin("codi","C",[texCodi]);
-	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
-	BranchDefault();
-	to_uv.xy=f2_uv;
-	BranchEnd();
-
-	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
-	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
-	if(f3_ref.y > 0.0) {
-		to_normal=V3Nor(V3MulMat3Normal(f3_nor,Mat4ToMat3(woweMat)).xyz);
-	} else {
-		to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
-	}
-	to_ref=f3_ref;
-
 	P = V4MulMatCoordi(P, viewMat);
     to_viewPos = P;
+	BranchBegin("zDepth","Z",[zDepth,zDepthBias]);
+	P.z+=zDepth*zDepthBias;
+	BranchEnd();
 	out_position = V4MulMatCoordi(P, projectMat);
+
+
+	var nMat3 : CMat3;
+	if(f3_ref.y > 0.0)	nMat3 = Mat4ToMat3(woweMat);
+	else nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
+
+	to_normal  = V3Nor(V3MulMat3Normal(f3_nor,     nMat3).xyz);
+	to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
+
+	to_tangent = V3Nor(V3SubV3(to_tangent,V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))));
+
+	to_binormal = V3Nor(V3MulFloat(V3Cross(to_normal, to_tangent),f4_tan.w));
+
+	to_ref=f3_ref;
 }
 
 function ps_main_shadow_read() 
@@ -885,21 +982,24 @@ function ps_main_shadow_read()
 	var uv : CVec2 = to_uv;
     var world : CVec4 = to_worldPos;
     var pShadow : CVec4 = new CVec4(1.0,1.0,1.0,1.0);
-	BranchBegin("parallax","P",[parallaxNormal, camPos]);
+	BranchBegin("parallax","P",[parallaxNormal, camPos, parallaxDist, parallaxDepth]);
 	temp = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, world, camPos, to_ref);
     uv = temp.xy;
 	world.xyz = V3SubV3(world.xyz, V3MulFloat(
-		V3Nor(V3SubV3(camPos, world.xyz)), 
-		V3Len(new CVec3(V2SubV2(temp.xy,to_uv), parallaxNormal * temp.z)) / max(
+		V3Nor(V3SubV3(camPos, world.xyz)),
+		parallaxDepth * V3Len(new CVec3(V2SubV2(temp.xy,to_uv), parallaxNormal * temp.z)) / max(1e-6, max(
 			length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)),
 			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
-		)
+		))
 	));
+	screenDepth = screenPos.z;
 	if(parallaxNormal > 0.0001) {
-		temp.x = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
-		screenDepth = SDF.ClipControl > 0
-			? clamp(screenPos.z * temp.x, 0.0, 1.0)
-			: clamp(((screenPos.z * 2.0 - 1.0) * temp.x) * 0.5 + 0.5, 0.0, 1.0);
+		if(parallaxDepth > 0.0001) {
+			temp.x = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
+			screenDepth = SDF.ClipControl > 0
+				? clamp(screenPos.z * temp.x, 0.0, 1.0)
+				: clamp(((screenPos.z * 2.0 - 1.0) * temp.x) * 0.5 + 0.5, 0.0, 1.0);
+		}
 
         outputIndex = 0.0;
         pShadow = new CVec4(0.0,0.0,0.0,0.0);
@@ -917,7 +1017,8 @@ function ps_main_shadow_read()
 	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
 	L_cor=VFXDown2(uv,VFX,time,world);
 	BranchDefault();
-	L_cor = Sam2DToColor(0.0, uv);
+	//ps_main_shadow_write와 같은 이유로 슬롯 0 고정 금지. 텍스처가 여러 장인 메시(풀 줄기 다음 꽃·잎 카드)는 카드가 불투명 슬롯 알파로 판정돼 투명 영역까지 그림자 읽기에 찍힌다
+	L_cor = Sam2DToColor(to_ref.x, uv);
 	BranchEnd();
 
 	BranchBegin("colorModel","CM",[colorModel]);

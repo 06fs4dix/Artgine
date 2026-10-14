@@ -257,6 +257,9 @@ export class CUtilWeb {
 	private static sNodeBaseTypeFiles: string[] = ["globals.d.ts", "globals.typedarray.d.ts", "buffer.buffer.d.ts", "process.d.ts"];
 	// 페이지 생애주기 동안 한 번만 로드하도록 하는 캐시(에디터를 여러 번 열어도 중복 addExtraLib 안 함).
 	private static mNodeTypesLoaded: Set<string> = new Set();
+	// canonical 경로 → 소스 캐시. _visited로 재방문(재fetch/재귀)을 건너뛴 뒤에도, 다른 fileDir(호출 지점)에서
+	// 새로 필요해진 별칭(monacoAliasPath)을 재fetch 없이 등록할 수 있게 소스를 들고 있는다(TSImport.mLibSourceCache 참고).
+	private static mLibSourceCache: Map<string, string> = new Map();
 
 	private static async LoadNodeTypeFile(_relPath: string) {
 		if (CUtilWeb.mNodeTypesLoaded.has(_relPath)) return;
@@ -372,26 +375,51 @@ export class CUtilWeb {
 			processedPaths.set(originalPath, adjustedFullPath);
 			importPathArr[i] = adjustedFullPath;
 
-			if (_monaco && window["require"] != null && !_visited.has(adjustedFullPath)) {
-				_visited.add(adjustedFullPath);
-				const fName = adjustedFullPath + ".ts";
-				const buf = await CFile.Load(fName);
-				const libSource = CUtil.ArrayToString(buf);
-				window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, fName);
-				// 소스를 치환하지 않으면 원본 import문(보통 ".js" 확장자)이 그대로 남으므로,
-				// TS가 실제로 찾는 키(확장자 그대로의 절대경로)에도 동일 내용을 등록해준다.
-				if (!_rewriteSource && hadJsExt) {
-					window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, adjustedFullPath + ".js");
+			if (_monaco && window["require"] != null) {
+				// _visited(canonical 키)는 "이 실제 파일을 이미 fetch했는가"만 판단한다. 같은 canonical 파일이라도
+				// 호출 지점(fileDir)이 다르면 이번에 새로 필요한 monacoAliasPath가 다를 수 있으므로(예: CAniFlow.ts가
+				// 얕은 상대경로로 먼저 CAnimation.js를 방문해 _visited에 등록해버리면, 이후 CUser.ts가 깊은
+				// "../../../artgine/..." 경로로 같은 파일을 import할 때 별칭 등록 자체가 스킵되어 "Cannot find module"이
+				// 뜨던 버그가 있었다) 별칭 등록은 fetch 여부와 무관하게 항상 시도한다.
+				let libSource: string;
+				if (_visited.has(adjustedFullPath)) {
+					libSource = CUtilWeb.mLibSourceCache.get(adjustedFullPath);
+				} else {
+					_visited.add(adjustedFullPath);
+					const fName = adjustedFullPath + ".ts";
+					const buf = await CFile.Load(fName);
+					libSource = CUtil.ArrayToString(buf);
+					CUtilWeb.mLibSourceCache.set(adjustedFullPath, libSource);
+					window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, fName);
+					// 소스를 치환하지 않으면 원본 import문(보통 ".js" 확장자)이 그대로 남으므로,
+					// TS가 실제로 찾는 키(확장자 그대로의 절대경로)에도 동일 내용을 등록해준다.
+					if (!_rewriteSource && hadJsExt) {
+						window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, adjustedFullPath + ".js");
+					}
 				}
-				if (monacoAliasPath != null) {
+
+				if (monacoAliasPath != null && libSource != null) {
 					window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, monacoAliasPath + ".ts");
 					if (!_rewriteSource && hadJsExt) {
 						window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, monacoAliasPath + ".js");
 					}
 				}
-				// A->B->C처럼 간접 상속/참조되는 파일도 타입을 찾을 수 있도록, 방금 로드한 파일의
-				// import도 재귀적으로 처리한다. _visited로 순환 참조/중복 로드를 막는다.
-				await CUtilWeb.TSImport(libSource, _monaco, _github, adjustedFullPath, false, _visited);
+
+				// A->B->C처럼 간접 상속/참조되는 파일도 타입을 찾을 수 있도록, 방금 로드한 파일의 import도 재귀적으로
+				// 처리한다. 이때 넘기는 _filePath는 canonical이 아니라 "TS가 실제로 이 파일을 찾은 좌표"(별칭이 있으면
+				// 별칭, 없으면 canonical)여야 한다 - 그래야 그 파일 내부의 얕은 상대경로 import(예: CPaint2D의
+				// "./CPaint.js", CPaint의 "../CComponent.js")도 같은 좌표계로 계산되어 상속 체인(mSave 등 베이스
+				// 클래스 멤버)이 안 끊긴다.
+				// 재귀 중복방지 키는 fetch 중복방지 키(adjustedFullPath, _visited에 위에서 이미 추가됨)와 반드시
+				// 구분해야 한다 - 별칭이 없는 경우(recurseFilePath === adjustedFullPath) 같은 문자열을 그대로 쓰면
+				// 방금 위에서 추가한 항목에 자기 자신이 걸려 재귀가 매번 스킵되는 버그가 생긴다(실제로 CUserController.js
+				// 처럼 별칭이 필요 없는 파일의 내부 import(CBehavior/CPad 등)가 전혀 재귀 처리되지 않는 문제로 나타났었다).
+				const recurseFilePath = monacoAliasPath ?? adjustedFullPath;
+				const recurseVisitKey = "recurse:" + recurseFilePath;
+				if (libSource != null && !_visited.has(recurseVisitKey)) {
+					_visited.add(recurseVisitKey);
+					await CUtilWeb.TSImport(libSource, _monaco, _github, recurseFilePath, false, _visited);
+				}
 			}
 		}
 

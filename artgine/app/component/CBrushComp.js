@@ -1,5 +1,4 @@
 import { CComponent } from "./CComponent.js";
-import { CPaint3D } from "./paint/CPaint3D.js";
 export class CBrushComp extends CComponent {
     constructor(_key) {
         super();
@@ -21,6 +20,7 @@ export class CBrushComp extends CComponent {
     GetTex() { return this.mTexKey + ".tex"; }
     PushRPAuto(_write) {
         this.mWriteRP.push(_write);
+        return _write;
     }
     StartChk() {
         if (this.mStartChk == true && this.mBrush != null) {
@@ -35,12 +35,6 @@ export class CBrushComp extends CComponent {
         return false;
     }
     Update(_update) {
-        if (this.mReadTag != null) {
-            var cm = this.ProductMsg("CubeMap");
-            cm.mIntra = CPaint3D;
-            cm.mInter = "";
-            cm.mMsgData[0] = this;
-        }
         return false;
     }
     RecvGetBrush(_brush) {

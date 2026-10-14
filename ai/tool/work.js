@@ -37,6 +37,7 @@ const PROJECT_ROOT = findProjectRoot(SCRIPT_DIR);
 const { CWorkOrder } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CWorkOrder.js')));
 const { CSubAgent } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CSubAgent.js')));
 const { CTerminalScheduler } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CTerminalScheduler.js')));
+const { CProviderLog } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CProviderLog.js')));
 
 const [cmd, ...rest] = process.argv.slice(2);
 
@@ -48,14 +49,13 @@ function usageAndExit() {
     console.error('       node ai/tool/work.js list-sched                         (스케줄러 목록)');
     console.error('       node ai/tool/work.js set-sched <name> <subAgentKey> <mode> <option_json> <command...>');
     console.error('       node ai/tool/work.js del-sched <name>                   (스케줄러 삭제)');
-    console.error('       node ai/tool/work.js get <id>                            (워크오더 단건 조회)');
+    console.error('       node ai/tool/work.js get <id>                            (워크오더 단건 + 처리 로그/최종 답변)');
     console.error('       node ai/tool/work.js check <팀키> [시작시각]              (팀 경과분 + 워크오더 집계)');
     console.error('       node ai/tool/work.js push <from> <to> <content...>       (작업 생성, 줄바꿈은 실제 Enter 대신 \\n으로)');
-    console.error('       node ai/tool/work.js status <id> <status>                (상태 갱신)');
-    console.error('       node ai/tool/work.js result <id> <status> <result...>    (완료/실패 처리, 상태+결과 동시 기록, 줄바꿈은 \\n으로)');
-    console.error('       node ai/tool/work.js watchdog                            (working인데 실제로 처리 중이 아닌 좀비 워크오더를 ready로 복구)');
+    console.error('       node ai/tool/work.js status <id> <status>                (상태 갱신. 완료는 서버가 자동 판정, 실패 선언은 status <id> failed)');
+    console.error('       node ai/tool/work.js watchdog                            (사원 세션이 사라진 working 워크오더를 ready로 복구)');
     console.error('       node ai/tool/work.js team-end <팀키>                     (팀 종료 - 그 팀이 자동 생성한 임시 사원을 전부 정리)');
-    console.error('       node ai/tool/work.js start-team <provider> <model|-> <subAgents|-> <autoAgents_json|-> <limitMin|-> <goal...>');
+    console.error('       node ai/tool/work.js start-team [--remindMin=N] <provider> <model|-> <subAgents|-> <autoAgents_json|-> <limitMin|-> <goal...>');
     console.error('                                                                 (팀 시작 - curl 대신 이 명령을 써야 한글 등 비ASCII goal이 안 깨짐)');
     process.exit(1);
 }
@@ -246,7 +246,20 @@ if (cmd === 'list-work') {
     const [id] = rest;
     if (!id) usageAndExit();
     const record = await CWorkOrder.Get(Number(id));
-    printResult(record);
+    if (!record) { printResult(null); process.exit(0); }
+    // 결과 본문은 워크오더에 없다 - assignee의 대화 로그 중 이 의뢰 구간(의뢰 표식이 든 user 행 ~ 다음 의뢰 logId)에서
+    // 꺼낸다. 시작을 logId가 아니라 표식 행으로 잡아야 배분 직전 /clear의 응답("Conversation cleared...")이 섞이지 않는다.
+    // user 행(= 보낸 지시문)은 content와 중복이라 뺀다. 아직 배분 전이거나 지시문이 로그에 안 잡혔으면 로그가 없다.
+    let logs = [];
+    const taskRow = record.logId > 0 ? await CProviderLog.FindTaskRow(record.assignee, record.logId, CWorkOrder.Marker(record.id)) : 0;
+    if (taskRow > 0) {
+        const rows = await CProviderLog.ListForKeyRange(record.assignee, taskRow, await CWorkOrder.NextLogId(record));
+        logs = rows.filter(r => r.role !== 'user').map(r => r.role === 'tool'
+            ? { id: r.id, role: r.role, tool: r.tool, file: r.file, createdAt: r.createdAt }
+            : { id: r.id, role: r.role, text: r.text, createdAt: r.createdAt });
+    }
+    const finals = logs.filter(l => l.role === 'assistant');
+    printResult({ ...record, answer: finals.length > 0 ? finals[finals.length - 1].text : null, logs });
 
 } else if (cmd === 'check') {
     // 메인(팀 감독자)이 자기 팀의 진행 상황을 정량으로 확인하는 용도.
@@ -285,18 +298,10 @@ if (cmd === 'list-work') {
     await CWorkOrder.SetStatus(Number(id), status);
     console.log('ok');
 
-} else if (cmd === 'result') {
-    const [id, status, ...resultParts] = rest;
-    const result = unescapeNewlines(resultParts.join(' ').trim());
-    if (!id || !status) usageAndExit();
-    await CWorkOrder.SetResult(Number(id), status, result);
-    console.log('ok');
-
 } else if (cmd === 'watchdog') {
-    // work_order.status='working'은 서버가 배분 시 선점만 할 뿐, 완료/실패 보고는 서브 에이전트 자신이
-    // work.js result를 실행해야만 이루어진다 — 그 에이전트가 죽거나 멈추면 영원히 'working'에 갇힌다.
-    // 실제로 처리 중인지는 라우터의 세션 상태(cmd/sessions, busy/permPending)로만 알 수 있으므로
-    // 여기서 로컬 서버에 물어봐서 대조하고, 어긋나면 세션을 죽이고 DB를 ready로 되돌려 재배분되게 한다.
+    // work_order.status='working'은 그 에이전트의 최종 답변이 로그에 들어와야(또는 스스로 failed를 선언해야)
+    // 풀린다 — 에이전트 세션이 사라지면(크래시 등) 영원히 'working'에 갇힌다.
+    // 세션 존재 여부는 라우터(cmd/sessions)만 알므로 로컬 서버에 물어 대조한다.
     const auth = localServerAuth();
     if (!auth) {
         console.error('fail: ai/tool/cookie.json에서 로컬 서버(localhost/127.0.0.1) 인증 토큰을 찾지 못했습니다');
@@ -315,16 +320,13 @@ if (cmd === 'list-work') {
         process.exit(1);
     }
 
+    // 세션이 살아있는 의뢰는 건드리지 않는다. 완료는 서버가 판정한다 - 최종 답변이 로그에 들어오면 done,
+    // 로그에 못 잡혀도 세션이 30초 이상 idle이면 안전망으로 done(_completeWorkOrdersByIdle). 예전처럼 "idle인데
+    // 결과 보고가 없다"는 이유로 세션을 죽이고 재배분하면, 로그 판정이 안 되는 CLI에서 같은 일을 끝없이 반복한다.
+    // 여기서 할 일은 세션이 아예 사라진(크래시 등) 의뢰를 ready로 돌려, 되살아난 세션에 재배분되게 하는 것뿐이다.
     const recovered = [];
     for (const order of working) {
-        const s = sessions.find(x => x.key === order.assignee);
-        const alive = s != null && (s.busy || s.permPending);
-        if (alive) continue; // 진짜로 일하는 중 — 손대지 않음
-
-        if (s) {
-            try { await cmdFetch(auth, (token) => `${auth.baseUrl}/cmd/kill-session?token=${s.token}&authToken=${token}`); }
-            catch { /* 세션이 이미 사라졌을 수 있음 — DB 복구는 계속 진행 */ }
-        }
+        if (sessions.some(x => x.key === order.assignee)) continue;
         await CWorkOrder.SetStatus(order.id, 'ready');
         recovered.push({ id: order.id, assignee: order.assignee });
     }
@@ -355,7 +357,10 @@ if (cmd === 'list-work') {
     // curl로 /cmd/start-team을 직접 부르면 비ASCII(한글 등) 인자가 Windows 콘솔 코드페이지 변환을
     // 거치며 깨진다(curl.exe는 ANSI argv를 받지만 Node는 유니코드 argv를 그대로 받는다) - 그래서 이
     // 명령은 Node 프로세스 안에서 URLSearchParams로 직접 인코딩해 fetch하여 그 변환 경로를 우회한다.
-    const [provider, modelArg, subAgentsArg, autoAgentsArg, limitMinArg, ...goalParts] = rest;
+    // --remindMin=N 은 위치 인자 순서를 깨지 않도록 플래그로 받아 먼저 걷어낸다(기존 호출과 호환).
+    const remindFlag = rest.find(a => a.startsWith('--remindMin='));
+    const positional = rest.filter(a => a !== remindFlag);
+    const [provider, modelArg, subAgentsArg, autoAgentsArg, limitMinArg, ...goalParts] = positional;
     const goal = unescapeNewlines(goalParts.join(' ').trim());
     if (!provider || !goal) usageAndExit();
     const auth = localServerAuth();
@@ -369,6 +374,7 @@ if (cmd === 'list-work') {
     if (subAgentsArg && subAgentsArg !== '-') params.set('subAgents', subAgentsArg);
     if (autoAgentsArg && autoAgentsArg !== '-') params.set('autoAgents', autoAgentsArg);
     if (limitMinArg && limitMinArg !== '-') params.set('limitMin', limitMinArg);
+    if (remindFlag) params.set('remindMin', remindFlag.slice('--remindMin='.length));
     params.set('goal', goal);
     try {
         const r = await cmdFetch(auth, (token) => {

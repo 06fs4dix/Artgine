@@ -41,6 +41,8 @@ process.on('uncaughtException', (e: any) => {
 });
 process.on('unhandledRejection', (e: any) => { console.error('[unhandledRejection]', e); });
 
+(process as any).time = Date.now();
+
 // __dirname 대체 코드 (TS + ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,6 +135,21 @@ const createWindow = () => {
 		gMainWindow.setAlwaysOnTop(true);
 		gMainWindow.focus();
 		gMainWindow.setAlwaysOnTop(false);
+	});
+
+	// Electron은 페이지의 beforeunload 확인창을 띄우지 않고 닫기/새로고침을 조용히 취소한다(창이 안 닫히는 것처럼 보임).
+	// 브라우저와 동일하게 종료 확인 대화상자를 직접 띄우고, '종료' 선택 시 preventDefault로 이탈을 허용한다.
+	gMainWindow.webContents.on('will-prevent-unload', (event) => {
+		const choice = dialog.showMessageBoxSync(gMainWindow, {
+			type: 'question',
+			buttons: ['종료', '취소'],
+			defaultId: 1,
+			cancelId: 1,
+			title: '확인',
+			message: '이 페이지를 나가시겠습니까?',
+			detail: '변경사항이 저장되지 않을 수 있습니다.',
+		});
+		if (choice === 0) event.preventDefault(); // 이탈(닫기/새로고침) 허용
 	});
 
 	// Electron BrowserWindow는 크롬과 달리 우클릭 컨텍스트 메뉴(복사/붙여넣기/검사 등)를 기본 제공하지 않으므로 직접 구현한다.

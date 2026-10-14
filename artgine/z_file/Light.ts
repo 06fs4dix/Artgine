@@ -1,13 +1,18 @@
 import { SDF } from "./SDF";
 import { 
-    CMat3, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, reflect, 
-    SamCubeLodToColor, SaturateFloat, Sam2DArrToV4, Sam2DArrV4, SamCubeSize, 
+    CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, Null, IntToFloat, reflect, 
+    SamCubeLodToColor, SaturateFloat, Sam2DArrNearestToV4, Sam2DArrV4, SamCubeSize, 
     sqrt, abs, clamp, max, min, pow, mix, Exp2, log2, floor,
     V2AddV2, V2MulFloat, 
-    V3AddV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3,
+    V3AddV3, V3DivV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3,
     V4AddV4, V4MulFloat,
     round,
     FloatBitsToInt,
+    step,
+    Sam2DArrToCubeColor,
+    Sam2DArrLodToCubeColor,
+    Sam2DArrSize,
+
 } from "./Shader";
 
 export var ambientColor : CVec3 = new CVec3(0.2,0.2,0.2);
@@ -27,7 +32,9 @@ export var ligStep1 : number=SDF.eLightStep1.Phong;
 export var ligStep2 : number=SDF.eLightStep2.Emissive;
 export var ligStep3 : number=SDF.eLightStep3.None;
 
-export var envmapOn : number = 0.0;
+//CBrush.mEnvmapPos. xyz=probe 위치, w=구 반사 반지름(0이면 무한거리). 레이어 시작은 인덱스*6
+export var envCount : number = 0.0;
+export var envPos: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4EnvPos);
 
 //LUT
 export var ligDir: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightDir);
@@ -107,14 +114,56 @@ function DFX_Approx(_nDotV : number, _roughness : number) : CVec2 {
     return AB;
 }
 */
+//반사 방향을 probe 중심 구(반지름 _radius)에 투영한다. 반지름 0이면 무한거리로 보고 그대로 쓴다
+function SphereProjection(_dir : CVec3, _pos : CVec3, _center : CVec3, _radius : number) : CVec3
+{
+    var d : CVec3 = V3Nor(_dir);
+    if(_radius <= 0.0) return d;
+    var l : CVec3 = V3SubV3(_pos, _center);
+    var b : number = V3Dot(l, d);
+    var h : number = b * b - (V3Dot(l, l) - _radius * _radius);
+    if(h < 0.0) return d;
+    var t : number = sqrt(h) - b;
+    if(t < 0.0) return d;
+    return V3AddV3(l, V3MulFloat(d, t));
+}
+function EnvSample(_p : CVec4, _index : number, _nor : CVec3, _refl : CVec3, _pos : CVec3, _maxLod : number, _roughness : number) : CMat3
+{
+    var texOff : number = _index * 6.0;
+    var R : CVec3 = SphereProjection(_refl, _pos, _p.xyz, _p.w);
+    var irradiance : CVec3 = Sam2DArrLodToCubeColor(SDF.eTexSlot.ArrEnvmap, _nor, texOff, _maxLod).rgb;
+    var prefiltered : CVec3 = Sam2DArrLodToCubeColor(SDF.eTexSlot.ArrEnvmap, R, texOff, _roughness * _maxLod).rgb;
+    return new CMat3(irradiance, prefiltered, new CVec3(0.0, 0.0, 0.0));
+}
+export function EnvNearest(_world : CVec3, _nor : CVec3) : number
+{
+    var best : number = -1.0;
+    var bestDist : number = 1000000000000000.0;
+    for(var e=0;e<SDF.TexSizeMax;++e)
+    {
+        if(e >= FloatToInt(envCount)) break;
+        var ep : CVec4 = Sam2DArrNearestToV4(envPos, IntToFloat(e));
+        var lp : CVec3 = V3SubV3(ep.xyz, _world);
+        var d : number = V3Len(lp);
+        if(ep.w > 0.0) {
+            if(d >= ep.w || (d > ep.w * 0.5 && V3Dot(_nor, lp) <= 0.0)) d = 1000000.0;
+            else d = d - 1000000.0;
+        }
+        if(d < bestDist) {
+            bestDist = d;
+            best = IntToFloat(e);
+        }
+    }
+    return best;
+}
 function ComputeSpecularOcclusion(_nDotV : number, _ao : number, _roughness : number) : number
 {
     return SaturateFloat(pow(_nDotV + _ao, Exp2(-16.0 * _roughness - 1.0)) - 1.0 + _ao);
 }
 
 export function LightCac3D(
-    campos : CVec3, position : CVec4, albedo : CVec4, normal :CVec3, shadow : CVec4,
-    roughness : number,ao : number,metalic : number,maskIndex : number) : CMat3
+    position : CVec4, albedo : CVec4, normal :CVec3, shadow : CVec4, maskIndex : number,
+    campos : CVec3, roughness : number,ao : number,metalic : number,envIdx : number) : CMat3
 {
     normal = V3Nor(normal);
 
@@ -143,9 +192,9 @@ export function LightCac3D(
     for(var i=0;i<SDF.TexSizeMax;++i)
     {
         if(i >= FloatToInt(ligCount)) break;
-        var lDir : CVec4=Sam2DArrToV4(ligDir,IntToFloat(i));
-        var lCol : CVec4=Sam2DArrToV4(ligCol,IntToFloat(i));
-        var lMask: CVec4=Sam2DArrToV4(ligMask,IntToFloat(i));
+        var lDir : CVec4=Sam2DArrNearestToV4(ligDir,IntToFloat(i));
+        var lCol : CVec4=Sam2DArrNearestToV4(ligCol,IntToFloat(i));
+        var lMask: CVec4=Sam2DArrNearestToV4(ligMask,IntToFloat(i));
 
         // lMask.x가 ptMask.x에 겹치는 비트가 없으면 라이팅 받지 않음
         if((FloatToInt(lMask.x) & FloatToInt(maskIndex)) == 0) continue;
@@ -293,14 +342,16 @@ export function LightCac3D(
     var DEnvAll : CVec3;
     var SEnvAll : CVec3;
     {
-        if(envmapOn < 0.5) {
+        var envBest : number = round(envIdx);
+        if(envBest < 0.0) {
             // 0 컬러 : ambient_color가 환경값
             DEnvAll = V3MulV3(albedo.xyz, ambientColor);
         }
         else {
+            var envBestPos : CVec4 = Sam2DArrNearestToV4(envPos, envBest);
         	// 1 IBL approx : 블러된 큐브맵(0)을 IBL로 사용
-            var maxReflectionLOD : number = floor(log2(SamCubeSize(0.0).x)) - 4.0;
-            var R : CVec3 = reflect(V3MulFloat(viewDir, -1.0), normal);
+            var maxReflectionLOD : number = max(0.0, floor(log2(Sam2DArrSize(SDF.eTexSlot.ArrEnvmap).x)) - 4.0);
+            var reflDir : CVec3 = reflect(V3MulFloat(viewDir, -1.0), normal);
 
             var baseReflectivity : CVec3 = new CVec3(0.04,0.04,0.04);
             var F0 : CVec3 = V3Mix(baseReflectivity, albedo.rgb, metalic);
@@ -309,10 +360,11 @@ export function LightCac3D(
             var kS : CVec3 = F;
             var kD : CVec3 = V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), kS), 1.0 - metalic);
 
-            var irradiance : CVec3 = SamCubeLodToColor(0.0, normal, maxReflectionLOD).rgb;
+            var envSam : CMat3 = EnvSample(envBestPos, envBest, normal, reflDir, position.xyz, maxReflectionLOD, orgRoughness);
+            var irradiance : CVec3 = envSam[0];
+            var prefilteredColor : CVec3 = envSam[1];
             DEnvAll = V3MulV3(V3MulV3(albedo.rgb, irradiance), kD);
 
-            var prefilteredColor : CVec3 = SamCubeLodToColor(0.0, R, orgRoughness * maxReflectionLOD).rgb;
             SEnvAll = V3MulV3(prefilteredColor, V3MulV3(kS, EnvBRDFApprox(F0, roughness, nDotV)));
         }
         /*
@@ -377,8 +429,8 @@ export function GetSunInfo() : CMat3
     for(var i=0;i<SDF.TexSizeMax;++i)
 	{
 		if(i >= FloatToInt(ligCount)) break;
-		var dir : CVec4 = Sam2DArrToV4(ligDir,IntToFloat(i));
-		var col : CVec4 = Sam2DArrToV4(ligCol,IntToFloat(i));
+		var dir : CVec4 = Sam2DArrNearestToV4(ligDir,IntToFloat(i));
+		var col : CVec4 = Sam2DArrNearestToV4(ligCol,IntToFloat(i));
 
 		//lDir가 0이면 라이트 아님
 		if(abs(dir.w) <= 0.5) continue;
@@ -399,6 +451,8 @@ export function GetSunInfo() : CMat3
     );
 }
 
+// lig(0,1,0)이 가장 밝고, lig(0,-1,0)이 가장 어두운 라이팅 계산
+// normal2D는 z값 없이 y값만으로 계산함
 export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow :CVec4,maskIndex :number) : CMat3
 {
     albedo.rgb = V3Max(albedo.rgb, new CVec3(0.01, 0.01, 0.01));
@@ -412,9 +466,9 @@ export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow 
     for(var i=0;i<SDF.TexSizeMax;++i)
     {
         if(i >= FloatToInt(ligCount)) break;
-        var lDir : CVec4=Sam2DArrToV4(ligDir,IntToFloat(i));
-        var lCol : CVec4=Sam2DArrToV4(ligCol,IntToFloat(i));
-        var lMask: CVec4=Sam2DArrToV4(ligMask,IntToFloat(i));
+        var lDir : CVec4=Sam2DArrNearestToV4(ligDir,IntToFloat(i));
+        var lCol : CVec4=Sam2DArrNearestToV4(ligCol,IntToFloat(i));
+        var lMask: CVec4=Sam2DArrNearestToV4(ligMask,IntToFloat(i));
 
         // lMask.x가 ptMask.x에 겹치는 비트가 없으면 라이팅 받지 않음
         if((FloatToInt(lMask.x) & FloatToInt(maskIndex)) == 0) continue;
@@ -437,13 +491,15 @@ export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow 
             //포인트 라이트 범위 밖에 있으면 스킵
             if(dist>lDir.w) continue;
 
-            var attenuation : number = 1.0 - max(0.0, (dist - lCol.w) / (lDir.w - lCol.w));
+            var attenuation : number = 1.0 - clamp((dist - lCol.w) / (lDir.w - lCol.w), 0.0, 1.0);
             radiance = V3MulFloat(radiance, attenuation);
             
             var diffuse : CVec3 = albedo.rgb;
             if(norLen>0.5) {    // 노말맵이 존재함
-                L.z=0.0;
+                L.y=-L.y;
+                L.z=1.0;
                 L=V3Nor(L);
+
                 var angle:number=max(0.0,V3Dot(normal,L));
                 diffuse = V3MulFloat(diffuse, angle);
             }
@@ -453,6 +509,11 @@ export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow 
         else
         {
             L = V3Nor(L);
+
+            if(norLen>0.5) {
+                normal = V3Nor(new CVec3(-normal.x, (normal.y+normal.z+1.0)/3.0, 0.0));   // y값 0~1 범위 나오도록 수정
+            }
+
             var angle:number=max(0.0,V3Dot(normal,L));
             var diffuse:CVec3=V3MulFloat(radiance,angle);
             DDirAll=V3AddV3(DDirAll,V3MulV3(albedo.rgb,diffuse));

@@ -5,17 +5,7 @@ import { CPlane } from "./CPlane.js";
 import { CPlaneInside } from "./CPlaneInside.js";
 import { CPoolGeo } from "./CPoolGeo.js";
 import { CVec3 } from "./CVec3.js";
-const RayBoxRIGHT = 0;
-const RayBoxLEFT = 1;
-const RayBoxMIDDLE = 2;
 const d_EPSILON = 1e-6;
-const _rbi_quadrant = new CVec3();
-const _rbi_maxT = new CVec3();
-const _rbi_candidatePlane = new CVec3();
-const _rbi_pOrigin = new CVec3();
-const _rbi_pBoxMin = new CVec3();
-const _rbi_pBoxMax = new CVec3();
-const _rbi_pIntersect = new CVec3();
 export class CUtilMath {
     static CameraPerspectiveFovLH(fov, aspect, znear, zfar, _width, result = new CMat()) {
         var yScale = (1.0 / Math.tan(fov * 0.5));
@@ -36,7 +26,7 @@ export class CUtilMath {
     }
     static CameraPerspectiveFovLH_ReverseZ(fov, aspect, znear, zfar, _width, result = new CMat()) {
         var yScale = (1.0 / Math.tan(fov * 0.5));
-        var q = zfar / (znear - zfar);
+        var q = znear / (znear - zfar);
         result.SetUnit(false);
         if (_width) {
             result.mF32A[0] = yScale / aspect;
@@ -46,9 +36,9 @@ export class CUtilMath {
             result.mF32A[0] = yScale;
             result.mF32A[5] = yScale / aspect;
         }
-        result.mF32A[10] = -q;
+        result.mF32A[10] = q;
         result.mF32A[11] = 1.0;
-        result.mF32A[14] = q * znear;
+        result.mF32A[14] = -q * zfar;
         return result;
     }
     static CameraPerspectiveFovRH(fov, aspect, znear, zfar, _width, result = new CMat()) {
@@ -287,79 +277,102 @@ export class CUtilMath {
         return true;
     }
     static RayBoxIS(_min, _max, pa_ray) {
-        const quadrant = _rbi_quadrant;
-        const maxT = _rbi_maxT;
-        const candidatePlane = _rbi_candidatePlane;
-        const pIntersect = _rbi_pIntersect;
-        const vecList = pa_ray.GetVecList();
-        const pOrigin = _rbi_pOrigin;
-        const pBoxMin = _rbi_pBoxMin;
-        const pBoxMax = _rbi_pBoxMax;
-        pOrigin.Import(vecList[2]);
-        pBoxMin.Import(_min);
-        pBoxMax.Import(_max);
-        const dir = vecList[0];
-        if (pBoxMin.mF32A[0] > pBoxMax.mF32A[0]) {
-            pBoxMin.mF32A[0] = _max.mF32A[0];
-            pBoxMax.mF32A[0] = _min.mF32A[0];
+        const vl = pa_ray.mVec3List;
+        const d = vl[0].mF32A;
+        const o = vl[2].mF32A;
+        const a = _min.mF32A;
+        const b = _max.mF32A;
+        let tmin = -Infinity, tmax = Infinity;
+        let dv, ov, lo, hi, t1, t2, tmp;
+        dv = d[0];
+        ov = o[0];
+        lo = a[0];
+        hi = b[0];
+        if (lo > hi) {
+            tmp = lo;
+            lo = hi;
+            hi = tmp;
         }
-        if (pBoxMin.mF32A[1] > pBoxMax.mF32A[1]) {
-            pBoxMin.mF32A[1] = _max.mF32A[1];
-            pBoxMax.mF32A[1] = _min.mF32A[1];
-        }
-        if (pBoxMin.mF32A[2] > pBoxMax.mF32A[2]) {
-            pBoxMin.mF32A[2] = _max.mF32A[2];
-            pBoxMax.mF32A[2] = _min.mF32A[2];
-        }
-        let inside = true;
-        for (let i = 0; i < 3; ++i) {
-            if (pOrigin.mF32A[i] < pBoxMin.mF32A[i]) {
-                quadrant.mF32A[i] = RayBoxLEFT;
-                candidatePlane.mF32A[i] = pBoxMin.mF32A[i];
-                inside = false;
+        if (dv > d_EPSILON || dv < -d_EPSILON) {
+            t1 = (lo - ov) / dv;
+            t2 = (hi - ov) / dv;
+            if (t1 > t2) {
+                tmp = t1;
+                t1 = t2;
+                t2 = tmp;
             }
-            else if (pOrigin.mF32A[i] > pBoxMax.mF32A[i]) {
-                quadrant.mF32A[i] = RayBoxRIGHT;
-                candidatePlane.mF32A[i] = pBoxMax.mF32A[i];
-                inside = false;
-            }
-            else {
-                quadrant.mF32A[i] = RayBoxMIDDLE;
-            }
+            if (t1 > tmin)
+                tmin = t1;
+            if (t2 < tmax)
+                tmax = t2;
+            if (tmin > tmax || tmax < 0)
+                return false;
         }
-        if (inside) {
-            pa_ray.mVec3List[1].mF32A[0] = pOrigin.mF32A[0];
-            pa_ray.mVec3List[1].mF32A[1] = pOrigin.mF32A[1];
-            pa_ray.mVec3List[1].mF32A[2] = pOrigin.mF32A[2];
-            return true;
-        }
-        for (let i = 0; i < 3; i++) {
-            if (quadrant.mF32A[i] !== RayBoxMIDDLE
-                && (dir.mF32A[i] > d_EPSILON || dir.mF32A[i] < -d_EPSILON))
-                maxT.mF32A[i] = (candidatePlane.mF32A[i] - pOrigin.mF32A[i]) / dir.mF32A[i];
-            else
-                maxT.mF32A[i] = -1.0;
-        }
-        let whichPlane = 0;
-        if (maxT.mF32A[1] > maxT.mF32A[0])
-            whichPlane = 1;
-        if (maxT.mF32A[2] > maxT.mF32A[whichPlane])
-            whichPlane = 2;
-        if (maxT.mF32A[whichPlane] < 0.0)
+        else if (ov < lo || ov > hi)
             return false;
-        for (let i = 0; i < 3; i++) {
-            if (whichPlane !== i) {
-                pIntersect.mF32A[i] = pOrigin.mF32A[i] + maxT.mF32A[whichPlane] * dir.mF32A[i];
-                if (pIntersect.mF32A[i] < pBoxMin.mF32A[i] || pIntersect.mF32A[i] > pBoxMax.mF32A[i])
-                    return false;
-            }
-            else {
-                pIntersect.mF32A[i] = candidatePlane.mF32A[i];
-            }
+        dv = d[1];
+        ov = o[1];
+        lo = a[1];
+        hi = b[1];
+        if (lo > hi) {
+            tmp = lo;
+            lo = hi;
+            hi = tmp;
         }
-        pa_ray.mVec3List[1].mF32A[0] = pIntersect.mF32A[0];
-        pa_ray.mVec3List[1].mF32A[1] = pIntersect.mF32A[1];
-        pa_ray.mVec3List[1].mF32A[2] = pIntersect.mF32A[2];
+        if (dv > d_EPSILON || dv < -d_EPSILON) {
+            t1 = (lo - ov) / dv;
+            t2 = (hi - ov) / dv;
+            if (t1 > t2) {
+                tmp = t1;
+                t1 = t2;
+                t2 = tmp;
+            }
+            if (t1 > tmin)
+                tmin = t1;
+            if (t2 < tmax)
+                tmax = t2;
+            if (tmin > tmax || tmax < 0)
+                return false;
+        }
+        else if (ov < lo || ov > hi)
+            return false;
+        dv = d[2];
+        ov = o[2];
+        lo = a[2];
+        hi = b[2];
+        if (lo > hi) {
+            tmp = lo;
+            lo = hi;
+            hi = tmp;
+        }
+        if (dv > d_EPSILON || dv < -d_EPSILON) {
+            t1 = (lo - ov) / dv;
+            t2 = (hi - ov) / dv;
+            if (t1 > t2) {
+                tmp = t1;
+                t1 = t2;
+                t2 = tmp;
+            }
+            if (t1 > tmin)
+                tmin = t1;
+            if (t2 < tmax)
+                tmax = t2;
+            if (tmin > tmax || tmax < 0)
+                return false;
+        }
+        else if (ov < lo || ov > hi)
+            return false;
+        const p = vl[1].mF32A;
+        if (tmin <= 0) {
+            p[0] = o[0];
+            p[1] = o[1];
+            p[2] = o[2];
+        }
+        else {
+            p[0] = o[0] + d[0] * tmin;
+            p[1] = o[1] + d[1] * tmin;
+            p[2] = o[2] + d[2] * tmin;
+        }
         return true;
     }
     static RaySphereIS(pa_center, pa_radian, pa_ray) {
@@ -815,6 +828,197 @@ export class CUtilMath {
         }
         return out;
     }
+    static ColBoxTriMesh(_boundA, _matA, _boundB, _matB, _push = null, _moveDir = null) {
+        const posList = _boundB.mPos;
+        const triCount = Math.floor(posList.Size() / 3);
+        if (triCount == 0)
+            return null;
+        const flat = TriFlatCache(_boundB, triCount);
+        const mA = _matA.mF32A;
+        const mB = _matB.mF32A;
+        let u0x = mA[0], u0y = mA[1], u0z = mA[2];
+        let u1x = mA[4], u1y = mA[5], u1z = mA[6];
+        let u2x = mA[8], u2y = mA[9], u2z = mA[10];
+        const s0 = Math.sqrt(u0x * u0x + u0y * u0y + u0z * u0z);
+        const s1 = Math.sqrt(u1x * u1x + u1y * u1y + u1z * u1z);
+        const s2 = Math.sqrt(u2x * u2x + u2y * u2y + u2z * u2z);
+        if (s0 <= 0 || s1 <= 0 || s2 <= 0)
+            return null;
+        u0x /= s0;
+        u0y /= s0;
+        u0z /= s0;
+        u1x /= s1;
+        u1y /= s1;
+        u1z /= s1;
+        u2x /= s2;
+        u2y /= s2;
+        u2z /= s2;
+        const aMin = _boundA.mMin, aMax = _boundA.mMax;
+        const ex = (aMax.x - aMin.x) * 0.5 * s0;
+        const ey = (aMax.y - aMin.y) * 0.5 * s1;
+        const ez = (aMax.z - aMin.z) * 0.5 * s2;
+        const alcx = (aMin.x + aMax.x) * 0.5;
+        const alcy = (aMin.y + aMax.y) * 0.5;
+        const alcz = (aMin.z + aMax.z) * 0.5;
+        const cx = mA[0] * alcx + mA[4] * alcy + mA[8] * alcz + mA[12];
+        const cy = mA[1] * alcx + mA[5] * alcy + mA[9] * alcz + mA[13];
+        const cz = mA[2] * alcx + mA[6] * alcy + mA[10] * alcz + mA[14];
+        const bs0 = Math.sqrt(mB[0] * mB[0] + mB[1] * mB[1] + mB[2] * mB[2]);
+        const bs1 = Math.sqrt(mB[4] * mB[4] + mB[5] * mB[5] + mB[6] * mB[6]);
+        const bs2 = Math.sqrt(mB[8] * mB[8] + mB[9] * mB[9] + mB[10] * mB[10]);
+        const bScaMin = Math.min(bs0, Math.min(bs1, bs2));
+        if (bScaMin <= 0)
+            return null;
+        const iMat = CPoolGeo.ProductMat();
+        CMath.MatInvert(_matB, iMat);
+        const mI = iMat.mF32A;
+        const lcx = mI[0] * cx + mI[4] * cy + mI[8] * cz + mI[12];
+        const lcy = mI[1] * cx + mI[5] * cy + mI[9] * cz + mI[13];
+        const lcz = mI[2] * cx + mI[6] * cy + mI[10] * cz + mI[14];
+        CPoolGeo.RecycleMat(iMat);
+        const lr = Math.sqrt(ex * ex + ey * ey + ez * ez) / bScaMin;
+        const pMinX = lcx - lr, pMaxX = lcx + lr;
+        const pMinY = lcy - lr, pMaxY = lcy + lr;
+        const pMinZ = lcz - lr, pMaxZ = lcz + lr;
+        let v0x = 0, v0y = 0, v0z = 0;
+        let v1x = 0, v1y = 0, v1z = 0;
+        let v2x = 0, v2y = 0, v2z = 0;
+        let mvx = 0, mvy = 0, mvz = 0;
+        if (_moveDir != null) {
+            mvx = _moveDir.x;
+            mvy = _moveDir.y;
+            mvz = _moveDir.z;
+        }
+        let bestPen = 0, bestX = 0, bestY = 0, bestZ = 0;
+        const TestAxis = (_axx, _axy, _axz) => {
+            const len2 = _axx * _axx + _axy * _axy + _axz * _axz;
+            if (len2 <= 1e-12)
+                return true;
+            const inv = 1 / Math.sqrt(len2);
+            const nx = _axx * inv, ny = _axy * inv, nz = _axz * inv;
+            const r = ex * Math.abs(nx * u0x + ny * u0y + nz * u0z)
+                + ey * Math.abs(nx * u1x + ny * u1y + nz * u1z)
+                + ez * Math.abs(nx * u2x + ny * u2y + nz * u2z);
+            const d0 = v0x * nx + v0y * ny + v0z * nz;
+            const d1 = v1x * nx + v1y * ny + v1z * nz;
+            const d2 = v2x * nx + v2y * ny + v2z * nz;
+            const tMin = Math.min(d0, Math.min(d1, d2));
+            const tMax = Math.max(d0, Math.max(d1, d2));
+            const pen1 = r - tMin;
+            const pen2 = tMax + r;
+            if (pen1 <= 0 || pen2 <= 0)
+                return false;
+            const prevC = -(mvx * nx + mvy * ny + mvz * nz);
+            let useMinus;
+            if (prevC <= tMin)
+                useMinus = true;
+            else if (prevC >= tMax)
+                useMinus = false;
+            else
+                useMinus = (pen1 < pen2);
+            const pen = useMinus ? pen1 : pen2;
+            if (bestPen == 0 || pen < bestPen) {
+                bestPen = pen;
+                if (useMinus) {
+                    bestX = -nx;
+                    bestY = -ny;
+                    bestZ = -nz;
+                }
+                else {
+                    bestX = nx;
+                    bestY = ny;
+                    bestZ = nz;
+                }
+            }
+            return true;
+        };
+        const ua = [u0x, u0y, u0z, u1x, u1y, u1z, u2x, u2y, u2z];
+        const ea = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let outX = 0, outY = 0, outZ = 0;
+        let hit = false;
+        for (let t = 0; t < triCount; ++t) {
+            const f = t * 9;
+            const a0 = flat[f], a1 = flat[f + 1], a2 = flat[f + 2];
+            const b0 = flat[f + 3], b1 = flat[f + 4], b2 = flat[f + 5];
+            const c0 = flat[f + 6], c1 = flat[f + 7], c2 = flat[f + 8];
+            if (a0 < pMinX && b0 < pMinX && c0 < pMinX)
+                continue;
+            if (a0 > pMaxX && b0 > pMaxX && c0 > pMaxX)
+                continue;
+            if (a1 < pMinY && b1 < pMinY && c1 < pMinY)
+                continue;
+            if (a1 > pMaxY && b1 > pMaxY && c1 > pMaxY)
+                continue;
+            if (a2 < pMinZ && b2 < pMinZ && c2 < pMinZ)
+                continue;
+            if (a2 > pMaxZ && b2 > pMaxZ && c2 > pMaxZ)
+                continue;
+            v0x = mB[0] * a0 + mB[4] * a1 + mB[8] * a2 + mB[12] - cx;
+            v0y = mB[1] * a0 + mB[5] * a1 + mB[9] * a2 + mB[13] - cy;
+            v0z = mB[2] * a0 + mB[6] * a1 + mB[10] * a2 + mB[14] - cz;
+            v1x = mB[0] * b0 + mB[4] * b1 + mB[8] * b2 + mB[12] - cx;
+            v1y = mB[1] * b0 + mB[5] * b1 + mB[9] * b2 + mB[13] - cy;
+            v1z = mB[2] * b0 + mB[6] * b1 + mB[10] * b2 + mB[14] - cz;
+            v2x = mB[0] * c0 + mB[4] * c1 + mB[8] * c2 + mB[12] - cx;
+            v2y = mB[1] * c0 + mB[5] * c1 + mB[9] * c2 + mB[13] - cy;
+            v2z = mB[2] * c0 + mB[6] * c1 + mB[10] * c2 + mB[14] - cz;
+            ea[0] = v1x - v0x;
+            ea[1] = v1y - v0y;
+            ea[2] = v1z - v0z;
+            ea[3] = v2x - v1x;
+            ea[4] = v2y - v1y;
+            ea[5] = v2z - v1z;
+            ea[6] = v0x - v2x;
+            ea[7] = v0y - v2y;
+            ea[8] = v0z - v2z;
+            bestPen = 0;
+            const fnx = ea[1] * ea[5] - ea[2] * ea[4];
+            const fny = ea[2] * ea[3] - ea[0] * ea[5];
+            const fnz = ea[0] * ea[4] - ea[1] * ea[3];
+            if (TestAxis(fnx, fny, fnz) == false)
+                continue;
+            if (TestAxis(u0x, u0y, u0z) == false)
+                continue;
+            if (TestAxis(u1x, u1y, u1z) == false)
+                continue;
+            if (TestAxis(u2x, u2y, u2z) == false)
+                continue;
+            let sep = false;
+            for (let i = 0; i < 3 && sep == false; ++i) {
+                const aix = ua[i * 3], aiy = ua[i * 3 + 1], aiz = ua[i * 3 + 2];
+                for (let j = 0; j < 3; ++j) {
+                    const ejx = ea[j * 3], ejy = ea[j * 3 + 1], ejz = ea[j * 3 + 2];
+                    if (TestAxis(aiy * ejz - aiz * ejy, aiz * ejx - aix * ejz, aix * ejy - aiy * ejx) == false) {
+                        sep = true;
+                        break;
+                    }
+                }
+            }
+            if (sep)
+                continue;
+            if (bestPen <= 0)
+                continue;
+            const sx = bestX * bestPen, sy = bestY * bestPen, sz = bestZ * bestPen;
+            hit = true;
+            const sl = Math.sqrt(sx * sx + sy * sy + sz * sz);
+            if (sl > 1e-9) {
+                const ux = sx / sl, uy = sy / sl, uz = sz / sl;
+                const remain = sl - (outX * ux + outY * uy + outZ * uz);
+                if (remain > 0) {
+                    outX += ux * remain;
+                    outY += uy * remain;
+                    outZ += uz * remain;
+                }
+            }
+        }
+        if (hit == false)
+            return null;
+        const out = _push || new CVec3();
+        out.x = -outX;
+        out.y = -outY;
+        out.z = -outZ;
+        return out;
+    }
     static Grad(_hash, _x, _y) {
         return ((_hash & 1) == 0 ? _x : -_x) + ((_hash & 2) == 0 ? _y : -_y);
     }
@@ -859,7 +1063,7 @@ export class CUtilMath {
             pa_persent = 0;
         var w = (pa_vec.length - 1) * pa_persent;
         var s = Math.trunc(w);
-        var e = Math.trunc((w + 1));
+        var e = Math.min(s + 1, pa_vec.length - 1);
         var p = w % 1;
         var t0 = CPoolGeo.ProductV3();
         var t1 = CPoolGeo.ProductV3();
@@ -881,3 +1085,55 @@ export class CUtilMath {
         return len;
     }
 }
+class CTriFlat {
+    flat;
+    triCount;
+    sample;
+}
+const gTriFlatMap = new WeakMap();
+function TriFlatSample(_list, _triCount, _out) {
+    const last = _triCount * 3 - 1;
+    const idx = [0, 1, (last >> 1), last];
+    for (let k = 0; k < 4; ++k) {
+        const p = _list.Find(idx[k]).mF32A;
+        _out[k * 3] = p[0];
+        _out[k * 3 + 1] = p[1];
+        _out[k * 3 + 2] = p[2];
+    }
+}
+function TriFlatCache(_bound, _triCount) {
+    const list = _bound.mPos;
+    let c = gTriFlatMap.get(_bound);
+    if (c != null && c.triCount == _triCount) {
+        const s = gTriFlatTmp;
+        TriFlatSample(list, _triCount, s);
+        let same = true;
+        for (let k = 0; k < 12; ++k) {
+            if (s[k] != c.sample[k]) {
+                same = false;
+                break;
+            }
+        }
+        if (same)
+            return c.flat;
+    }
+    if (c == null) {
+        c = new CTriFlat();
+        gTriFlatMap.set(_bound, c);
+    }
+    c.triCount = _triCount;
+    c.flat = new Float64Array(_triCount * 9);
+    for (let t = 0; t < _triCount; ++t) {
+        for (let j = 0; j < 3; ++j) {
+            const p = list.Find(t * 3 + j).mF32A;
+            const o = t * 9 + j * 3;
+            c.flat[o] = p[0];
+            c.flat[o + 1] = p[1];
+            c.flat[o + 2] = p[2];
+        }
+    }
+    c.sample = new Float64Array(12);
+    TriFlatSample(list, _triCount, c.sample);
+    return c.flat;
+}
+const gTriFlatTmp = new Float64Array(12);

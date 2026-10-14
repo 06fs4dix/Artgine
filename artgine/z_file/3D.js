@@ -1,9 +1,9 @@
-import { Build, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, MatTypeToMat, Sam2DToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrToMat, clamp, floor, min, abs, max, dFdy, dFdx, length, SaturateFloat, smoothstep, V2SubV2, V2MulFloat, V2DivV2, V2AddV2, V2Len, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V3Len, V3Mix, V3SubV3, SaturateV3, V3Cross, V3Sqrt, V3MulV3, V4MulMatCoordi, V4Min, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, Sam2DArrToV4, } from "./Shader";
+import { Build, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, MatTypeToMat, Sam2DToColor, Sam2DGradToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrNearestToMat, clamp, floor, min, abs, max, dFdy, dFdx, length, SaturateFloat, smoothstep, V2SubV2, V2MulFloat, V2DivV2, V2AddV2, V2Len, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V3Len, V3Mix, V3SubV3, SaturateV3, V3Cross, V3Sqrt, V3MulV3, V4MulMatCoordi, V4Min, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, Sam2DArrNearestToV4, sqrt, sin, } from "./Shader";
 import { SDF } from "./SDF";
 import { VFXDown2, GetTexCodiedUV, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, ColorModalFun, AlphaModalFun, vfxMat0, vfxMat1 } from "./ColorFun";
-import { ambientColor, envmapOn, GetMaterial, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, material, cullMask, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envCount, envPos, EnvNearest, GetMaterial, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, material, cullMask, sam2DCount, samCubeCount } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
-import { bias, normalBias, PCF, shadowCount, shadowOn, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowRate, shadowReadList, shadowWrite, texture16f, jitter, CalcShadow, CalcParallaxShadow, shadowInfoList, shadowCascadeDataList, shadowDivideList, PCFStep } from "./Shadow";
+import { bias, normalBias, PCF, shadowCount, shadowOn, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow, shadowRate, shadowWrite, texture16f, shadowZOffset, jitter, CalcShadow, CalcParallaxShadow, shadowInfoList, PCFStep } from "./Shadow";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
 import { exposure, Tonemap, tonemappingType } from "./ToneMapping";
 var screenDepth;
@@ -13,6 +13,8 @@ var texCodi = Null();
 var screenSize;
 var skin = Null();
 var parallaxNormal = Attribute(0, "canvas");
+var parallaxDist = new CVec2(1500.0, 3000.0);
+var parallaxDepth = 1.0;
 var alphaCut = 0.01;
 var worldMat = Null();
 var worldMatShort = Null();
@@ -28,6 +30,7 @@ var to_tangent = Null();
 var to_ref = Null();
 var to_worldPos = Null();
 var to_viewPos = Null();
+var to_envIdx = Null();
 var out_position = Null();
 var out_color = Null();
 var out_pos = Null();
@@ -52,7 +55,7 @@ var normalflowDir = new CVec2(0.0, 0.0);
 var normalRange = 1.0;
 Build("Artgine/Shader/3DSkin", [], vs_main, [
     worldMat, viewMat, projectMat, skin, sam2DCount
-], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
+], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_envIdx], ps_main, [out_color]);
 Build("Artgine/Shader/3DSimple", ["simple"], vs_main_simple, [
     worldMat, viewMat, projectMat
 ], [out_position, to_uv], ps_main_simple, [out_color]);
@@ -63,14 +66,14 @@ Build("Artgine/Shader/3DGBuffer", ["gBuf"], vs_main_gBuffer, [
 ], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer, [out_color, out_pos, out_nor, out_spc]);
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
     worldMat, viewMat, projectMat, skin,
-    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-    shadowReadList, shadowInfoList, shadowCascadeDataList, shadowDivideList,
-    shadowWrite, shadowCount,
-], [out_position, to_uv, to_viewPos], ps_main_shadow_write, [out_color]);
+    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+    shadowInfoList,
+    shadowWrite, shadowCount, shadowZOffset,
+], [out_position, to_uv, to_viewPos, to_ref], ps_main_shadow_write, [out_color]);
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], vs_main_shadow_read, [
     worldMat, viewMat, projectMat, skin,
-    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow,
-    shadowReadList, shadowInfoList, shadowCascadeDataList, shadowDivideList,
+    shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow,
+    shadowInfoList,
     shadowWrite, shadowCount,
     shadowRate, PCF, PCFStep, texture16f, bias, normalBias, jitter,
     ligDir, ligCol, ligMask, ligCount, cullMask,
@@ -102,10 +105,10 @@ function GetWorldWeightMat(_weightArrMat, _weightBakeArrMat, _index, _weight, _w
     var woweMat = _worldMat;
     if (_skin > 0.5 && _weight.x + _weight.y + _weight.z + _weight.w > 0.0) {
         if (_skin < SDF.eSkin.Bone + 0.5 && _weightArrMat.x > 0.0) {
-            var weightMat = FloatMulMat(_weight.x, Sam2DArrToMat(_weightArrMat, _weightIndex.x));
-            weightMat = MatAdd(FloatMulMat(_weight.y, Sam2DArrToMat(_weightArrMat, _weightIndex.y)), weightMat);
-            weightMat = MatAdd(FloatMulMat(_weight.z, Sam2DArrToMat(_weightArrMat, _weightIndex.z)), weightMat);
-            weightMat = MatAdd(FloatMulMat(_weight.w, Sam2DArrToMat(_weightArrMat, _weightIndex.w)), weightMat);
+            var weightMat = FloatMulMat(_weight.x, Sam2DArrNearestToMat(_weightArrMat, _weightIndex.x));
+            weightMat = MatAdd(FloatMulMat(_weight.y, Sam2DArrNearestToMat(_weightArrMat, _weightIndex.y)), weightMat);
+            weightMat = MatAdd(FloatMulMat(_weight.z, Sam2DArrNearestToMat(_weightArrMat, _weightIndex.z)), weightMat);
+            weightMat = MatAdd(FloatMulMat(_weight.w, Sam2DArrNearestToMat(_weightArrMat, _weightIndex.w)), weightMat);
             woweMat = MatMul(weightMat, woweMat);
         }
         else if (_skin < SDF.eSkin.Bake + 0.5 && _index > -0.5) {
@@ -128,17 +131,42 @@ function GetWorldWeightMat(_weightArrMat, _weightBakeArrMat, _index, _weight, _w
 }
 function GetParallaxMappedUV(_uv, _tan, _bi, _nor, _wor, _camPos, _texOff) {
     var uvh = new CVec3(_uv, 0.0);
+    var dpx = dFdx(_wor.xyz);
+    var dpy = dFdy(_wor.xyz);
+    var duvx = dFdx(_uv);
+    var duvy = dFdy(_uv);
     if (parallaxNormal > 0.0001) {
-        var TBN = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
-        uvh = ParallaxNormal(V3MulMat3Normal(_camPos, TBN).xyz, V3MulMat3Normal(_wor.xyz, TBN).xyz, _texOff.y, _uv, parallaxNormal);
+        var tx = V3Dot(dpx, _tan);
+        var ty = V3Dot(dpy, _tan);
+        var bx = V3Dot(dpx, _bi);
+        var by = V3Dot(dpy, _bi);
+        var det = tx * by - ty * bx;
+        var aniso = new CVec2(1.0, 1.0);
+        var valid = 0.0;
+        if (V3Len(_tan) > 0.5 && V3Len(_bi) > 0.5 && abs(det) > 0.0000001) {
+            valid = smoothstep(4.0, 16.0, (V2Len(duvx) + V2Len(duvy)) / (1.2e-7 * max(1.0, max(abs(_uv.x), abs(_uv.y)))));
+        }
+        if (abs(det) > 0.0000001) {
+            var su = abs((duvx.x * by - duvy.x * bx) / det);
+            var sv = abs((duvy.y * tx - duvx.y * ty) / det);
+            var sMax = max(max(su, sv), 0.0000001);
+            aniso = new CVec2(su / sMax, sv / sMax);
+        }
+        var toCam = V3SubV3(_camPos, _wor.xyz);
+        var facing = 1.0;
+        if (V3Dot(_nor, toCam) < 0.0)
+            facing = -1.0;
+        var TBN = TransposeMat3(V3ToMat3(V3MulFloat(_tan, aniso.x), V3MulFloat(_bi, aniso.y), V3MulFloat(_nor, facing)));
+        var fade = valid * (1.0 - smoothstep(parallaxDist.x, parallaxDist.y, V3Len(toCam))) * smoothstep(0.08, 0.3, abs(V3Dot(_nor, V3Nor(toCam))));
+        uvh = ParallaxNormal(V3MulMat3Normal(_camPos, TBN).xyz, V3MulMat3Normal(_wor.xyz, TBN).xyz, _texOff.y, _uv, parallaxNormal * fade);
     }
     return uvh;
 }
-function GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff, sam2DCount) {
+function GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff, sam2DCount, _dx, _dy) {
     var N = _nor;
     if (to_ref.y > 0.5 && sam2DCount > 1.5) {
         var TBN = V3ToMat3(_tan, _bi, _nor);
-        N = Sam2DToColor(to_ref.y, _uv).xyz;
+        N = Sam2DGradToColor(to_ref.y, _uv, _dx, _dy).xyz;
         N = MappingTexToV3(N);
         if (V3Dot(N, new CVec3(0, 0, 1)) > 0.999)
             N = _nor;
@@ -186,6 +214,10 @@ function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_ref) {
     to_tangent = V3Nor(V3SubV3(to_tangent, V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))));
     to_binormal = V3Nor(V3MulFloat(V3Cross(to_normal, to_tangent), f4_tan.w));
     to_ref = f3_ref;
+    to_envIdx.x = -1.0;
+    BranchBegin("env", "E", [envCount, envPos]);
+    to_envIdx.x = EnvNearest(to_worldPos.xyz, to_normal);
+    BranchEnd();
 }
 function vs_main_gBuffer(f3_ver, f2_uv, f4_wi, f4_we, f3_nor, f4_tan, f3_ref) {
     BranchBegin("codi", "C", [texCodi]);
@@ -264,28 +296,41 @@ function Caustics(_world, _flowDir, _ligDir, _ligCol) {
     var tex = SampleCaustics(uvw, 1.0 / 128.0, L, _ligCol);
     return SaturateV3(tex);
 }
-function WaterProcessing(_color, _caustics, _world) {
+function ShoreSlopeScale(_nor) {
+    var ny = abs(_nor.y);
+    return clamp(ny / max(sqrt(SaturateFloat(1.0 - ny * ny)), 0.001), 1.0, 40.0);
+}
+function WaterProcessing(_color, _caustics, _world, _slope, _lit) {
+    var deep = V3MulV3(deepColor, _lit);
+    var shallow = V3MulV3(shallowColor, _lit);
     var heightDiff = abs(waterDeep.x - _world.y);
     var depthBlend = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
     var dist = V3Len(V3SubV3(camPos, _world.xyz));
     var t = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
     var luma = (_color.x * 0.299 + _color.y * 0.587 + _color.z * 0.114);
-    var foamThreshold = min(waterDeep.z, waterDeep.z * waterHeight);
-    var foamMask = 1.0 - smoothstep(0.0, foamThreshold, heightDiff);
-    _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
+    var shoreNoise = NoiseGet(new CVec3(_world.x / 400.0, _world.z / 400.0, time * 0.05), SDF.eNoise.Perlin);
+    var waveK = SaturateFloat(V2Len(normalflowDir) / 1.5);
+    var lap = 0.5 + 0.5 * sin(time * (0.5 + 1.5 * waveK) + shoreNoise * 12.0);
+    var foamThreshold = min(waterDeep.z, min(waterDeep.z, waterDeep.z * waterHeight) * (0.4 + 0.9 * shoreNoise) * (0.6 + 0.6 * lap));
+    var foamMask = 1.0 - smoothstep(0.0, foamThreshold, heightDiff * _slope);
+    _color = V3Mix(deep, V3Mix(_color, shallow, 0.1), depthBlend);
     _caustics = V3MulFloat(_caustics, depthBlend * luma * (1.0 - foamMask));
     _color = V3AddV3(_color, _caustics);
-    _color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
+    _color = V3Mix(deep, _color, 0.6 * (1.0 - t));
     if (foamMask > 0.0) {
-        var foam = new CVec3(0.55, 0.58, 0.58);
-        var noise = NoiseGet(new CVec3(_world.x / 300.0 - normalflowDir.x * time * 0.1, _world.z / 300.0 + normalflowDir.y * time * 0.1, 0.0), SDF.eNoise.Perlin);
-        var edgeFade = foamMask * smoothstep(0.25, 1.0, noise);
-        _color = V3AddV3(_color, V3MulFloat(foam, 0.35 * edgeFade));
-        _color = V3Mix(_color, foam, 0.4 * edgeFade);
+        var foam = V3MulV3(new CVec3(0.55, 0.58, 0.58), _lit);
+        var noise = NoiseGet(new CVec3(_world.x / 120.0 + _world.y / 240.0 - normalflowDir.x * time * 0.1, _world.z / 120.0 - _world.y / 240.0 + normalflowDir.y * time * 0.1, time * 0.15), SDF.eNoise.PerlinFBM);
+        var foamLod = SaturateFloat(dist * 0.0012 / 50.0);
+        noise = noise + (0.45 - noise) * foamLod;
+        var edgeFade = foamMask * smoothstep(0.35 - 0.15 * foamLod, 0.65 + 0.15 * foamLod, noise + foamMask * 0.3) * smoothstep(0.0, 0.6, waveK);
+        _color = V3AddV3(_color, V3MulFloat(foam, 0.2 * edgeFade));
+        _color = V3Mix(_color, foam, 0.25 * edgeFade);
     }
     return _color;
 }
 function ps_main() {
+    var uvDx = dFdx(to_uv);
+    var uvDy = dFdy(to_uv);
     var shadow = new CVec4(-1.0, -1.0, -1.0, -1.0);
     BranchBegin("shadow", "S", [shadowOn, screenSize]);
     if (shadowOn > 0.5) {
@@ -296,23 +341,34 @@ function ps_main() {
     var uv = to_uv;
     var uvh;
     var ratio;
-    BranchBegin("parallax", "P", [parallaxNormal, camPos]);
+    BranchBegin("parallax", "P", [parallaxNormal, camPos, parallaxDist, parallaxDepth]);
     uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
     uv = uvh.xy;
-    world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), V3Len(new CVec3(V2SubV2(uvh.xy, to_uv), parallaxNormal * uvh.z)) / max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz)))));
-    if (parallaxNormal > 0.0001) {
+    world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), parallaxDepth * V3Len(new CVec3(V2SubV2(uvh.xy, to_uv), parallaxNormal * uvh.z)) / max(1e-6, max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))))));
+    if (parallaxNormal > 0.0001 && parallaxDepth > 0.0001) {
         ratio = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
         screenDepth = SDF.ClipControl > 0
             ? clamp(screenPos.z * ratio, 0.0, 1.0)
             : clamp(((screenPos.z * 2.0 - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
     }
+    else {
+        screenDepth = screenPos.z;
+    }
     BranchEnd();
-    var normal = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
+    BranchBegin("waterReflect", "waterReflect", [waterDeep]);
+    if (world.y <= waterDeep.x)
+        discard;
+    BranchEnd();
+    BranchBegin("waterRefract", "waterRefract", [waterDeep]);
+    if (world.y > waterDeep.x + waterDeep.z)
+        discard;
+    BranchEnd();
+    var normal = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount, uvDx, uvDy);
     var L_cor;
     BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time, vfxMat0, vfxMat1]);
     L_cor = VFXDown2(uv, VFX, time, world);
     BranchDefault();
-    L_cor = Sam2DToColor(to_ref.x, uv);
+    L_cor = Sam2DGradToColor(to_ref.x, uv, uvDx, uvDy);
     BranchEnd();
     BranchBegin("colorModel", "CM", [colorModel]);
     L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
@@ -331,15 +387,17 @@ function ps_main() {
     var lmaterial = new CVec4(1.0, 1.0, 1.0, 1.0);
     var sunDir = new CVec3(0.0, 1.0, 0.0);
     var sunCol = new CVec3(1.0, 1.0, 1.0);
+    var waterLit = new CVec3(1.0, 1.0, 1.0);
     var gamma = 1.0;
-    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, cullMask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envmapOn, sam2DCount, samCubeCount]);
+    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, cullMask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envCount, envPos, sam2DCount, samCubeCount]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
-    lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
+    lmaterial = GetMaterial(material, Sam2DGradToColor(to_ref.z, uv, uvDx, uvDy), sam2DCount);
     dseMat = GetSunInfo();
     sunDir = dseMat[0];
     sunCol = dseMat[1];
-    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, cullMask.x);
+    waterLit = SaturateV3(V3AddV3(ambientColor, sunCol));
+    dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
     L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
     BranchDefault();
     if (shadow.a > -0.5) {
@@ -353,34 +411,36 @@ function ps_main() {
     if (gamma > 1.1) {
         out_color.rgb = V3Sqrt(out_color.rgb);
     }
-    BranchBegin("waterReflect", "waterReflect", [waterDeep]);
-    if (world.y <= waterDeep.x)
-        discard;
-    BranchEnd();
     var caustics;
-    BranchBegin("waterRefract", "waterRefract", [waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time, normalflowDir, normalRange]);
-    if (world.y > waterDeep.x + waterDeep.z)
-        discard;
+    var shoreSlope = 1.0;
+    BranchBegin("waterProcessing", "waterProcessing", [waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time, normalflowDir, normalRange]);
     caustics = Caustics(world.xyz, causticFlowDir, sunDir, sunCol);
-    out_color.rgb = WaterProcessing(out_color.rgb, caustics, world);
+    shoreSlope = ShoreSlopeScale(V3Nor(to_normal));
+    out_color.rgb = WaterProcessing(out_color.rgb, caustics, world, shoreSlope, waterLit);
+    out_color.a = 0.8 + 0.2 * sqrt(SaturateFloat(max(waterDeep.x - world.y, 0.0) * shoreSlope / (max(waterDeep.z, 1.0) * 4.0)));
     BranchEnd();
 }
 function ps_main_gBuffer() {
     var uv = to_uv;
+    var uvDx = dFdx(to_uv);
+    var uvDy = dFdy(to_uv);
     var world = to_worldPos;
     var view = to_viewPos;
     var uvh;
     var ratio;
-    BranchBegin("parallax", "P", [parallaxNormal, camPos]);
+    BranchBegin("parallax", "P", [parallaxNormal, camPos, parallaxDist, parallaxDepth]);
     uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
     uv = uvh.xy;
-    world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), V3Len(new CVec3(V2SubV2(uvh.xy, to_uv), parallaxNormal * uvh.z)) / max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz)))));
+    world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), parallaxDepth * V3Len(new CVec3(V2SubV2(uvh.xy, to_uv), parallaxNormal * uvh.z)) / max(1e-6, max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))))));
     view.xyz = V4MulMatCoordi(world, viewMat).xyz;
-    if (parallaxNormal > 0.0001) {
+    if (parallaxNormal > 0.0001 && parallaxDepth > 0.0001) {
         ratio = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
         screenDepth = SDF.ClipControl > 0
             ? clamp(screenPos.z * ratio, 0.0, 1.0)
             : clamp(((screenPos.z * 2.0 - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
+    }
+    else {
+        screenDepth = screenPos.z;
     }
     BranchEnd();
     var L_cor;
@@ -388,9 +448,9 @@ function ps_main_gBuffer() {
     L_cor = VFXDown2(uv, VFX, time, world);
     BranchDefault();
     if (sam2DCount == 1.0)
-        L_cor = Sam2DToColor(0.0, uv);
+        L_cor = Sam2DGradToColor(0.0, uv, uvDx, uvDy);
     else
-        L_cor = Sam2DToColor(to_ref.x, uv);
+        L_cor = Sam2DGradToColor(to_ref.x, uv, uvDx, uvDy);
     BranchEnd();
     BranchBegin("colorModel", "CM", [colorModel]);
     L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
@@ -406,9 +466,9 @@ function ps_main_gBuffer() {
         discard;
     BranchEnd();
     out_pos = new CVec4(view.xyz, cullMask.x);
-    var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
+    var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount, uvDx, uvDy);
     out_nor = new CVec4(MappingV3ToTex(N), 1.0);
-    var lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
+    var lmaterial = GetMaterial(material, Sam2DGradToColor(to_ref.z, uv, uvDx, uvDy), sam2DCount);
     out_spc = lmaterial;
     if (outputType < SDF.eGBuf.Albedo + 0.5) {
         out_color = L_cor;
@@ -423,7 +483,8 @@ function ps_main_gBuffer() {
         out_color = out_spc;
     }
 }
-function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
+function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv, f3_ref) {
+    to_ref = f3_ref;
     BranchBegin("codi", "C", [texCodi]);
     to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
     BranchDefault();
@@ -454,7 +515,7 @@ function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
     out_position.z = min(out_position.z, out_position.w);
 }
 function ps_main_shadow_write() {
-    var L_cor = Sam2DToColor(0.0, to_uv);
+    var L_cor = Sam2DToColor(to_ref.x, to_uv);
     BranchBegin("alphaModel", "AM", [alphaModel]);
     L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
     BranchEnd();
@@ -465,19 +526,25 @@ function ps_main_shadow_write() {
     if (L_cor.a <= 0.01)
         discard;
     BranchEnd();
-    var shadowInfo;
+    var row0;
     var lDir;
     BranchBegin("PointLightShadowF", "PLSF", [ligDir]);
-    shadowInfo = Sam2DArrToV4(shadowInfoList, shadowWrite.y);
-    lDir = Sam2DArrToV4(ligDir, shadowInfo.x);
-    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowInfo.z) / (shadowInfo.w - shadowInfo.z);
+    row0 = Sam2DArrNearestToV4(shadowInfoList, shadowWrite.y * 4.0);
+    lDir = Sam2DArrNearestToV4(ligDir, row0.x);
+    out_color.b = -V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) / row0.z;
     out_color.a = 1.0;
     BranchDefault();
     out_color = to_viewPos;
+    out_color.z += shadowZOffset;
     out_color.a = 1.0;
     BranchEnd();
 }
-function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor, f4_tan, f3_bi, f3_ref) {
+function vs_main_shadow_read(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_ref) {
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
     var wMat;
     BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
     wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
@@ -494,24 +561,22 @@ function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor, f4_tan, f3_bi,
     P = ApplyWind(P, skin, f4_we, time);
     BranchEnd();
     to_worldPos = P;
-    to_normal = V3Nor(V3MulMat3Normal(f3_nor, TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
-    BranchBegin("codi", "C", [texCodi]);
-    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
-    BranchDefault();
-    to_uv.xy = f2_uv;
-    BranchEnd();
-    to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, Mat4ToMat3(woweMat)).xyz);
-    to_binormal = V3Nor(V3MulMat3Normal(f3_bi, Mat4ToMat3(woweMat)).xyz);
-    if (f3_ref.y > 0.0) {
-        to_normal = V3Nor(V3MulMat3Normal(f3_nor, Mat4ToMat3(woweMat)).xyz);
-    }
-    else {
-        to_normal = V3Nor(V3MulMat3Normal(f3_nor, TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
-    }
-    to_ref = f3_ref;
     P = V4MulMatCoordi(P, viewMat);
     to_viewPos = P;
+    BranchBegin("zDepth", "Z", [zDepth, zDepthBias]);
+    P.z += zDepth * zDepthBias;
+    BranchEnd();
     out_position = V4MulMatCoordi(P, projectMat);
+    var nMat3;
+    if (f3_ref.y > 0.0)
+        nMat3 = Mat4ToMat3(woweMat);
+    else
+        nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
+    to_normal = V3Nor(V3MulMat3Normal(f3_nor, nMat3).xyz);
+    to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
+    to_tangent = V3Nor(V3SubV3(to_tangent, V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))));
+    to_binormal = V3Nor(V3MulFloat(V3Cross(to_normal, to_tangent), f4_tan.w));
+    to_ref = f3_ref;
 }
 function ps_main_shadow_read() {
     var temp;
@@ -519,15 +584,18 @@ function ps_main_shadow_read() {
     var uv = to_uv;
     var world = to_worldPos;
     var pShadow = new CVec4(1.0, 1.0, 1.0, 1.0);
-    BranchBegin("parallax", "P", [parallaxNormal, camPos]);
+    BranchBegin("parallax", "P", [parallaxNormal, camPos, parallaxDist, parallaxDepth]);
     temp = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, world, camPos, to_ref);
     uv = temp.xy;
-    world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), V3Len(new CVec3(V2SubV2(temp.xy, to_uv), parallaxNormal * temp.z)) / max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz)))));
+    world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), parallaxDepth * V3Len(new CVec3(V2SubV2(temp.xy, to_uv), parallaxNormal * temp.z)) / max(1e-6, max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))))));
+    screenDepth = screenPos.z;
     if (parallaxNormal > 0.0001) {
-        temp.x = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
-        screenDepth = SDF.ClipControl > 0
-            ? clamp(screenPos.z * temp.x, 0.0, 1.0)
-            : clamp(((screenPos.z * 2.0 - 1.0) * temp.x) * 0.5 + 0.5, 0.0, 1.0);
+        if (parallaxDepth > 0.0001) {
+            temp.x = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
+            screenDepth = SDF.ClipControl > 0
+                ? clamp(screenPos.z * temp.x, 0.0, 1.0)
+                : clamp(((screenPos.z * 2.0 - 1.0) * temp.x) * 0.5 + 0.5, 0.0, 1.0);
+        }
         outputIndex = 0.0;
         pShadow = new CVec4(0.0, 0.0, 0.0, 0.0);
         for (var i = 0; i < SDF.TexSizeMax; ++i) {
@@ -543,7 +611,7 @@ function ps_main_shadow_read() {
     BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time, vfxMat0, vfxMat1]);
     L_cor = VFXDown2(uv, VFX, time, world);
     BranchDefault();
-    L_cor = Sam2DToColor(0.0, uv);
+    L_cor = Sam2DToColor(to_ref.x, uv);
     BranchEnd();
     BranchBegin("colorModel", "CM", [colorModel]);
     L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);

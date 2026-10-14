@@ -4,42 +4,6 @@ import { CTexture } from "../../../artgine/render/CTexture.js";
 import { CParser } from "../../../artgine/util/parser/CParser.js";
 import { CVec2 } from "../../../artgine/geometry/CVec2.js";
 import { CObject } from "../../basic/CObject.js";
-const ANIMS = {
-    spellcast: { f: 7 },
-    thrust: { f: 8 },
-    walk: { f: 9 },
-    slash: { f: 6 },
-    shoot: { f: 13 },
-    hurt: { f: 6 },
-    climb: { f: 6 },
-    idle: { f: 2 },
-    jump: { f: 5 },
-    sit: { f: 3 },
-    emote: { f: 3 },
-    run: { f: 8 },
-    combat_idle: { f: 2 },
-    backslash: { f: 13 },
-    halfslash: { f: 6 },
-};
-const ANIM_YOFFSETS = {
-    spellcast: 0, thrust: 256, walk: 512, slash: 768,
-    shoot: 1024, hurt: 1280, climb: 1344, idle: 1408,
-    jump: 1664, sit: 1920, emote: 2176, run: 2432,
-    combat_idle: 2688, backslash: 2944, halfslash: 3200,
-};
-const ONE_DIR_ANIMS = new Set(['hurt', 'climb']);
-function getDirArr(dir, animName) {
-    if (dir && !Array.isArray(dir) && typeof dir === 'object') {
-        return dir[animName] ?? (ONE_DIR_ANIMS.has(animName) ? [1] : [0, 2, 1, 3]);
-    }
-    return ONE_DIR_ANIMS.has(animName) ? [1] : [0, 2, 1, 3];
-}
-const ANIM_ORDER = [
-    'spellcast', 'thrust', 'walk', 'slash', 'shoot', 'hurt', 'climb',
-    'idle', 'jump', 'sit', 'emote', 'run', 'combat_idle', 'backslash', 'halfslash',
-];
-const COMPOSITE_W = 832;
-const FRAME_SIZE = 64;
 const PALETTE_META = {
     cloth: { version: "ulpc", base: "white" },
     body: { version: "ulpc", base: "light" },
@@ -48,23 +12,11 @@ const PALETTE_META = {
     eye: { version: "ulpc", base: "blue" },
     all: { version: "lpcr", base: "white" },
 };
-const TYPE_MATERIAL = {
-    clothes: ["cloth"],
-    torso: ["cloth"],
-    shoulders: ["cloth", "metal"],
-    body: ["body"],
-    head: ["body"],
-    expression: ["body"],
-    face: ["body"],
-    hair: ["hair"],
-    eyes: ["eye"],
-};
-const PALETTE_FALLBACK_ORDER = ["cloth", "body", "metal", "hair", "eye"];
 export class CULPC extends CObject {
     static eState = {
         "walk": "walk",
         "slash": "slash",
-        "thrush": "thrush",
+        "thrust": "thrust",
         "idle": "idle",
         "shoot": "shoot",
         "spellcast": "spellcast"
@@ -73,7 +25,7 @@ export class CULPC extends CObject {
     mTexture = null;
     static AniGroups = [
         ["walk", "move"],
-        ["slash", "thrush", "attack", "spellcast", "shoot"],
+        ["slash", "thrust", "attack", "spellcast", "shoot"],
         ["idle", "basic"]
     ];
     static FallbackMap = CULPC._CreateBidirectionalMap(CULPC.AniGroups);
@@ -174,14 +126,7 @@ export class CParserULPC extends CParser {
             const result = new CULPC();
             const cv = new CH5CanvasInst();
             let textureFile = pa_fileName.replace(/\.json$/i, ".ulpc");
-            let specs;
-            if (Array.isArray(json.selections)) {
-                specs = await this._buildV3(json, absBase, cv);
-            }
-            else {
-                const paletteBase = rootSlash ? new URL("../palette_definitions/", rootSlash).toString() : "palette_definitions/";
-                specs = await this._buildV2(json, absBase, paletteBase, cv);
-            }
+            const specs = await this._buildV3(json, absBase, cv);
             this._buildAnimMap(specs, result, textureFile);
             result.mTexture = cv.GetNewTex();
             result.mTexture.SetMipMap(CTexture.eMipmap.GL);
@@ -205,265 +150,6 @@ export class CParserULPC extends CParser {
             }
             result.mAniMap.set(s.key, cAnim);
         }
-    }
-    async _buildV2(json, absBase, paletteBase, cv) {
-        const layers = [...(json.layers ?? [])].sort((a, b) => a.zPos - b.zPos);
-        const sizeBase = json.sizeBase ?? FRAME_SIZE;
-        const oversizeSections = [];
-        const seenAnim = new Set();
-        for (const layer of layers) {
-            if ((layer.size ?? FRAME_SIZE) <= sizeBase)
-                continue;
-            const supported = layer.supportedAnimations ?? [];
-            for (const animName of supported) {
-                if (seenAnim.has(animName))
-                    continue;
-                const baseAnim = this._extractBaseAnim(animName);
-                if (!baseAnim)
-                    continue;
-                seenAnim.add(animName);
-                const dirArr = getDirArr(layer.dir, animName);
-                oversizeSections.push({
-                    animName, baseAnim,
-                    frameSize: layer.size,
-                    cols: layer.frame,
-                    dirArr,
-                    yOffset: 0, idleYOffset: 0,
-                });
-            }
-        }
-        const animYMap = new Map();
-        let stackY = 0;
-        for (const animName of ANIM_ORDER) {
-            const supportingLayer = layers.find(l => (l.size ?? FRAME_SIZE) <= sizeBase &&
-                (l.supportedAnimations ?? []).includes(animName));
-            if (!supportingLayer)
-                continue;
-            const dirs = getDirArr(supportingLayer.dir, animName);
-            animYMap.set(animName, { y: stackY, dirs });
-            stackY += dirs.length * sizeBase;
-        }
-        const idleDirs = animYMap.get("idle")?.dirs ?? [0, 2, 1, 3];
-        const idleF = ANIMS["idle"].f;
-        let canvasW = COMPOSITE_W;
-        let canvasH = stackY;
-        for (const sec of oversizeSections) {
-            sec.yOffset = canvasH;
-            if (sec.cols * sec.frameSize > canvasW)
-                canvasW = sec.cols * sec.frameSize;
-            canvasH += sec.dirArr.length * sec.frameSize;
-            sec.idleYOffset = canvasH;
-            if (idleF * sec.frameSize > canvasW)
-                canvasW = idleF * sec.frameSize;
-            canvasH += idleDirs.length * sec.frameSize;
-        }
-        cv.Init(canvasW, canvasH, false, false);
-        await cv.Draw();
-        const ctx = cv.GetContext();
-        ctx.imageSmoothingEnabled = false;
-        const loadTasks = [];
-        const taskKeys = new Set();
-        for (const [animName, { y: dstY }] of animYMap) {
-            for (const layer of layers) {
-                const supported = layer.supportedAnimations ?? [];
-                const isOversize = supported.some(a => seenAnim.has(a));
-                if (isOversize)
-                    continue;
-                let url;
-                if (supported.length > 0 && !supported.includes(animName)) {
-                    if (animName !== "idle")
-                        continue;
-                    const fallback = ["walk", "hurt", ...supported]
-                        .find(a => supported.includes(a) && ANIMS[a] !== undefined);
-                    if (!fallback)
-                        continue;
-                    url = absBase + "/" + this._swapAnim(layer.fileName, fallback);
-                }
-                else {
-                    url = absBase + "/" + this._swapAnim(layer.fileName, animName);
-                }
-                const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
-                if (!taskKeys.has(taskKey)) {
-                    taskKeys.add(taskKey);
-                    loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                }
-            }
-        }
-        for (const sec of oversizeSections) {
-            const { animName, baseAnim } = sec;
-            for (const layer of layers) {
-                const supported = layer.supportedAnimations ?? [];
-                if (supported.includes(animName)) {
-                    const url = absBase + "/" + layer.fileName;
-                    const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
-                    if (!taskKeys.has(taskKey)) {
-                        taskKeys.add(taskKey);
-                        loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                    }
-                }
-                if (supported.length === 0 || supported.includes(baseAnim)) {
-                    const url = absBase + "/" + this._swapAnim(layer.fileName, baseAnim);
-                    const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
-                    if (!taskKeys.has(taskKey)) {
-                        taskKeys.add(taskKey);
-                        loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                    }
-                }
-                const isOversizeForOther = supported.some(a => seenAnim.has(a) && a !== animName);
-                if (!isOversizeForOther) {
-                    const isOversizeForThis = supported.includes(animName);
-                    if (isOversizeForThis) {
-                        const oversizeAnim = supported.find(a => seenAnim.has(a)) ?? animName;
-                        const walkUrl = absBase + "/" + layer.fileName.replace(`/${oversizeAnim}/`, `/${baseAnim}/`);
-                        const taskKey = `${walkUrl}|${JSON.stringify(layer.recolors ?? {})}`;
-                        if (!taskKeys.has(taskKey)) {
-                            taskKeys.add(taskKey);
-                            loadTasks.push(this._loadAndRecolor(walkUrl, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                        }
-                    }
-                    else if (supported.length === 0 || supported.includes(baseAnim)) {
-                        const canUseIdle = supported.length === 0 || supported.includes("idle");
-                        const srcAnim = canUseIdle ? "idle" : baseAnim;
-                        const srcUrl = absBase + "/" + this._swapAnim(layer.fileName, srcAnim);
-                        const taskKey = `${srcUrl}|${JSON.stringify(layer.recolors ?? {})}`;
-                        if (!taskKeys.has(taskKey)) {
-                            taskKeys.add(taskKey);
-                            loadTasks.push(this._loadAndRecolor(srcUrl, layer, paletteBase).then(img => ({ key: taskKey, img })));
-                        }
-                    }
-                }
-            }
-        }
-        const results = await Promise.all(loadTasks);
-        const imgCache = new Map();
-        for (const res of results)
-            imgCache.set(res.key, res.img);
-        const getCachedImg = (url, layer) => {
-            const key = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
-            return imgCache.get(key) ?? null;
-        };
-        const pendingFallbacks = [];
-        for (const [animName, { y: dstY }] of animYMap) {
-            for (const layer of layers) {
-                const supported = layer.supportedAnimations ?? [];
-                const isOversize = supported.some(a => seenAnim.has(a));
-                if (isOversize)
-                    continue;
-                if (supported.length > 0 && !supported.includes(animName)) {
-                    if (animName !== "idle")
-                        continue;
-                    const fallback = ["walk", "hurt", ...supported]
-                        .find(a => supported.includes(a) && ANIMS[a] !== undefined);
-                    if (!fallback)
-                        continue;
-                    const url = absBase + "/" + this._swapAnim(layer.fileName, fallback);
-                    pendingFallbacks.push({ url, layer, dstY });
-                    continue;
-                }
-                const url = absBase + "/" + this._swapAnim(layer.fileName, animName);
-                const img = getCachedImg(url, layer);
-                if (img)
-                    ctx.drawImage(img, 0, dstY);
-            }
-        }
-        for (const { url, layer, dstY } of pendingFallbacks) {
-            const img = getCachedImg(url, layer);
-            if (!img)
-                continue;
-            for (let d = 0; d < idleDirs.length; d++) {
-                const srcY = d * sizeBase;
-                const rowY = dstY + d * sizeBase;
-                for (let f = 0; f < idleF; f++) {
-                    ctx.drawImage(img, 0, srcY, sizeBase, sizeBase, f * sizeBase, rowY, sizeBase, sizeBase);
-                }
-            }
-        }
-        for (const sec of oversizeSections) {
-            const { animName, baseAnim, frameSize, cols, dirArr, yOffset } = sec;
-            const offset = (frameSize - sizeBase) / 2;
-            const reversed = animName.includes('_reverse');
-            for (const layer of layers) {
-                const supported = layer.supportedAnimations ?? [];
-                let oversizeImg = null;
-                if (supported.includes(animName)) {
-                    oversizeImg = getCachedImg(absBase + "/" + layer.fileName, layer);
-                }
-                if (oversizeImg) {
-                    for (let d = 0; d < dirArr.length; d++)
-                        for (let f = 0; f < cols; f++)
-                            ctx.drawImage(oversizeImg, f * frameSize, d * frameSize, frameSize, frameSize, f * frameSize, yOffset + d * frameSize, frameSize, frameSize);
-                }
-                else if (supported.length === 0 || supported.includes(baseAnim)) {
-                    const url = absBase + "/" + this._swapAnim(layer.fileName, baseAnim);
-                    const stdImg = getCachedImg(url, layer);
-                    if (!stdImg)
-                        continue;
-                    for (let d = 0; d < dirArr.length; d++)
-                        for (let f = 0; f < cols; f++) {
-                            const srcF = reversed ? (cols - 1 - f) : f;
-                            ctx.drawImage(stdImg, srcF * sizeBase, d * sizeBase, sizeBase, sizeBase, f * frameSize + offset, yOffset + d * frameSize + offset, sizeBase, sizeBase);
-                        }
-                }
-            }
-        }
-        for (const sec of oversizeSections) {
-            const { animName, baseAnim, frameSize, idleYOffset } = sec;
-            const offset = (frameSize - sizeBase) / 2;
-            for (const layer of layers) {
-                const supported = layer.supportedAnimations ?? [];
-                const isOversizeForThis = supported.includes(animName);
-                const isOversizeForOther = supported.some(a => seenAnim.has(a) && a !== animName);
-                if (isOversizeForOther)
-                    continue;
-                if (isOversizeForThis) {
-                    const oversizeAnim = supported.find(a => seenAnim.has(a)) ?? animName;
-                    const walkUrl = absBase + "/" + layer.fileName.replace(`/${oversizeAnim}/`, `/${baseAnim}/`);
-                    const img = getCachedImg(walkUrl, layer);
-                    if (!img)
-                        continue;
-                    for (let d = 0; d < idleDirs.length; d++)
-                        for (let f = 0; f < idleF; f++)
-                            ctx.drawImage(img, 0, d * frameSize, frameSize, frameSize, f * frameSize, idleYOffset + d * frameSize, frameSize, frameSize);
-                }
-                else if (supported.length === 0 || supported.includes(baseAnim)) {
-                    const canUseIdle = supported.length === 0 || supported.includes("idle");
-                    const srcAnim = canUseIdle ? "idle" : baseAnim;
-                    const srcUrl = absBase + "/" + this._swapAnim(layer.fileName, srcAnim);
-                    const img = getCachedImg(srcUrl, layer);
-                    if (!img)
-                        continue;
-                    for (let d = 0; d < idleDirs.length; d++)
-                        for (let f = 0; f < idleF; f++) {
-                            const srcF = canUseIdle ? f : 0;
-                            ctx.drawImage(img, srcF * sizeBase, d * sizeBase, sizeBase, sizeBase, f * frameSize + offset, idleYOffset + d * frameSize + offset, sizeBase, sizeBase);
-                        }
-                }
-            }
-        }
-        const specs = [];
-        for (const [animName, { y: dstY, dirs }] of animYMap) {
-            const fStart = animName === "walk" ? 1 : 0;
-            for (let d = 0; d < dirs.length; d++) {
-                const key = dirs.length > 1 ? `${animName}_${dirs[d]}` : animName;
-                specs.push({ key, yOffset: dstY + d * sizeBase, frameSize: sizeBase,
-                    frameCount: ANIMS[animName].f, frameStart: fStart, scale: 1 });
-            }
-        }
-        for (const sec of oversizeSections) {
-            const { animName, baseAnim, frameSize, cols, dirArr, yOffset, idleYOffset } = sec;
-            const scale = frameSize / sizeBase;
-            const fStart = baseAnim === "walk" ? 1 : 0;
-            for (let d = 0; d < dirArr.length; d++) {
-                const key = dirArr.length > 1 ? `${animName}_${dirArr[d]}` : animName;
-                specs.push({ key, yOffset: yOffset + d * frameSize,
-                    frameSize, frameCount: cols, frameStart: fStart, scale });
-            }
-            for (let d = 0; d < idleDirs.length; d++) {
-                specs.push({ key: `idle_${idleDirs[d]}`, yOffset: idleYOffset + d * frameSize,
-                    frameSize, frameCount: idleF, frameStart: 0, scale });
-            }
-        }
-        return specs;
     }
     async _buildV3(json, absBase, cv) {
         const rawEntries = [];
@@ -588,110 +274,6 @@ export class CParserULPC extends CParser {
         }
         return specs;
     }
-    async _loadAndRecolor(url, layer, paletteBase) {
-        const recolors = layer.recolors ?? null;
-        const recolorKey = JSON.stringify(recolors || {});
-        const cacheKey = `${url}|${recolorKey}|${paletteBase}`;
-        if (CParserULPC.sRecolorCache.has(cacheKey))
-            return CParserULPC.sRecolorCache.get(cacheKey);
-        if (!recolors || Object.keys(recolors).length === 0) {
-            const img = await this._loadImg(url);
-            if (img)
-                CParserULPC.sRecolorCache.set(cacheKey, img);
-            return img;
-        }
-        const img = await this._loadImg(url);
-        if (img) {
-            const swapped = await this._applyRecolors(img, recolors, paletteBase);
-            const res = swapped ?? img;
-            CParserULPC.sRecolorCache.set(cacheKey, res);
-            return res;
-        }
-        const firstColor = Object.values(recolors)[0];
-        if (firstColor) {
-            const variantUrl = this._toVariantUrl(url, firstColor);
-            if (variantUrl !== url) {
-                const res = await this._loadImg(variantUrl);
-                if (res)
-                    CParserULPC.sRecolorCache.set(cacheKey, res);
-                return res;
-            }
-        }
-        return null;
-    }
-    _toVariantUrl(url, colorName) {
-        if (!colorName)
-            return url;
-        return url.replace(/\/([^/]+)\.png$/i, `/$1/${colorName}.png`);
-    }
-    _parseRecolorKey(key) {
-        const parts = key.split('.');
-        if (parts.length === 3)
-            return { material: parts[0], version: parts[1], color: parts[2] };
-        if (parts.length === 2)
-            return { material: parts[0], version: null, color: parts[1] };
-        return { material: null, version: null, color: parts[0] };
-    }
-    async _applyRecolors(img, recolors, paletteBase) {
-        let current = img;
-        let changed = false;
-        for (const [typeName, targetColor] of Object.entries(recolors)) {
-            const parsed = this._parseRecolorKey(targetColor);
-            const tgtMaterial = parsed.material ?? (TYPE_MATERIAL[typeName]?.[0] ?? "cloth");
-            const tgtVersion = parsed.version ?? PALETTE_META[tgtMaterial]?.version;
-            const tgtPalette = await this._fetchPalette(tgtMaterial, paletteBase, tgtVersion);
-            if (!tgtPalette)
-                continue;
-            const dstColors = tgtPalette[parsed.color];
-            if (!dstColors)
-                continue;
-            const srcCandidates = [
-                ...(parsed.material ? [parsed.material] : []),
-                ...(TYPE_MATERIAL[typeName] ?? []),
-                ...PALETTE_FALLBACK_ORDER,
-            ].filter((m, i, arr) => arr.indexOf(m) === i);
-            for (const srcMaterial of srcCandidates) {
-                const srcVersion = PALETTE_META[srcMaterial]?.version;
-                const srcPalette = await this._fetchPalette(srcMaterial, paletteBase, srcVersion);
-                if (!srcPalette)
-                    continue;
-                const srcBase = PALETTE_META[srcMaterial]?.base ?? "white";
-                if (srcMaterial === tgtMaterial && srcBase === parsed.color)
-                    continue;
-                const srcColors = srcPalette[srcBase];
-                if (!srcColors)
-                    continue;
-                const result = this._swapPalette(current, srcColors, dstColors);
-                if (result) {
-                    current = result;
-                    changed = true;
-                    break;
-                }
-            }
-        }
-        return changed ? current : null;
-    }
-    async _fetchPalette(material, paletteBase, version) {
-        const meta = PALETTE_META[material];
-        const ver = version ?? meta?.version;
-        if (!ver)
-            return null;
-        const cacheKey = `${material}_${ver}`;
-        if (CParserULPC.sPaletteCache.has(cacheKey))
-            return CParserULPC.sPaletteCache.get(cacheKey);
-        const url = `${paletteBase}${material}/${material}_${ver}.json`;
-        try {
-            const resp = await fetch(url);
-            if (!resp.ok)
-                return null;
-            const data = await resp.json();
-            CParserULPC.sPaletteCache.set(cacheKey, data);
-            return data;
-        }
-        catch {
-            return null;
-        }
-    }
     _swapPalette(src, srcColors, dstColors) {
         const w = src instanceof HTMLCanvasElement ? src.width : src.naturalWidth;
         const h = src instanceof HTMLCanvasElement ? src.height : src.naturalHeight;
@@ -739,14 +321,14 @@ export class CParserULPC extends CParser {
             const d = this._hexToRgb(dstColors[i]);
             if (!s || !d)
                 continue;
-            const dst32 = (255 << 24) | (d.b << 16) | (d.g << 8) | d.r;
+            const dst32 = ((255 << 24) | (d.b << 16) | (d.g << 8) | d.r) >>> 0;
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dg = -1; dg <= 1; dg++) {
                     for (let db = -1; db <= 1; db++) {
                         const r = Math.max(0, Math.min(255, s.r + dr));
                         const g = Math.max(0, Math.min(255, s.g + dg));
                         const b = Math.max(0, Math.min(255, s.b + db));
-                        const src32 = (255 << 24) | (b << 16) | (g << 8) | r;
+                        const src32 = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
                         map.set(src32, dst32);
                     }
                 }
@@ -754,31 +336,6 @@ export class CParserULPC extends CParser {
         }
         CParserULPC.sColorMapCache.set(key, map);
         return map;
-    }
-    _swapAnim(filePath, anim) {
-        const parts = filePath.split('/');
-        const lastNoExt = parts[parts.length - 1].replace('.png', '');
-        if (ANIMS[lastNoExt] !== undefined) {
-            parts[parts.length - 1] = anim + '.png';
-        }
-        else {
-            for (let i = parts.length - 2; i >= 0; i--) {
-                if (ANIMS[parts[i]] !== undefined) {
-                    parts[i] = anim;
-                    break;
-                }
-            }
-        }
-        return parts.join('/');
-    }
-    _extractBaseAnim(animName) {
-        const parts = animName.split('_');
-        for (let i = 1; i <= parts.length; i++) {
-            const candidate = parts.slice(0, i).join('_');
-            if (ANIMS[candidate] !== undefined)
-                return candidate;
-        }
-        return null;
     }
     _loadImg(url) {
         return new Promise(resolve => {

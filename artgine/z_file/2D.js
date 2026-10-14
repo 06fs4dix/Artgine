@@ -1,4 +1,4 @@
-import { Build, CVec2, CVec3, CVec4, CMat3, Attribute, Null, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, max, min, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V3Cross, V3Nor, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, MappingTexToV3, MatTypeToMat, V2Abs, Sam2DArrV4, Sam2DArrToV4, V2AddV2, smoothstep, V3Abs, V3Sqrt, V3MulV3, } from "./Shader";
+import { Build, CVec2, CVec3, CVec4, CMat3, Attribute, Null, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, max, min, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V3Cross, V3Nor, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, MappingTexToV3, MatTypeToMat, V2Abs, Sam2DArrV4, Sam2DArrNearestToV4, V2AddV2, V3Abs, V3Sqrt, V3MulV3, } from "./Shader";
 import { VFX, VFXDown2, GetTexCodiedUV, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, ColorModalFun, AlphaModalFun, vfxMat0, vfxMat1 } from "./ColorFun";
 import { ambientColor, ligCol, ligDir, ligCount, LightCac2D, ligMask, cullMask } from "./Light";
 import { shadowOn, shadowRate, shadowWrite } from "./Shadow";
@@ -19,6 +19,9 @@ var out_position = Null();
 var out_color = Null();
 var to_uv = Null();
 var to_worldPos = Null();
+var cutoutPos = Null();
+var to_cutout = Null();
+var shadowHeight = Null();
 var time = Attribute(0, "time");
 var mask = 1.0;
 var lastHide = Null();
@@ -31,17 +34,17 @@ Build("Artgine/Shader/2DPlane", [], vs_main, [
     worldMat,
     viewMat, projectMat,
 ], [
-    out_position, to_uv, to_worldPos
+    out_position, to_uv, to_worldPos, to_cutout
 ], ps_main, [out_color]);
 Build("Artgine/Shader/2DTail", ["tail"], vs_main_tail, [
     worldMat, viewMat, projectMat,
 ], [
-    out_position, to_uv, to_worldPos
+    out_position, to_uv, to_worldPos, to_cutout
 ], ps_main, [out_color]);
 Build("Artgine/Shader/2DTrail", ["trail"], vs_main_trail, [
     worldMat, viewMat, projectMat, trailPos, lastHide, texCodi,
 ], [
-    out_position, to_uv, to_worldPos
+    out_position, to_uv, to_worldPos, to_cutout
 ], ps_main, [out_color]);
 Build("Artgine/Shader/2DSimple", ["simple"], vs_main_simple, [
     worldMat,
@@ -53,7 +56,7 @@ Build("Artgine/Shader/2DMask", ["mask"], vs_main, [
     worldMat,
     viewMat, projectMat, mask
 ], [
-    out_position, to_uv, to_worldPos
+    out_position, to_uv, to_worldPos, to_cutout
 ], ps_main_mask, [out_color]);
 Build("Artgine/Shader/2DBlit", ["blit"], vs_main_blit, [], [
     out_position, to_uv
@@ -176,31 +179,35 @@ function vs_main_tail(f3_ver, f2_uv) {
     BranchEnd();
     var lDir;
     var lCol;
+    var dir;
+    var dist;
     BranchBegin("shadowPlaneV", "SPV", [ligDir, ligCol, ligCount, shadowWrite, shadowRate]);
     if (shadowWrite.x > ligCount - 0.5) {
         to_uv.z *= 0.0;
     }
     else {
-        lDir = Sam2DArrToV4(ligDir, shadowWrite.x);
-        lCol = Sam2DArrToV4(ligCol, shadowWrite.x);
+        lDir = Sam2DArrNearestToV4(ligDir, shadowWrite.x);
+        lCol = Sam2DArrNearestToV4(ligCol, shadowWrite.x);
         to_uv.z *= max(lCol.r, max(lCol.g, lCol.b)) * shadowRate;
+        dir = lDir.xyz;
         if (lDir.w > 0.5) {
-            lDir.xyz = V3SubV3(rpos.xyz, lDir.xyz);
-            if (V3Len(lDir.xyz) <= lCol.w)
-                to_uv.z *= 1.0;
-            else if (V3Len(lDir.xyz) >= lDir.w) {
-                to_uv.z *= 0.0;
-            }
-            else
-                to_uv.z *= 1.0 - smoothstep(0.0, 1.0, (V3Len(lDir.xyz) - lCol.w) / (lDir.w - lCol.w));
+            dir = V3SubV3(rpos.xyz, dir);
         }
-        lDir.xyz = V3Nor(lDir.xyz);
+        dir = V3Nor(dir);
         if (f2_uv.y > 0.5) {
             rpos.y -= size.y;
-            rpos.xy = V2AddV2(rpos.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
+            rpos.xy = V2AddV2(rpos.xy, V2MulFloat(dir.xy, size.y * (1.0 + dir.y * 0.1)));
             rpos.z -= 0.1;
         }
+        if (lDir.w > 0.5) {
+            dist = V3Len(V3SubV3(rpos.xyz, lDir.xyz));
+            to_uv.z *= 1.0 - max(0.0, (dist - lCol.w) / (lDir.w - lCol.w));
+        }
     }
+    BranchEnd();
+    BranchBegin("cutout", "CO", [cutoutPos]);
+    to_cutout.x = mid.y - size.y * 0.5;
+    to_cutout.y = size.y;
     BranchEnd();
     to_worldPos = rpos;
     rpos = V4MulMatCoordi(rpos, viewMat);
@@ -211,7 +218,7 @@ function vs_main_tail(f3_ver, f2_uv) {
     out_position = rpos;
 }
 function vs_main_trail(f2_ver) {
-    var tpos = Sam2DArrToV4(trailPos, f2_ver.x);
+    var tpos = Sam2DArrNearestToV4(trailPos, f2_ver.x);
     var rawUV = new CVec2(1.0 - tpos.w, (f2_ver.y + 1.0) * 0.5);
     BranchBegin("codi", "C", [texCodi]);
     to_uv.xy = GetTexCodiedUV(rawUV, texCodi);
@@ -223,6 +230,10 @@ function vs_main_trail(f2_ver) {
     else
         to_uv.z = tpos.w;
     var rpos = new CVec4(tpos.xyz, 1.0);
+    BranchBegin("cutout", "CO", [cutoutPos]);
+    to_cutout.x = 1000000.0;
+    to_cutout.y = 0.0;
+    BranchEnd();
     to_worldPos = rpos;
     rpos = V4MulMatCoordi(rpos, viewMat);
     rpos = V4MulMatCoordi(rpos, projectMat);
@@ -278,6 +289,10 @@ function vs_main(f3_ver, f2_uv, f3_sca) {
     BranchDefault();
     P = V4MulMatCoordi(P, wMat);
     BranchEnd();
+    BranchBegin("cutout", "CO", [cutoutPos]);
+    to_cutout.x = isMerge > 0.5 ? (isVertexBot > 0.5 ? P.y : P.y - size.y) : (wMat[3].y - size.y * 0.5);
+    to_cutout.y = size.y;
+    BranchEnd();
     BranchBegin("wind", "W", [windDir, windPos, windInfo, windCount, windInfluence, time]);
     if (isVertexBot < 0.5 && windInfluence > 0.01) {
         P.xyz = V3AddV3(P.xyz, GetWind(P.xyz, size, time));
@@ -285,29 +300,39 @@ function vs_main(f3_ver, f2_uv, f3_sca) {
     BranchEnd();
     var lDir;
     var lCol;
+    var dir;
+    var dist;
+    var shadowH;
+    BranchBegin("shadowHeight", "SH", [shadowHeight]);
+    shadowH = min(1.0, shadowHeight / max(size.y, 0.0001));
+    BranchDefault();
+    shadowH = 1.0;
+    BranchEnd();
     BranchBegin("shadowPlaneV", "SPV", [ligDir, ligCol, ligCount, shadowWrite, shadowRate]);
     if (shadowWrite.x > ligCount - 0.5) {
         to_uv.z *= 0.0;
     }
     else {
-        lDir = Sam2DArrToV4(ligDir, shadowWrite.x);
-        lCol = Sam2DArrToV4(ligCol, shadowWrite.x);
+        lDir = Sam2DArrNearestToV4(ligDir, shadowWrite.x);
+        lCol = Sam2DArrNearestToV4(ligCol, shadowWrite.x);
         to_uv.z *= max(lCol.r, max(lCol.g, lCol.b)) * shadowRate;
+        dir = lDir.xyz;
         if (lDir.w > 0.5) {
-            lDir.xyz = V3SubV3(P.xyz, lDir.xyz);
-            if (V3Len(lDir.xyz) <= lCol.w)
-                to_uv.z *= 1.0;
-            else if (V3Len(lDir.xyz) >= lDir.w) {
-                to_uv.z *= 0.0;
-            }
-            else
-                to_uv.z *= 1.0 - smoothstep(0.0, 1.0, (V3Len(lDir.xyz) - lCol.w) / (lDir.w - lCol.w));
+            dir = V3SubV3(P.xyz, dir);
         }
-        lDir.xyz = V3Nor(lDir.xyz);
+        dir = V3Nor(dir);
         if (isVertexBot < 0.5) {
-            P.y -= size.y;
-            P.xy = V2AddV2(P.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
+            P.y -= size.y * (1.0 + shadowH) * 0.5;
+            P.xy = V2AddV2(P.xy, V2MulFloat(dir.xy, size.y * (1.0 + dir.y * 0.1) * (1.0 + shadowH) * 0.5));
             P.z -= 0.1;
+        }
+        else {
+            P.y += size.y * (1.0 - shadowH) * 0.5;
+            P.xy = V2AddV2(P.xy, V2MulFloat(dir.xy, size.y * (1.0 + dir.y * 0.1) * (shadowH - 1.0) * 0.5));
+        }
+        if (lDir.w > 0.5) {
+            dist = V3Len(V3SubV3(P.xyz, lDir.xyz));
+            to_uv.z *= 1.0 - max(0.0, (dist - lCol.w) / (lDir.w - lCol.w));
         }
     }
     BranchEnd();
@@ -337,6 +362,25 @@ function ps_main() {
     BranchEnd();
     BranchBegin("alphaModel", "AM", [alphaModel]);
     L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    var coOn = 0.0;
+    var coR = 1.0;
+    var coFront = 0.0;
+    var coX = 0.0;
+    var coY = 0.0;
+    var coD = 0.0;
+    var coIn = 0.0;
+    var coCover = 0.0;
+    BranchBegin("cutout", "CO", [cutoutPos]);
+    coOn = cutoutPos.z > 0.0 ? 1.0 : 0.0;
+    coR = max(cutoutPos.z, 1.0);
+    coFront = to_cutout.x < cutoutPos.y ? 1.0 : 0.0;
+    coCover = (to_cutout.x + to_cutout.y) > cutoutPos.y ? 1.0 : 0.0;
+    coX = (to_worldPos.x - cutoutPos.x) / coR;
+    coY = (to_worldPos.y - (cutoutPos.y + coR * 0.5)) / coR;
+    coD = coX * coX + coY * coY;
+    coIn = coD < 1.0 ? 1.0 : 0.0;
+    L_cor.a = L_cor.a * (1.0 - coOn * coFront * coCover * coIn * (1.0 - cutoutPos.w));
     BranchEnd();
     BranchBegin("alphaCut", "AC", [alphaCut]);
     if (L_cor.a <= alphaCut)
@@ -384,6 +428,6 @@ function ps_main_mask() {
     if (L_cor.a <= 0.01)
         discard;
     BranchEnd();
-    L_cor.a = mask;
+    L_cor.a = L_cor.a * mask;
     out_color = L_cor;
 }

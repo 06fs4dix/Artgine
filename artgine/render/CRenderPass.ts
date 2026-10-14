@@ -144,7 +144,10 @@ export class CRenderPass extends CObject
 
 	//public m_cull : boolean=true;
 	public mCullFrustum : boolean=true;
-	
+	//렌더 직전에 패스 전체를 건너뛰는 스위치. Export 된 사본과 참조를 공유해야 해서 불린이 아니라 객체다
+	//(CCanvas 의 renInfo.mRP 는 사본이라 값 타입이면 갱신이 전달되지 않는다). Reset 의 키 계산에는 넣지 않는다
+	public mEnable={v:true};
+
 	public mPriority=CRenderPass.ePriority.Normal;
 	public mRenderTarget="";
 	public mRenderTargetUse : Set<number>=new Set<number>();
@@ -154,6 +157,7 @@ export class CRenderPass extends CObject
 	public mShader : string ="";
 	public mClearDepth:boolean=null;
 	public mClearColor:boolean=null;
+	//다시 그리는 주기(초, 밀리초 아님). 0이면 매 프레임. 카메라가 움직인 프레임은 주기와 상관없이 그린다
 	public mCycle=0;
 
 	public mBlitType=0;//1 depth 2 color
@@ -198,6 +202,8 @@ export class CRenderPass extends CObject
 	
 	override IsShould(_member: string, _type: CObject.eShould): boolean {
 		if(_member=="mCP")
+			return false;
+		if(_member=="mEnable")
 			return false;
 		return super.IsShould(_member,_type);
 	}

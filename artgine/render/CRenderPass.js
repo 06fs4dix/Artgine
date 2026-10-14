@@ -110,6 +110,7 @@ export class CRenderPass extends CObject {
     mCullFace = null;
     mCamera = null;
     mCullFrustum = true;
+    mEnable = { v: true };
     mPriority = CRenderPass.ePriority.Normal;
     mRenderTarget = "";
     mRenderTargetUse = new Set();
@@ -148,6 +149,8 @@ export class CRenderPass extends CObject {
     mCP = null;
     IsShould(_member, _type) {
         if (_member == "mCP")
+            return false;
+        if (_member == "mEnable")
             return false;
         return super.IsShould(_member, _type);
     }

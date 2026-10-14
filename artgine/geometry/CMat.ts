@@ -62,10 +62,9 @@ export class CMat extends CFloat32
 			this.mUnit=false;
 	}
 	IsUnit(){return this.mUnit;	}
-	Unit()	
+	//mUnit만 믿고 건너뛰면 mF32A를 직접 고친 뒤 UnitCheck 없이 풀에 반납된 행렬이 초기화되지 않는다. 항상 단위행렬을 쓴다
+	Unit()
 	{
-		if(this.mUnit)	return;
-
 		this.mF32A[0]=1;this.mF32A[1]=0;this.mF32A[2]=0;this.mF32A[3]=0;
 		this.mF32A[4]=0;this.mF32A[5]=1;this.mF32A[6]=0;this.mF32A[7]=0;
 		this.mF32A[8]=0;this.mF32A[9]=0;this.mF32A[10]=1;this.mF32A[11]=0;

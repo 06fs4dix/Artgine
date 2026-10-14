@@ -3,14 +3,22 @@
 
 import { CPath }  from "../../basic/CPath.js";
 import { CHash }  from "../../basic/CHash.js";
-import { getAuthToken, setAuthToken, authLogin, checkAuthed } from "../CAuthToken.js";
+import { getAuthToken, setAuthToken, authLogin, checkAuthed, getPageAuthToken, withAuthToken } from "../CAuthToken.js";
 import { CIframeMsg } from "./CIframeMsg.js";
 
 const params     = new URLSearchParams(location.search);
 const SESSION_ID = params.get('session') || '';
 const READONLY   = params.get('readonly') === '1';
 
-let authToken  = getAuthToken(CPath.WebRootUrl());
+// 로컬(same-origin)이면 '' 이라 세션 쿠키로 인증되고, 원격이면 Control이 URL에 실어 보낸 ?authToken= 이 들어온다.
+let authToken  = getPageAuthToken(CPath.WebRootUrl());
+
+// PlayWright/* 요청 URL. 로컬은 same-origin 세션 쿠키로 인증되지만 원격(cross-origin)은 그 쿠키가
+// 서드파티로 차단되므로 서버가 받아주는 ?authToken= 을 붙인다(CPlaywrightRouter.isAuthedOrToken).
+// 토큰이 ''이면 URL이 그대로라 로컬 동작은 바뀌지 않는다.
+function pwUrl(apiPath: string): string {
+    return withAuthToken(CPath.WebRootUrl() + apiPath, authToken);
+}
 let pollTimer: number | null = null;
 let pollMs     = 3000;
 let logOffset  = 0;
@@ -54,12 +62,12 @@ function initResetControl() {
     btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
-            const listRes = await fetch(CPath.WebRootUrl() + 'PlayWright/list');
+            const listRes = await fetch(pwUrl('PlayWright/list'));
             const listJson = await listRes.json();
             const session = (listJson.sessions as IBrowserSessionInfo[] | undefined)?.find(s => s.sessionId === SESSION_ID);
             if (!listJson.ok || !session) throw new Error('Session not found');
 
-            const resetRes = await fetch(CPath.WebRootUrl() + 'PlayWright/reset', {
+            const resetRes = await fetch(pwUrl('PlayWright/reset'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -81,6 +89,50 @@ function initResetControl() {
         } catch {
             btn.textContent = 'Failed';
             setTimeout(() => { btn.textContent = 'Reset'; }, 1500);
+        } finally {
+            btn.disabled = false;
+        }
+    });
+}
+
+function appendLog(text: string, cls = '') {
+    const div = document.createElement('div');
+    div.className = cls;
+    div.textContent = text;
+    logArea.appendChild(div);
+    logArea.scrollTop = logArea.scrollHeight;
+}
+
+function initCaptureControl() {
+    if (!controlsBar) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline-secondary py-0 px-2';
+    btn.textContent = 'Capture';
+    controlsBar.appendChild(btn);
+
+    btn.addEventListener('click', async () => {
+        const src = screenshot.src;
+        const b64 = src.startsWith('data:') ? src.replace(/^data:[^,]*base64,/, '') : '';
+        if (!b64) { appendLog('[capture] no image', 'text-danger'); return; }
+
+        const d = new Date();
+        const p = (n: number) => String(n).padStart(2, '0');
+        const name = `capture_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.jpg`;
+
+        btn.disabled = true;
+        try {
+            const res = await fetch(CPath.WebRootUrl() + 'File/Upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: 'temp/', name: [name], data: [b64], token: authToken })
+            });
+            const j = await res.json();
+            if (!j.ok) throw new Error(j.msg || 'Upload failed');
+            appendLog(`[capture] temp/${name}`, 'text-info');
+        } catch (e: any) {
+            appendLog(`[capture] failed: ${e.message}`, 'text-danger');
         } finally {
             btn.disabled = false;
         }
@@ -154,9 +206,12 @@ async function tryLogin(pw: string) {
 
 async function checkAuth() {
     const hadToken = !!authToken;
-    const valid = await checkAuthed(CPath.WebRootUrl());
+    // authToken은 원격이면 URL(?authToken=)에서, 로컬이면 localStorage에서 온다(getPageAuthToken).
+    const valid = await checkAuthed(CPath.WebRootUrl(), authToken);
     if (valid) {
-        authToken = getAuthToken(CPath.WebRootUrl());
+        // 로컬에서 쿠키만으로 통과한 경우 저장된 토큰을 집어온다. 원격이면 URL로 받은 토큰을 덮어쓰지 않는다
+        // (이 origin의 localStorage는 비어 있어서 덮으면 토큰을 잃는다).
+        if (!authToken) authToken = getAuthToken(CPath.WebRootUrl());
         hideOverlay();
         boot();
     } else {
@@ -189,7 +244,7 @@ CIframeMsg.Recv({
 async function poll() {
     if (!canPoll()) { pollTimer = null; return; }
     try {
-        const screenReq = fetch(CPath.WebRootUrl() + 'PlayWright/screenshot', {
+        const screenReq = fetch(pwUrl('PlayWright/screenshot'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -197,7 +252,7 @@ async function poll() {
                 args: [{ type: 'jpeg', quality: screenshotQuality }]
             })
         });
-        const logsReq = consoleVisible ? fetch(CPath.WebRootUrl() + 'PlayWright/logs', {
+        const logsReq = consoleVisible ? fetch(pwUrl('PlayWright/logs'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: SESSION_ID, fromOffset: logOffset })
@@ -234,6 +289,9 @@ function boot() {
     }
 
     if (READONLY) inputModeRow.style.display = 'none';
+
+    const heldKeys = new Map<string, string>();
+    let keyChain: Promise<void> = Promise.resolve();
 
     rateSlider.addEventListener('input', () => {
         pollMs = parseFloat(rateSlider.value) * 1000;
@@ -277,85 +335,58 @@ function boot() {
 
         e.preventDefault();
 
-        // Ctrl+C: 가상 브라우저 선택 텍스트 → 로컬 클립보드
-        if (e.ctrlKey && e.key.toLowerCase() === 'c') {
-            try {
-                const evalRes = await fetch(CPath.WebRootUrl() + 'PlayWright/eval', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: SESSION_ID, expr: 'window.getSelection()?.toString() ?? ""' })
-                });
-                const evalJson = await evalRes.json();
-                const selected = typeof evalJson.result === 'string' ? evalJson.result : '';
-                if (selected) await navigator.clipboard.writeText(selected).catch(() => {});
-            } catch {}
-            try {
-                await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: SESSION_ID, fn: 'keyboard.press', args: ['Control+C'] })
-                });
-            } catch {}
+        // keyboard.down 은 US 레이아웃에 없는 문자를 Unknown key로 거부하므로 type으로 보낸다.
+        if (e.key.length === 1 && e.key.charCodeAt(0) > 0x7e) {
+            queueKey(() => pwExec('keyboard.type', [e.key]));
             return;
         }
-
-        // Ctrl+V: 로컬 클립보드 → 가상 브라우저
-        if (e.ctrlKey && e.key.toLowerCase() === 'v') {
-            try {
-                const text = await navigator.clipboard.readText();
-                if (text) {
-                    await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ sessionId: SESSION_ID, fn: 'keyboard.type', args: [text] })
-                    });
-                }
-            } catch {}
-            return;
-        }
-
-        const fn = e.key.length === 1 ? 'keyboard.type' : 'keyboard.press';
-        try {
-            await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId: SESSION_ID, fn, args: [e.key] })
-            });
-        } catch {}
+        // type/press는 원격에서 keydown/keyup을 즉시 연달아 발생시켜, 매 프레임 키 상태를 읽는
+        // 엔진(CWindow의 mKeyPress)에서는 눌림이 관측되지 않는다. 그래서 down/up을 분리해 전달한다.
+        // keyup 시점의 e.key는 Shift 해제 등으로 달라질 수 있어 e.code 기준으로 눌렀던 key를 기억한다.
+        const key = e.key;
+        heldKeys.set(e.code, key);
+        queueKey(() => pwExec('keyboard.down', [key]));
     });
 
-    kbBridge.addEventListener('paste', async (e: ClipboardEvent) => {
+    kbBridge.addEventListener('keyup', (e: KeyboardEvent) => {
+        const key = heldKeys.get(e.code);
+        if (key == null) return;
+        heldKeys.delete(e.code);
+        e.preventDefault();
+        queueKey(() => pwExec('keyboard.up', [key]));
+    });
+
+    kbBridge.addEventListener('blur', releaseAllKeys);
+    inputToggle.addEventListener('change', () => { if (!inputToggle.checked) releaseAllKeys(); });
+
+    kbBridge.addEventListener('paste', (e: ClipboardEvent) => {
         if (!inputMode) return;
         e.preventDefault();
         const text = e.clipboardData?.getData('text');
         kbBridge.value = '';
-        if (text) {
-            try { await pwExec('keyboard.type', [text]); } catch {}
-        }
+        if (text) queueKey(() => pwExec('keyboard.type', [text]));
     });
 
     // 모바일 IME(Android 등)는 문자 입력을 keydown이 아니라 input/composition 이벤트로만 알려준다.
     // keydown 쪽에서 preventDefault하지 않고 흘려보낸 조합 입력을 여기서 캡처해 가상 브라우저로 전달한다.
-    kbBridge.addEventListener('input', async (e: Event) => {
+    kbBridge.addEventListener('input', (e: Event) => {
         if (!inputMode) return;
         const ie = e as InputEvent;
         if (ie.isComposing) return;
         const inputType = ie.inputType;
         kbBridge.value = '';
-        try {
-            if (inputType === 'deleteContentBackward') { await pwExec('keyboard.press', ['Backspace']); return; }
-            if (inputType === 'deleteContentForward')  { await pwExec('keyboard.press', ['Delete']); return; }
-            if (inputType === 'insertLineBreak')        { await pwExec('keyboard.press', ['Enter']); return; }
-            if (ie.data) await pwExec('keyboard.type', [ie.data]);
-        } catch {}
+        if (inputType === 'deleteContentBackward') { queueKey(() => pwExec('keyboard.press', ['Backspace'])); return; }
+        if (inputType === 'deleteContentForward')  { queueKey(() => pwExec('keyboard.press', ['Delete'])); return; }
+        if (inputType === 'insertLineBreak')        { queueKey(() => pwExec('keyboard.press', ['Enter'])); return; }
+        const data = ie.data;
+        if (data) queueKey(() => pwExec('keyboard.type', [data]));
     });
 
-    kbBridge.addEventListener('compositionend', async (e: CompositionEvent) => {
+    kbBridge.addEventListener('compositionend', (e: CompositionEvent) => {
         kbBridge.value = '';
         if (!inputMode) return;
-        if (e.data) {
-            try { await pwExec('keyboard.type', [e.data]); } catch {}
-        }
+        const data = e.data;
+        if (data) queueKey(() => pwExec('keyboard.type', [data]));
     });
 
     // 인풋 모드 여부 관계없이 img 네이티브 드래그 금지
@@ -378,15 +409,26 @@ function boot() {
     }
 
     async function pwExec(fn: string, args: any[]) {
-        await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
+        await fetch(pwUrl('PlayWright/exec'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: SESSION_ID, fn, args })
         });
     }
 
+    // 키 요청을 직렬화한다. fetch를 병렬로 보내면 up이 down보다 먼저 도착해 원격 키가 눌린 채로 남을 수 있다.
+    function queueKey(task: () => Promise<void>) {
+        keyChain = keyChain.then(task).catch(() => {});
+    }
+
+    function releaseAllKeys() {
+        const keys = [...heldKeys.values()];
+        heldKeys.clear();
+        for (const key of keys) queueKey(() => pwExec('keyboard.up', [key]));
+    }
+
     async function pwEval(expr: string): Promise<any> {
-        const r = await fetch(CPath.WebRootUrl() + 'PlayWright/eval', {
+        const r = await fetch(pwUrl('PlayWright/eval'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: SESSION_ID, expr })
@@ -520,4 +562,5 @@ loginPw.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter
 initQualityControl();
 initConsoleControl();
 initResetControl();
+initCaptureControl();
 checkAuth();

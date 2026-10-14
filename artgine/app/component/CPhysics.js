@@ -13,6 +13,7 @@ export class CPhysics {
     static GroundSlop = 0.03;
     static SurfaceFriction = 0;
     static SurfaceBounce = 0;
+    static LinearDamping = 400;
     static BounceKey = "b";
     static BounceMinVel = 30;
 }

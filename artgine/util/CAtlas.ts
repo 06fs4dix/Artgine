@@ -42,7 +42,7 @@ export class CAtlas extends CTexture implements IFile
 	mPadding = 1;
 	//public mBase64 = new CBase64File();
 	// mTex: CTexture = null;
-	// mTexFilter = CTexture.eFilter.Neaest;
+	// mTexFilter = CTexture.eFilter.Nearest;
 	// mTexMipMap = CTexture.eMipmap.GL;
 	mCreate = false;
 	mUrlMap = new Map<number, string>();
@@ -574,7 +574,7 @@ export class CAtlas extends CTexture implements IFile
 					const b64File   = new CBase64File();
 					b64File.mExt    = "tga";
 					b64File.mData   = tgaBuf;
-					b64File.mOption.mFilter=CTexture.eFilter.Neaest;
+					b64File.mOption.mFilter=CTexture.eFilter.Nearest;
 					b64File.RefreshHash();
 
 					// 4. CClipBase64 — 텍스쳐 클립 (time=0 한 번만)

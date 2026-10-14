@@ -2,6 +2,7 @@ import { CEvent } from "../basic/CEvent.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CH5Canvas } from "./CH5Canvas.js";
+import { CImgPro } from "./CImgPro.js";
 import { CTexture, CTextureInfo } from "./CTexture.js";
 import { CModal } from "../basic/CModal.js";
 import { CUtilWeb } from "../util/CUtilWeb.js";
@@ -16,6 +17,7 @@ var gRTOff = 0;
 export class CRenderer {
     mDev = null;
     mRes = null;
+    mLoadSet = null;
     mPF;
     mShaderInterpret;
     mTexUse = new CTexUse();
@@ -34,7 +36,7 @@ export class CRenderer {
         this.mUniToSam2dArr = new CTexture();
         this.mUniToSam2dArr.SetSize(2048, 256);
         this.mUniToSam2dArr.PushInfo([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, 5)]);
-        this.mUniToSam2dArr.SetFilter(CTexture.eFilter.Linear);
+        this.mUniToSam2dArr.SetFilter(CTexture.eFilter.Nearest);
         this.mUniToSam2dArr.SetMipMap(CTexture.eMipmap.None);
         this.mUniToSam2dArr.CreateBuf();
         this.mUniToSam2dArr.mReadPixelEvent = new CEvent(this.ReadPixel, this);
@@ -45,7 +47,7 @@ export class CRenderer {
     SInter() { return this.mShaderInterpret; }
     async BuildH5CMDList(_ch5json) {
         CH5Canvas.Init(_ch5json.mSize.x, _ch5json.mSize.y);
-        CH5Canvas.Draw(_ch5json.mCMD);
+        await CH5Canvas.Draw(_ch5json.mCMD);
         let tex = CH5Canvas.GetNewTex();
         this.mRes.Push(_ch5json.mKey + ".tex", tex);
         this.BuildTexture(tex);
@@ -55,6 +57,46 @@ export class CRenderer {
     BlitColor(_read, _draw = null) { }
     Begin(_tex = null, _surface = false, _rtUse = null, _rtLevel = 0) { return false; }
     End(_tex = null, _rtUse = null, _rtLevel = 0) { }
+    BlurEnvmap(_texKey) {
+        const tex = this.mRes.Find(_texKey);
+        if (this.mDev.GL() == null || tex == null || tex.GetGBuf().length == 0)
+            return;
+        const info = tex.GetInfo()[0];
+        const isFloat = info.mFormat == CTexture.eFormat.RGBA32F;
+        const type = isFloat ? this.mDev.GL().FLOAT : this.mDev.GL().UNSIGNED_BYTE;
+        const size = tex.GetWidth();
+        const lodCount = Math.floor(Math.log2(size)) + 1;
+        if (lodCount < 2)
+            return;
+        const gTex = tex.GetGBuf()[0];
+        const fb = this.mDev.GL().createFramebuffer();
+        this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, fb);
+        this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D_ARRAY, gTex);
+        const mips = [];
+        for (let layer = 0; layer + 6 <= info.mCount; layer += 6) {
+            const faces = [];
+            for (let lod = 0; lod < lodCount; lod++) {
+                const s = size >> lod;
+                for (let face = 0; face < 6; face++) {
+                    const buf = isFloat ? new Float32Array(s * s * 4) : new Uint8Array(s * s * 4);
+                    this.mDev.GL().framebufferTextureLayer(this.mDev.GL().FRAMEBUFFER, this.mDev.GL().COLOR_ATTACHMENT0, gTex, lod, layer + face);
+                    this.mDev.GL().readPixels(0, 0, s, s, this.mDev.GL().RGBA, type, buf);
+                    faces.push(buf);
+                }
+            }
+            mips.push(faces);
+        }
+        const blurred = CImgPro.SphericalGaussianBlur(tex, mips);
+        for (let lod = 0; lod < blurred.length; lod++) {
+            const s = size >> lod;
+            const bufs = blurred[lod].GetBuf();
+            for (let layer = 0; layer < bufs.length; layer++)
+                this.mDev.GL().texSubImage3D(this.mDev.GL().TEXTURE_2D_ARRAY, lod, 0, 0, layer, s, s, 1, this.mDev.GL().RGBA, type, bufs[layer]);
+        }
+        this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D_ARRAY, null);
+        this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, null);
+        this.mDev.GL().deleteFramebuffer(fb);
+    }
     GetMainFrameTex() {
         return this.mMainFrameTex;
     }
@@ -132,7 +174,44 @@ export class CRendererGL extends CRenderer {
     Begin(_tex = null, _2d = false, _rtUse = null, _rtLevel = 0) {
         return false;
     }
-    End(_tex = null, _rtUse, _rtLevel = 0) {
+    End(_tex = null, _rtUse = null, _rtLevel = 0) {
+        this.mDev.mClearColor = true;
+        this.mDev.mClearDepth = true;
+        this.mFrameBufStack.pop();
+        let last = null;
+        if (this.mFrameBufStack.length > 0)
+            last = this.mFrameBufStack[this.mFrameBufStack.length - 1];
+        if (_tex != null) {
+            _tex.BindFrame(false);
+            if (last == null) {
+                if (_tex.GetAnti() > 0) {
+                    this.mDev.GL().bindFramebuffer(this.mDev.GL().READ_FRAMEBUFFER, _tex.mFrameBuf[_rtLevel]);
+                    this.mDev.GL().bindFramebuffer(this.mDev.GL().DRAW_FRAMEBUFFER, _tex.mAntiBuf[_rtLevel]);
+                    this.mDev.GL().blitFramebuffer(0, 0, _tex.GetWidth(), _tex.GetHeight(), 0, 0, _tex.GetWidth(), _tex.GetHeight(), this.mDev.GL().COLOR_BUFFER_BIT, this.mDev.GL().LINEAR);
+                }
+                this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, this.mXRFrame);
+            }
+            else
+                this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, last.mFrameBuf[0]);
+        }
+        else if (this.mXRFrame == null)
+            this.mDev.GL().flush();
+        this.mDev.ViewPort(0, 0, this.mPF.mWidth, this.mPF.mHeight);
+        if (_tex != null) {
+            var info = _tex.GetInfo();
+            for (var i = 0; i < info.length; ++i) {
+                if (_tex.GetMipMap() != CTexture.eMipmap.None) {
+                    var type = Number(this.mDev.GL().TEXTURE_2D);
+                    if (info[i].mTarget == CTexture.eTarget.Array)
+                        type = this.mDev.GL().TEXTURE_2D_ARRAY;
+                    else if (info[i].mTarget == CTexture.eTarget.Cube)
+                        type = this.mDev.GL().TEXTURE_CUBE_MAP;
+                    this.mDev.GL().bindTexture(type, _tex.GetGBuf()[i]);
+                    this.mDev.GL().generateMipmap(type);
+                    this.mDev.GL().bindTexture(type, null);
+                }
+            }
+        }
     }
     GetMainFrameTex() { return this.mMainFrameTex; }
     SetXR(_frame, _eye) {
@@ -332,6 +411,13 @@ export class CRendererGPU extends CRenderer {
         return null;
     }
     GenMipmap(_gt, _format, _levels, _layers) {
+    }
+    mRTMipSet = new Set();
+    mEnvBlurBusy = false;
+    mEnvBlurAgain = false;
+    BlurEnvmap(_texKey) {
+    }
+    async BlurEnvmapAsync(_tex) {
     }
     GetSampler(_tex) {
         return null;

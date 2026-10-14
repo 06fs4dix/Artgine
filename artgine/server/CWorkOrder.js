@@ -3,6 +3,7 @@ import { CSQLite } from '../network/CSQLite.js';
 export class CWorkOrder {
     static sDB = null;
     static sTable = 'work_order';
+    static sCols = 'id, status, requester, assignee, createdAt, content, logId';
     static async Init() {
         if (CWorkOrder.sDB != null)
             return CWorkOrder.sDB;
@@ -10,7 +11,7 @@ export class CWorkOrder {
         await db.Init();
         if (await db.IsCollection(CWorkOrder.sTable)) {
             const cols = await db.GetProjection(CWorkOrder.sTable);
-            if (!cols.includes('requester')) {
+            if (!cols.includes('logId')) {
                 await db.Send(`DROP TABLE ${CWorkOrder.sTable}`);
             }
         }
@@ -21,7 +22,7 @@ export class CWorkOrder {
             new CORMField('assignee', ''),
             new CORMField('createdAt', 0),
             new CORMField('content', ''),
-            new CORMField('result', ''),
+            new CORMField('logId', 0),
         ]);
         CWorkOrder.sDB = db;
         return db;
@@ -29,13 +30,13 @@ export class CWorkOrder {
     static async Create(_requester, _assignee, _content) {
         const db = await CWorkOrder.Init();
         const createdAt = CWorkOrder.Now();
-        await db.Send(`INSERT INTO ${CWorkOrder.sTable} (status, requester, assignee, createdAt, content, result) VALUES (?, ?, ?, ?, ?, ?)`, ['ready', _requester, _assignee, createdAt, _content, '']);
-        const rows = await db.Recv(`SELECT id, status, requester, assignee, createdAt, content, result FROM ${CWorkOrder.sTable} WHERE requester = ? AND assignee = ? AND createdAt = ? ORDER BY id DESC LIMIT 1`, [_requester, _assignee, createdAt]);
+        await db.Send(`INSERT INTO ${CWorkOrder.sTable} (status, requester, assignee, createdAt, content, logId) VALUES (?, ?, ?, ?, ?, ?)`, ['ready', _requester, _assignee, createdAt, _content, 0]);
+        const rows = await db.Recv(`SELECT ${CWorkOrder.sCols} FROM ${CWorkOrder.sTable} WHERE requester = ? AND assignee = ? AND createdAt = ? ORDER BY id DESC LIMIT 1`, [_requester, _assignee, createdAt]);
         return CWorkOrder.RowToRecord(rows[0]);
     }
     static async ReadyList(_assignee) {
         const db = await CWorkOrder.Init();
-        const rows = await db.Recv(`SELECT id, status, requester, assignee, createdAt, content, result FROM ${CWorkOrder.sTable} WHERE assignee = ? AND status != 'done' ORDER BY id ASC`, [_assignee]);
+        const rows = await db.Recv(`SELECT ${CWorkOrder.sCols} FROM ${CWorkOrder.sTable} WHERE assignee = ? AND status != 'done' ORDER BY id ASC`, [_assignee]);
         if (rows == null || rows.length === 0)
             return null;
         const records = rows.map(CWorkOrder.RowToRecord);
@@ -45,24 +46,38 @@ export class CWorkOrder {
     }
     static async Latest(_assignee) {
         const db = await CWorkOrder.Init();
-        const rows = await db.Recv(`SELECT id, status, requester, assignee, createdAt, content, result FROM ${CWorkOrder.sTable} WHERE assignee = ? ORDER BY id DESC LIMIT 1`, [_assignee]);
+        const rows = await db.Recv(`SELECT ${CWorkOrder.sCols} FROM ${CWorkOrder.sTable} WHERE assignee = ? ORDER BY id DESC LIMIT 1`, [_assignee]);
         if (rows == null || rows.length === 0)
             return null;
         return CWorkOrder.RowToRecord(rows[0]);
+    }
+    static async Working(_assignee) {
+        const db = await CWorkOrder.Init();
+        const rows = await db.Recv(`SELECT ${CWorkOrder.sCols} FROM ${CWorkOrder.sTable} WHERE assignee = ? AND status = 'working' ORDER BY id ASC LIMIT 1`, [_assignee]);
+        if (rows == null || rows.length === 0)
+            return null;
+        return CWorkOrder.RowToRecord(rows[0]);
+    }
+    static async NextLogId(_order) {
+        const db = await CWorkOrder.Init();
+        const rows = await db.Recv(`SELECT logId FROM ${CWorkOrder.sTable} WHERE assignee = ? AND id > ? AND logId > 0 ORDER BY id ASC LIMIT 1`, [_order.assignee, _order.id]);
+        if (rows == null || rows.length === 0)
+            return 0;
+        return Number(rows[0][0]) || 0;
     }
     static async List(_status, _limit) {
         const db = await CWorkOrder.Init();
         const statusFilter = _status ? `WHERE status = ?` : '';
         const limitClause = _limit ? `LIMIT ${Number(_limit)}` : '';
         const params = _status ? [_status] : [];
-        const rows = await db.Recv(`SELECT id, status, requester, assignee, createdAt, content, result FROM ${CWorkOrder.sTable} ${statusFilter} ORDER BY id DESC ${limitClause}`, params);
+        const rows = await db.Recv(`SELECT ${CWorkOrder.sCols} FROM ${CWorkOrder.sTable} ${statusFilter} ORDER BY id DESC ${limitClause}`, params);
         if (rows == null)
             return [];
         return rows.map(CWorkOrder.RowToRecord);
     }
     static async Get(_id) {
         const db = await CWorkOrder.Init();
-        const rows = await db.Recv(`SELECT id, status, requester, assignee, createdAt, content, result FROM ${CWorkOrder.sTable} WHERE id = ?`, [_id]);
+        const rows = await db.Recv(`SELECT ${CWorkOrder.sCols} FROM ${CWorkOrder.sTable} WHERE id = ?`, [_id]);
         if (rows == null || rows.length === 0)
             return null;
         return CWorkOrder.RowToRecord(rows[0]);
@@ -71,9 +86,28 @@ export class CWorkOrder {
         const db = await CWorkOrder.Init();
         await db.Send(`UPDATE ${CWorkOrder.sTable} SET status = ? WHERE id = ?`, [_status, _id]);
     }
-    static async SetResult(_id, _status, _result) {
+    static async Dispatch(_id, _logId) {
         const db = await CWorkOrder.Init();
-        await db.Send(`UPDATE ${CWorkOrder.sTable} SET status = ?, result = ? WHERE id = ?`, [_status, _result, _id]);
+        await db.Send(`UPDATE ${CWorkOrder.sTable} SET status = 'working', logId = ? WHERE id = ?`, [_logId, _id]);
+    }
+    static async CompleteIfWorking(_id) {
+        const db = await CWorkOrder.Init();
+        const rows = await db.Recv(`SELECT id FROM ${CWorkOrder.sTable} WHERE id = ? AND status = 'working'`, [_id]);
+        if (rows == null || rows.length === 0)
+            return false;
+        await db.Send(`UPDATE ${CWorkOrder.sTable} SET status = 'done' WHERE id = ? AND status = 'working'`, [_id]);
+        return true;
+    }
+    static async FailPending(_requester) {
+        const db = await CWorkOrder.Init();
+        const rows = await db.Recv(`SELECT id FROM ${CWorkOrder.sTable} WHERE requester = ? AND status IN ('ready', 'working')`, [_requester]);
+        const ids = (rows ?? []).map((r) => Number(r[0]));
+        if (ids.length > 0)
+            await db.Send(`UPDATE ${CWorkOrder.sTable} SET status = 'failed' WHERE requester = ? AND status IN ('ready', 'working')`, [_requester]);
+        return ids;
+    }
+    static Marker(_id) {
+        return `[WorkOrder #${_id}]`;
     }
     static async DeleteAll() {
         const db = await CWorkOrder.Init();
@@ -99,7 +133,7 @@ export class CWorkOrder {
             assignee: String(_row[3]),
             createdAt: Number(_row[4]),
             content: String(_row[5]),
-            result: String(_row[6]),
+            logId: Number(_row[6]) || 0,
         };
     }
     static Now() {

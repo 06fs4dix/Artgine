@@ -11,6 +11,8 @@ export class CBoundWorld {
     Init(_LBound, _WMat) {
         this.mBound.Reset();
         this.mBound.mType = _LBound.mType;
+        if (_LBound.mType == CBound.eType.GJK || _LBound.mType == CBound.eType.Triangle)
+            this.mBound.mPos.PushArray(_LBound.mPos);
         if (_LBound.mType == CBound.eType.Sphere) {
             this.mCenter.Zero();
             this.mSize.x = CMath.Max(Math.abs(_LBound.mMin.x), Math.abs(_LBound.mMax.x));

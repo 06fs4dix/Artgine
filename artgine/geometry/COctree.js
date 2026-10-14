@@ -139,6 +139,8 @@ export class COctreeMgr {
     }
     Insert(_center, _size, _data, _min = null, _max = null, _static = false) {
     }
+    Remove(_data) {
+    }
     InsideRay(_ray, _RayLength, _boundary, results) {
     }
     InsidePlane(_bplane, _results) {

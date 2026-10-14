@@ -168,6 +168,7 @@ export class SDF {
 		V4WindInfo:32,
 		V4LightColor:33,
 		V4LightDir:34,
+		V4EnvPos:35,
 
 		MatShadowNear:40,
         MatShadowFar:44,
@@ -180,11 +181,10 @@ export class SDF {
         MatShadowCas1VPWithZRow:44,
         MatShadowCas2VPWithZRow:48,
         MatShadowCas3VPWithZRow:52,
+		MatShadowCas4VPWithZRow:56,
+		MatShadowCas5VPWithZRow:60,
         
-        V4ShadowReadList:64,
-        V4ShadowInfoList:65,
-		V4ShadowCascadeDataList:66,
-        V4ShadowDivideList:67,
+        V4ShadowInfoList:64,
 		V4LightMask:68,
 
 		SlotShadow:2,//512계 사용함2048
@@ -193,8 +193,7 @@ export class SDF {
 	}
 	static eTexSlot=
 	{
-		
-
+		ArrEnvmap:3.0,
 		ArrShadowWrite:2.0,
 		ArrUni:1.0,
 		SingleShadowRead:10.0,

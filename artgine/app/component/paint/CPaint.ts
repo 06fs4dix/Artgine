@@ -96,7 +96,7 @@ export class CPaint extends CComponent implements IMat
 		//ShadowWrite:"ShadowWrite",
 		ShadowReadOnly:"shadowReadOnly",
 		Shadow:"shadow",
-		Wind:"Wind",
+		Wind:"wind",
 		Parallax:"parallax",
 		
 
@@ -118,7 +118,8 @@ export class CPaint extends CComponent implements IMat
         Mask11:0b000000000001000,
         Mask12:0b000000000000100,
         Mask13:0b000000000000010,
-        Mask14:0b000000000000001
+        Mask14:0b000000000000001,
+		Nothing:0b000000000000000
     };
 
 	mBW=new CBoundWorldPaint();
@@ -132,8 +133,7 @@ export class CPaint extends CComponent implements IMat
 	protected mTexCodi : CVec4;//xy size,zw 시작 위치!
 
 	public mAutoRPUpdate=true;
-	public mCamCullUpdate=true;
-	
+
 	protected mBound = new CBound();
 	//protected mBoundFMat : CBound;// = new CBound();
 
@@ -206,7 +206,7 @@ export class CPaint extends CComponent implements IMat
 	override SetEnable(_val: boolean): void {
 		
 		if(this.mEnable!=_val)
-			this.ClearCRPAuto();
+			this.ClearBatch(false);
 		super.SetEnable(_val);
 		
 	}
@@ -255,6 +255,9 @@ export class CPaint extends CComponent implements IMat
 	// 	return null;
 	// }
 	override Destroy(): void {
+		//RemoveComps로 파괴한 뒤 서브젝트 Destroy가 컴포넌트를 다시 Destroy하면 아래 WASM 메모리를 두 번 반납한다.
+		//풀에 같은 메모리가 두 번 들어가 새 페인트 둘이 경계 구 중심(mBW.mPos) 등을 나눠 써서 서로 덮어쓴다(컬링·그림자가 엉뚱해짐)
+		if(this.IsDestroy())	return;
 
 		if(this.GetRecycleType()!=null)
 		{
@@ -273,15 +276,15 @@ export class CPaint extends CComponent implements IMat
 		this.mLMat.ReleaseWASM();
 		//this.mBoundFMat.DeleteWASM();
 		this.mBound.DeleteWASM();
-		this.ClearBatch();
-		
+		this.ClearBatch(false);
+
 	}
 	override Reset()
 	{
 		super.Reset();
 		this.mFMat.Unit();
 		this.mLMat.Unit();
-		this.ClearBatch();
+		this.ClearBatch(false);
 		this.mTextureKey.length=0;
 		//this.mBoundFMat.Reset();
 		this.mBound.Reset();
@@ -315,7 +318,7 @@ export class CPaint extends CComponent implements IMat
 			 _member=="mRenPT"  || _member=="mTagKey" ||
 			_member=="mDefaultAttr" || _member=="mBatchMap" || _member=="mBatchLastArr" || _member=="mBatchLastVF" || 
 			_member=="mBoundFMat" || _member=="mBoundFMatC" || _member=="mBoundFMatR" || _member=="mBound" ||
-			_member=="mAutoRPUpdate" || _member=="mCamCullUpdate" || _member=="mBW" ||
+			_member=="mAutoRPUpdate" || _member=="mBW" ||
 			_member=="mColorModel" || _member=="mAlphaModel" || _member=="mVFX" )
 				return false;
 		// if(_type==CObject.eShould.Proxy)
@@ -326,17 +329,28 @@ export class CPaint extends CComponent implements IMat
 		
 		return super.IsShould(_member,_type);
 	}
-	ClearBatch()
+	// _delegate=true(기본)면 실제 배열 조작은 하지 않고 mAutoRPUpdate 플래그만 세운다. 실제 정리(mRenPT
+	// null 처리, CRPAuto splice)는 CCanvas.PTUpdate에서 한 곳에 모아 동기적으로 수행한다(호출 시점에 즉시
+	// mShow=null을 만들면, PTUpdate가 아직 재생성을 안 한 그 프레임에는 아무것도 안 그려지는 1프레임
+	// 깜박임이 생긴다 — 위임은 그 gap을 없애기 위함).
+	// _delegate=false는 삭제/Reset/Enable 강제조정처럼 그 자리에서 즉시 반영돼야 하는 경우에만 쓴다.
+	ClearBatch(_delegate: boolean = true)
 	{
+		if(_delegate)
+		{
+			this.mAutoRPUpdate=true;
+			return;
+		}
+
 		for(let ren of this.mRenPT)
 		{
-			
+
 			if(ren!=null)
 			{
 				ren.mDistance=0x7FFFFF00;
 				ren.mShow=null;
 			}
-				
+
 		}
 
 		this.mRenPT=[];
@@ -345,7 +359,17 @@ export class CPaint extends CComponent implements IMat
 			//CConsol.Log(this.mRenderPass[i].ObjHash());
 			this.mBatchMap.set(key,null);
 		}
-		this.mCamCullUpdate=true;
+
+		for(var i=0;i<this.mRenderPass.length;++i)
+		{
+			if(this.mRenderPass[i] instanceof CRPAuto)
+			{
+				this.mRenderPass.splice(i,1);
+				i--;
+			}
+		}
+
+		this.mAutoRPUpdate=true;
 		//this.mBatchLastVF=null;
 	}
 	IsUpdateFMat()	{	return this.mUpdateFMat;}
@@ -358,7 +382,7 @@ export class CPaint extends CComponent implements IMat
 		button.className="btn btn-primary btn-sm";
 		button.innerText="Refresh";
 		button.onclick=()=>{
-			this.ClearCRPAuto();
+			this.ClearBatch(false);
 		};
 		_div.append(button);
 	}
@@ -372,7 +396,7 @@ export class CPaint extends CComponent implements IMat
 				this.mShaderAttrMap.set("VFX",new CShaderAttr("VFX",new CVFX([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])));
 				this.mVFX=this.mShaderAttrMap.get("VFX").mData;
 				this.PushTag("vfx");
-				this.ClearBatch();
+				this.ClearBatch(false);
 				this.EditRefresh();
 			};
 			_body.append(btn);
@@ -490,7 +514,7 @@ export class CPaint extends CComponent implements IMat
 	override SetOwner(_obj :CSubject)
 	{
 		super.SetOwner(_obj);
-		this.ClearCRPAuto();
+		this.ClearBatch();
 		this.SetTexture(this.mTextureKey);
 	}
 	//public m_material=new CVec4(1,0,0,0);
@@ -568,6 +592,8 @@ export class CPaint extends CComponent implements IMat
 	
 		if(this.mShaderAttrMap.get("texCodi")==null)		
 			this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
+		if(this.mShaderAttrMap.get("cullMask")==null)
+			this.mShaderAttrMap.set("cullMask",new CShaderAttr("cullMask",new CVec4(CPaint.eCullMask.Default)));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
         this.mCullMask=this.mShaderAttrMap.get("cullMask").mData;
@@ -647,53 +673,52 @@ export class CPaint extends CComponent implements IMat
 		if(_pointer.IsRef(this.mTextureKey))
 		{
 			this.SetTexture(this.mTextureKey);
-			this.ClearBatch();
-			//this.ClearCRPAuto();
+			this.ClearBatch(false);
 			//this.WTRefresh();
 		}
 		else if(_pointer.IsRef(this.mTag))
 		{
 			this.mTagKey=null;
 			//this.BatchClear();
-			this.ClearCRPAuto();
+			this.ClearBatch(false);
 			//this.WTRefresh();
 		}
 		else if(_pointer.member=="mColorModel")
 		{
 			this.PushTag("colorModel");
-			this.ClearCRPAuto();
+			this.ClearBatch(false);
 		}
 		else if(_pointer.member=="mAlphaModel")
 		{
 			this.PushTag("alphaModel");
-			this.ClearCRPAuto();
+			this.ClearBatch(false);
 		}
 		else if(_pointer.member=="mCullMask")
 		{
-			this.ClearCRPAuto();
+			this.ClearBatch(false);
 		}
 		else if(_child)
 		{
 			if(_pointer.IsRef(this.mRenderPass))
 			{
-				
+
 				//this.BatchClear();
-				this.ClearCRPAuto();
+				this.ClearBatch(false);
 				if(_pointer.target instanceof CRenderPass)
 					_pointer.target.Reset();
 				else
 					CAlert.E("CRPAuto는 페인트 내에서 수정 불가합니다.");
-				
+
 			}
 			else if(_pointer.IsRef(this.mAlphaModel))
 			{
 				this.PushTag("alphaModel");
-				this.ClearCRPAuto();
+				this.ClearBatch(false);
 			}
 			else if(_pointer.IsRef(this.mColorModel))
 			{
 				this.PushTag("colorModel");
-				this.ClearCRPAuto();
+				this.ClearBatch(false);
 			}
 			else if(_pointer.IsRef(this.mVFX))
 			{
@@ -733,7 +758,7 @@ export class CPaint extends CComponent implements IMat
 		{
 			if(rp.Key()==_rpc.Key())
 				pChk=false;
-		}	
+		}
 		if(pChk)
 		{
 			if(_rpc.mCopy==false)
@@ -746,27 +771,6 @@ export class CPaint extends CComponent implements IMat
 			//return true;
 		}
 	}
-	ClearCRPAuto()
-	{
-		this.ClearBatch();
-		for(var i=0;i<this.mRenderPass.length;++i)
-		{
-			if(this.mRenderPass[i] instanceof CRPAuto)
-			{
-				//CConsol.Log(this.mRenderPass[i].ObjHash());
-				this.mRenderPass.splice(i,1);
-				i--;
-			}
-				
-		}
-		
-		this.mAutoRPUpdate=true;
-	}
-	EmptyRPChk()
-	{
-
-	}
-
 	ClassEqual(_type)	{	return _type == CPaint;	}
 	//GetCamera()	{	return this.m_cam;	}
 	GetTag()	{	return this.mTag;	}
@@ -785,15 +789,15 @@ export class CPaint extends CComponent implements IMat
 
 
 		this.mTagKey=null;
-		this.ClearCRPAuto();
+		this.ClearBatch();
 
 		return true;
 	}
-	RemoveTag(_tag : string)	
+	RemoveTag(_tag : string)
 	{
 		this.mTag.delete(_tag);
 		this.mTagKey=null;
-		this.ClearCRPAuto();
+		this.ClearBatch();
 	}
 	GetDrawMesh(_meshKey : string,_shader : CShader,_ci : CMeshCreateInfo,_modify=false)
 	{
@@ -907,7 +911,7 @@ export class CPaint extends CComponent implements IMat
 		
 		for(let sa of this.mShaderAttrMap.values())
 		{
-			if(sa.mEach==_key)
+			if(sa.mType==-2&&sa.mEach==_key)
 				return sa;
 		}
 		return null;
@@ -943,7 +947,7 @@ export class CPaint extends CComponent implements IMat
 		this.mAlphaModel.mF32A[0]=_alpha.mF32A[0];
 		this.mAlphaModel.mF32A[1]=_alpha.mF32A[1];
 		if(as!=this.IsAlphaState())
-			this.ClearCRPAuto();
+			this.ClearBatch();
 		if(this.mTag.has("alphaModel")==false)
 			this.ClearBatch();
 		this.PushTag("alphaModel");
@@ -1034,7 +1038,7 @@ export class CPaint extends CComponent implements IMat
 		// 	this.PushTag("alphaModel");
 		// }
 
-		this.ClearCRPAuto();
+		this.ClearBatch();
 		//this.InitPaint();
 		
 	}
@@ -1220,11 +1224,12 @@ export class CPaint extends CComponent implements IMat
 				
 				let tex=this.mOwner.GetFrame().Res().Find(texKey);
 				//texList.push(tex);
-				if(tex!=null && tex instanceof CTexture && i==0)
+				//잎처럼 알파 텍스처가 0번이 아닌 슬롯(나무껍질 다음)에 있는 메시도 있어서 모든 슬롯을 본다
+				if(tex!=null && tex instanceof CTexture)
 				{
 					if(tex.GetAlpha()) this.mAlphaTex = true;
-					
-					continue;
+
+					if(i==0)	continue;
 				}
 				if(tex==null)	this.mInit=false;
 
@@ -1364,7 +1369,13 @@ export class CPaint extends CComponent implements IMat
 		if(this.mTextureKey.length==0 || this.GetOwner().GetFrame()==null)	return "";
 
 		let tex=this.GetOwner().GetFrame().Res().Find(this.mTextureKey[0]) as CTexture;
-		
+		//GPU로 로드된 텍스처는 업로드 후 CPU 픽셀이 비워진다. 캡처하려면 mGPU=false로 로드해야 한다
+		if(tex==null || tex.GetBuf()[0]==null)
+		{
+			CAlert.W(this.mTextureKey[0]+" : CPU 픽셀이 없어 캡처할 수 없다");
+			return "";
+		}
+
 		let codi=this.GetLeftTopRightBottom(this.GetOwner().GetFrame());
 		CH5Canvas.Init(codi.z-codi.x,codi.w-codi.y);
 		let cmd=CH5Canvas.DrawBuf(tex.GetBuf()[0],0,0,tex.GetWidth(),tex.GetHeight(),codi);

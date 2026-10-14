@@ -183,6 +183,7 @@ export class CUtilWeb {
     };
     static sNodeBaseTypeFiles = ["globals.d.ts", "globals.typedarray.d.ts", "buffer.buffer.d.ts", "process.d.ts"];
     static mNodeTypesLoaded = new Set();
+    static mLibSourceCache = new Map();
     static async LoadNodeTypeFile(_relPath) {
         if (CUtilWeb.mNodeTypesLoaded.has(_relPath))
             return;
@@ -279,22 +280,34 @@ export class CUtilWeb {
                 _source = _source.replaceAll(originalPath, adjustedFullPath);
             processedPaths.set(originalPath, adjustedFullPath);
             importPathArr[i] = adjustedFullPath;
-            if (_monaco && window["require"] != null && !_visited.has(adjustedFullPath)) {
-                _visited.add(adjustedFullPath);
-                const fName = adjustedFullPath + ".ts";
-                const buf = await CFile.Load(fName);
-                const libSource = CUtil.ArrayToString(buf);
-                window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, fName);
-                if (!_rewriteSource && hadJsExt) {
-                    window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, adjustedFullPath + ".js");
+            if (_monaco && window["require"] != null) {
+                let libSource;
+                if (_visited.has(adjustedFullPath)) {
+                    libSource = CUtilWeb.mLibSourceCache.get(adjustedFullPath);
                 }
-                if (monacoAliasPath != null) {
+                else {
+                    _visited.add(adjustedFullPath);
+                    const fName = adjustedFullPath + ".ts";
+                    const buf = await CFile.Load(fName);
+                    libSource = CUtil.ArrayToString(buf);
+                    CUtilWeb.mLibSourceCache.set(adjustedFullPath, libSource);
+                    window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, fName);
+                    if (!_rewriteSource && hadJsExt) {
+                        window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, adjustedFullPath + ".js");
+                    }
+                }
+                if (monacoAliasPath != null && libSource != null) {
                     window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, monacoAliasPath + ".ts");
                     if (!_rewriteSource && hadJsExt) {
                         window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, monacoAliasPath + ".js");
                     }
                 }
-                await CUtilWeb.TSImport(libSource, _monaco, _github, adjustedFullPath, false, _visited);
+                const recurseFilePath = monacoAliasPath ?? adjustedFullPath;
+                const recurseVisitKey = "recurse:" + recurseFilePath;
+                if (libSource != null && !_visited.has(recurseVisitKey)) {
+                    _visited.add(recurseVisitKey);
+                    await CUtilWeb.TSImport(libSource, _monaco, _github, recurseFilePath, false, _visited);
+                }
             }
         }
         return _source;

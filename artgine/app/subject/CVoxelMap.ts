@@ -16,8 +16,10 @@ import {CAtlas} from "../../util/CAtlas.js";
 import { CDOM } from "../../basic/CDOM.js";
 
 import {CCollider} from "../component/CCollider.js";
+import { CGeometryInfo } from "../component/CGeometryComp.js";
 import { CPaintVoxel, CVoxPlane } from "../component/paint/CPaintVoxel.js";
-import {CSubject} from "./CSubject.js";
+import {CSubjectMap} from "./CSubjectMap.js";
+import { CComponent } from "../component/CComponent.js";
   
 import { CBlackBoardRef, CObject, CPointer } from "../../basic/CObject.js";
 
@@ -289,7 +291,7 @@ export class CVTileMold extends CObject
 	}
 }
 
-export class CVoxelMap extends CSubject implements IMapSchema
+export class CVoxelMap extends CSubjectMap implements IMapSchema
 {
 	// static eColliderEvent={
 	// 	Null:0,
@@ -307,8 +309,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	mTileRoleArr =new Array<CVTileRole>();
 	mTileMoldArr = new Array<CVTileMold>();
     //mPaint : CPaintVoxel=null;
-	mColliderArr = Array<CCollider>();
-	mPaintArr=new Array<CPaintVoxel>();
+	declare mPaintArr : Array<CPaintVoxel>;
 	mDiv=16;
     mPlane : Array<CVoxPlane>=new Array<CVoxPlane>();//임시 버퍼
     //mCount=new CVec3();
@@ -316,6 +317,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	mUpdateRes=true;
 	mUpdateModify=new Set<CCIndex>();
 	mLight=false;
+	mTag=["shadow","light"];
 	static SunValue=1.0;
 	
 	mLayer =new Array<CBlackBoardRef<CVoxelMap>>();
@@ -324,7 +326,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 
 		if(_member=="mComArr" && _type==CObject.eShould.Editer)	return true;
 
-		if(_member=="mPaint" || _member=="mUpdateRes" || _member=="mPlane" || _member=="mColliderArr" || _member=="mComArr")	return false;
+		if(_member=="mPaint" || _member=="mUpdateRes" || _member=="mPlane" || _member=="mComArr")	return false;
 
 		return super.IsShould(_member,_type);
 	}
@@ -386,52 +388,52 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	}
 	
 	RefreshModify()
-{
-    let cntX=Math.ceil(this.mBuf.mCount.x/this.mDiv);
-    let cntY=Math.ceil(this.mBuf.mCount.y/this.mDiv);
+	{
+		let cntX=Math.ceil(this.mBuf.mCount.x/this.mDiv);
+		let cntY=Math.ceil(this.mBuf.mCount.y/this.mDiv);
 
-    let chunkMap=new Map<number, Array<CCIndex>>();
-    for(let m of this.mUpdateModify)
-    {
-        this.PlaneRefresh(m);
-        let cx=Math.floor(m.x/this.mDiv);
-        let cy=Math.floor(m.y/this.mDiv);
-        let cz=Math.floor(m.z/this.mDiv);
-        let pi=cx+cy*cntX+cz*cntX*cntY;
-        if(!chunkMap.has(pi)) chunkMap.set(pi,[]);
-        chunkMap.get(pi).push(m);
-    }
+		let chunkMap=new Map<number, Array<CCIndex>>();
+		for(let m of this.mUpdateModify)
+		{
+			this.PlaneRefresh(m);
+			let cx=Math.floor(m.x/this.mDiv);
+			let cy=Math.floor(m.y/this.mDiv);
+			let cz=Math.floor(m.z/this.mDiv);
+			let pi=cx+cy*cntX+cz*cntX*cntY;
+			if(!chunkMap.has(pi)) chunkMap.set(pi,[]);
+			chunkMap.get(pi).push(m);
+		}
 
-    for(let [pi,cells] of chunkMap)
-    {
-        let paint=this.mPaintArr[pi];
-        if(paint==null) continue;
+		for(let [pi,cells] of chunkMap)
+		{
+			let paint=this.mPaintArr[pi];
+			if(paint==null) continue;
 
-        let cz=Math.floor(pi/(cntX*cntY));
-        let cy=Math.floor((pi%(cntX*cntY))/cntX);
-        let cx=pi%cntX;
-        let x0=cx*this.mDiv, y0=cy*this.mDiv, z0=cz*this.mDiv;
-        let chunkW=Math.min(this.mDiv, this.mBuf.mCount.x-x0);
-        let chunkH=Math.min(this.mDiv, this.mBuf.mCount.y-y0);
+			let cz=Math.floor(pi/(cntX*cntY));
+			let cy=Math.floor((pi%(cntX*cntY))/cntX);
+			let cx=pi%cntX;
+			let x0=cx*this.mDiv, y0=cy*this.mDiv, z0=cz*this.mDiv;
+			let chunkW=Math.min(this.mDiv, this.mBuf.mCount.x-x0);
+			let chunkH=Math.min(this.mDiv, this.mBuf.mCount.y-y0);
 
-        let chunkPlanes=new Array<CVoxPlane>();
-        for(let m of cells)
-        {
-            let lx=m.x-x0, ly=m.y-y0, lz=m.z-z0;
-            let localBase=(lx + ly*chunkW + lz*chunkW*chunkH)*6;
-            let globalBase=m.x*6 + m.y*this.mBuf.mCount.x*6
-                                  + m.z*this.mBuf.mCount.x*this.mBuf.mCount.y*6;
-            for(let j=0;j<6;++j)
-            {
-                let plane=this.mPlane[globalBase+j];
-                plane.mOff=localBase+j; // 청크 로컬로 교정
-                chunkPlanes.push(plane);
-            }
-        }
-        paint.Rebuild(chunkPlanes);
-    }
-    this.mUpdateModify.clear();
-}
+			let chunkPlanes=new Array<CVoxPlane>();
+			for(let m of cells)
+			{
+				let lx=m.x-x0, ly=m.y-y0, lz=m.z-z0;
+				let localBase=(lx + ly*chunkW + lz*chunkW*chunkH)*6;
+				let globalBase=m.x*6 + m.y*this.mBuf.mCount.x*6
+									+ m.z*this.mBuf.mCount.x*this.mBuf.mCount.y*6;
+				for(let j=0;j<6;++j)
+				{
+					let plane=this.mPlane[globalBase+j];
+					plane.mOff=localBase+j; // 청크 로컬로 교정
+					chunkPlanes.push(plane);
+				}
+			}
+			paint.Rebuild(chunkPlanes);
+		}
+		this.mUpdateModify.clear();
+	}
 	PlaneRefresh(_index : CCIndex)
 	{
 		
@@ -501,11 +503,17 @@ export class CVoxelMap extends CSubject implements IMapSchema
 		// 	return;
 		// }
 
+		if(this.mUpdateRes || this.mUpdateModify.size>0)
+			this.ColWake();
 		if(this.mUpdateRes)
 			this.RefreshRes();
 		if(this.mUpdateModify.size>0)
 			this.RefreshModify();
+
+		super.Update(_update);
 	}
+	//페인트·콜라이더 배열은 청크 번호·셀 번호로 직접 접근한다(RefreshRes, PlaneRefresh가 칸을 정해 넣는다)
+	protected override PushMapComp(_com : CComponent)	{}
 	PickBox(_ray : CRay) : CCIndexPick
 	{
 		

@@ -46,14 +46,16 @@ export class CTexture extends CObject {
     mGBuffer = new Array;
     mMipMap = CTexture.eMipmap.None;
     mWrap = CTexture.eWrap.Clamp;
-    mFilter = CTexture.eFilter.Neaest;
+    mFilter = CTexture.eFilter.Nearest;
     mInfo = [new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)];
     mYFlip = true;
     mOrgWidth = 0;
     mOrgHeight = 0;
     mAnti = 0;
+    mAniso = 0;
     mAlpha = false;
     mAutoResize = true;
+    mKeepBuf = true;
     mUpdate = new Set();
     mFrameBuf = new Array();
     mAntiBuf = new Array();
@@ -69,7 +71,7 @@ export class CTexture extends CObject {
     }
     Icon() { return "bi bi-image"; }
     LoaderOption() {
-        return JSON.stringify({ wrap: this.mWrap, filter: this.mFilter, mipMap: this.mMipMap });
+        return JSON.stringify({ wrap: this.mWrap, filter: this.mFilter, mipMap: this.mMipMap, aniso: this.mAniso });
     }
     IsFrameBuf() { return this.mFrameBuf.length != 0; }
     IsBindFrame() { return this.mFrame; }
@@ -223,6 +225,20 @@ export class CTexture extends CObject {
                 this.mBuffer.push(new Float32Array(this.mWidth * this.mHeight * 4 * info.mCount));
         }
     }
+    ReleaseBuf() {
+        if (this.mKeepBuf)
+            return false;
+        if (this.IsFrameBuf())
+            return false;
+        if (this.mVideo)
+            return false;
+        if (this.mGBuffer.length == 0)
+            return false;
+        if (this.mBuffer.length == 0)
+            return false;
+        this.mBuffer.length = 0;
+        return true;
+    }
     SetAnti(_sample) {
         this.mAnti = _sample;
         for (let buf of this.mFrameBuf) {
@@ -243,6 +259,8 @@ export class CTexture extends CObject {
     }
     GetYFlip() { return this.mYFlip; }
     GetAnti() { return this.mAnti; }
+    SetAniso(_max) { this.mAniso = _max; this.mUpdate.clear(); }
+    GetAniso() { return this.mAniso; }
     SetBuf(_buf) {
         if (_buf instanceof HTMLVideoElement)
             this.mVideo = true;
@@ -352,7 +370,7 @@ export class CTexture extends CObject {
 (function (CTexture) {
     let eFilter;
     (function (eFilter) {
-        eFilter[eFilter["Neaest"] = 4] = "Neaest";
+        eFilter[eFilter["Nearest"] = 4] = "Nearest";
         eFilter[eFilter["Linear"] = 3] = "Linear";
     })(eFilter = CTexture.eFilter || (CTexture.eFilter = {}));
     ;

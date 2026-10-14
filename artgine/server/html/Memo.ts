@@ -462,7 +462,11 @@ async function DoDelete(): Promise<void> {
             editorTextEl.value = '';
             lastSavedText = '';
             saveStatusEl.textContent = '';
-            await ShowListScreen();
+            if (j.keyDeleted) {
+                ShowConnectScreen();
+            } else {
+                await ShowListScreen();
+            }
         } else {
             CAlert.E(j?.msg || L('memo.msg.failDelete', 'Delete failed'));
         }

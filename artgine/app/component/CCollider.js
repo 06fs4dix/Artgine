@@ -9,6 +9,7 @@ import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
 import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
 import { CMat } from "../../geometry/CMat.js";
 import { CUpdate } from "../../basic/Basic.js";
+import { CSleep } from "../../util/CSleep.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CBoundWorldCollider } from "./CBoundWorld.js";
 import { CPhysics } from "./CPhysics.js";
@@ -50,6 +51,9 @@ export class CCollider extends CGeometryComp {
     mColTarget = new CArray();
     mColPush = new CArray();
     mColPair = new Map();
+    mSleep = new CSleep();
+    mCycleSkip = false;
+    GetSleep() { return this.mSleep; }
     constructor(_paint = null, _rb = null, _2d = false) {
         super();
         this.mRB = _rb;
@@ -59,6 +63,11 @@ export class CCollider extends CGeometryComp {
         else
             this.mBound = new CBound();
         this.mSysc = CComponent.eSysn.Collider;
+    }
+    Destroy() {
+        if (this.IsDestroy() == false && this.mGI != null && this.mGI.mOctree != null)
+            this.mGI.mOctree.Remove(this);
+        super.Destroy();
     }
     Icon() { return "bi bi-sign-railroad"; }
     RegistHeap(_F32A) {
@@ -72,7 +81,7 @@ export class CCollider extends CGeometryComp {
     EditChange(_pointer, _child) {
         super.EditChange(_pointer, _child);
         if (_pointer.IsRef(this.mBound)) {
-            if (_pointer.member == "mType" && this.mBound.mType == CBound.eType.Polytope && this.mPaintLoad != null) {
+            if (_pointer.member == "mType" && (this.mBound.mType == CBound.eType.GJK || this.mBound.mType == CBound.eType.Triangle) && this.mPaintLoad != null) {
                 let bound = this.mPaintLoad.GetBound().Export();
                 this.mBound.mPos.Clear();
                 this.mBound.mPos.PushArray(bound.mPos);
@@ -92,7 +101,8 @@ export class CCollider extends CGeometryComp {
         if (_member == "mUpdateMat" || _member == "mGJK" || _member == "mPaintLoad" ||
             _member == "mPushVec" || _member == "mGI" || _member == "mBW" ||
             _member == "mColTarget" || _member == "mColPush" || _member == "mColPair" ||
-            _member == "mOneWayMap" || _member == "mRB" || _member == "mCameraOutLast")
+            _member == "mOneWayMap" || _member == "mRB" || _member == "mCameraOutLast" ||
+            _member == "mCycleSkip")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -151,6 +161,8 @@ export class CCollider extends CGeometryComp {
         this.UpdateMat();
         if (this.IsEnable() == false || this.GetLayer() == "" || this.GetOwner().IsEnable() == false)
             return;
+        if (this.mCycleSkip)
+            return;
         this.mGI.mOctree.Insert(this.mBW.mPos, this.mBW.mSize, this, this.mBW.mWBound.mMin, this.mBW.mWBound.mMax, this.mEvent == CCollider.eEvent.Static);
     }
     GetBW() {
@@ -171,9 +183,9 @@ export class CCollider extends CGeometryComp {
     }
     StartChk() {
         let start = super.StartChk();
-        if (this.mPaintLoad != null && this.mBound.GetType() == CBound.eType.Null) {
+        if (this.mPaintLoad != null && (this.mBound.GetType() == CBound.eType.Null || this.mBound.mMin.x > this.mBound.mMax.x)) {
             this.InitBound(this.mPaintLoad);
-            if (this.mBound.GetType() == CBound.eType.Null) {
+            if (this.mBound.GetType() == CBound.eType.Null || this.mBound.mMin.x > this.mBound.mMax.x) {
                 this.mStartChk = true;
                 return false;
             }
@@ -197,10 +209,13 @@ export class CCollider extends CGeometryComp {
                 return;
             }
             this.mPaintLoad = _paint;
-            if (this.mBound.GetType() == CBound.eType.Null) {
+            if (this.mBound.GetType() == CBound.eType.Null || this.mBound.mMin.x > this.mBound.mMax.x) {
+                let type = this.mBound.GetType();
                 let bound = _paint.GetBound().Export();
                 this.mBound.Reset();
                 this.mBound.Import(bound);
+                if (type != CBound.eType.Null)
+                    this.mBound.SetType(type);
             }
         }
         this.mUpdateMat = CUpdate.eType.Updated;

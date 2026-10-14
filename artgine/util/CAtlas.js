@@ -428,7 +428,7 @@ export class CAtlas extends CTexture {
                     const b64File = new CBase64File();
                     b64File.mExt = "tga";
                     b64File.mData = tgaBuf;
-                    b64File.mOption.mFilter = CTexture.eFilter.Neaest;
+                    b64File.mOption.mFilter = CTexture.eFilter.Nearest;
                     b64File.RefreshHash();
                     ani.Push(new CClipBase64(0, b64File));
                     ani.Push(new CClipImg(0, 0, b64File.FileName()));

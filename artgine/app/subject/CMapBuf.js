@@ -1,3 +1,4 @@
+import { CAlert } from "../../basic/CAlert.js";
 import { CObject } from "../../basic/CObject.js";
 import { CUtil } from "../../basic/CUtil.js";
 import { CVec3 } from "../../geometry/CVec3.js";
@@ -41,6 +42,10 @@ export class CMapBuf extends CObject {
     }
     SetTexture(_tex) {
         let buf = _tex.GetBuf()[0];
+        if (buf == null) {
+            CAlert.W(_tex.Key() + " : CPU 픽셀이 없다. 맵 이미지는 mGPU=false로 로드해야 한다");
+            return;
+        }
         let width = _tex.GetWidth();
         let height = _tex.GetHeight();
         const isTarget3D = this.mCount.z > 1;

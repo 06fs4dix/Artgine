@@ -328,7 +328,7 @@ async function AniToolDrop(_drop) {
         let fileDrop = _drop;
         for (let i = 0; i < fileDrop.mPaths.length; ++i) {
             if (fileDrop.mPaths.length > 0 && fileDrop.mPaths[i] != null) {
-                gAtl.Frame().Load().Exe(fileDrop.mPaths[i], new CLoaderOption().Set("mFilter", CTexture.eFilter.Neaest));
+                gAtl.Frame().Load().Exe(fileDrop.mPaths[i], new CLoaderOption().Set("mFilter", CTexture.eFilter.Nearest));
                 let info = CString.ExtCut(fileDrop.mPaths[i]);
                 let defaultDelay = Number(CDOM.IDValue("defaultDelay"));
                 if (info.ext == "png" || info.ext == "jpg") {
@@ -568,7 +568,7 @@ function AniToolPlay() {
         gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
         gSubject = gAtl.Canvas("AniTool").PushSub(new CSubject());
         let pt = gSubject.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
-        pt.mAutoLoad.mFilter = CTexture.eFilter.Neaest;
+        pt.mAutoLoad.mFilter = CTexture.eFilter.Nearest;
         let af = gSubject.PushComp(new CAniFlow(gAni));
         af.mSpeed = speedRange;
     }
@@ -612,11 +612,11 @@ async function AniToolSubjectInit() {
     else {
         gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
         gSubject = gAtl.Canvas("AniTool").PushSub(new CSubject());
-        await gAtl.Frame().Load().Exe(gBasicTex, new CLoaderOption().Set("mFilter", CTexture.eFilter.Neaest));
+        await gAtl.Frame().Load().Exe(gBasicTex, new CLoaderOption().Set("mFilter", CTexture.eFilter.Nearest));
         gImg = gAtl.Frame().Res().Find(gBasicTex);
         let pt = gSubject.PushComp(new CPaint2D(gBasicTex));
         pt.SetPivot(new CVec3(1, -1, 1));
-        pt.mAutoLoad.mFilter = CTexture.eFilter.Neaest;
+        pt.mAutoLoad.mFilter = CTexture.eFilter.Nearest;
         AniToolRangeInit();
     }
     let pt2D = gSubject.FindComp(CPaint2D);

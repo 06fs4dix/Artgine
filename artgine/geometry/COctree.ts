@@ -200,6 +200,14 @@ export class COctreeMgr
 
     }
 
+    //Insert로 등록된 데이터를 옥트리 장부에서 지운다. 트리 자체는 매 Build가 새로 만들므로
+    //여기서 할 일은 "다음 Build부터 이 데이터를 빼는 것"과 누적된 장부를 비우는 것뿐이다.
+    //안 부르면 죽은 콜라이더의 항목이 영원히 쌓여 Build가 훑는 대상과 메모리가 계속 늘어난다.
+    Remove(_data : any)
+    {
+
+    }
+
     InsideRay(_ray : CRay, _RayLength : number, _boundary : number, results : Function)
     {
 

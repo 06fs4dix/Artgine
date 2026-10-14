@@ -81,10 +81,11 @@ export class CImgPro {
         }
         return boundList;
     }
-    static SphericalGaussianBlur(_tex, _infoIndex = 0, _maxSamples = 128) {
+    static SphericalGaussianBlur(_tex, _mips = null) {
         const v3 = CPoolGeo.ProductV3();
+        const maxSamples = 128;
         const LOD_MAX = Math.floor(Math.log2(_tex.GetWidth()));
-        const LOD_MIN = 4;
+        const ROUGH_LODS = Math.max(1, LOD_MAX - 4);
         const PHI = (1 + Math.sqrt(5)) / 2;
         const INV_PHI = 1 / PHI;
         const AxisDirections = [
@@ -99,125 +100,176 @@ export class CImgPro {
             new CVec3(-1, 1, 1),
             new CVec3(1, 1, 1)
         ];
-        const rawBuf = _tex.GetBuf();
-        for (let i = 0; i < rawBuf.length; i++) {
-            if (rawBuf[i].length != _tex.GetWidth() * _tex.GetHeight() * 4) {
-                const rawBufSize = Math.round(Math.sqrt(rawBuf[i].length / 4));
-                const newTex = CImgPro.SqurEnlargedReduced(rawBufSize, rawBufSize, rawBuf[i], _tex.GetWidth() / rawBufSize, _tex.GetHeight() / rawBufSize, 4);
-                rawBuf[i] = newTex.GetBuf()[0];
-            }
-            for (let idx = 0; idx < rawBuf[i].length; idx += 4) {
-                if (rawBuf[i] instanceof Uint8Array) {
-                    rawBuf[i][idx + 0] = Math.pow(rawBuf[i][idx + 0] / 255, 2.2) * 255;
-                    rawBuf[i][idx + 1] = Math.pow(rawBuf[i][idx + 1] / 255, 2.2) * 255;
-                    rawBuf[i][idx + 2] = Math.pow(rawBuf[i][idx + 2] / 255, 2.2) * 255;
-                }
-                else {
-                    rawBuf[i][idx + 0] = Math.pow(rawBuf[i][idx + 0], 2.2);
-                    rawBuf[i][idx + 1] = Math.pow(rawBuf[i][idx + 1], 2.2);
-                    rawBuf[i][idx + 2] = Math.pow(rawBuf[i][idx + 2], 2.2);
-                }
-            }
-        }
-        const buf = [];
+        const faceDir = new CVec3();
+        let isFloatType = false;
+        let sigmas = [];
+        let sizeLods = [];
+        const result = [];
+        const outInfos = [];
         let bufIndex = 0;
-        let bufInfo;
-        for (let i = 0; i < _tex.GetInfo().length; i++) {
-            let info = _tex.GetInfo()[i];
-            let count = info.mTarget === CTexture.eTarget.Cube ? 6 : (info.mTarget === CTexture.eTarget.Array ? info.mCount : 1);
-            for (let j = 0; j < count; j++, bufIndex++) {
-                if (bufIndex >= _tex.GetBuf().length) {
-                    continue;
-                }
-                if (i != _infoIndex) {
-                    continue;
-                }
-                bufInfo = info;
-                buf.push(rawBuf[bufIndex]);
+        for (const info of _tex.GetInfo()) {
+            const layerCount = info.mTarget === CTexture.eTarget.Cube ? 6 : (info.mTarget === CTexture.eTarget.Array ? info.mCount : 1);
+            if (info.mTarget !== CTexture.eTarget.Sigle) {
+                isFloatType = info.mFormat == CTexture.eFormat.RGBA32F;
+                const cubeStart = result.length;
+                for (let layer = 0; layer + 6 <= layerCount && (_mips == null || result.length < _mips.length); layer += 6)
+                    result.push(BlurCube(_mips != null ? _mips[result.length] : null, bufIndex + layer));
+                const cubes = result.length - cubeStart;
+                if (cubes > 0)
+                    outInfos.push({ target: info.mTarget, format: info.mFormat, count: info.mTarget === CTexture.eTarget.Cube ? 1 : cubes * 6 });
             }
+            bufIndex += layerCount;
         }
-        const isBufferFloat = buf[0] instanceof Float32Array;
-        const isFloatType = bufInfo.mFormat == CTexture.eFormat.RGBA32F;
-        const ArrayBufferType = isFloatType ? Float32Array : Uint8Array;
-        const sigmas = [];
-        const sizeLods = [];
-        let currentLod = LOD_MAX;
-        const totalLods = LOD_MAX - LOD_MIN + 1;
-        for (let i = 0; i < totalLods; i++) {
-            const sizeLod = Math.pow(2, currentLod);
-            sizeLods.push(sizeLod);
-            const t = i / (totalLods - 1);
-            const sigmaExt = i == 0 ? 0 : 1 / sizeLod;
-            const roughness = t * 0.582;
-            const sigma = CMath.FloatInterpolate(sigmaExt, roughness, t);
-            sigmas.push(sigma);
-            if (currentLod > LOD_MIN) {
-                currentLod--;
-            }
-        }
-        const cubeUVOutputs = [];
-        const pingpongBuffer = [];
-        for (let mip = 0; mip < totalLods; mip++) {
-            const size = sizeLods[mip];
-            for (let face = 0; face < 6; face++) {
-                const bufferK = isBufferFloat ? 1 : 255;
-                const typeK = isFloatType ? 1 : 255;
-                const floatK = typeK / bufferK;
-                const outData = new ArrayBufferType(size * size * 4);
-                if (mip == 0) {
-                    if (_tex.GetYFlip()) {
-                        for (let y = 0; y < size; y++)
-                            for (let x = 0; x < size; x++) {
-                                const flippexIdx = 4 * ((size - 1 - y) * size + x);
-                                const idx = 4 * (y * size + x);
-                                outData[idx + 0] = buf[face][flippexIdx + 0] / floatK;
-                                outData[idx + 1] = buf[face][flippexIdx + 1] / floatK;
-                                outData[idx + 2] = buf[face][flippexIdx + 2] / floatK;
-                                outData[idx + 3] = buf[face][flippexIdx + 3] / floatK;
-                            }
-                    }
-                    else
-                        outData.set(buf[face]);
-                }
-                cubeUVOutputs.push(outData);
-                pingpongBuffer.push(new ArrayBufferType(size * size * 4));
-            }
-        }
-        for (let i = 1; i < totalLods; i++) {
-            const lodIn = i - 1;
-            const lodOut = i;
-            const sigma = Math.sqrt(sigmas[i] * sigmas[i] - sigmas[i - 1] * sigmas[i - 1]);
-            const axisDir = AxisDirections[(totalLods - i - 1) % AxisDirections.length];
-            HalfBlur(cubeUVOutputs, pingpongBuffer, lodIn, lodOut, sigma, true, axisDir);
-            HalfBlur(pingpongBuffer, cubeUVOutputs, lodOut, lodOut, sigma, false, axisDir);
-        }
-        const mipmaps = [];
-        for (let mip = 0; mip < totalLods; mip++) {
+        const textures = [];
+        const lodCount = result.length > 0 ? result[0].length / 6 : 0;
+        for (let lod = 0; lod < lodCount; lod++) {
             const tex = new CTexture();
-            mipmaps.push(tex);
-            tex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, isFloatType ? CTexture.eFormat.RGBA32F : CTexture.eFormat.RGBA8, 1)]);
-            tex.SetSize(sizeLods[mip], sizeLods[mip]);
-            tex.GetBuf().push(cubeUVOutputs[mip * 6 + 0], cubeUVOutputs[mip * 6 + 1], cubeUVOutputs[mip * 6 + 2], cubeUVOutputs[mip * 6 + 3], cubeUVOutputs[mip * 6 + 4], cubeUVOutputs[mip * 6 + 5]);
+            tex.PushInfo(outInfos.map(o => new CTextureInfo(o.target, o.format, o.count)));
+            tex.SetSize(_tex.GetWidth() >> lod, _tex.GetWidth() >> lod);
+            for (const cube of result)
+                for (let face = 0; face < 6; face++)
+                    tex.GetBuf().push(cube[lod * 6 + face]);
+            textures.push(tex);
         }
         CPoolGeo.RecycleV3(v3);
-        return mipmaps;
+        return textures;
+        function BlurCube(_cubeMips, _bufOff) {
+            const ArrayBufferType = isFloatType ? Float32Array : Uint8Array;
+            const totalLods = _cubeMips != null ? _cubeMips.length / 6 : LOD_MAX + 1;
+            sigmas = [];
+            sizeLods = [];
+            for (let i = 0; i < totalLods; i++) {
+                const sizeLod = Math.pow(2, LOD_MAX - i);
+                sizeLods.push(sizeLod);
+                const t = Math.min(1, i / ROUGH_LODS);
+                const sigmaExt = i == 0 ? 0 : 1 / sizeLod;
+                sigmas.push(CMath.FloatInterpolate(sigmaExt, t * 0.582, t));
+            }
+            let faces = _cubeMips;
+            if (faces == null) {
+                faces = [];
+                const size = sizeLods[0];
+                for (let face = 0; face < 6; face++) {
+                    let src = _tex.GetBuf()[_bufOff + face];
+                    if (src.length != size * size * 4) {
+                        const srcSize = Math.round(Math.sqrt(src.length / 4));
+                        src = CImgPro.SqurEnlargedReduced(srcSize, srcSize, src, size / srcSize, size / srcSize, 4).GetBuf()[0];
+                    }
+                    const k = (isFloatType ? 1 : 255) / (src instanceof Float32Array ? 1 : 255);
+                    const out = new ArrayBufferType(size * size * 4);
+                    for (let y = 0; y < size; y++) {
+                        const sy = _tex.GetYFlip() ? size - 1 - y : y;
+                        for (let x = 0; x < size * 4; x++)
+                            out[y * size * 4 + x] = src[sy * size * 4 + x] * k;
+                    }
+                    faces.push(out);
+                }
+                for (let i = 1; i < totalLods; i++)
+                    for (let face = 0; face < 6; face++)
+                        faces.push(new ArrayBufferType(sizeLods[i] * sizeLods[i] * 4));
+            }
+            const pingpongBuffer = [];
+            for (let i = 0; i < faces.length; i++)
+                pingpongBuffer.push(i < 6 ? null : new ArrayBufferType(faces[i].length));
+            for (let i = 1; i < totalLods; i++) {
+                const axisDir = AxisDirections[(totalLods - i - 1) % AxisDirections.length];
+                const lodIn = _cubeMips != null ? i : i - 1;
+                const sigma = _cubeMips != null ? sigmas[i] : Math.sqrt(sigmas[i] * sigmas[i] - sigmas[i - 1] * sigmas[i - 1]);
+                HalfBlur(faces, pingpongBuffer, lodIn, i, sigma, true, axisDir);
+                HalfBlur(pingpongBuffer, faces, i, i, sigma, false, axisDir);
+            }
+            for (let i = 0; i < totalLods; i++)
+                if (faces[i * 6] != null)
+                    FixEdge(faces, i);
+            return faces;
+        }
+        function FaceDir(_face, _u, _v) {
+            switch (_face) {
+                case 0:
+                    faceDir.x = 1.0;
+                    faceDir.y = _v;
+                    faceDir.z = _u;
+                    break;
+                case 1:
+                    faceDir.x = -1.0;
+                    faceDir.y = _v;
+                    faceDir.z = -_u;
+                    break;
+                case 2:
+                    faceDir.x = _u;
+                    faceDir.y = 1.0;
+                    faceDir.z = _v;
+                    break;
+                case 3:
+                    faceDir.x = _u;
+                    faceDir.y = -1.0;
+                    faceDir.z = -_v;
+                    break;
+                case 4:
+                    faceDir.x = -_u;
+                    faceDir.y = _v;
+                    faceDir.z = 1.0;
+                    break;
+                case 5:
+                    faceDir.x = _u;
+                    faceDir.y = _v;
+                    faceDir.z = -1.0;
+                    break;
+            }
+            return faceDir;
+        }
+        function FixEdge(_faces, _lod) {
+            const s = sizeLods[_lod];
+            if (s < 2)
+                return;
+            const c = (s - 1) * 0.5;
+            const groups = new Map();
+            for (let face = 0; face < 6; face++) {
+                for (let y = 0; y < s; y++) {
+                    const xStep = (y == 0 || y == s - 1) ? 1 : s - 1;
+                    for (let x = 0; x < s; x += xStep) {
+                        const d = FaceDir(face, (x - c) / c, (y - c) / c);
+                        const key = Math.round(d.x * 2 * c) + "," + Math.round(d.y * 2 * c) + "," + Math.round(d.z * 2 * c);
+                        let g = groups.get(key);
+                        if (g == null) {
+                            g = [];
+                            groups.set(key, g);
+                        }
+                        g.push(_lod * 6 + face, (y * s + x) * 4);
+                    }
+                }
+            }
+            for (const g of groups.values()) {
+                if (g.length < 4)
+                    continue;
+                const n = g.length / 2;
+                for (let ch = 0; ch < 4; ch++) {
+                    let sum = 0;
+                    for (let i = 0; i < g.length; i += 2)
+                        sum += _faces[g[i]][g[i + 1] + ch];
+                    for (let i = 0; i < g.length; i += 2)
+                        _faces[g[i]][g[i + 1] + ch] = sum / n;
+                }
+            }
+        }
         function HalfBlur(_bufIn, _bufOut, _lodIn, _lodOut, _sigmaRadians, _isLatitudinal, _poleAxis) {
             const STANDARD_DEVIATIONS = 3;
             const sizeIn = sizeLods[_lodIn];
             const sizeOut = sizeLods[_lodOut];
-            const invSizeOut = 1 / sizeOut;
-            const pixels = sizeIn - 1;
+            const edgeC = (sizeOut - 1) * 0.5;
+            const edgeK = sizeOut > 1 ? 1 / edgeC : 0;
+            const pixels = Math.max(1, sizeIn - 1);
             const isSigmaFinite = isFinite(_sigmaRadians);
-            const radiansPerPixel = isSigmaFinite ? Math.PI / (2 * pixels) : (2 * Math.PI) / (2 * _maxSamples - 1);
+            const radiansPerPixel = isSigmaFinite ? Math.PI / (2 * pixels) : (2 * Math.PI) / (2 * maxSamples - 1);
             const sigmaPixels = _sigmaRadians / radiansPerPixel;
-            const samples = isSigmaFinite ? 1 + Math.floor(STANDARD_DEVIATIONS * sigmaPixels) : _maxSamples;
-            const sampleCount = Math.min(samples, _maxSamples);
-            const weights = new Float32Array(_maxSamples);
-            const cosTable = new Float32Array(_maxSamples);
-            const sinTable = new Float32Array(_maxSamples);
+            const samples = isSigmaFinite ? 1 + Math.floor(STANDARD_DEVIATIONS * sigmaPixels) : maxSamples;
+            const sampleCount = Math.min(samples, maxSamples);
+            const weights = new Float32Array(maxSamples);
+            const cosTable = new Float32Array(maxSamples);
+            const sinTable = new Float32Array(maxSamples);
             let sum = 0;
-            for (let s = 0; s < _maxSamples; ++s) {
-                const x = s / sigmaPixels;
+            for (let s = 0; s < maxSamples; ++s) {
+                const x = sigmaPixels > 0 ? s / sigmaPixels : (s == 0 ? 0 : Infinity);
                 const w = Math.exp(-x * x / 2);
                 weights[s] = w;
                 const theta = radiansPerPixel * s;
@@ -236,42 +288,11 @@ export class CImgPro {
                 const outBuf = _bufOut[outFaceIndex];
                 let outIdx = 0;
                 for (let y = 0; y < sizeOut; y++) {
-                    const v = 1.0 - (y + 0.5) * invSizeOut * 2.0;
+                    const v = (y - edgeC) * edgeK;
                     for (let x = 0; x < sizeOut; x++) {
-                        const u = (x + 0.5) * invSizeOut * 2.0 - 1.0;
-                        let dvX = 0, dvY = 0, dvZ = 0;
-                        switch (face) {
-                            case 0:
-                                dvX = 1.0;
-                                dvY = v;
-                                dvZ = -u;
-                                break;
-                            case 1:
-                                dvX = -1.0;
-                                dvY = v;
-                                dvZ = u;
-                                break;
-                            case 2:
-                                dvX = u;
-                                dvY = 1.0;
-                                dvZ = -v;
-                                break;
-                            case 3:
-                                dvX = u;
-                                dvY = -1.0;
-                                dvZ = v;
-                                break;
-                            case 4:
-                                dvX = u;
-                                dvY = v;
-                                dvZ = 1.0;
-                                break;
-                            case 5:
-                                dvX = -u;
-                                dvY = v;
-                                dvZ = -1.0;
-                                break;
-                        }
+                        const u = (x - edgeC) * edgeK;
+                        const fd = FaceDir(face, u, v);
+                        const dvX = fd.x, dvY = fd.y, dvZ = fd.z;
                         const dvLen = Math.sqrt(dvX * dvX + dvY * dvY + dvZ * dvZ);
                         const outDirX = dvX / dvLen;
                         const outDirY = dvY / dvLen;
@@ -312,8 +333,8 @@ export class CImgPro {
                             const odCos_Y = outDirY * cosTheta;
                             const odCos_Z = outDirZ * cosTheta;
                             const axDot = axisX * dotProd * oneMinusCos;
-                            const ayDot = axisX * dotProd * oneMinusCos;
-                            const azDot = axisX * dotProd * oneMinusCos;
+                            const ayDot = axisY * dotProd * oneMinusCos;
+                            const azDot = axisZ * dotProd * oneMinusCos;
                             if (s === 0) {
                                 const sDirX = odCos_X + cxX * sinTheta + axDot;
                                 const sDirY = odCos_Y + cxY * sinTheta + ayDot;
@@ -357,13 +378,13 @@ export class CImgPro {
             if (absX >= absY && absX >= absZ) {
                 if (_rx > 0) {
                     face = 0;
-                    uc = -_rz;
+                    uc = _rz;
                     vc = _ry;
-                    ma = _rx;
+                    ma = absX;
                 }
                 else {
                     face = 1;
-                    uc = _rz;
+                    uc = -_rz;
                     vc = _ry;
                     ma = absX;
                 }
@@ -372,37 +393,37 @@ export class CImgPro {
                 if (_ry > 0) {
                     face = 2;
                     uc = _rx;
-                    vc = -_rz;
-                    ma = _ry;
+                    vc = _rz;
+                    ma = absY;
                 }
                 else {
                     face = 3;
                     uc = _rx;
-                    vc = _rz;
+                    vc = -_rz;
                     ma = absY;
                 }
             }
             else {
                 if (_rz > 0) {
                     face = 4;
-                    uc = _rx;
+                    uc = -_rx;
                     vc = _ry;
-                    ma = _rz;
+                    ma = absZ;
                 }
                 else {
                     face = 5;
-                    uc = -_rx;
+                    uc = _rx;
                     vc = _ry;
                     ma = absZ;
                 }
             }
             const u = 0.5 * (uc / ma + 1.0);
-            const v = 0.5 * (1.0 - vc / ma);
+            const v = 0.5 * (vc / ma + 1.0);
             const src = _buf[_lod * 6 + face];
             const w = sizeLods[_lod];
             const h = sizeLods[_lod];
-            const texX = u * w - 0.5;
-            const texY = v * h - 0.5;
+            const texX = u * (w - 1);
+            const texY = v * (h - 1);
             const x0 = Math.max(0, Math.min(w - 1, Math.floor(texX)));
             const y0 = Math.max(0, Math.min(h - 1, Math.floor(texY)));
             const x1 = Math.max(0, Math.min(w - 1, x0 + 1));
@@ -1160,7 +1181,7 @@ export class CImgPro {
             }
         }
         const out = new CTexture();
-        out.SetFilter(CTexture.eFilter.Neaest);
+        out.SetFilter(CTexture.eFilter.Nearest);
         out.SetWrap(CTexture.eWrap.Clamp);
         out.SetMipMap(CTexture.eMipmap.None);
         out.SetSize(_size.x, _size.y);
@@ -1361,7 +1382,7 @@ export class CImgPro {
         }
         const out = new CTexture();
         out.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)]);
-        out.SetFilter(CTexture.eFilter.Neaest);
+        out.SetFilter(CTexture.eFilter.Nearest);
         out.SetWrap(CTexture.eWrap.Repeat);
         out.SetMipMap(CTexture.eMipmap.GL);
         out.SetSize(_size.x, _size.y);
@@ -1405,7 +1426,7 @@ export class CImgPro {
             }
             const tex = new CTexture();
             tex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)]);
-            tex.SetFilter(CTexture.eFilter.Neaest);
+            tex.SetFilter(CTexture.eFilter.Nearest);
             tex.SetWrap(CTexture.eWrap.Repeat);
             tex.SetMipMap(CTexture.eMipmap.GL);
             tex.SetSize(_size.x, _size.y);

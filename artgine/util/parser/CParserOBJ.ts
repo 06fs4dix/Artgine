@@ -18,13 +18,15 @@ type ObjFaceV = { vi:number, vti:number, vni:number };
 export class CParserOBJ extends CParser
 {
     public mMesh = new CMesh();
-    private mPath: string = "";
+    public mPath: string = "";
     public mComputeNormal : boolean;
+    public mMergeStatic : boolean;
 
-    constructor(_computeNormal=true)
+    constructor(_computeNormal=true,_mergeStatic=true)
     {
         super();
         this.mComputeNormal=_computeNormal;
+        this.mMergeStatic=_mergeStatic;
     }
 
     override GetResult() { return this.mMesh; }

@@ -1,6 +1,6 @@
 import { 
 	Build, CMat, CVec2, CVec3, CVec4, CMat3, OutColor, OutPosition,
-	ToV3, ToV4, UV2, Vertex3, Attribute, Null,
+	ToV2, ToV3, ToV4, UV2, Vertex3, Attribute, Null,
 	LWVPMul, discard, screenPos,
 	Sam2D0ToColor, Sam2DToColor, Sam2DSize,
 	max, min,
@@ -11,7 +11,7 @@ import {
 	MappingTexToV3, MatTypeToMat,
     V2Abs,
 	Sam2DArrV4,
-	Sam2DArrToV4,
+	Sam2DArrNearestToV4,
 	Vertex2,
     V2AddV2,
     smoothstep,
@@ -64,6 +64,17 @@ var out_color : OutColor=Null();
 var to_uv : ToV3=Null();
 var to_worldPos : ToV4=Null();
 
+// cutout : 캐릭터 주위를 원형으로 뚫어 가려진 캐릭터가 비쳐 보이게 한다
+// cutoutPos  xy=기준(캐릭터 발밑) 월드좌표, z=구멍 반경, w=구멍 안 알파 배율
+var cutoutPos : CVec4=Null();
+var to_cutout : ToV2=Null();
+
+// shadowHeight : 2D 그림자를 눕힐 때 쓸 몸 높이(월드 단위). 그림자는 원래 쿼드 높이를 키로 알고 눕히는데,
+// ULPC 오버사이즈 포즈는 프레임을 배율만큼 키워 그 가운데에 몸을 그린다(CParserULPC scale → CPaint2D.SetSca).
+// 그대로 두면 그림자가 발밑에서 떨어져 밀린다. "shadowHeight" 태그가 붙은 페인트만 이 값을 쓰고,
+// 나머지는 기본 경로라 유니폼을 읽지 않는다(직전 드로우 값이 남아 섞일 일이 없다).
+var shadowHeight : number=Null();
+
 var time : number=Attribute(0,"time");
 var mask: number=1.0;
 var lastHide : number=Null();
@@ -81,7 +92,7 @@ Build("Artgine/Shader/2DPlane",[],
 		worldMat,
 		viewMat,projectMat,
 	],[
-		out_position,to_uv,to_worldPos
+		out_position,to_uv,to_worldPos,to_cutout
 	],ps_main,[out_color]
 );
 
@@ -89,14 +100,14 @@ Build("Artgine/Shader/2DTail",["tail"],
 	vs_main_tail,[
 		worldMat,viewMat,projectMat,
 	],[
-		out_position,to_uv,to_worldPos
+		out_position,to_uv,to_worldPos,to_cutout
 	],ps_main,[out_color]
 );
 Build("Artgine/Shader/2DTrail",["trail"],
 	vs_main_trail,[
 		worldMat,viewMat,projectMat,trailPos,lastHide,texCodi,
 	],[
-		out_position,to_uv,to_worldPos
+		out_position,to_uv,to_worldPos,to_cutout
 	],ps_main,[out_color]
 );
 Build("Artgine/Shader/2DSimple",["simple"],
@@ -112,7 +123,7 @@ Build("Artgine/Shader/2DMask",["mask"],
 		worldMat,
 		viewMat,projectMat,mask
 	],[
-		out_position,to_uv,to_worldPos
+		out_position,to_uv,to_worldPos,to_cutout
 	],ps_main_mask,[out_color]
 );
 Build("Artgine/Shader/2DBlit",["blit"],vs_main_blit,[
@@ -250,34 +261,41 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 	
 	var lDir : CVec4;
     var lCol : CVec4;
+	var dir : CVec3;
+	var dist : number;
     BranchBegin("shadowPlaneV","SPV",[ligDir, ligCol, ligCount, shadowWrite, shadowRate]);
     if(shadowWrite.x > ligCount - 0.5) {
         to_uv.z *= 0.0;
     }
     else {
-        lDir =Sam2DArrToV4(ligDir,shadowWrite.x);
-        lCol =Sam2DArrToV4(ligCol,shadowWrite.x);
+        lDir =Sam2DArrNearestToV4(ligDir,shadowWrite.x);
+        lCol =Sam2DArrNearestToV4(ligCol,shadowWrite.x);
 
         to_uv.z *= max(lCol.r, max(lCol.g, lCol.b)) * shadowRate;
 
+		dir = lDir.xyz;
         if(lDir.w > 0.5) {    // point light
-            lDir.xyz = V3SubV3(rpos.xyz, lDir.xyz);
-            if(V3Len(lDir.xyz) <= lCol.w) to_uv.z *= 1.0;
-            else if(V3Len(lDir.xyz) >= lDir.w) {
-                to_uv.z *= 0.0;
-            }
-            else to_uv.z *= 1.0 - smoothstep(0.0, 1.0, (V3Len(lDir.xyz) - lCol.w) / (lDir.w - lCol.w));
+            dir = V3SubV3(rpos.xyz, dir);
+        }
+        dir = V3Nor(dir);
+
+		if(f2_uv.y > 0.5) {
+			rpos.y -= size.y;
+            rpos.xy = V2AddV2(rpos.xy, V2MulFloat(dir.xy, size.y * (1.0 + dir.y * 0.1)));
+            rpos.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄
         }
 
-        lDir.xyz = V3Nor(lDir.xyz);
-
-        if(f2_uv.y > 0.5) {
-            rpos.y -= size.y;
-            rpos.xy = V2AddV2(rpos.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
-            rpos.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄
+		if(lDir.w > 0.5) {    // point light
+			dist = V3Len(V3SubV3(rpos.xyz, lDir.xyz));
+			to_uv.z *= 1.0 - max(0.0, (dist - lCol.w) / (lDir.w - lCol.w));
         }
     }
     BranchEnd();
+
+	BranchBegin("cutout","CO",[cutoutPos]);
+	to_cutout.x = mid.y - size.y * 0.5;
+	to_cutout.y = size.y;
+	BranchEnd();
 
 	to_worldPos=rpos;
 	rpos=V4MulMatCoordi(rpos,viewMat);
@@ -289,7 +307,7 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 }
 function vs_main_trail(f2_ver : Vertex2)
 {
-    var tpos : CVec4=Sam2DArrToV4(trailPos, f2_ver.x);
+    var tpos : CVec4=Sam2DArrNearestToV4(trailPos, f2_ver.x);
     var rawUV : CVec2 = new CVec2(1.0-tpos.w,(f2_ver.y + 1.0) * 0.5);
 
 	BranchBegin("codi","C",[texCodi]);
@@ -304,6 +322,11 @@ function vs_main_trail(f2_ver : Vertex2)
 		to_uv.z = tpos.w;
 
 	var rpos : CVec4=new CVec4(tpos.xyz,1.0);
+	// 트레일은 컷아웃 대상이 아니므로 판정에서 항상 빠지게 둔다
+	BranchBegin("cutout","CO",[cutoutPos]);
+	to_cutout.x = 1000000.0;
+	to_cutout.y = 0.0;
+	BranchEnd();
 	to_worldPos=rpos;
 	rpos=V4MulMatCoordi(rpos,viewMat);
 	rpos=V4MulMatCoordi(rpos,projectMat);
@@ -371,7 +394,14 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 	BranchDefault();
 	P = V4MulMatCoordi(P, wMat);
 	BranchEnd();
-    
+
+	// 바람/그림자로 P가 흔들리기 전에 이 스프라이트의 바닥 y(YSort 기준)를 기록해 둔다.
+	// 머지는 정점이 이미 월드라 부호 있는 scale로, 비머지는 월드행렬의 이동+높이로 구한다.
+	BranchBegin("cutout","CO",[cutoutPos]);
+	to_cutout.x = isMerge > 0.5 ? (isVertexBot > 0.5 ? P.y : P.y - size.y) : (wMat[3].y - size.y * 0.5);
+	to_cutout.y = size.y;
+	BranchEnd();
+
 	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);
 	if(isVertexBot < 0.5 && windInfluence > 0.01) {
 		P.xyz = V3AddV3(P.xyz, GetWind(P.xyz, size, time));
@@ -380,31 +410,49 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 
     var lDir : CVec4;
     var lCol : CVec4;
+	var dir : CVec3;
+	var dist : number;
+
+	// 몸 높이 / 쿼드 높이. 1이면 쿼드가 곧 몸이다(프리팹처럼 그림에 맞춰 자른 스프라이트).
+	var shadowH : number;
+	BranchBegin("shadowHeight","SH",[shadowHeight]);
+	shadowH = min(1.0, shadowHeight / max(size.y, 0.0001));
+	BranchDefault();
+	shadowH = 1.0;
+	BranchEnd();
+
     BranchBegin("shadowPlaneV","SPV",[ligDir, ligCol, ligCount, shadowWrite, shadowRate]);
     if(shadowWrite.x > ligCount - 0.5) {
         to_uv.z *= 0.0;
     }
     else {
-        lDir =Sam2DArrToV4(ligDir,shadowWrite.x);
-        lCol =Sam2DArrToV4(ligCol,shadowWrite.x);
+        lDir =Sam2DArrNearestToV4(ligDir,shadowWrite.x);
+        lCol =Sam2DArrNearestToV4(ligCol,shadowWrite.x);
 
         to_uv.z *= max(lCol.r, max(lCol.g, lCol.b)) * shadowRate;
 
+		dir = lDir.xyz;
         if(lDir.w > 0.5) {    // point light
-            lDir.xyz = V3SubV3(P.xyz, lDir.xyz);
-            if(V3Len(lDir.xyz) <= lCol.w) to_uv.z *= 1.0;
-            else if(V3Len(lDir.xyz) >= lDir.w) {
-                to_uv.z *= 0.0;
-            }
-            else to_uv.z *= 1.0 - smoothstep(0.0, 1.0, (V3Len(lDir.xyz) - lCol.w) / (lDir.w - lCol.w));
+            dir = V3SubV3(P.xyz, dir);
+        }
+        dir = V3Nor(dir);
+
+        // 몸이 프레임 세로 가운데에 있다고 보고 발밑(쿼드 중심 - 몸높이/2)을 접지점으로 삼는다.
+        // 위 정점은 발밑까지 내려 빛 방향으로 눕히고, 아래 정점은 발밑까지 올려 반대쪽으로 민다 —
+        // 그래야 텍스처 속 발이 접지점에 붙는다. shadowH=1이면 아래 정점은 그대로라 예전과 같다.
+        if(isVertexBot < 0.5) {
+            P.y -= size.y * (1.0 + shadowH) * 0.5;
+            P.xy = V2AddV2(P.xy, V2MulFloat(dir.xy, size.y * (1.0 + dir.y * 0.1) * (1.0 + shadowH) * 0.5));
+            P.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄
+        }
+        else {
+            P.y += size.y * (1.0 - shadowH) * 0.5;
+            P.xy = V2AddV2(P.xy, V2MulFloat(dir.xy, size.y * (1.0 + dir.y * 0.1) * (shadowH - 1.0) * 0.5));
         }
 
-        lDir.xyz = V3Nor(lDir.xyz);
-
-        if(isVertexBot < 0.5) {
-            P.y -= size.y;
-            P.xy = V2AddV2(P.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
-            P.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄
+		if(lDir.w > 0.5) {    // point light
+			dist = V3Len(V3SubV3(P.xyz, lDir.xyz));
+			to_uv.z *= 1.0 - max(0.0, (dist - lCol.w) / (lDir.w - lCol.w));
         }
     }
 
@@ -446,7 +494,34 @@ function ps_main()
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
-	
+
+	// cutout : YSort상 기준점보다 앞에 그려지는(바닥 y가 더 낮은) 스프라이트만 뚫는다
+	// 바닥이 기준선보다 아래인 스프라이트만 뚫는다. 캐릭터 자신은 바닥이 기준선이라 제외된다.
+	// DSL이 중첩 블록 안의 discard / 복합대입을 제대로 만들지 못해, 계산만 안에서 하고 적용은 밖에서 한다.
+	// 반경(z)이 0 이하면 꺼짐. 0으로 나누지 않도록 반경을 최소 1로 묶고 결과를 스위치로 죽인다.
+	// 브랜치 안에서는 변수 선언이 금지되어 있어 선언은 전부 밖에서 한다.
+	var coOn : number = 0.0;
+	var coR : number = 1.0;
+	var coFront : number = 0.0;
+	var coX : number = 0.0;
+	var coY : number = 0.0;
+	var coD : number = 0.0;
+	var coIn : number = 0.0;
+	var coCover : number = 0.0;
+	BranchBegin("cutout","CO",[cutoutPos]);
+	coOn = cutoutPos.z > 0.0 ? 1.0 : 0.0;
+	coR = max(cutoutPos.z, 1.0);
+	// 앞에 그려지고(바닥이 더 낮고) 스프라이트 윗변이 기준선을 넘어야 = 실제로 캐릭터를 가린다
+	coFront = to_cutout.x < cutoutPos.y ? 1.0 : 0.0;
+	coCover = (to_cutout.x + to_cutout.y) > cutoutPos.y ? 1.0 : 0.0;
+	// 기준선은 발밑이라 원 중심을 그대로 쓰면 아래로 치우친다. 반경에 비례해 몸통 높이로 올린다.
+	coX = (to_worldPos.x - cutoutPos.x) / coR;
+	coY = (to_worldPos.y - (cutoutPos.y + coR * 0.5)) / coR;
+	coD = coX * coX + coY * coY;
+	coIn = coD < 1.0 ? 1.0 : 0.0;
+	L_cor.a = L_cor.a * (1.0 - coOn * coFront * coCover * coIn * (1.0 - cutoutPos.w));
+	BranchEnd();
+
     BranchBegin("alphaCut","AC",[alphaCut]);
     if ( L_cor.a <= alphaCut ) discard;
     BranchDefault();
@@ -502,6 +577,6 @@ function ps_main_mask()
     if ( L_cor.a <= 0.01 ) discard;
     BranchEnd();
 	
-	L_cor.a=mask;
+	L_cor.a=L_cor.a*mask;
 	out_color=L_cor;
 }

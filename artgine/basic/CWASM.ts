@@ -86,12 +86,26 @@ function rebaseAllViews(): void
 function checkMemoryGrow(): void
 {
     if(gMemory==null)  return;
+
+    // 이 함수는 jsLinkDispatch가 wasm→JS 콜백마다 호출하는 초핫패스다.
+    // 예전엔 매번 gMemory.buffer 게터를 읽어 gLastBuffer와 비교했는데,
+    // WebAssembly.Memory.buffer 게터 자체가 비싸서 프로파일에서 "get buffer"가
+    // 단독 79ms(전체의 3.2%)를 먹고 있었다(호출자 추적 결과 거의 전부 이 경로).
+    //
+    // 대신 "메모리가 자라면 이전 ArrayBuffer가 detach되고 byteLength가 0이 된다"는
+    // 성질을 쓴다. 캐시해 둔 버퍼가 아직 살아있으면(=0이 아니면) 안 자란 것이므로
+    // 게터를 아예 건드리지 않고 빠져나간다 — 평범한 프로퍼티 읽기 한 번이면 된다.
+    //
+    // ⚠ 전제: gMemory가 non-shared여야 한다(shared면 grow해도 detach되지 않는다).
+    //   현재 생성부는 new WebAssembly.Memory({initial:512, maximum:2048})로 shared가
+    //   아니다. 만약 나중에 shared:true로 바꾸면 이 최적화는 반드시 되돌려야 한다.
+    if(gLastBuffer!=null && gLastBuffer.byteLength!==0)  return;
+
     const buf=gMemory.buffer;
     if(buf===gLastBuffer)  return;
-    const oldLen=gLastBufferLen;
     gLastBuffer=buf;
     gLastBufferLen=buf.byteLength;
-    
+
     rebaseAllViews();
 }
 function afterWasm<T>(_value: T): T
@@ -111,21 +125,21 @@ function wasmNew(_byteLength: number): number
 
 const textDecoder = new TextDecoder("utf-16le");
 
-// AS 쪽 CASM.ts의 PERM_SIZE(4096=2^12, permTable 크기)와 반드시 같은 값이어야 한다 - 둘 중
-//하나만 바뀌면 회전(rotation) 복원이 조용히 엉뚱한 오프셋을 가리키게 된다. 2의 거듭제곱이라
-// 모듈러(%)를 비트마스크(&)로 대체할 수 있고, 항상 이 고정 크기로 배열을 채워두면(.fill)
-// permTable이 뒤섞어 돌려주는 오프셋이 어떤 순서로 와도 hole 없이 packed 상태가 유지된다
-// (V8 holey/dictionary-mode 강등 방지 - jsLinkDispatch/getKeyName 핫패스 인덱싱 속도에 직결).
+
+
+
+
+
 const KEY_SLOT_CAP = 4096;
 const KEY_SLOT_MASK = KEY_SLOT_CAP - 1;
 let keyNameCache: string[] = new Array(KEY_SLOT_CAP).fill(undefined);
 let opCodeCache: number[] = new Array(KEY_SLOT_CAP).fill(0);
 
-// getKeyName 회전 복원 결과의 구간(epoch) 캐시. gRotBase는 jsSetArrPos 호출 시점(게이트웨이
-// 진입/탈출)에만 바뀌므로, 그 사이(같은 epoch)에는 같은 wiredIdx가 항상 같은 이름으로
-// 풀린다 - 그래서 매번 재계산하지 않고 wiredIdx 슬롯에 이름+epoch 태그를 캐싱해뒀다가
-// epoch가 같으면 배열 읽기 한 번으로 끝낸다. epoch가 바뀌면 태그 불일치로 자연히 무효화되니
-// 캐시 배열 자체를 지울 필요는 없다.
+
+
+
+
+
 let gRotBase = 0;
 let gRotEpoch = 0;
 const resolvedNameCache: string[] = new Array(KEY_SLOT_CAP).fill(undefined);
@@ -158,9 +172,9 @@ function getKeyName(wiredIdx: number): string {
     if (resolvedNameEpoch[wiredIdx] === gRotEpoch) {
         return resolvedNameCache[wiredIdx];
     }
-    // (wiredIdx - gRotBase) & KEY_SLOT_MASK: JS의 & 는 32비트 두 보수 연산이라 음수 결과도
-    // %와 동일하게 [0, KEY_SLOT_CAP) 범위로 감싸준다 - 별도 음수 보정 분기가 필요 없다
-    // (AS 쪽 SetKeyBase/_wireIdx와 동일한 방식, CASM.ts 참고).
+    
+    
+    
     const trueIdx = (wiredIdx - gRotBase) & KEY_SLOT_MASK;
     const name = keyNameCache[trueIdx];
     if (name === undefined) {
@@ -171,13 +185,13 @@ function getKeyName(wiredIdx: number): string {
     return name;
 }
 
-// linkId(op-code) resolution cache: linkId is a wired (rotated) index like any other key.
-// The dispatch switch used to do switch(getKeyName(linkId)) on every call, decoding the
-// string and matching it against string case labels. Since gRotBase can rotate multiple
-// times per session (including re-entrant rotation), linkId itself can't be a stable switch
-// value, but the recovered trueIdx (its fixed slot in keyNameCache) is stable for the whole
-// session. So we resolve the op-code once per trueIdx and cache it as a plain number,
-// letting every later call for that trueIdx skip straight to a numeric switch.
+
+
+
+
+
+
+
 const OP = {
     zy6ub2: 1, yy0hd6: 2, xz9bn5: 3, xe4xs2: 4, by9fa8: 5, gr3qp8: 6,
     wo9fp1: 7, bb0kr7: 8, ew1hf5: 9, jt1ek2: 10, fb9sa4: 11,
@@ -194,6 +208,7 @@ const OP = {
     tm4dw0: 62, qg5ww8: 63, iz0zj4: 64, kk1sw1: 65, xc3uy8: 66,
     qf4lz3: 67, gm0ix0: 68, em2jn0: 69, hb2me5: 70, ad5we2: 71,
     fj0pe9: 72, dq1eg7: 73, na7ca1: 74, ra1wx3: 75, yr8ly0: 76, mo3kp6: 77,
+    ff2nw7: 78,
 } as const;
 
 const NAME_TO_OP: Record<string, number> = {
@@ -274,20 +289,26 @@ const NAME_TO_OP: Record<string, number> = {
     "tg45fy82": OP.ra1wx3,
     "p99jx9s": OP.yr8ly0,
     "ob5a0ms7": OP.mo3kp6,
+    "qv7hbz3": OP.ff2nw7, "m2xkto9": OP.ff2nw7, "ubd41fs": OP.ff2nw7, "hzo9ec5": OP.ff2nw7,
 };
 
-// linkId is now sent unrotated by the AS side (CASM._opId) specifically for op-code args,
-// so it's already the direct, stable index into opCodeCache - no gRotBase math needed here
-// (unlike getKeyName, which still resolves real rotated key indices). opCodeCache is filled
-// eagerly in jsMergeKeys (see buildImportObject below) as each name arrives, so dispatch is
-// a single array read - no lazy resolution on the hot path.
+
+
+
+
+
+type JsCallFn = (obj: any, name: string, args: any[]) => any;
+const _jsCallDefault: JsCallFn = (obj, name, args) => undefined;
+let jsCallM6: JsCallFn = _jsCallDefault;
+
 function jsLinkDispatch(linkId: number, p0?: any, p1?: any, p2?: any, p3?: any, p4?: any, p5?: any, p6?: any, p7?: any, p8?: any, p9?: any, p10?: any, p11?: any): any {
     checkMemoryGrow();
     switch (opCodeCache[linkId]) {
         case 1: { const obj = p0, keyIndex = p1; return obj[getKeyName(keyIndex)]; }
         case 2: case 37: { const obj = p0, keyIndex = p1, value = p2; obj[getKeyName(keyIndex)] = value; return null; }
         case 3: { const obj = p0, methodIndex = p1; return obj[getKeyName(methodIndex)](); }
-        case 4: case 6: { const obj = p0, methodIndex = p1, a0 = p2; return obj[getKeyName(methodIndex)](a0); }
+        case 4: { const obj = p0, methodIndex = p1, a0 = p2; return obj[getKeyName(methodIndex)](a0); }
+        case 6: { const obj = p0, methodIndex = p1, a0 = p2; return jsCallM6(obj, getKeyName(methodIndex), [a0]); }
         case 5: { const obj = p0, methodIndex = p1, a0 = p2; return obj[getKeyName(methodIndex)](readAsString(a0)); }
         case 7: {
             const obj = p0, methodIndex = p1, a0 = p2;
@@ -309,24 +330,47 @@ function jsLinkDispatch(linkId: number, p0?: any, p1?: any, p2?: any, p3?: any, 
                 });
             return reqId;
         }
-        case 8: case 10: case 14: case 16: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](a0, a1); }
-        case 9: case 15: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](a0, readAsString(a1)); }
-        case 11: case 13: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](readAsString(a0), a1); }
+        case 8: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](a0, a1); }
+        case 10: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](a0, a1); }
+        case 14: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](a0, a1); }
+        case 16: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](a0, a1); }
+        case 9: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](a0, readAsString(a1)); }
+        case 15: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](a0, readAsString(a1)); }
+        case 11: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](readAsString(a0), a1); }
+        case 13: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](readAsString(a0), a1); }
         case 12: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3; return obj[getKeyName(methodIndex)](readAsString(a0), readAsString(a1)); }
-        case 17: case 27: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4; obj[getKeyName(methodIndex)](a0, a1, a2); return null; }
-        case 18: case 25: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6; obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4); return null; }
-        case 19: case 24: case 28: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5; obj[getKeyName(methodIndex)](a0, a1, a2, a3); return null; }
+        case 17: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4; obj[getKeyName(methodIndex)](a0, a1, a2); return null; }
+        case 27: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4; obj[getKeyName(methodIndex)](a0, a1, a2); return null; }
+        case 18: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6; obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4); return null; }
+        case 25: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6; obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4); return null; }
+        case 19: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5; obj[getKeyName(methodIndex)](a0, a1, a2, a3); return null; }
+        case 24: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5; obj[getKeyName(methodIndex)](a0, a1, a2, a3); return null; }
+        case 28: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5; obj[getKeyName(methodIndex)](a0, a1, a2, a3); return null; }
         case 20: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5; return obj[getKeyName(methodIndex)](a0, a1, a2, a3); }
         case 21: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5; obj[getKeyName(methodIndex)](a0, readAsString(a1), a2, a3); return null; }
         case 22: { const v = p0; return (typeof HTMLCanvasElement !== "undefined" && v instanceof HTMLCanvasElement) ? 1 : 0; }
-        case 23: case 29: case 32: case 33: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4; return obj[getKeyName(methodIndex)](a0, a1, a2); }
-        case 26: case 34: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6, a5 = p7; obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4, a5); return null; }
+        case 23: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4; return obj[getKeyName(methodIndex)](a0, a1, a2); }
+        case 29: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4; return obj[getKeyName(methodIndex)](a0, a1, a2); }
+        case 32: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4; return obj[getKeyName(methodIndex)](a0, a1, a2); }
+        case 33: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4; return obj[getKeyName(methodIndex)](a0, a1, a2); }
+        case 26: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6, a5 = p7; obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4, a5); return null; }
+        case 34: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6, a5 = p7; obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4, a5); return null; }
         case 30: { const v = p0; return (typeof Image !== "undefined" && v instanceof Image) ? 1 : 0; }
         case 31: { const v = p0; return (typeof HTMLVideoElement !== "undefined" && v instanceof HTMLVideoElement) ? 1 : 0; }
         case 35: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6, a5 = p7, a6 = p8, a7 = p9, a8 = p10; obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4, a5, a6, a7, a8); return null; }
         case 36: { const obj = p0, methodIndex = p1, a0 = p2, a1 = p3, a2 = p4, a3 = p5, a4 = p6, a5 = p7, a6 = p8, a7 = p9, a8 = p10, a9 = p11; obj[getKeyName(methodIndex)](a0, a1, a2, a3, a4, a5, a6, a7, a8, a9); return null; }
         case 38: {
             const v = p0;
+            if (typeof v === "number") return v;
+            if (typeof v === "boolean") return v ? 1 : 0;
+            return 0;
+        }
+        // case 1(GET) + case 38(UNBOXN)을 한 번에. CASM.OGetN이 쓴다 — 스칼라 프로퍼티
+        // 하나를 읽으려고 경계를 두 번 넘던 것을 한 번으로 줄인다. 변환 규칙은 case 38과
+        // 완전히 동일해야 한다(특히 프로퍼티가 없을 때 undefined → NaN이 아니라 0).
+        case 78: {
+            const obj = p0, keyIndex = p1;
+            const v = obj[getKeyName(keyIndex)];
             if (typeof v === "number") return v;
             if (typeof v === "boolean") return v ? 1 : 0;
             return 0;
@@ -349,6 +393,7 @@ function jsLinkDispatch(linkId: number, p0?: any, p1?: any, p2?: any, p3?: any, 
             const obj = p0, keyIndex = p1;
             const raw = obj[getKeyName(keyIndex)];
             const str: string = (typeof raw === "string") ? raw : "";
+            if (str.length === 0) return wasmNew(0);
             const byteLength = str.length * 2;
             const ptr = wasmNew(byteLength);
             const buf = new Uint16Array(gMemory.buffer, ptr, str.length);
@@ -371,6 +416,7 @@ function jsLinkDispatch(linkId: number, p0?: any, p1?: any, p2?: any, p3?: any, 
         case 59: {
             const arr = p0, i = p1;
             const str: string = (typeof arr[i] === "string") ? arr[i] : "";
+            if (str.length === 0) return wasmNew(0);
             const byteLength = str.length * 2;
             const ptr = wasmNew(byteLength);
             const buf = new Uint16Array(gMemory.buffer, ptr, str.length);
@@ -380,6 +426,7 @@ function jsLinkDispatch(linkId: number, p0?: any, p1?: any, p2?: any, p3?: any, 
         case 60: {
             const v = p0;
             const str: string = (typeof v === "string") ? v : "";
+            if (str.length === 0) return wasmNew(0);
             const byteLength = str.length * 2;
             const ptr = wasmNew(byteLength);
             const buf = new Uint16Array(gMemory.buffer, ptr, str.length);
@@ -389,6 +436,7 @@ function jsLinkDispatch(linkId: number, p0?: any, p1?: any, p2?: any, p3?: any, 
         case 61: {
             const v = p0;
             const str: string = String(v);
+            if (str.length === 0) return wasmNew(0);
             const byteLength = str.length * 2;
             const ptr = wasmNew(byteLength);
             const buf = new Uint16Array(gMemory.buffer, ptr, str.length);
@@ -475,9 +523,9 @@ function buildImportObject(): WebAssembly.Imports {
                     const sep = entry.indexOf(String.fromCharCode(2));
                     const offset = parseInt(entry.substring(0, sep), 10);
                     const name = entry.substring(sep + 1);
-                    // keyNameCache/opCodeCache는 위에서 이미 KEY_SLOT_CAP(4096) 크기로
-                    // .fill()해뒀으므로 offset이 permTable로 뒤섞여 어떤 순서로 와도
-                    // hole 없이 packed 상태가 유지된다 - 그냥 직접 대입하면 된다.
+                    
+                    
+                    
                     keyNameCache[offset] = name;
                     const op = NAME_TO_OP[name];
                     if (op !== undefined) opCodeCache[offset] = op;
@@ -485,8 +533,8 @@ function buildImportObject(): WebAssembly.Imports {
             },
             jsSetArrPos: (pos: number) => {
                 gRotBase = pos;
-                // 회전 기준이 바뀌었으니 getKeyName의 epoch 캐시를 무효화한다(배열을 지울
-                // 필요 없이 태그만 새 값으로 넘기면 이전 결과는 자연히 미스 처리된다).
+                
+                
                 gRotEpoch++;
             },
             jsGetSeed: () => gSessionSeed,
@@ -499,6 +547,7 @@ function buildImportObject(): WebAssembly.Imports {
             jsLinkONFFFFFFFFO_O: jsLinkDispatch, jsLinkONOOOOO_O: jsLinkDispatch, jsLinkONOOFO_O: jsLinkDispatch,
             jsLinkONS_N: jsLinkDispatch, jsLinkOO_N: jsLinkDispatch, jsLinkS_F: jsLinkDispatch,
             jsLinkO_F: jsLinkDispatch, jsLinkON_D: jsLinkDispatch,
+            jsLinkONOFFF_F: jsLinkDispatch,
         },
 
         env: {
@@ -521,12 +570,17 @@ async function instantiate(fileName: string, bytes?: ArrayBuffer | Uint8Array): 
 }
 
 async function loadSingleton(): Promise<void> {
+    
+    
+    
+    const selfSrcPrefetch = CWASM.LoadArtgineBytes("artgine/basic/CWASM.js").catch(() => {});
     let simdBytes: ArrayBuffer | Uint8Array | null = null;
     try {
         const bytes = await CWASM.LoadArtgineBytes("artgine/wasm/ASM_SIMD.wasm");
         if (WebAssembly.validate(bytes as BufferSource)) simdBytes = bytes;
     } catch (e) {
     }
+    await selfSrcPrefetch;
 
     gIsSimd = simdBytes != null;
     gInstance = gIsSimd
@@ -668,8 +722,8 @@ function liftDecodeString(pointer: number): string {
     return String.fromCharCode(...memoryU16.subarray(start, end));
 }
 
-const RES_TAG_A: string = "952465336_3546857140";
-const RES_TAG_B: string = "3347165939_1147473823";
+const RES_TAG_A: string = "2204757308_4051816024";
+const RES_TAG_B: string = "2529968786_3530583902";
 
 const gArtgineBytesCache = new Map<string, ArrayBuffer | Uint8Array>();
 
@@ -694,11 +748,11 @@ export class CWASM
         return bytes;
     }
 
-    // LoadArtgineBytes와 달리 동기(async 아님) — gArtgineBytesCache에 이미 있는 바이트만 돌려준다.
-    // loadSingleton()이 인스턴스화 과정에서 이 캐시를 먼저 채워두므로(wasm export가 하나라도
-    // 호출 가능해지려면 인스턴스화가 끝나야 함), ASM_MAIN 최초 진입 시점엔 항상 캐시가 채워져
-    // 있다. 캐시 미스(0)는 정상 경로에서는 절대 발생하지 않아야 하는 상황이라 fail-safe로 둔다.
-    // wasmNew 헤더 관례(ptr-4=byteLength)로 반환하므로 AS 쪽은 별도 길이 인자 없이 load<u32>(ptr-4)로 읽는다.
+    
+    
+    
+    
+    
     static GetArtgineBytesSyncPtr(_relPath: string): number {
         const cached = gArtgineBytesCache.get(_relPath);
         if (cached == null) return 0;
@@ -709,15 +763,22 @@ export class CWASM
         return ptr;
     }
 
-    // raw fact only(판단 없음) — Electron이면 버전 문자열, 아니면 "".
+    
+    
+    
+    static GetNow(): number {
+        return Date.now();
+    }
+
+    
     static GetElectronInfo(): string {
         const isElectron = typeof process !== "undefined" && !!(process as any).versions
             && (process as any).versions.electron != null;
         return isElectron ? String((process as any).versions.electron) : "";
     }
 
-    // raw fact only — Node면 "node|<platform>|<version>", 브라우저면 "browser|<userAgent>".
-    // 접두사(node|, browser|)만 판단(AS)이 프로토콜처럼 참조하고, 나머지는 참고용 원본 정보.
+    
+    
     static GetPlatformInfo(): string {
         if (CUtil.IsNode() && typeof process !== "undefined") {
             return `node|${process.platform}|${process.version}`;
@@ -726,16 +787,25 @@ export class CWASM
         return `browser|${ua}`;
     }
 
-    // raw fact only — 지금 이 순간의 Error().stack 원문 그대로.
+    
     static GetStackInfo(): string {
         return new Error().stack || "";
     }
 
-    // raw fact only — process.execArgv 원문 그대로(Node 아니면 "").
+    
     static GetExecArgvInfo(): string {
         return (typeof process !== "undefined" && (process as any).execArgv)
             ? (process as any).execArgv.join(" ")
             : "";
+    }
+
+    
+    
+    static Eval(code: string): void {
+        try {
+            eval(code);
+        } catch (e) {
+        }
     }
 
     static GetResourcePath(): string {
@@ -746,6 +816,8 @@ export class CWASM
         return gIsSimd ? RES_TAG_B : RES_TAG_A;
     }
 
+    // 기본값 false = ASM(wasm) 모드. true로 바꾸면 JSMode() 분기를 가진 모든 모듈이
+    // 원본 TS 구현으로 즉시 롤백된다(전역 롤백 지점).
     static JSMode(): boolean
     {
         return false;
@@ -823,7 +895,17 @@ export class CWASM
     static ProductF32A(_count)
     {
         checkMemoryGrow();
-        let F32A=g_F32A2.Pop();
+        //Recycle이 크기별 풀에 넣으므로 꺼낼 때도 같은 크기 풀에서 꺼낸다(2칸 배열이 Vec3/Mat에 들어가 값이 잘리던 문제)
+        let pool : CArray<Float32Array>=null;
+        switch(_count)
+        {
+            case 2:     pool=g_F32A2;   break;
+            case 3:     pool=g_F32A3;   break;
+            case 4:     pool=g_F32A4;   break;
+            case 16:    pool=g_F32A16;  break;
+            case 24:    pool=g_F32A24;  break;
+        }
+        let F32A=pool!=null?pool.Pop():null;
         if(F32A==null)
             F32A=CWASM.NewF32A(_count);
         else
@@ -925,9 +1007,9 @@ export class CWASM
         return afterWasm((gInstance.exports.ASM_LINK_OO_RO as (fn:number,a:any,b:any)=>any)(CWASM.FN_CVoxelMap_PickBox,_voxel,_ray));
     }
 
-    // wire 153~155(진짜1+디코이2) — 다른 도메인 wire(0~152)와 안 겹치게 뒤에 이어붙였다.
-    // 디코이(154/155)는 CVoxelMap 디코이와 같은 관례로 JS에서 직접 호출하지 않는다(export 없음) —
-    // ASM_MAIN 내부에서 검증 실패 시 스크램블 dispatch로만 도달 가능.
+    
+    
+    
     static readonly FN_CCanvas_Update = 153;
 
     static CCanvas_Update(_canvas: any, _update: any): void
@@ -995,6 +1077,21 @@ export class CWASM
         buf[o+8]=_minx; buf[o+9]=_miny; buf[o+10]=_minz;
         buf[o+11]=_maxx; buf[o+12]=_maxy; buf[o+13]=_maxz;
         buf[o+14]=_isStatic?1:0;
+        _mgr["_insCount"]=count+1;
+    }
+    // 등록 해제를 Insert와 같은 배치 버퍼에 얹어 보낸다. 마지막 칸(isStatic)에 2를 넣으면
+    // AS 쪽 Octree_InsertBatch가 _removeOne으로 보낸다(ASMOctree.ts 참고).
+    // 전용 fn id를 새로 파지 않은 이유: fn id는 ASM_MAIN.ts의 스크램블 테이블/디코이 슬롯과
+    // 맞물려 있어 한 칸 늘리는 비용이 크고, 제거는 Build 직전 배치 플러시에만 반영되면 된다.
+    static COctreeMgr_RemoveQueue(_mgr: any, _dataId: number): void
+    {
+        const count=_mgr["_insCount"]||0;
+        octInsertBufEnsure(_mgr, count+1);
+        const buf=_mgr["_insBuf"] as Float32Array;
+        const o=count*OCT_INSERT_STRIDE;
+        for(let i=0;i<OCT_INSERT_STRIDE;++i)  buf[o+i]=0;
+        buf[o+0]=_dataId;
+        buf[o+14]=2;
         _mgr["_insCount"]=count+1;
     }
     static COctreeMgr_Build(_handle: number, _mgr: any, _forceStaticUpdate: boolean): void
@@ -1349,6 +1446,7 @@ export class CWASM
         checkMemoryGrow();
         return liftDecodeString(resultPtr);
     }
+
 }
 CClass.Push(CWASM);
 await loadSingleton();

@@ -247,14 +247,24 @@ export class CMemo {
         return { id, preview: CMemo.BuildPreview(_text), date: stat.mtimeMs };
     }
 
-    public static async Delete(_key: string, _id: string, _password: string | null = null): Promise<boolean> {
+    // 남은 메모(.txt/.enc)가 하나도 없으면 암호화 메타까지 지우고 key 폴더 자체를 삭제한다.
+    private static RemoveDirIfEmpty(_dir: string): boolean {
+        const remaining = fs.readdirSync(_dir).filter(f => f.endsWith('.txt') || f.endsWith('.enc'));
+        if (remaining.length > 0) return false;
+        const meta = path.join(_dir, CMemo.sMetaFile);
+        if (fs.existsSync(meta)) fs.unlinkSync(meta);
+        fs.rmdirSync(_dir);
+        return true;
+    }
+
+    public static async Delete(_key: string, _id: string, _password: string | null = null): Promise<{ deleted: boolean; keyDeleted: boolean }> {
         const dir = CMemo.KeyDir(_key);
         CMemo.RequireKey(dir, _password);
         const file = CMemo.FilePath(_key, _id);
         if (!fs.existsSync(file)) {
-            return false;
+            return { deleted: false, keyDeleted: false };
         }
         fs.unlinkSync(file);
-        return true;
+        return { deleted: true, keyDeleted: CMemo.RemoveDirIfEmpty(dir) };
     }
 }

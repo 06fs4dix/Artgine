@@ -166,12 +166,14 @@ export class CParserFBX extends CParser
 	public mModelKeyMap=new Map<string,string>();
 	mColorTex : boolean;
 	public mComputeNormal : boolean;
+	public mMergeStatic : boolean;
 
-	constructor(_colorTex=false,_computeNormal=true)
+	constructor(_colorTex=false,_computeNormal=true,_mergeStatic=true)
 	{
 		super();
 		this.mColorTex=_colorTex;
 		this.mComputeNormal=_computeNormal;
+		this.mMergeStatic=_mergeStatic;
 	}
 	override GetResult() 	{	return this.mMesh;	}
 	PosScaAxis(_vec)

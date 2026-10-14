@@ -43,6 +43,7 @@ export class CRenderer
 {
     public mDev : CDevice=null;
     public mRes : CRes=null;
+    public mLoadSet : Set<any>=null;
     public mPF : CPreferences;
 	public mShaderInterpret : CShaderInterpret;
 	mTexUse=new CTexUse();
@@ -80,11 +81,10 @@ export class CRenderer
 		// this.mRes.Push(this.mUniToSam2dKey,this.mUniToSam2d);
 
 
-
 		this.mUniToSam2dArr=new CTexture();
 		this.mUniToSam2dArr.SetSize(2048,256);
 		this.mUniToSam2dArr.PushInfo([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,5)]);
-		this.mUniToSam2dArr.SetFilter(CTexture.eFilter.Linear);
+		this.mUniToSam2dArr.SetFilter(CTexture.eFilter.Nearest);
 		this.mUniToSam2dArr.SetMipMap(CTexture.eMipmap.None);
 		this.mUniToSam2dArr.CreateBuf();
 		this.mUniToSam2dArr.mReadPixelEvent=new CEvent(this.ReadPixel,this);
@@ -96,7 +96,7 @@ export class CRenderer
     async BuildH5CMDList(_ch5json:CH5CMDList)
 	{
 		CH5Canvas.Init(_ch5json.mSize.x,_ch5json.mSize.y);
-		CH5Canvas.Draw(_ch5json.mCMD);
+		await CH5Canvas.Draw(_ch5json.mCMD);
 		let tex=CH5Canvas.GetNewTex();
 		this.mRes.Push(_ch5json.mKey+".tex",tex);
 		this.BuildTexture(tex);
@@ -107,7 +107,58 @@ export class CRenderer
 	BlitColor(_read : CTexture,_draw : CTexture=null){}
 	Begin(_tex : CTexture=null,_surface=false,_rtUse:Set<number>=null,_rtLevel=0){	return false;	}
 	End(_tex : CTexture=null,_rtUse :Set<number>=null,_rtLevel=0){}
-	
+
+	BlurEnvmap(_texKey : string)
+	{
+		const tex = this.mRes.Find(_texKey) as CTexture;
+		if(this.mDev.GL() == null || tex == null || tex.GetGBuf().length == 0)
+			return;
+
+		const info = tex.GetInfo()[0];
+		const isFloat = info.mFormat == CTexture.eFormat.RGBA32F;
+		const type = isFloat ? this.mDev.GL().FLOAT : this.mDev.GL().UNSIGNED_BYTE;
+		const size = tex.GetWidth();
+		const lodCount = Math.floor(Math.log2(size)) + 1;
+		if(lodCount < 2)
+			return;
+
+		const gTex = tex.GetGBuf()[0];
+		const fb = this.mDev.GL().createFramebuffer();
+		this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, fb);
+		this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D_ARRAY, gTex);
+
+		const mips : (Uint8Array|Float32Array)[][] = [];
+		for(let layer = 0; layer + 6 <= info.mCount; layer += 6)
+		{
+			const faces : (Uint8Array|Float32Array)[] = [];
+			for(let lod = 0; lod < lodCount; lod++)
+			{
+				const s = size >> lod;
+				for(let face = 0; face < 6; face++)
+				{
+					const buf = isFloat ? new Float32Array(s * s * 4) : new Uint8Array(s * s * 4);
+					this.mDev.GL().framebufferTextureLayer(this.mDev.GL().FRAMEBUFFER, this.mDev.GL().COLOR_ATTACHMENT0, gTex, lod, layer + face);
+					this.mDev.GL().readPixels(0, 0, s, s, this.mDev.GL().RGBA, type, buf);
+					faces.push(buf);
+				}
+			}
+			mips.push(faces);
+		}
+
+		const blurred = CImgPro.SphericalGaussianBlur(tex, mips);
+		for(let lod = 0; lod < blurred.length; lod++)
+		{
+			const s = size >> lod;
+			const bufs = blurred[lod].GetBuf();
+			for(let layer = 0; layer < bufs.length; layer++)
+				this.mDev.GL().texSubImage3D(this.mDev.GL().TEXTURE_2D_ARRAY, lod, 0, 0, layer, s, s, 1, this.mDev.GL().RGBA, type, bufs[layer] as ArrayBufferView);
+		}
+
+		this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D_ARRAY, null);
+		this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, null);
+		this.mDev.GL().deleteFramebuffer(fb);
+	}
+
 	GetMainFrameTex() {
 		return this.mMainFrameTex;
 	}
@@ -271,12 +322,72 @@ export class CRendererGL extends CRenderer
 		
 		return false;	
 	}
-	override End(_tex : CTexture=null,_rtUse :Set<number>,_rtLevel=0)
-	{
-		 
-        
-    
-	}
+	override End(_tex : CTexture=null,_rtUse :Set<number> = null,_rtLevel=0)
+    {
+        this.mDev.mClearColor=true;
+		this.mDev.mClearDepth=true;
+        this.mFrameBufStack.pop();
+		let last=null;
+		if(this.mFrameBufStack.length>0)
+			last=this.mFrameBufStack[this.mFrameBufStack.length-1];
+			
+		//xrFrame가 있으면 그걸로 재초기화 시켜줌
+		if (_tex != null)
+		{
+			_tex.BindFrame(false);
+			if(last==null)
+			{
+				if(_tex.GetAnti()>0)
+				{
+					this.mDev.GL().bindFramebuffer(this.mDev.GL().READ_FRAMEBUFFER, _tex.mFrameBuf[_rtLevel]);
+					this.mDev.GL().bindFramebuffer(this.mDev.GL().DRAW_FRAMEBUFFER, _tex.mAntiBuf[_rtLevel]);
+					//this.mDev.GL().clearBufferfv(this.mDev.GL().COLOR, 0, [1.0, 1.0, 1.0, 1.0]);
+					this.mDev.GL().blitFramebuffer(0, 0, _tex.GetWidth(), _tex.GetHeight(),
+				                     0, 0, _tex.GetWidth(), _tex.GetHeight(),
+				                     this.mDev.GL().COLOR_BUFFER_BIT, this.mDev.GL().LINEAR);
+				                     
+				    //this.mDev.GL().bindFramebuffer(this.mDev.GL().READ_FRAMEBUFFER, null);
+					//this.mDev.GL().bindFramebuffer(this.mDev.GL().DRAW_FRAMEBUFFER, null);
+				}
+				
+				
+			                     
+				
+				this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, this.mXRFrame);
+			}
+			else
+				this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, last.mFrameBuf[0]);
+		}
+		//xrFrame가 있으면 데이터 최종은 webxr에서 처리해야함
+		else if(this.mXRFrame==null)
+			this.mDev.GL().flush();
+		this.mDev.ViewPort(0, 0, this.mPF.mWidth, this.mPF.mHeight);
+
+
+		
+		if(_tex!=null)// && _tex.GetInfo()[0].m_target==CTexture.eTarget.Cube)
+		{
+			var info=_tex.GetInfo();
+			for(var i=0;i<info.length;++i)
+			{
+				if(_tex.GetMipMap()!=CTexture.eMipmap.None)
+				{
+					
+					
+					var type=Number(this.mDev.GL().TEXTURE_2D);
+					if(info[i].mTarget==CTexture.eTarget.Array)
+						type=this.mDev.GL().TEXTURE_2D_ARRAY;
+					else if(info[i].mTarget==CTexture.eTarget.Cube)
+						type=this.mDev.GL().TEXTURE_CUBE_MAP;
+					this.mDev.GL().bindTexture(type, _tex.GetGBuf()[i]);
+					this.mDev.GL().generateMipmap(type);
+					this.mDev.GL().bindTexture(type, null);
+				}
+
+			}
+
+		}
+    }
 	override GetMainFrameTex() {		return this.mMainFrameTex;	}
 	SetXR(_frame,_eye)
 	{
@@ -652,6 +763,16 @@ export class CRendererGPU extends CRenderer
 		return null;
 	}
 	GenMipmap(_gt : GPUTexture,_format : GPUTextureFormat,_levels : number,_layers : number)
+	{
+	}
+	//GL End의 generateMipmap 자리. 프레임 인코더가 제출된 뒤에 만들어야 이번 프레임 내용이 들어간다
+	mRTMipSet=new Set<CTexture>();
+	mEnvBlurBusy=false;
+	mEnvBlurAgain=false;
+	override BlurEnvmap(_texKey : string)
+	{
+	}
+	async BlurEnvmapAsync(_tex : CTexture)
 	{
 	}
 	GetSampler(_tex : CTexture) : GPUSampler

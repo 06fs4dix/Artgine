@@ -213,10 +213,15 @@
 
   var ws = null;
   var disconnected = false;
+  // 서버는 접속 직후 pty 출력 전체를 재생하는데, 거기엔 CLI가 시작할 때 보낸 터미널 질의(DA1 ESC[c 등)가
+  // 들어 있다. xterm이 이를 다시 받아 응답(ESC[?1;2c)을 onData로 내보내면 이미 입력 대기 중인 CLI가 글자로
+  // 받아 입력창에 "[?1;2c"가 쌓인다(grok 실측). 서버가 재생 직후 보내는 첫 상태 메시지까지의 응답은 버린다.
+  var _replaying = false;
   // 로그 패널(마크다운 모드)은 buildInputBar 안에서만 존재하므로(읽기전용 뷰어는 buildInputBar 자체가
   // 안 불린다), 실제 구현은 buildInputBar가 이 변수에 덮어씌운다. connect()의 ws.onmessage는 바깥
   // 스코프라 buildInputBar 안의 함수 선언을 직접 볼 수 없어서 이렇게 바깥에 자리를 만들어둔다.
-  var _onSessionStatus = function () {};
+  var _sessionStatus = "";
+  var _onSessionStatus = function (status) { _sessionStatus = status || ""; };
   // 핸드오프 진행 중에는 이 세션의 모든 입력을 막는다(리드모드처럼). 하단 입력창뿐 아니라
   // xterm 화면 직접 입력(term.onData)·메뉴·방향키가 전부 sendRaw를 거치므로 여기서 한 번에 차단한다.
   var _handoffLock = false;
@@ -228,9 +233,48 @@
   var _frameVisible = true;
   var MIN_TERM_COLS = 20;
   var MIN_TERM_ROWS = 5;
+  var _focusInAt = 0;
+  function _wsSend(text) {
+    if (_handoffLock || !_frameVisible) return;
+    if (text === "\x1b[I") _focusInAt = Date.now();
+    if (ws && ws.readyState === 1) ws.send(text);
+  }
+  // grok 승인 메뉴는 뜬 직후 키보드 포커스가 메뉴가 아닌 곳(하단 "Help improve Grok" 배너)에 남아 있어
+  // 첫 Enter를 소비해 버린다(\r은 서버까지 가지만 메뉴가 안 닫힘). 방향키를 한 번 받으면 메뉴가 포커스를
+  // 가져가므로, Enter 직전에 선택을 바꿨다 되돌리는 방향키 쌍을 먼저 보낸다. 선택이 끝 항목이면
+  // 아래로 못 가거나 순환할 수 있어 위→아래 순서로 뒤집는다.
+  // 또 하나: 포커스-인(ESC[I, 화면 클릭/창 전환/재접속 때 xterm이 보냄) 직후 약 1~3초 안에 들어온 키는
+  // grok이 버린다(실측: 1초 이내 Enter 실패, 3초 뒤 성공). 그 시간이 지나도록 기다렸다 보낸다.
+  var GROK_FOCUS_QUIET_MS = 2500;
+  function _grokMenuSel() {
+    var b = term.buffer.active, rows = [], sel = 0, yes = false;
+    for (var i = term.rows - 1; i >= 0; i--) {
+      var line = b.getLine(b.viewportY + i);
+      if (!line) continue;
+      var m = /^\s*(?:[│┃|][\s|]*)?(\d+)\s*\((.)\)\s*(.*)$/.exec(line.translateToString(true));
+      if (!m) { if (rows.length) break; continue; }
+      var num = Number(m[1]);
+      if (rows.length && num !== rows[rows.length - 1] - 1) break;
+      rows.push(num);
+      if (m[2] === "•") sel = num;
+      if (/\bYes\b/i.test(m[3])) yes = true;
+    }
+    if (rows.length < 3 || rows[rows.length - 1] !== 1 || !sel || !yes) return 0;
+    return sel === rows[0] ? -1 : 1;
+  }
   function sendRaw(text) {
     if (_handoffLock || !_frameVisible) return;
-    if (ws && ws.readyState === 1) ws.send(text);
+    if (MODE === "grok" && text === "\r") {
+      var dir = _grokMenuSel();
+      if (dir) {
+        var w = Math.max(0, GROK_FOCUS_QUIET_MS - (Date.now() - _focusInAt));
+        setTimeout(function () { _wsSend(dir > 0 ? "\x1b[B" : "\x1b[A"); }, w);
+        setTimeout(function () { _wsSend(dir > 0 ? "\x1b[A" : "\x1b[B"); }, w + 100);
+        setTimeout(function () { _wsSend("\r"); }, w + 250);
+        return;
+      }
+    }
+    _wsSend(text);
   }
   // grok은 ESC를 취소로 받지 않아 Ctrl+C를 대신 보낸다(다른 CLI의 ESC와 같은 결과).
   function sendEsc() { sendRaw(MODE === "grok" ? "\x03" : "\x1b"); }
@@ -250,16 +294,38 @@
     }
   });
 
-  // codex/opencode scroll emulation (우리 term 사용)
-  var _scrollDepth = 0;
-  function _codexUp()   { var p = _scrollDepth++; sendRaw("\x1b[A"); if (p === 0) sendRaw("\x14"); }
-  function _codexDown() { var p = _scrollDepth; if (_scrollDepth > 0) _scrollDepth--; sendRaw("\x1b[B"); if (p === 1 && _scrollDepth === 0) sendRaw("\x14"); }
+  // codex(--no-alt-screen)는 지난 대화를 xterm 스크롤백에 쌓는다. 서버가 node-pty 동봉 ConPTY를 써야
+  // 스크롤 영역 삽입이 그대로 넘어와 쌓인다(Win10 내장 conhost는 재그리기로 바꿔 스크롤백이 비었다).
+  function _codexUp()   { term.scrollPages(-1); }
+  function _codexDown() { term.scrollPages(1); }
+  // grok은 마우스 추적(SGR)을 켜고 휠 이벤트를 포커스 이동 없이 스크롤백에 한 줄씩 적용한다(위/아래 끝
+  // 클램프, 바닥을 넘기면 추적 재개도 grok이 처리). 예전엔 Tab으로 스크롤백 포커스에 들어가 Ctrl+K/J 횟수를
+  // 클라이언트에서 셌는데, grok은 끝에서 키를 무시하고 연타 시 일부를 흘려 카운터가 어긋났고 그 뒤의 Tab이
+  // 포커스를 거꾸로 뒤집었다(스크롤백에 갇혀 첫 입력 글자가 먹힘). 좌표는 권한 메뉴가 아닌 스크롤백 영역을 가리킨다.
+  // 마우스 추적이 꺼진 화면에 SGR을 보내면 파라미터가 입력창에 글자로 새므로 그때는 보내지 않는다.
+  // 서버는 ws 메시지마다 pty 쓰기 뒤 15ms를 쉬므로(_ptyWriteChunked) 이벤트별로 보내면 빠른 휠이 수 초씩 밀린다.
+  // 한 프레임 동안 모아 한 메시지로 보낸다.
+  var _grokWheelBuf = "";
+  function _grokWheel(up) {
+    if (term.modes.mouseTrackingMode === "none") return;
+    if (!_grokWheelBuf) setTimeout(function () { var s = _grokWheelBuf; _grokWheelBuf = ""; sendRaw(s); }, 16);
+    _grokWheelBuf += "\x1b[<" + (up ? 64 : 65) + ";2;" + Math.max(2, Math.floor(term.rows / 3)) + "M";
+  }
 
   // xterm 화면(#xt) 자체에 포커스가 있을 때도 Tab은 항상 부모(Home)로 전달해 사이드바를 토글한다.
   // (하단 입력창 inp에 포커스가 있을 때의 Tab 처리는 buildInputBar 안의 별도 리스너가 담당)
   term.attachCustomKeyEventHandler(function (e) {
     if (e.type !== "keydown") return true;
     if (e.key === "Tab") { e.preventDefault(); sendToParent("terminal-tab-key"); return false; }
+    // Ctrl+C: customKeyEventHandler가 false를 반환하면 xterm._keyDown이 즉시 리턴하며 preventDefault도
+    // \x03 전송도 하지 않는다(xterm.js lib 소스 확인). 그러면 브라우저 네이티브 Ctrl+C 복사 동작이
+    // 그대로 진행되고, xterm이 이미 등록해둔 copyHandler가 그 "copy" 이벤트에서 선택 영역을
+    // clipboardData에 채운다(secure context 여부와 무관 — navigator.clipboard.writeText는 이 서버처럼
+    // HTTP·원격 IP라 secure context가 아니면 조용히 실패하므로 여기서 직접 호출하면 안 된다).
+    // 선택이 없을 때는 그대로 통과시켜 기존 인터럽트(SIGINT) 동작을 유지한다.
+    if (e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && (e.key === "c" || e.key === "C") && term.hasSelection()) {
+      return false;
+    }
     if (MODE === "codex") {
       if (e.key === "PageUp")   { _codexUp();   return false; }
       if (e.key === "PageDown") { _codexDown(); return false; }
@@ -275,6 +341,7 @@
     if (window.__AUTH_TOKEN__) url += "&authToken=" + encodeURIComponent(window.__AUTH_TOKEN__);
     ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
+    _replaying = true;
     ws.onopen = function () { disconnected = false; sendResize(); };
     ws.onmessage = function (ev) {
       if (typeof ev.data === "string") { term.write(ev.data); return; }
@@ -282,7 +349,11 @@
       // 항상 텍스트 프레임으로 오므로 이 분기와 절대 섞이지 않는다.
       try {
         var msg = JSON.parse(new TextDecoder("utf-8").decode(ev.data));
-        if (msg && msg.type === "status") _onSessionStatus(msg.status);
+        if (msg && msg.type === "status") {
+          // term.write는 비동기 파싱이라, 재생분의 응답이 전부 나온 뒤에 풀리도록 쓰기 큐 끝에서 해제한다.
+          if (_replaying) term.write("", function () { _replaying = false; });
+          _onSessionStatus(msg.status);
+        }
       } catch (e) {}
     };
     ws.onclose = function () { disconnected = true; term.write("\r\n\x1b[31m[disconnected] retry: Enter\x1b[m\r\n"); };
@@ -312,9 +383,18 @@
 
     term.onData(function (d) {
       if (disconnected) { if (d === "\r") { disconnected = false; connect(); } return; }
+      if (_replaying) return;
       if (!readOnly) sendRaw(d);
     });
-    window.addEventListener("resize", sendResize);
+    // grok은 pty 크기가 실제로 바뀔 때마다 대화 전체를 다시 배치하느라 긴 세션에서 수십 초 동안 CPU를 다 쓰고
+    // 모든 입력(휠·키)을 무시한다(39분 세션 실측 약 50초, 같은 크기 재전송은 무해). 창 드래그 중 중간 크기마다
+    // 보내면 그 시간이 쌓이므로 마지막 크기만 보낸다.
+    var _resizeTimer = 0;
+    function _sendResizeDebounced() { clearTimeout(_resizeTimer); _resizeTimer = setTimeout(sendResize, 300); }
+    window.addEventListener("resize", _sendResizeDebounced);
+    // 같은 세션을 크기가 다른 창 여러 개가 보고 있으면 pty는 마지막 resize 크기를 따른다.
+    // 사용자가 조작하려고 포커스를 준 창의 크기로 되돌려 CLI 화면이 그 창에서 깨지지 않게 한다.
+    window.addEventListener("focus", _sendResizeDebounced);
     connect();
 
     if (readOnly) { buildLoginBar(); return; }
@@ -722,6 +802,7 @@
       if (_logOpen) _logHide();
     }
     _onSessionStatus = function (status) {
+      _sessionStatus = status || "";
       if (status === "permission") {
         _switchToTerminalForPermission();
       } else if (status === "idle" && _autoSwitchedAway) {
@@ -880,13 +961,13 @@
       if (MODE === "antigravity" && c === "/status") return "/usage";
       return text;
     }
-    // 핸드오프: 다른 프로바이더를 슬래시로 지목(예: /codex)하면, 현재 대화를 요약해 넘기고 그 프로바이더로 이어간다.
+    // 핸드오프: 다른 프로바이더를 슬래시로 지목(예: /codex)하면, 현재 대화 로그 번호를 넘기고 그 프로바이더로 이어간다.
     // 셸(cmd) 세션이나 현재와 같은 프로바이더는 대상이 아니다.
     var HANDOFF_ALIASES = { claude: "claude", codex: "codex", agy: "antigravity", opencode: "opencode", grok: "grok" };
     function startHandoff(to) {
-      _handoffLock = true;                    // 이 세션의 모든 입력 차단(요약이 오염되지 않도록)
+      _handoffLock = true;                    // 이 세션의 모든 입력 차단(넘기는 동안 대화가 더 진행되지 않도록)
       inp.disabled = true; inp.value = ""; autoHeight();
-      term.write("\r\n\x1b[36m[handoff] Summarizing this session and switching to " + to + "... (up to 3 min)\x1b[m\r\n");
+      term.write("\r\n\x1b[36m[handoff] Passing this session's conversation log to " + to + "...\x1b[m\r\n");
       var q = "token=" + encodeURIComponent(token) + "&to=" + encodeURIComponent(to);
       if (storedToken) q += "&authToken=" + encodeURIComponent(storedToken);
       fetch(window.__CTX_PATH__ + "/cmd/handoff?" + q, { method: "POST" })
@@ -911,16 +992,49 @@
 
     // Ctrl+Z 복원용: 마지막으로 실제 전송한 원본 입력(정규화 전) 텍스트.
     var _lastSent = "";
+    // grok은 마우스 추적을 켜 두어 화면 클릭이 grok으로 넘어가고, 클릭한 항목이 선택되며 포커스가 스크롤백으로
+    // 간다(하단 안내 "Space:prompt"). 그 상태에서 sendInput의 선행 \r이 가면 선택된 이전 프롬프트의 인라인 편집이
+    // 열리고 뒤따르는 입력이 거기에 붙어 "Resubmit from here"(대화 되감기)로 이어진다(ai/ctx/6cf3d3e2… 실측).
+    // 한글은 영문과 달리 프롬프트로 자동 복귀하지도 않는다. 문서상 복귀 키인 Space는 인라인 편집 중엔 먹히지
+    // 않아서 입력 박스를 직접 클릭한다. 인라인 편집 중엔 첫 클릭이 편집 취소만 하고 포커스는 스크롤백에 남으므로
+    // (실측), 클릭 후 화면을 다시 읽어 복귀가 확인될 때까지 반복한 뒤에 전송한다.
+    function _grokScrollPromptRow() {
+      if (term.modes.mouseTrackingMode === "none") return -1;
+      var b = term.buffer.active, row = -1, scrollFocused = false;
+      for (var i = term.rows - 1; i >= 0; i--) {
+        var line = b.getLine(b.viewportY + i);
+        if (!line) continue;
+        var t = line.translateToString(true);
+        if (t.indexOf("Space:prompt") >= 0) scrollFocused = true;
+        if (row < 0 && t.indexOf("│ >") >= 0) row = i + 1;
+      }
+      return scrollFocused ? row : -1;
+    }
+    function _grokFocusPrompt(done, tries) {
+      var row = _grokScrollPromptRow();
+      if (row < 0 || tries >= 4) { done(); return; }
+      var col = term.cols - 4;
+      sendRaw("\x1b[<0;" + col + ";" + row + "M\x1b[<0;" + col + ";" + row + "m");
+      setTimeout(function () { _grokFocusPrompt(done, tries + 1); }, 300);
+    }
+
     function sendInput() {
       if (disconnected) { disconnected = false; connect(); return; }
-      if (inp.value.trim()) _lastSent = inp.value;
-      var text = normalize(inp.value);
+      var raw = inp.value;
+      if (raw.trim()) _lastSent = raw;
+      var text = normalize(raw);
       if (text.trim() === "/super") { _toggleSuper(); inp.value = ""; autoHeight(); inp.focus(); return; }
-      var _ht = inp.value.trim().toLowerCase();
+      var _ht = raw.trim().toLowerCase();
       if (_ht.charAt(0) === "/" && HANDOFF_ALIASES.hasOwnProperty(_ht.slice(1))) {
         var _htTo = HANDOFF_ALIASES[_ht.slice(1)];
         if (_htTo !== MODE) { startHandoff(_htTo); return; }
       }
+      inp.value = ""; autoHeight(); inp.focus();
+      if (MODE === "grok") _grokFocusPrompt(function () { _sendText(text); }, 0);
+      else _sendText(text);
+    }
+
+    function _sendText(text) {
       if (text) {
         if (text[0] === "/") _forceTerminalView();
         // ESC 직후 IME 리셋 등으로 맨 앞 한 글자가 유실되는 경우를 대비해 항상 빈 엔터를 먼저 보낸다.
@@ -941,7 +1055,6 @@
           else sendRaw("\r");
         }
       } else sendRaw("\r");
-      inp.value = ""; autoHeight(); inp.focus();
     }
 
     var _imeResetting = false; // ESC 연타 시 포커스 이동 사이클이 겹치지 않게 하는 가드
@@ -995,6 +1108,12 @@
         if (_lastSent) { inp.value = _lastSent; autoHeight(); inp.setSelectionRange(inp.value.length, inp.value.length); }
         return;
       }
+      if ((e.key === "PageUp" || e.key === "PageDown") && !_logOpen && !e.ctrlKey && !e.altKey && !e.metaKey &&
+          (MODE === "grok" || MODE === "opencode" || MODE === "codex")) {
+        e.preventDefault();
+        if (e.key === "PageUp") _pageUp(); else _pageDown();
+        return;
+      }
       if (!inp.value) { var a = { ArrowUp: "\x1b[A", ArrowDown: "\x1b[B", ArrowLeft: "\x1b[D", ArrowRight: "\x1b[C" }; if (a[e.key]) { e.preventDefault(); sendRaw(a[e.key]); } }
     });
     document.addEventListener("click", function (e) { if (!bar.contains(e.target)) _acHide(); });
@@ -1017,20 +1136,25 @@
     setTimeout(sendResize, 800);
 
     // 로그 패널이 열려 있으면 터미널용 휠/터치 가로채기를 끄고 #mi-log 네이티브 스크롤을 살린다.
-    if (MODE === "codex") {
-      document.addEventListener("wheel", function (e) {
-        if (_logOpen) return;
-        e.preventDefault(); e.stopPropagation();
-        if (e.deltaY < 0) _codexUp(); else _codexDown();
-      }, { passive: false, capture: true });
-    }
+    // 트랙패드는 작은 delta 이벤트를 연달아 쏘므로 이벤트 수가 아니라 누적 거리로 줄 수를 정한다.
+    var WHEEL_STEP_PX = 40;
+    var _wheelAccum = 0;
     document.addEventListener("wheel", function (e) {
       if (_logOpen) return;
-      if (MODE !== "opencode" && MODE !== "grok") return;
+      if (MODE === "grok") {
+        e.preventDefault(); e.stopPropagation();
+        var px = e.deltaMode === 0 ? e.deltaY : e.deltaY * WHEEL_STEP_PX;
+        if ((px < 0) !== (_wheelAccum < 0)) _wheelAccum = 0;
+        _wheelAccum += px;
+        while (_wheelAccum <= -WHEEL_STEP_PX) { _wheelAccum += WHEEL_STEP_PX; _grokWheel(true); }
+        while (_wheelAccum >= WHEEL_STEP_PX)  { _wheelAccum -= WHEEL_STEP_PX; _grokWheel(false); }
+        return;
+      }
+      if (MODE !== "opencode") return;
       e.preventDefault(); e.stopPropagation();
       sendRaw(e.deltaY < 0 ? "\x1b[5~" : "\x1b[6~");
     }, { passive: false, capture: true });
-    // codex/opencode/grok처럼 휠을 통째로 가로채지 않는 나머지 모드(claude 등)에서, xterm 내장
+    // opencode/grok처럼 휠을 통째로 가로채지 않는 나머지 모드(claude/codex 등)에서, xterm 내장
     // 자동 하단 추적(BufferService.isUserScrolling)이 풀리지 않고 멈추는 경우가 있다. 원인: 네이티브
     // 스크롤(휠/터치/스크롤바 드래그 전부 공통)은 Viewport._handleScroll이 scrollTop을 행높이로 나눠
     // Math.round()한 값으로 목표 줄을 계산하는데, WebGL 렌더러/서브픽셀 스크롤 오차로 스크롤바를 끝까지
@@ -1045,7 +1169,7 @@
     if (_xtViewportEl) {
       _xtViewportEl.addEventListener("scroll", function () {
         if (_logOpen) return;
-        if (MODE === "codex" || MODE === "opencode" || MODE === "grok") return;
+        if (MODE === "opencode" || MODE === "grok") return;
         var dims = term._core && term._core._renderService && term._core._renderService.dimensions;
         var rowH = (dims && dims.css && dims.css.cell && dims.css.cell.height) || 16;
         var maxScrollTop = _xtViewportEl.scrollHeight - _xtViewportEl.clientHeight;
@@ -1054,11 +1178,11 @@
     }
 
     // 모바일 터치 드래그는 wheel 이벤트를 발생시키지 않아 위 wheel 가로채기가 무력화된다.
-    // codex/opencode/grok은 스크롤백이 없는 alt-screen 앱이라 xterm 내장 터치 스크롤(handleTouchStart/Move,
+    // opencode/grok은 스크롤백이 없는 alt-screen 앱이라 xterm 내장 터치 스크롤(handleTouchStart/Move,
     // xterm.js 코어가 자체 등록)이 동작해도 의미가 없으므로, wheel과 동일하게 document 캡처 단계에서
-    // stopPropagation으로 xterm 내장 리스너(버블 단계, non-capture)에 도달하기 전에 가로채 PageUp/Down으로 치환한다.
-    // claude/antigravity 등 나머지 모드는 이 블록 자체를 안 타므로 xterm 기본 터치 스크롤이 그대로 동작한다.
-    if (MODE === "codex" || MODE === "opencode" || MODE === "grok") {
+    // stopPropagation으로 xterm 내장 리스너(버블 단계, non-capture)에 도달하기 전에 가로채 _pageUp/Down으로 넘긴다.
+    // claude/codex/antigravity 등 나머지 모드는 이 블록 자체를 안 타므로 xterm 기본 터치 스크롤이 그대로 동작한다.
+    if (MODE === "opencode" || MODE === "grok") {
       var _touchY = null, _touchAccum = 0;
       var TOUCH_SCROLL_STEP = 40; // px: wheel 한 노치에 대응하는 드래그 거리
       document.addEventListener("touchstart", function (e) {
@@ -1074,8 +1198,8 @@
         var dy = y - _touchY;
         _touchY = y;
         _touchAccum += dy;
-        while (_touchAccum >= TOUCH_SCROLL_STEP) { _touchAccum -= TOUCH_SCROLL_STEP; _pageUp(); }
-        while (_touchAccum <= -TOUCH_SCROLL_STEP) { _touchAccum += TOUCH_SCROLL_STEP; _pageDown(); }
+        while (_touchAccum >= TOUCH_SCROLL_STEP) { _touchAccum -= TOUCH_SCROLL_STEP; if (MODE === "grok") _grokWheel(true); else _pageUp(); }
+        while (_touchAccum <= -TOUCH_SCROLL_STEP) { _touchAccum += TOUCH_SCROLL_STEP; if (MODE === "grok") _grokWheel(false); else _pageDown(); }
         e.preventDefault(); e.stopPropagation();
       }, { passive: false, capture: true });
       document.addEventListener("touchend", function () { _touchY = null; _touchAccum = 0; }, { passive: true, capture: true });

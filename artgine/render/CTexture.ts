@@ -61,7 +61,7 @@ export class CTexture extends CObject
 	protected mGBuffer : Array<any> = new Array<any>;
 	private mMipMap : number = CTexture.eMipmap.None;
 	private mWrap : number = CTexture.eWrap.Clamp;
-	private mFilter : number = CTexture.eFilter.Neaest;
+	private mFilter : number = CTexture.eFilter.Nearest;
 	private mInfo : Array<CTextureInfo> = [new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)];
 	private mYFlip=true;
 	//렌더타겟 최초 생성 시 지정한 원본 사이즈. 0=미설정(sentinel)
@@ -69,8 +69,13 @@ export class CTexture extends CObject
 	private mOrgWidth : number=0;
 	private mOrgHeight : number=0;
 	private mAnti : number = 0;
+	//이방성 필터링 최대 배수(0=끔, 2/4/8/16). 밉맵이 있는 선형 텍스처에만 적용된다
+	private mAniso : number = 0;
 	private mAlpha =false;
 	private mAutoResize = true;
+	//true(기본)면 지금까지처럼 GPU 업로드 뒤에도 CPU 픽셀 버퍼를 계속 들고 있는다.
+	//false로 두면 ReleaseBuf()가 실제로 버퍼를 비운다(메모리 회수용, 호출은 수동).
+	public mKeepBuf = true;
 
 	public mUpdate=new Set<number>();
 
@@ -94,7 +99,7 @@ export class CTexture extends CObject
 	override Icon(){		return "bi bi-image";	}
 	LoaderOption() : string
 	{
-		return JSON.stringify({wrap:this.mWrap,filter:this.mFilter,mipMap:this.mMipMap});
+		return JSON.stringify({wrap:this.mWrap,filter:this.mFilter,mipMap:this.mMipMap,aniso:this.mAniso});
 	}
 	IsFrameBuf(){	return this.mFrameBuf.length!=0;	}
 	IsBindFrame(){	return this.mFrame;	}
@@ -297,10 +302,26 @@ export class CTexture extends CObject
 			else
 				this.mBuffer.push(new Float32Array(this.mWidth*this.mHeight * 4*info.mCount));
 		}
-		
+
 	}
-	
-	SetAnti(_sample)	
+
+	//GPU 업로드가 끝난 뒤 CPU쪽 픽셀 버퍼(mBuffer)를 비운다. mKeepBuf가 true(기본)면 아무것도 하지 않으므로
+	//끄고 싶은 텍스처에서만 mKeepBuf=false로 두고 부른다. 버퍼를 다시 읽는 경로(CPaint의 캡처, CMapBuf,
+	//CTerrainMap, 에디터의 mReadPixelEvent)가 있는 텍스처에는 쓰면 안 된다.
+	//해제 후 다시 필요해지면 CreateBuf()로 빈 버퍼를 만들거나 CRenderer.ReadPixel()로 GPU에서 되읽는다.
+	ReleaseBuf() : boolean
+	{
+		if(this.mKeepBuf)	return false;
+		if(this.IsFrameBuf())	return false;	//렌더타겟은 애초에 CPU 버퍼를 쓰지 않는다
+		if(this.mVideo)	return false;			//비디오는 매 프레임 원본이 필요하다
+		if(this.mGBuffer.length==0)	return false;	//아직 GPU로 안 올라갔으면 지우면 안 된다
+		if(this.mBuffer.length==0)	return false;
+
+		this.mBuffer.length=0;
+		return true;
+	}
+
+	SetAnti(_sample)
 	{	
 		this.mAnti=_sample;	
 
@@ -324,6 +345,9 @@ export class CTexture extends CObject
 	}
 	GetYFlip()	{	return this.mYFlip;	}
 	GetAnti()	{	return this.mAnti;	}
+	//텍스처 파라미터는 최초 바인드 때 한 번 설정되므로(mUpdate) 값이 바뀌면 다시 설정하게 비운다
+	SetAniso(_max : number)	{	this.mAniso=_max;	this.mUpdate.clear();	}
+	GetAniso()	{	return this.mAniso;	}
 
 	SetBuf(_buf : HTMLImageElement);
 	SetBuf(_buf : ArrayBuffer);
@@ -453,7 +477,7 @@ export class CTexture extends CObject
 export namespace CTexture
 {
 	export enum eFilter{
-		Neaest=4,
+		Nearest=4,
 		Linear=3,
 	};
 	export enum eWrap{

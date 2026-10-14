@@ -28,13 +28,16 @@ export class CForce extends CObject {
     }
     SetDirVel(_DirBegin, _VelBegin, _DirEnd = null, _VelEnd = 0) {
         if (typeof _DirBegin == "number") {
-            this.mDMulVBegin.mF32A[0] = _DirBegin * _VelEnd;
-            this.mDMulVBegin.mF32A[1] = _VelBegin * _VelEnd;
-            this.mDMulVBegin.mF32A[2] = _DirEnd * _VelEnd;
+            this.mDirection.mF32A[0] = _DirBegin;
+            this.mDirection.mF32A[1] = _VelBegin;
+            this.mDirection.mF32A[2] = _DirEnd;
+            this.mVelocity = _VelEnd;
+            this.mDMulVBegin = CMath.V3MulFloat(this.mDirection, _VelEnd);
+            this.mDMulVEnd = null;
         }
         else {
             this.mDMulVBegin = CMath.V3MulFloat(_DirBegin, _VelBegin);
-            this.mDirection = _DirBegin;
+            this.mDirection.Import(_DirBegin);
             this.mVelocity = _VelBegin;
             if (_DirEnd == null)
                 this.mDMulVEnd = null;

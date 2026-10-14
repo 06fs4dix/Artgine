@@ -7,12 +7,14 @@ export default class CParserGLTF extends CParser {
     mColorTex;
     mTexBufRaw;
     mComputeNormal;
-    constructor(_inch, _colorTex = false, _texBufRaw = false, _computeNormal = true) {
+    mMergeStatic;
+    constructor(_inch, _colorTex = false, _texBufRaw = false, _computeNormal = true, _mergeStatic = true) {
         super();
         this.mInch = _inch;
         this.mColorTex = _colorTex;
         this.mTexBufRaw = _texBufRaw;
         this.mComputeNormal = _computeNormal;
+        this.mMergeStatic = _mergeStatic;
     }
     GetResult() {
         return this.mMesh;

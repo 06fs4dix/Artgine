@@ -13,9 +13,11 @@ import { CMath } from "../../geometry/CMath.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CVec4 } from "../../geometry/CVec4.js";
 import { CFile } from "../../system/CFile.js";
+import { CSleep } from "../../util/CSleep.js";
 import { CComponent } from "../component/CComponent.js";
 import { CRouteMsg } from "../CRouteMsg.js";
 import { CPaint } from "../component/paint/CPaint.js";
+import { CCollider } from "../component/CCollider.js";
 import { CUtil } from "../../basic/CUtil.js";
 var g_offCObjHD = 0;
 export class CSubject extends CObject {
@@ -46,8 +48,19 @@ export class CSubject extends CObject {
     mUpdateMat = CUpdate.eType.Updated;
     mUpdateComp = true;
     mSave = true;
+    mSleep = null;
+    mSleepSkip = false;
     SetSave(_enable) {
         this.mSave = _enable;
+    }
+    SetSleep(_cycle) {
+        this.mSleepSkip = false;
+        if (_cycle <= 0) {
+            this.mSleep = null;
+            return;
+        }
+        this.mSleep = new CSleep(_cycle);
+        this.mSleep.Reset(Math.random() * _cycle);
     }
     constructor(_comArr = new Array()) {
         super();
@@ -81,7 +94,9 @@ export class CSubject extends CObject {
             super.Recycle();
             let pVec = this.FindComps(CPaint, true);
             for (let pt of pVec) {
-                pt.ClearCRPAuto();
+                pt.ClearBatch(false);
+                if (this.mPTArr == null)
+                    continue;
                 for (let i = 0; i < this.mPTArr.length; ++i) {
                     if (this.mPTArr[i] == pt) {
                         this.mPTArr.splice(i, 1);
@@ -90,6 +105,12 @@ export class CSubject extends CObject {
                 }
             }
             this.mPTArr = null;
+            let cVec = this.FindComps(CCollider, true);
+            for (let cl of cVec) {
+                let gi = cl.GetGI();
+                if (gi != null && gi.mOctree != null)
+                    gi.mOctree.Remove(cl);
+            }
             return;
         }
         this.mPos.Zero();
@@ -124,7 +145,7 @@ export class CSubject extends CObject {
         this.UpdateComp();
         if (this.mPTArr) {
             for (let pt of this.mPTArr) {
-                pt.ClearCRPAuto();
+                pt.ClearBatch(false);
             }
             this.mPTArr.length = 0;
             this.mPTArr = null;
@@ -132,7 +153,7 @@ export class CSubject extends CObject {
         else {
             let pVec = this.FindComps(CPaint, true);
             for (let pt of pVec) {
-                pt.ClearCRPAuto();
+                pt.ClearBatch(false);
             }
         }
         this.mFrame = null;
@@ -190,7 +211,7 @@ export class CSubject extends CObject {
         if (_member == "mFrame" || _member == "mKeyChange" || _member == "mInMsg" || _member == "mOutMsg" || _member == "mBroMsg" ||
             _member == "mPushArr" || _member == "mPushLock" || _member == "mUpdateComp" || _member == "mComEnableArr" ||
             _member == "mDestroy" || _member == "mPTArr" ||
-            _member == "mCLArr" || _member == "mUpdateMat")
+            _member == "mCLArr" || _member == "mUpdateMat" || _member == "mSleep" || _member == "mSleepSkip")
             return false;
         if (_type == CObject.eShould.Proxy) {
             if (_member == "mPos" || _member == "mRot" || _member == "mSca" || _member == "mWMat" || _member == "mPMat" ||
@@ -275,7 +296,7 @@ export class CSubject extends CObject {
         this.SetChildShow(_enable);
         if (this.mPTArr != null) {
             for (let pt of this.mPTArr) {
-                pt.ClearCRPAuto();
+                pt.ClearBatch(false);
             }
         }
         if (this.mPTArr != null) {
@@ -348,20 +369,23 @@ export class CSubject extends CObject {
     }
     RouteMsgUpdate(_update) {
     }
-    GetCPaintVec(_vec = new Array) {
+    GetCPaintVec(_vec = new Array, _collect = true) {
         if (this.mPTArr == null || this.mPTArr.length == 0) {
             if (_vec != null)
                 this.mPTArr = _vec;
             if (this.mPTArr == null)
                 this.mPTArr = new Array();
-            for (let each0 of this.mComArr) {
-                if (each0.IsDestroy())
-                    continue;
-                if (each0.GetSysc() == CComponent.eSysn.Paint)
-                    this.mPTArr.push(each0);
+            let collect = _collect && this.mEnable;
+            if (collect) {
+                for (let each0 of this.mComArr) {
+                    if (each0.IsDestroy())
+                        continue;
+                    if (each0.GetSysc() == CComponent.eSysn.Paint)
+                        this.mPTArr.push(each0);
+                }
             }
             for (let each0 of this.mChild) {
-                each0.GetCPaintVec(this.mPTArr);
+                each0.GetCPaintVec(this.mPTArr, collect);
             }
         }
         return this.mPTArr;

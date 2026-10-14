@@ -4,9 +4,11 @@ export class CParserOBJ extends CParser {
     mMesh = new CMesh();
     mPath = "";
     mComputeNormal;
-    constructor(_computeNormal = true) {
+    mMergeStatic;
+    constructor(_computeNormal = true, _mergeStatic = true) {
         super();
         this.mComputeNormal = _computeNormal;
+        this.mMergeStatic = _mergeStatic;
     }
     GetResult() { return this.mMesh; }
     async Load(pa_fileName) {

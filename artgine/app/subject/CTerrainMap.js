@@ -9,15 +9,18 @@ import { CVec3 } from "../../geometry/CVec3.js";
 import { CVec4 } from "../../geometry/CVec4.js";
 import { CColor } from "../../render/CColor.js";
 import { CImgPro } from "../../render/CImgPro.js";
+import { CAlert } from "../../basic/CAlert.js";
+import { CLoaderOption } from "../../util/CLoader.js";
 import { CRenderPass } from "../../render/CRenderPass.js";
+import { CShaderAttr } from "../../render/CShaderAttr.js";
 import { CTexture, CTextureInfo } from "../../render/CTexture.js";
 import { CCIndex } from "../canvas/CCIndex.js";
 import { CCollider } from "../component/CCollider.js";
 import { CPhysics } from "../component/CPhysics.js";
 import { CPaintTerrain } from "../component/paint/CPaintTerrain.js";
 import { CMapBuf } from "./CMapBuf.js";
-import { CSubject } from "./CSubject.js";
-export class CTerrainMap extends CSubject {
+import { CSubjectMap } from "./CSubjectMap.js";
+export class CTerrainMap extends CSubjectMap {
     mHeightBuf = new CMapBuf();
     mSplatBuf = new CMapBuf();
     mHeightTexture = null;
@@ -61,17 +64,6 @@ export class CTerrainMap extends CSubject {
             return super.PushComp(colTerrain);
         }
         return super.PushComp(_com);
-    }
-    ToStr() {
-        const detachedPaints = Array.from(this.FindComps(CPaintTerrain));
-        for (const comp of detachedPaints) {
-            this.DetachComp(comp.Key());
-        }
-        const result = super.ToStr();
-        for (const comp of detachedPaints) {
-            this.PushComp(comp);
-        }
-        return result;
     }
     ToggleDebugMode() {
         const TEST_COLORS = [
@@ -130,7 +122,7 @@ export class CTerrainMap extends CSubject {
             if (this.GetFrame().Res().Find(texKey) == null)
                 allLoaded = false;
             if (!this.GetFrame().Load().IsLoad(texKey))
-                this.GetFrame().Load().Exe(texKey);
+                this.GetFrame().Load().Exe(texKey, new CLoaderOption().Set("mGPU", false));
         }
         return allLoaded;
     }
@@ -195,6 +187,10 @@ export class CTerrainMap extends CSubject {
                 if (_org == null)
                     return CImgPro.Square(layerTex.GetWidth(), layerTex.GetHeight(), _default);
                 const orgTex = this.GetFrame().Res().Find(_org);
+                if (orgTex == null || orgTex.GetBuf()[0] == null) {
+                    CAlert.W(_org + " : CPU 픽셀이 없어 스플랫 레이어에 못 넣는다. mGPU=false로 로드해야 한다");
+                    return CImgPro.Square(layerTex.GetWidth(), layerTex.GetHeight(), _default);
+                }
                 const result = CImgPro.SqurEnlargedReduced(orgTex.GetWidth(), orgTex.GetHeight(), orgTex.GetBuf()[0], layerTex.GetWidth() / orgTex.GetWidth(), layerTex.GetHeight() / orgTex.GetHeight(), 4);
                 if (orgTex.GetYFlip()) {
                     const temp = new Uint8Array(result.GetWidth() * 4);
@@ -220,10 +216,23 @@ export class CTerrainMap extends CSubject {
     }
     InitPaints() {
         const textureList = [this.mLayerTexture, this.mSplatTexture, this.mHeightTexture];
+        const matArr = [];
+        let matTex = false;
+        for (let i = 4; i < 8; i++) {
+            const m = this.mTexture[i];
+            if (typeof m == "string")
+                matTex = true;
+            const v = m instanceof CVec4 ? m : new CVec4(1, 0.5, 0, 1);
+            matArr.push(v.x, v.y, v.z, v.w);
+        }
+        const matConst = new CMat(matArr);
         const Spawn = (_level, _repeatCount, _scale, _cellIndex) => {
             const pt = this.PushComp(new CPaintTerrain(textureList, this.GetPos(), this.mTerrainHeight, _level, _repeatCount, _scale, this.mHeightBuf.mSize, _cellIndex, this.mTexCodi, this.mDefaultHeight));
             for (let tag of this.mTag)
                 pt.PushTag(tag);
+            pt.PushCShaderAttr(new CShaderAttr("splatMaterial", matConst));
+            if (matTex)
+                pt.PushTag("terrainMat");
             return pt;
         };
         for (let x = 0; x < 2; x++)

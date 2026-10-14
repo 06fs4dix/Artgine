@@ -132,15 +132,6 @@ export class CMath {
         CPoolGeo.RecycleV3(dummy);
         return len;
     }
-    static ApproxSqrt(x) {
-        return x * (0.41731 + 0.59016 / (x + 1e-6));
-    }
-    static V3DistancePseudo(_a, _b) {
-        const x = _a.mF32A[0] - _b.mF32A[0];
-        const y = _a.mF32A[1] - _b.mF32A[1];
-        const z = _a.mF32A[2] - _b.mF32A[2];
-        return CMath.ApproxSqrt(x * x + y * y + z * z);
-    }
     static MatTranspose(pa_mat, pa_out = null) {
         if (pa_out == null) {
             pa_out = new CMat();

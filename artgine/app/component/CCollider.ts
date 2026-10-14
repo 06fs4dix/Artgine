@@ -18,6 +18,7 @@ import { CPaint2D } from "./paint/CPaint2D.js";
 import {CPlaneInside} from "../../geometry/CPlaneInside.js";
 import {CJSON} from "../../basic/CJSON.js";
 import { CUpdate } from "../../basic/Basic.js";
+import { CSleep } from "../../util/CSleep.js";
 import { CObject, CPointer } from "../../basic/CObject.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 
@@ -88,6 +89,12 @@ export class CCollider extends CGeometryComp
 	mColPush =new CArray<CVec3>();
 	mColPair=new Map<CCollider,CVec3>();
 
+	//초 단위. 0이면 매 스텝 동작. 0보다 크면 주기가 된 스텝에만 옥트리 조회와 등록을 한다(CRenderPass.mCycle과 같은 규칙).
+	//쉬는 스텝에는 옥트리에 없으므로 다른 콜라이더에게도 잡히지 않는다. 스태틱 이벤트에는 적용하지 않는다.
+	public mSleep=new CSleep();
+	public mCycleSkip=false;
+	GetSleep()	{	return this.mSleep;	}
+
 	constructor();
 	constructor(_paint : CBound);
 	constructor(_paint : CPaint);
@@ -119,6 +126,16 @@ export class CCollider extends CGeometryComp
 		
 
 	// }
+	//옥트리는 Insert된 콜라이더마다 장부(정수 id와 래퍼)를 영구히 들고 있고 스스로 지우지
+	//않는다. 여기서 안 빼주면 죽은 콜라이더 항목이 계속 쌓여서 Build가 훑는 대상과 메모리가
+	//같이 늘고, 결국 프레임 비용으로 돌아온다. 재활용(Recycle)으로 빠지는 경우에도 같은 객체가
+	//새 id를 받게 되므로 옛 항목은 어차피 지워야 한다 — 그래서 조기 반환보다 앞에 둔다.
+	override Destroy()
+	{
+		if(this.IsDestroy()==false && this.mGI!=null && this.mGI.mOctree!=null)
+			this.mGI.mOctree.Remove(this);
+		super.Destroy();
+	}
 	override Icon(){		return "bi bi-sign-railroad";	}
 	RegistHeap(_F32A : Float32Array)
 	{
@@ -138,7 +155,7 @@ export class CCollider extends CGeometryComp
 		super.EditChange(_pointer,_child);
 		if(_pointer.IsRef(this.mBound))
 		{
-			if(_pointer.member=="mType" && this.mBound.mType==CBound.eType.Polytope && this.mPaintLoad!=null)
+			if(_pointer.member=="mType" && (this.mBound.mType==CBound.eType.GJK || this.mBound.mType==CBound.eType.Triangle) && this.mPaintLoad!=null)
 			{
 				let bound=this.mPaintLoad.GetBound().Export() as CBound;
 				this.mBound.mPos.Clear();
@@ -167,7 +184,8 @@ export class CCollider extends CGeometryComp
 			_member=="mPushVec" || _member=="mGI" || _member=="mBW" ||
 			
 			_member=="mColTarget" || _member=="mColPush" || _member=="mColPair" || 
-			_member=="mOneWayMap" || _member=="mRB" || _member=="mCameraOutLast")
+			_member=="mOneWayMap" || _member=="mRB" || _member=="mCameraOutLast" ||
+			_member=="mCycleSkip")
 			return false;
 			
 			
@@ -264,6 +282,7 @@ export class CCollider extends CGeometryComp
 		this.UpdateMat();
 
 		if(this.IsEnable()==false || this.GetLayer()=="" || this.GetOwner().IsEnable()==false) return;
+		if(this.mCycleSkip) return;
 
 		
 		this.mGI.mOctree.Insert(this.mBW.mPos, this.mBW.mSize,this,this.mBW.mWBound.mMin,this.mBW.mWBound.mMax,this.mEvent==CCollider.eEvent.Static);
@@ -293,10 +312,10 @@ export class CCollider extends CGeometryComp
 	override StartChk()
 	{
 		let start=super.StartChk();
-		if(this.mPaintLoad!=null && this.mBound.GetType()==CBound.eType.Null)
+		if(this.mPaintLoad!=null && (this.mBound.GetType()==CBound.eType.Null || this.mBound.mMin.x>this.mBound.mMax.x))
 		{
 			this.InitBound(this.mPaintLoad);
-			if(this.mBound.GetType()==CBound.eType.Null)
+			if(this.mBound.GetType()==CBound.eType.Null || this.mBound.mMin.x>this.mBound.mMax.x)
 			{
 				this.mStartChk=true;
 				return false;
@@ -337,11 +356,16 @@ export class CCollider extends CGeometryComp
 				return;
 			}
 			this.mPaintLoad=_paint;
-			if(this.mBound.GetType()==CBound.eType.Null)
+			//SetBoundType으로 타입을 먼저 강제 지정했어도 아직 크기를 못 받은 bound(min>max)면
+			//페인트 bound(min/max, 정점)를 받아오고 타입은 지정한 걸로 유지한다.
+			if(this.mBound.GetType()==CBound.eType.Null || this.mBound.mMin.x>this.mBound.mMax.x)
 			{
+				let type=this.mBound.GetType();
 				let bound=_paint.GetBound().Export() as CBound;
 				this.mBound.Reset();
 				this.mBound.Import(bound);
+				if(type!=CBound.eType.Null)
+					this.mBound.SetType(type);
 			}
 
 

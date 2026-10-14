@@ -93,17 +93,8 @@ if (location.protocol == 'file:' && isElectron==false){
 <!--EntryPoint-->
 <style>
 #myTab{font-size:0.8rem;} #myTab .nav-link, #myTab .btn{padding:0.25rem 0.5rem; font-size:0.8rem;}
-/* 상단 탭 스트립(#top-tab-strip)이 늘어나도 #myTab이 두 줄로 밀리지 않게, 고정 항목들은 줄어들지 않고
-   탭 스트립을 담은 li만 남는 폭을 먹고 넘치면 자체적으로 가로 스크롤한다. */
 #myTab{flex-wrap:nowrap;}
 #myTab > li{flex-shrink:0;}
-#myTab > li.flex-grow-1{flex-shrink:1;overflow:hidden;}
-#top-tab-strip{overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;scrollbar-width:thin;}
-.top-tab-item{cursor:pointer;flex-shrink:0;max-width:160px;padding:0.3rem 0.4rem;margin:0.25rem 0.15rem;
-    font-size:0.75rem;line-height:1;border-radius:0.25rem;background-color:var(--bs-tertiary-bg);white-space:nowrap;}
-.top-tab-item.ai-session-item-active-main{background-color:var(--bs-danger-bg-subtle);box-shadow:inset 0 -2px 0 var(--bs-danger);font-weight:600;}
-.top-tab-item.ai-session-item-active-sub{background-color:var(--bs-primary-bg-subtle);box-shadow:inset 0 -2px 0 var(--bs-primary);font-weight:600;}
-.top-tab-item .btn-close{width:0.5em;height:0.5em;padding:0;flex-shrink:0;}
 #rightSidebarTab{font-size:0.8rem;} #rightSidebarTab .nav-link{padding:0.25rem 0.5rem; font-size:0.8rem;}
 /* 사이드바 단계 레이아웃(Control.ts updateSidebarMode):
    both(≥1850): 좌·우 도킹(flex 자리 차지) + 컨테이너 max 1200
@@ -152,7 +143,7 @@ body.hide-right-sidebar #sidebarToggleBtnWrapRight{display:none !important;}
 /* 히든 콘솔 채팅 트리거를 위해 탭 맨 앞에 작은 여백 확보 */
 #myTab{padding-left:14px;}
 #rdp-sidebar-list .ai-session-item, #agent-sidebar-list .ai-session-item, #other-sidebar-list .ai-session-item{cursor:pointer;}
-/* 좌측 사이드바 하위 탭(Agent/Other): 우측 사이드바(#rightSidebarTab)와 동일한 부트스트랩 기본
+/* 좌측 사이드바 하위 탭(Agent/File/Other): 우측 사이드바(#rightSidebarTab)와 동일한 부트스트랩 기본
    nav-tabs 룩(밑줄 연결 + 활성 탭만 패널과 같은 배경으로 붙는 형태)을 그대로 쓴다. */
 #sidebarSubTab .nav-link{font-size:0.8rem;}
 /* Agent 경로 그룹: 헤더 클릭으로 접기/펼치기, ...버튼으로 그 경로에 Chat/Terminal 생성.
@@ -164,11 +155,12 @@ body.hide-right-sidebar #sidebarToggleBtnWrapRight{display:none !important;}
 .log-search-hit{background-color:#ff4d4f !important;color:#fff !important;border-radius:0.15em;padding:0 0.15em;font-weight:700;}
 /* 로그 본문은 마크다운 원문을 렌더링한 것이라 pre/code 최소 스타일을 잡아준다(Chat.html msg-bubble과 동일 패턴). */
 .log-body-text{line-height:1.5;}
-/* Multiplexer 패널: split 노드는 flex 컨테이너로 절반씩(고정 50/50) 나누고, leaf는 자리만 차지한다.
-   분할/병합/콘텐츠 선택 조작은 더 이상 패널 안 오버레이가 아니라 상단 Multiplexer 드롭다운에서 한다.
+/* Multiplexer 패널(VS Code 에디터 그룹 방식): split 노드는 flex 컨테이너, 두 자식의 flex-grow를 비율(ratio)
+   대로 주고(Control.ts tmuxApplyRatio) 그 사이의 .tmux-splitter를 드래그해 비율을 바꾼다. leaf는 위에 탭 바,
+   아래에 콘텐츠 자리(.tmux-leaf-content)를 갖는다.
    세션 iframe은 leaf 안에 들어가지 않는다 - pane을 옮길 때마다 appendChild로 부모를 바꾸면 Chrome이
    iframe을 무조건 재로드하기 때문에(display 상태와 무관), #tmux-tree-root에 딱 한 번만 붙인 뒤
-   다시는 부모를 바꾸지 않고 좌표(left/top/width/height)만 그 leaf의 위치로 옮겨서 "보이게" 한다
+   다시는 부모를 바꾸지 않고 좌표(left/top/width/height)만 그 leaf-content 위치로 옮겨서 "보이게" 한다
    (tmuxSyncPanePositions 참고). #tmux-tree-struct는 그 좌표의 기준이 되는 leaf 트리 구조물만 담고,
    overflow:hidden인 #tmux-tree-root 밖으로는 iframe이 나갈 수 없다. */
 #tmux-tree-root{overflow:hidden;}
@@ -177,26 +169,52 @@ body.hide-right-sidebar #sidebarToggleBtnWrapRight{display:none !important;}
 .tmux-split-row{flex-direction:row;}
 .tmux-split-col{flex-direction:column;}
 .tmux-split>.tmux-leaf, .tmux-split>.tmux-split{flex:1 1 0;min-width:0;min-height:0;}
-.tmux-split-row>:first-child{border-right:1px solid var(--bs-border-color);}
-.tmux-split-col>:first-child{border-bottom:1px solid var(--bs-border-color);}
-.tmux-leaf{position:relative;width:100%;height:100%;overflow:hidden;background-color:var(--bs-tertiary-bg);}
-.tmux-leaf-content{position:absolute;inset:0;}
+/* 분할선: 4px 띠. hover/드래그 중엔 primary 색으로 또렷하게. */
+.tmux-splitter{flex:0 0 4px;background-color:var(--bs-border-color);z-index:7;touch-action:none;}
+.tmux-split-row>.tmux-splitter{cursor:col-resize;}
+.tmux-split-col>.tmux-splitter{cursor:row-resize;}
+.tmux-splitter:hover, body.tmux-resizing .tmux-splitter{background-color:var(--bs-primary);}
+/* 분할선을 끄는 동안 마우스가 iframe 위를 지나도 이벤트를 뺏기지 않게 모든 세션 iframe의 입력을 잠시 끈다. */
+body.tmux-resizing{user-select:none;}
+body.tmux-resizing #tmux-tree-root iframe{pointer-events:none !important;}
+.tmux-leaf{position:relative;width:100%;height:100%;overflow:hidden;background-color:var(--bs-tertiary-bg);display:flex;flex-direction:column;}
+/* pane 탭 바: 왼쪽은 탭들(넘치면 가로 스크롤), 오른쪽은 고정 조작 버튼. 활성 pane(마지막으로 만진 곳 =
+   새 세션이 열리는 곳)은 탭 바 배경을 살짝 다르게 한다. */
+.tmux-leaf-tabbar{flex:0 0 28px;display:flex;align-items:stretch;background-color:var(--bs-secondary-bg);border-bottom:1px solid var(--bs-border-color);min-width:0;}
+.tmux-leaf-active>.tmux-leaf-tabbar{background-color:var(--bs-body-bg);}
+.tmux-tabs{position:relative;flex:1 1 auto;min-width:0;display:flex;align-items:stretch;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;}
+.tmux-tabs::-webkit-scrollbar{display:none;}
+.tmux-tabs.tmux-tabs-dragover{box-shadow:inset 0 -2px 0 var(--bs-primary);}
+.tmux-tab-item{cursor:pointer;flex-shrink:0;max-width:180px;display:flex;align-items:center;gap:0.3rem;padding:0 0.5rem;
+    font-size:0.75rem;line-height:1;border-right:1px solid var(--bs-border-color);color:var(--bs-secondary-color);white-space:nowrap;user-select:none;}
+.tmux-tab-item:hover{color:var(--bs-body-color);background-color:var(--bs-tertiary-bg);}
+.tmux-tab-item.tmux-tab-active{color:var(--bs-body-color);background-color:var(--tmux-pane-accent-bg, var(--bs-primary-bg-subtle));box-shadow:inset 0 -2px 0 var(--tmux-pane-accent, var(--bs-primary));font-weight:600;}
+.tmux-tab-item.tmux-tab-dragover{box-shadow:inset 2px 0 0 var(--bs-primary);}
+.tmux-tab-item .btn-close{width:0.5em;height:0.5em;padding:0;flex-shrink:0;opacity:0.35;}
+.tmux-tab-item:hover .btn-close, .tmux-tab-item.tmux-tab-active .btn-close{opacity:0.7;}
+.tmux-tab-actions{flex:0 0 auto;display:flex;align-items:center;padding:0 0.15rem;border-left:1px solid var(--bs-border-color);}
+.tmux-tab-actions .btn{padding:0 0.3rem;line-height:1;font-size:0.8rem;color:var(--bs-secondary-color);}
+.tmux-tab-actions .btn:hover{color:var(--bs-body-color);}
+/* pane별 고유색 테두리(Control.ts tmuxBuildEl이 borderColor를 배정) - 이 색이 좌측 사이드바/탭 강조
+   (.ai-session-item-active-pane, .tmux-tab-active)에도 그대로 쓰여 "이 색 = 이 화면 자리"를 알 수 있게 한다.
+   세션 iframe은 #tmux-tree-root에 별도로 겹쳐 그려져 leaf-content를 완전히 덮으므로, z-index로 iframe 위에
+   뜨는 오버레이여야 콘텐츠가 있는 pane에서도 보인다. */
+.tmux-leaf-outline{position:absolute;inset:0;z-index:10;pointer-events:none;border:1px solid transparent;box-sizing:border-box;}
+.tmux-leaf-content{position:relative;flex:1 1 auto;min-height:0;}
 /* 빈 칸 안내 문구. */
 .tmux-leaf-empty{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;color:var(--bs-secondary-color);font-size:0.85rem;text-align:center;padding:0.5rem;}
-/* 사이드바 세션 아이템을 드래그하는 동안(body.tmux-dragging)만 나타나는 pane 드롭존. 평소엔 완전히
-   숨겨서(display:none) iframe 위 클릭/스크롤을 방해하지 않는다. */
-.tmux-leaf-dropzone{position:absolute;inset:0;z-index:5;display:none;}
+/* 세션 아이템/탭을 드래그하는 동안(body.tmux-dragging)만 나타나는 pane 드롭존(콘텐츠 영역만 - 탭 바는
+   자체적으로 드롭을 받는다). 평소엔 완전히 숨겨서(display:none) iframe 위 클릭/스크롤을 방해하지 않는다.
+   안의 indicator가 5구역(가운데 = 탭으로 추가, 상/하/좌/우 = 그쪽으로 분할)을 미리 보여준다. */
+.tmux-leaf-dropzone{position:absolute;left:0;right:0;top:28px;bottom:0;z-index:5;display:none;}
 body.tmux-dragging .tmux-leaf-dropzone{display:block;}
-body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(13,110,253,0.18);outline:2px dashed var(--bs-primary);outline-offset:-2px;}
-/* Multiplexer 드롭다운(#tmux-dropdown-menu) 안의 pane 한 줄: 라벨(위)이 좁은 드롭다운 폭에서
-   버튼과 나란히 있으면 잘리기 쉬워, 라벨 한 줄 + 조작 버튼 한 줄로 나눈 2단 구성을 쓴다.
-   라벨 클릭 = 그 pane 화면 보기, 버튼들은 분할/병합/콘텐츠 선택 조작(Control.ts에서 stopPropagation
-   으로 드롭다운이 안 닫히게 처리). 같은 분할에서 나온 pane끼리는 구분선 없이 붙어서 나열되고,
-   다른 분할 그룹으로 넘어갈 때만 구분선(hr)이 들어간다. */
-.tmux-menu-pane{display:flex;flex-direction:column;gap:0.25rem;padding:0.35rem 0.75rem;}
-.tmux-menu-pane-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-size:0.82rem;font-weight:600;}
-.tmux-menu-pane-actions{display:flex;gap:0.3rem;}
-.tmux-menu-pane .btn{padding:0.1rem 0.4rem;}
+.tmux-drop-indicator{position:absolute;display:none;background-color:rgba(13,110,253,0.18);outline:2px dashed var(--bs-primary);outline-offset:-2px;pointer-events:none;}
+.tmux-leaf-dropzone.tmux-leaf-dragover .tmux-drop-indicator{display:block;}
+.tmux-drop-indicator[data-zone="center"]{inset:0;}
+.tmux-drop-indicator[data-zone="left"]{left:0;top:0;bottom:0;width:50%;}
+.tmux-drop-indicator[data-zone="right"]{right:0;top:0;bottom:0;width:50%;}
+.tmux-drop-indicator[data-zone="top"]{left:0;right:0;top:0;height:50%;}
+.tmux-drop-indicator[data-zone="bottom"]{left:0;right:0;bottom:0;height:50%;}
 .log-body-text p:last-child{margin-bottom:0;}
 .log-body-text pre{background:var(--bs-tertiary-bg);padding:.5rem;border-radius:.25rem;overflow-x:auto;}
 .log-body-text code{font-family:var(--bs-font-monospace);font-size:.875em;}
@@ -216,16 +234,15 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
 .agent-group-head.agent-group-remote:hover{background-color:var(--rdp-accent-bg, var(--bs-danger-bg-subtle));}
 .agent-group-head.agent-group-remote .agent-group-caret{color:var(--rdp-accent, var(--bs-danger));}
 .agent-group-addr{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.68rem;font-weight:400;color:var(--bs-secondary-color);line-height:1.2;}
-/* Multiplexer에 열린 세션: 메인 pane(새 세션이 들어가는 첫 leaf)은 빨강, 나머지 서브 pane은 파랑.
+/* Multiplexer에 열린 세션: 떠 있는 pane별 고유색(--tmux-pane-accent, tmuxPaneAccentStyle)으로 표시한다.
    여러 개가 동시에 켜질 수 있다. 종류(상태 점 색)와 강조가 섞이지 않도록 좌측 바+ 배경+ 굵게로만 구분한다.
-   예전 로컬/원격 강조 클래스(-active / -active-remote)는 서브/메인과 같은 배색으로 남겨 호환을 지킨다. */
-.ai-session-item.ai-session-item-active-sub,
+   예전 로컬/원격 강조 클래스(-active / -active-remote)는 값이 없을 때의 폴백색(파랑/빨강)으로 남겨 호환을 지킨다. */
 .ai-session-item.ai-session-item-active{background-color:var(--bs-primary-bg-subtle);box-shadow:inset 3px 0 0 var(--bs-primary);font-weight:600;}
-.ai-session-item.ai-session-item-active-main{background-color:var(--bs-danger-bg-subtle);box-shadow:inset 3px 0 0 var(--bs-danger);font-weight:600;}
+.ai-session-item.ai-session-item-active-pane{background-color:var(--tmux-pane-accent-bg, var(--bs-primary-bg-subtle));box-shadow:inset 3px 0 0 var(--tmux-pane-accent, var(--bs-primary));font-weight:600;}
 .ai-session-item.ai-session-item-active-remote{background-color:var(--rdp-accent-bg, var(--bs-danger-bg-subtle));box-shadow:inset 3px 0 0 var(--rdp-accent, var(--bs-danger));font-weight:600;}
 /* 호버 강조는 CSS로 처리한다. JS에서 생성 시점의 isActive를 클로저로 캡처해 클래스를 토글하면,
    나중에 active가 바뀌었을 때 그 클로저가 옛 값을 들고 있어 active 항목에 호버색이 덧칠된다. */
-.ai-session-item:hover:not(.ai-session-item-active):not(.ai-session-item-active-remote):not(.ai-session-item-active-main):not(.ai-session-item-active-sub){background-color:var(--bs-secondary-bg);}
+.ai-session-item:hover:not(.ai-session-item-active):not(.ai-session-item-active-remote):not(.ai-session-item-active-pane){background-color:var(--bs-secondary-bg);}
 /* Bootstrap 유틸리티 클래스(d-flex 등)는 !important라서 JS의 style.display 토글이 먹히지 않는다.
    placeholder를 확실히 숨기기 위한 전용 클래스. */
 /* 검색 결과 목록(사이드바 자동완성 + F2 검색 모달 공용). 바탕(--bs-body-bg)과 겹쳐 보이지 않도록
@@ -260,10 +277,12 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar" aria-label="Close" data-CLan-title="ctrl.close" title="Close"></button>
         </div>
         <div class="offcanvas-body p-2 flex-grow-1 overflow-auto d-flex flex-column" id="app-sidebar-body">
-            <!-- 하위 탭: Agent(Chat/Terminal) ↔ File(빠른 파일 열람, 우측 사이드바에서 이동해옴). 선택 탭은 localStorage에 기억된다. -->
+            <!-- 하위 탭: Agent(Chat/Terminal) ↔ File(빠른 파일 열람) ↔ Other(RDP/Browser/Editor, 우측
+                 사이드바에서 이동해옴). 선택 탭은 localStorage에 기억된다. -->
             <ul class="nav nav-tabs nav-fill mb-2 flex-shrink-0" id="sidebarSubTab" role="tablist">
                 <li class="nav-item"><button class="nav-link active py-1 px-2" id="sb-agent-tab" type="button">Agent</button></li>
                 <li class="nav-item"><button class="nav-link py-1 px-2" id="sb-file-tab" type="button"><span data-CLan="ctrl.file">File</span></button></li>
+                <li class="nav-item"><button class="nav-link py-1 px-2" id="sb-other-tab" type="button">Other</button></li>
             </ul>
             <!-- Agent: Chat/Terminal 세션을 workingDir 경로별 그룹으로 묶어 표시. 등록된 경로는 세션이 없어도 빈 그룹으로 남는다.
                  Control.ts의 renderSessionSidebar() → renderAgentGroups()가 채운다.
@@ -293,9 +312,23 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                     <input id="ctrlSideFileSearchInput" type="text" class="form-control form-control-sm" data-CLan="ctrl.ph.sideSearch" placeholder="Search (click to index)" autocomplete="off">
                     <div id="ctrlSideFileSearchResults" class="list-group ctrl-srch-results d-none" style="max-height:240px;overflow-y:auto;font-size:12px;position:absolute;left:0;right:0;top:100%;z-index:1000;"></div>
                 </div>
+                <!-- 검색 대상 선택: File(파일/폴더 이름 - 기존 동작) / TS(.ts 파일 내용 - 키워드가 어느
+                     파일에 있는지 찾음). TS는 내용 인덱스라 용량이 커서 localStorage에 저장하지 않는다. -->
+                <div class="mb-2">
+                    <select id="ctrlSideFileSearchMode" class="form-select form-select-sm">
+                        <option value="file" selected>File</option>
+                        <option value="ts">TS</option>
+                    </select>
+                </div>
                 <!-- 길게 눌러 복사한 파일 목록. 경로 바 아래에 X(목록 제거)/복사(현재 경로에 붙여넣기) 아이콘만 표시. -->
                 <div id="ctrlSideFileCopyList" class="d-none flex-column gap-1 mb-2"></div>
                 <div id="ctrlSideFileList" class="list-group"></div>
+            </div>
+            <!-- Other: RDP(Local/Remote) + Browser/Editor 세션(평면 최신순). 예전엔 우측 사이드바 탭이었으나
+                 여기(File 다음)로 옮겨왔다. rdpRenderList()/renderOtherList()가 각각 채운다. -->
+            <div id="left-other-panel" class="d-flex flex-column d-none">
+                <div id="rdp-sidebar-list" class="d-flex flex-column gap-1"></div>
+                <div id="other-sidebar-list" class="d-flex flex-column gap-1"></div>
             </div>
         </div>
     </div>
@@ -379,11 +412,7 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                 <li><button class="dropdown-item" id="help-open-btn" type="button"><i class="bi bi-question-circle"></i> <span data-CLan="ctrl.help">Help</span></button></li>
             </ul>
         </li>
-        <!-- 열려 있는 Chat/Terminal/Browser/Editor/Web 프레임 탭 스트립(More 바로 뒤). 폭이 모자라면 한 줄을
-             유지한 채 가로 스크롤한다(2줄로 밀리면 안 됨) - Control.ts의 renderTopTabStrip()이 채운다. -->
-        <li class="nav-item flex-grow-1 flex-shrink-1" role="presentation" style="min-width:0;">
-            <div id="top-tab-strip" class="d-flex align-items-center h-100"></div>
-        </li>
+        <!-- 열린 세션 탭은 상단이 아니라 Multiplexer의 각 pane 탭 바(Control.ts tmuxRenderTabBar)에 나온다. -->
         <li class="nav-item ms-auto" role="presentation" style="display:none;" id="sidebarToggleBtnWrap">
             <button class="btn btn-outline-secondary mt-1" id="sidebarToggleBtn" type="button"
                 data-bs-toggle="offcanvas" data-bs-target="#app-sidebar" aria-controls="app-sidebar" data-CLan-title="ctrl.menu" title="Menu">
@@ -445,8 +474,8 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <h6 class="mb-0 d-flex align-items-center gap-2 overflow-hidden">
                     <i class="bi bi-journal-code"></i> <span data-CLan="ctrl.providerLog">Provider Log</span>
-                    <!-- 지금 로그를 가져오는 서버(RDP 사이드바 선택을 따라감). Control.ts의 logUpdateSource()가 채운다. -->
-                    <span id="logSourceLabel" class="small fw-normal text-truncate" style="font-size:0.72rem;"></span>
+                    <!-- 로그를 가져올 서버 선택(로컬 + 저장된 원격). RDP 사이드바 선택과 독립적이다. Control.ts의 logPopulateServerSelect()가 채운다. -->
+                    <select id="logServerSelect" class="form-select form-select-sm w-auto" style="font-size:0.72rem;"></select>
                 </h6>
                 <div class="d-flex align-items-center gap-1">
                     <button id="logRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary" data-CLan-title="ctrl.refresh" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
@@ -463,8 +492,8 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
         </div>
     </div>
     <!-- Multiplexer 패널: 세션(터미널/채팅/브라우저/RDP/에디터)을 열면 이 패널로 전환된다(초기 진입
-         기본은 Help). 칸 나누기/분할 조작은 상단 Multiplexer 드롭다운(tmux-dropdown-menu)에서 하므로
-         패널 안에는 트리 콘텐츠만 있다. 트리 구조/선택 콘텐츠는 Control.ts의 tmux* 함수들이 관리하며
+         기본은 Help). 각 pane의 탭 바에서 분할/닫기/세션 고르기를 하고, 탭·사이드바 항목을 pane 가장자리에
+         드롭하면 그쪽으로 분할된다. 트리 구조/탭 목록/비율은 Control.ts의 tmux* 함수들이 관리하며
          localStorage에 저장된다. -->
     <div class="tab-pane h-100 position-relative" id="tmux-panel" role="tabpanel" aria-labelledby="tmux-panel-tab">
         <div id="tmux-tree-root" class="position-absolute" style="inset:0;">
@@ -485,10 +514,6 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="right-info-tab" data-bs-toggle="tab" data-bs-target="#right-info-panel" type="button"
                         role="tab" aria-controls="right-info-panel" aria-selected="true"><i class="bi bi-info-circle"></i> <span data-CLan="ctrl.info">Info</span></button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="right-other-tab" data-bs-toggle="tab" data-bs-target="#right-other-panel" type="button"
-                        role="tab" aria-controls="right-other-panel" aria-selected="false"><i class="bi bi-window-stack"></i> Other</button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="right-option-tab" data-bs-toggle="tab" data-bs-target="#right-option-panel" type="button"
@@ -515,15 +540,6 @@ body.tmux-dragging .tmux-leaf-dropzone.tmux-leaf-dragover{background-color:rgba(
                     <hr class="my-2">
                     <!-- 채팅/터미널 완료 알림 로그. Control.ts의 _showDoneNotification()이 최신순으로 쌓고 7개 초과 시 오래된 것부터 제거한다. -->
                     <div id="aiNotifLog" class="d-flex flex-column gap-1"></div>
-                </div>
-                <!-- Other: Browser/Editor 세션을 최신순 평면 목록으로 표시. renderOtherList()가 채운다.
-                     예전에는 좌측 사이드바의 Other 서브탭이었으나 File(빠른 파일 열람 패널)과 자리를 맞바꿔
-                     여기로 옮겨왔다. -->
-                <div class="tab-pane fade" id="right-other-panel" role="tabpanel" aria-labelledby="right-other-tab">
-                    <!-- RDP 세션 목록(Local + Remote). Control.ts의 rdpRenderList()가 채운다.
-                         예전에는 좌측 사이드바 맨 위였으나, Other와 함께 이 탭으로 옮겨왔다. -->
-                    <div id="rdp-sidebar-list" class="d-flex flex-column gap-1"></div>
-                    <div id="other-sidebar-list" class="d-flex flex-column gap-1"></div>
                 </div>
                 <div class="tab-pane fade" id="right-option-panel" role="tabpanel" aria-labelledby="right-option-tab">
                     <div class="mb-2">

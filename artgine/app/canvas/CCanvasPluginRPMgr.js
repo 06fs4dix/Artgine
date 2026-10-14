@@ -1,56 +1,64 @@
 import { CUpdate } from "../../basic/Basic.js";
+import { CVec2 } from "../../geometry/CVec2.js";
 import { CCanvasPlugin } from "./CCanvas.js";
 import { CRPMgr } from "./CRPMgr.js";
 export class CCanvasPluginRPMgr extends CCanvasPlugin {
-    mRPMgr = null;
-    mChangeRPMgr = null;
+    mRPMgr;
+    mChangeRPMgr;
     constructor(_RPMgr) {
         super();
         this.SetRPMgr(_RPMgr);
     }
-    SetRPMgr(_rpMgr) {
-        if (this.mRPMgr == null && _rpMgr == null) {
-            this.mChangeRPMgr = null;
-            return;
-        }
+    SetRPMgr(_rpMgr = null) {
         if (_rpMgr == null)
-            this.mChangeRPMgr = new CRPMgr();
+            _rpMgr = new CRPMgr();
+        if (this.mRPMgr == null)
+            this.mRPMgr = _rpMgr;
         else
             this.mChangeRPMgr = _rpMgr;
+        this.mRPMgr.mUpdate = CUpdate.eType.Updated;
     }
     Exe() {
+        if (this.mRPMgr.mUpdate == CUpdate.eType.Updated)
+            this.mRPMgr.mUpdate = CUpdate.eType.Already;
+        else if (this.mRPMgr.mUpdate == CUpdate.eType.Already)
+            this.mRPMgr.mUpdate = CUpdate.eType.Not;
+        if (this.mRPMgr.mUpdate != CUpdate.eType.Not) {
+            for (const autoRP of this.mRPMgr.mRPArr)
+                this.mCanvas.RemoveAutoRP(autoRP.Key());
+            for (const suf of this.mRPMgr.mSufArr)
+                this.mCanvas.Find(suf.Key())?.Destroy();
+            for (const [key, tex] of this.mRPMgr.mTexMap) {
+                const oldTex = this.mCanvas.GetFrame().Res().Find(key);
+                if (oldTex) {
+                    this.mCanvas.GetFrame().Ren().ReleaseTexture(oldTex);
+                    this.mCanvas.GetFrame().Res().Remove(key);
+                }
+            }
+        }
         if (this.mChangeRPMgr != null) {
-            if (this.mRPMgr != null) {
-                for (let i = 0; i < this.mRPMgr.mRPArr.length; ++i) {
-                    this.mCanvas.GetBrush().RemoveAutoRP(this.mRPMgr.Key() + "_" + i);
-                }
-                this.mCanvas.GetBrush().mAutoRPUpdate = CUpdate.eType.Not;
-                for (let i = 0; i < this.mRPMgr.mSufArr.length; ++i) {
-                    const obj = this.mCanvas.Find(this.mRPMgr.mSufArr[i].Key());
-                    if (obj)
-                        obj.Destroy();
-                }
-                this.mCanvas.GetBrush().ClearRen();
-            }
-            if (this.mChangeRPMgr.mTexMap.size != 0 || this.mChangeRPMgr.mSufArr.length != 0 || this.mChangeRPMgr.mRPArr.length != 0) {
-                for (let i = 0; i < this.mChangeRPMgr.mRPArr.length; ++i) {
-                    this.mCanvas.GetBrush().SetAutoRP(this.mChangeRPMgr.Key() + "_" + i, this.mChangeRPMgr.mRPArr[i]);
-                }
-                for (let i = 0; i < this.mChangeRPMgr.mSufArr.length; ++i) {
-                    let c = this.mChangeRPMgr.mSufArr[i].Export(true, false);
-                    this.mCanvas.PushSub(c);
-                }
-                this.mChangeRPMgr.SetFrame(this.mCanvas.GetFrame());
-                this.mRPMgr = this.mChangeRPMgr;
-            }
-            else
-                this.mRPMgr = null;
+            this.mRPMgr = this.mChangeRPMgr;
+            this.mRPMgr.mUpdate = CUpdate.eType.Already;
             this.mChangeRPMgr = null;
+        }
+        if (this.mRPMgr.mUpdate != CUpdate.eType.Not) {
+            for (const autoRP of this.mRPMgr.mRPArr)
+                this.mCanvas.PushAutoRP(autoRP.Key(), autoRP);
+            for (const suf of this.mRPMgr.mSufArr)
+                this.mCanvas.PushSub(suf.Export(true, false));
+            for (const [key, tex] of this.mRPMgr.mTexMap) {
+                const oldTex = this.mCanvas.GetFrame().Res().Find(key);
+                if (oldTex) {
+                    this.mCanvas.GetFrame().Ren().ReleaseTexture(oldTex);
+                    this.mCanvas.GetFrame().Res().Remove(key);
+                }
+                this.mCanvas.GetFrame().Ren().BuildRenderTarget(tex.GetInfo(), tex.HasOrg() ? new CVec2(tex.GetOrgWidth(), tex.GetOrgHeight()) : null, key);
+            }
         }
     }
     ;
     Destroy() {
         super.Destroy();
-        this.SetRPMgr(null);
+        this.SetRPMgr();
     }
 }

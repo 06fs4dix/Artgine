@@ -1,5 +1,6 @@
 import { CUtil } from "./CUtil.js";
 var gClassMap = new Map();
+var gMethodSnapshot = new Map();
 export class CClass {
     static ExtendsList(_type, _nameStr = false) {
         if (typeof _type === "object") {
@@ -83,16 +84,40 @@ export class CClass {
     static Push(_key, _val = null) {
         if (_val && typeof _val != "object" && typeof _val != "function")
             return;
+        let ctor = null;
         if (typeof _key == "string") {
             if (CUtil.IsNode() == false)
                 window[_key] = _val;
             gClassMap.set(_key, _val);
+            ctor = _val;
         }
         else if (_key.name != null) {
             if (CUtil.IsNode() == false)
                 window[_key.name] = _key;
             gClassMap.set(_key.name, _key);
+            ctor = _key;
         }
+        if (typeof ctor === "function" && ctor.prototype != null) {
+            const methods = new Map();
+            let proto = ctor.prototype;
+            while (proto && proto !== Object.prototype) {
+                for (const name of Object.getOwnPropertyNames(proto)) {
+                    if (name === "constructor" || methods.has(name))
+                        continue;
+                    const desc = Object.getOwnPropertyDescriptor(proto, name);
+                    if (desc && typeof desc.value === "function")
+                        methods.set(name, desc.value);
+                }
+                proto = Object.getPrototypeOf(proto);
+            }
+            gMethodSnapshot.set(ctor, methods);
+        }
+    }
+    static ResolveMethod(obj, name) {
+        if (obj == null)
+            return null;
+        const methods = gMethodSnapshot.get(obj.constructor);
+        return methods ? (methods.get(name) ?? null) : null;
     }
     static MethodName(_target, _all = false) {
         const methodSet = new Set();
@@ -206,3 +231,4 @@ export class CClass {
     }
 }
 CClass.Push(CClass);
+CClass.Push(CUtil);

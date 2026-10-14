@@ -14,14 +14,16 @@ export default class CParserGLTF extends CParser
     mColorTex : boolean;
     mTexBufRaw:boolean;
     public mComputeNormal : boolean;
+    public mMergeStatic : boolean;
 
-    constructor(_inch : boolean,_colorTex=false,_texBufRaw=false,_computeNormal=true)
+    constructor(_inch : boolean,_colorTex=false,_texBufRaw=false,_computeNormal=true,_mergeStatic=true)
     {
         super();
         this.mInch = _inch;
         this.mColorTex=_colorTex;
         this.mTexBufRaw=_texBufRaw;
         this.mComputeNormal=_computeNormal;
+        this.mMergeStatic=_mergeStatic;
     }
     override GetResult() {
         return this.mMesh;

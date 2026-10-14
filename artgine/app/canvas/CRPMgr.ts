@@ -1,18 +1,13 @@
-import { CClass } from "../../basic/CClass.js";
+import { CUpdate } from "../../basic/Basic.js";
 import { CDOM } from "../../basic/CDOM.js";
 import { CJSON } from "../../basic/CJSON.js";
-import { CObject, CPointer } from "../../basic/CObject.js";
-import { CUtilObj } from "../../basic/CUtilObj.js";
-import { CVec2 } from "../../geometry/CVec2.js";
+import { CObject } from "../../basic/CObject.js";
 import { CRenderPass } from "../../render/CRenderPass.js";
 import { CTexture } from "../../render/CTexture.js";
 import { CFile } from "../../system/CFile.js";
 import { IFile } from "../../system/System.js";
 import { CCondition } from "../../util/CCondition.js";
-import { CFrame } from "../../util/CFrame.js";
-import { CPaint } from "../component/paint/CPaint.js";
 import { CSurface } from "../subject/CSurface.js";
-
 
 export class CRPAuto extends CRenderPass 
 {
@@ -27,174 +22,74 @@ export class CRPAuto extends CRenderPass
 	{
 		this.mAnd.push(_con);
 	}
-	PushOr(_con : CCondition)
+	PushOr(_con : CCondition|CCondition[])
 	{
-		this.mOr.push(_con);
+		if(_con instanceof Array)
+			this.mOr.push(..._con);
+		else
+			this.mOr.push(_con);
 	}
 }
 
 export class CRPMgr extends CObject implements IFile
 {
-	//private mCanvas : CCanvas = null;
-	mFrame : CFrame;
-
 	public mRPArr : Array<CRPAuto> = new Array<CRPAuto>();
 	public mSufArr : Array<CSurface> =new Array<CSurface>();
 	public mTexMap : Map<string, CTexture> = new Map<string, CTexture>();
 
-	override IsShould(_member: string, _type: CObject.eShould) 
-	{
-		if(_member == "mFrame") {
-			return false;
-		}
+	public mUpdate=CUpdate.eType.Not;
+
+	override IsShould(_member: string, _type: CObject.eShould): boolean {
+		if(_member == "mUpdate") return false;
 		return super.IsShould(_member, _type);
 	}
-
-	SetFrame(_frame : CFrame) {
-		this.mFrame = _frame;
-
-		//create new texture
-		this.Reset();
-	}
-	//GetCanvas()	{	return this.mCanvas;	}
 
 	PushRP(_data : CRPAuto)
 	{
 		this.mRPArr.push(_data);
+		this.mUpdate=CUpdate.eType.Updated;
 		return _data;
 	}
 	PushSuf(_data : CSurface)
 	{
 		this.mSufArr.push(_data);
-		//더미로 일단 만들어둠
-		if(this.mFrame!=null)
-		{
-			let tex=new CTexture();
-			this.mFrame.Res().Push(_data.GetTexKey(),tex);
-			tex.mFrameBuf.push(null);
-		}
+		this.mUpdate=CUpdate.eType.Updated;
 		return _data;
 	}
 	PushTex(_key : string,_data : CTexture)
 	{
 		this.mTexMap.set(_key,_data);
-		if(this.mFrame!=null)
-		{
-			this.mFrame.Res().Push(_key,_data);
-			_data.mFrameBuf.push(null);
-		}
+		this.mUpdate=CUpdate.eType.Updated;
 		return _key;
 	}
-	//GBuf까지 지워야함!
-	RemoveTex(_key : string)
-	{
-		this.mTexMap.delete(_key);
-
-		if(this.mFrame!=null)
-		{
-			this.mFrame.Res().Remove(_key);
-			//_data.mFrameBuf.push(null);
-		}
-	}
+	
 	RemoveRP(_data : CRPAuto)
 	{
-		for(let i=0;i<this.mRPArr.length;++i)
-		{
-			if(this.mRPArr[i]==_data)
-			{
-				this.mRPArr.splice(i,1);
-				return;
-			}
-		}
+		const i = this.mRPArr.indexOf(_data);
+		if(i >= 0) this.mRPArr.splice(i, 1);
 	}
 	RemoveSuf(_data : CSurface)
 	{
-		for(let i=0;i<this.mSufArr.length;++i)
-		{
-			if(this.mSufArr[i]==_data)
-			{
-				this.mSufArr.splice(i,1);
-				return;
-			}
-		}
+		const i = this.mSufArr.indexOf(_data);
+		if(i >= 0) this.mSufArr.splice(i, 1);
 	}
-
-	//json save : m_rpCons의 텍스쳐 가져와서 저장(fw있어야 되는데 생각해봐야 할듯)
-	//json load : m_rtCons에서 rt 생성
-
-	SaveTexture()
+	RemoveTex(_key : string)
 	{
-		for(let rp of this.mRPArr) {
-			const texKey = rp.mRenderTarget;
-			if(texKey == "" || this.mTexMap.has(texKey)) continue;
-
-
-			const tex : CTexture = this.mFrame.Res().Find(texKey);
-			if(tex == null) continue;
-
-
-			const newTex = new CTexture();
-			newTex.SetSize(tex.GetWidth(), tex.GetHeight());
-			newTex.SetOrg(tex.GetOrgWidth(), tex.GetOrgHeight());
-			newTex.SetAlpha(tex.GetAlpha());
-			newTex.SetAnti(tex.GetAnti());
-			newTex.SetFilter(tex.GetFilter());
-			newTex.PushInfo(tex.GetInfo());
-			if(tex.IsKey()) {
-				newTex.SetKey(tex.Key());
-			}
-			newTex.SetMipMap(tex.GetMipMap());
-			newTex.SetWrap(tex.GetWrap());
-			this.mTexMap.set(texKey, newTex);
-		}
+		this.mTexMap.delete(_key);
 	}
 
-	public Reset() 
-	{
-		if(this.mFrame == null) return;
-
-		for(let [key, tex] of this.mTexMap) {
-			let size : CVec2 = null;
-			if(tex.HasOrg())
-				size=new CVec2(tex.GetOrgWidth(), tex.GetOrgHeight());
-			this.mFrame.Ren().BuildRenderTarget(tex.GetInfo(),size,key);
-
-			//this.m_can.GetFrame().Ren().ChangeAnti(key,tex.GetAnti());
-			//this.m_can.GetFrame().Ren().ChangeFilter(key,tex.GetFilter());
-		}
-		// for(let key of this.mTexMap.keys())
-		// {
-		// 	let tex=this.mFrame.Res().Find(key);
-		// 	this.mTexMap.set(key,tex);
-			
-		// }
-
-	}
-
-	public ExportCJSON(): CJSON {
-		this.SaveTexture();
-		return super.ExportCJSON();
-	}
-
-	
 	async LoadJSON(_file=null)
 	{
 		let buf=await CFile.Load(_file);
 		if(buf==null)	return true;
 		this.ImportCJSON(new CJSON(buf));
-
-		// this.mCanvas.SetRPMgr(this);
-		// this.mCanvas.ClearBatch();
-		// this.SetCanvas(this.mCanvas);
-
 		return false;
 	}
-
 	async SaveJSON(_file=null)
 	{
 		CFile.Save(this.ToStr(),_file);
 	}
-	EditHTMLInit(_div : HTMLDivElement)
+	override EditHTMLInit(_div : HTMLDivElement)
 	{
 		super.EditHTMLInit(_div);
 		var button=CDOM.TagToDom("button");
@@ -203,8 +98,6 @@ export class CRPMgr extends CObject implements IFile
 			if(window["RPMgrTool"]!=null)
 				window["RPMgrTool"](this);
 		};
-		
 		_div.append(button);
-
 	}
 }

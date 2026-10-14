@@ -16,13 +16,25 @@ export class CFloat32 extends CObject
 	}
 	NewWASM()
 	{
-		this.mF32A=CWASM.ProductF32A(this.mF32A.length);
+		//메모리 위치만 옮기고 값은 유지한다. 안 그러면 CBound처럼 생성자 초기값(min=+1e30,max=-1e30)이 0으로 지워진다
+		const old=this.mF32A;
+		this.mF32A=CWASM.ProductF32A(old.length);
+		const n=Math.min(old.length,this.mF32A.length);
+		for(let i=0;i<n;++i)	this.mF32A[i]=old[i];
 		CWASM.RegisterF32A(this);
 	}
 	ReleaseWASM()
 	{
+		//반납한 뒤에도 같은 뷰를 쥐고 있으면 다시 반납(풀에 중복 → 두 주인이 같은 메모리)하거나 반납 뒤 쓰기가 새 주인 값을 덮는다.
+		//반납 즉시 값만 복사한 일반 배열로 바꿔 두 번째 호출과 이후 쓰기가 아무 영향이 없게 한다
+		const old=this.mF32A;
+		if(old==null || old["ptr"]==null)	return;
 		CWASM.UnregisterF32A(this);
-		CWASM.Recycle(this.mF32A);
+		const copy=new Float32Array(old["len"]!=null ? old["len"] : old.length);
+		const n=Math.min(copy.length,old.length);
+		for(let i=0;i<n;++i)	copy[i]=old[i];
+		this.mF32A=copy;
+		CWASM.Recycle(old);
 	}
 	
 	IsZero() : boolean	

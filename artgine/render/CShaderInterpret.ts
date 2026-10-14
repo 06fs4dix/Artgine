@@ -1311,6 +1311,30 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	return texture(sam2DArr[0],vec3(0.0,0.0,0.0));";
 		str += "}\n";
 
+		str += "vec4 Sam2DArrNearestToV4(vec3 _uni,float _off) {\n";
+		if(CDevice.GetProperty(CDevice.eProperty.TexelFetch)==1)
+		{
+			str += "	ivec3 tc = ivec3(int(_off+0.5), int(_uni.y+0.5), int(_uni.z+0.5));\n";
+			str += "	if(_uni.x-0.5<=0.0) return texelFetch(sam2DArr[0],tc,0);\n";
+			for (var j = 1; j < CDevice.GetProperty(CDevice.eProperty.Sam2DArrMax); ++j)
+				str += "	else if(_uni.x-0.5<=" + j + ".0) return texelFetch(sam2DArr["+j+"],tc,0);\n";
+			str += "	return texelFetch(sam2DArr[0],ivec3(0),0);\n";
+		}
+		else
+		{
+			//모바일 GL은 sampler2DArray 배열 texelFetch에서 드라이버가 리셋돼(좌표 clamp해도 동일) 텍셀 중심 texture() 샘플링으로 읽는다
+			str += "	return Sam2DArrToV4(_uni,_off);\n";
+		}
+		str += "}\n";
+
+		str += "mat4 Sam2DArrNearestToMat(vec3 _uni,float _off) {\n";
+		str += "return mat4(\n";
+		str += "Sam2DArrNearestToV4(_uni,_off*4.0+0.0),\n";
+		str += "Sam2DArrNearestToV4(_uni,_off*4.0+1.0),\n";
+		str += "Sam2DArrNearestToV4(_uni,_off*4.0+2.0),\n";
+		str += "Sam2DArrNearestToV4(_uni,_off*4.0+3.0)\n";
+		str += ");}\n";
+
 		str += "mat4 Sam2DArrToMat(vec3 _uni,float _off) {\n";
 		str += "return mat4(\n";
 		str += "Sam2DArrToV4(_uni,_off*4.0+0.0),\n";
@@ -1452,6 +1476,17 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	return vec4(0,0,0,1);\n";
 		str += "}\n";
 
+		str += "vec4 Sam2DArrLodToColor(float _off,vec3 _uv,float _lod)\n";
+		str += "{\n";
+		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.Sam2DArrMax); ++j)
+		{
+			str += "	if(_off-0.5<=" + j + ".0)\n";
+			str += "		return textureLod(sam2DArr[" + j + "],_uv,_lod);\n";
+			
+		}
+		str += "	return vec4(0,0,0,1);\n";
+		str += "}\n";
+
         str += "vec4 Sam2DArrGradToColor(float _off,vec3 _uv,vec2 _dx,vec2 _dy)\n";
 		str += "{\n";
 		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.Sam2DArrMax); ++j)
@@ -1500,6 +1535,9 @@ export class CShaderInterpretGL extends CShaderInterpret
 		
 		str += "vec3 ParallaxNormal(vec3 TangentViewPos,vec3 TangentFragPos,float _index,vec2 _uv,float height_scale)\n";
 		str += "{\n";
+		//기울기는 거리 감쇠로 갈라지기 전(균일 흐름)에 구한다. 반복 샘플은 이 기울기로 밉을 골라 원거리 캐시 미스를 줄인다
+		str += "	vec2 dUVx = dFdx(_uv); vec2 dUVy = dFdy(_uv);\n";
+		str += "	if(height_scale < 0.000001) return vec3(_uv, 0.0);\n";
 		str += "	const float minLayers = 8.0;const float maxLayers = 32.0;\n";
 		str += "	vec3 viewDir   = normalize(TangentViewPos - TangentFragPos);\n";
 		str += "	float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));\n";
@@ -1510,17 +1548,17 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	vec2 deltaTexCoords = P / numLayers;\n";
 		str += "	vec2  currentTexCoords     = _uv;\n";
 		//str += "	deltaTexCoords.y=-deltaTexCoords.y;\n";//uv좌표계가 반대라서 이렇게
-		str += "	float currentDepthMapValue = 1.0-Sam2DLodToColor(_index, currentTexCoords, 0.0).a;\n";
+		str += "	float currentDepthMapValue = 1.0-Sam2DGradToColor(_index, currentTexCoords, dUVx, dUVy).a;\n";
 		str += "	for(int i=0;i<128;++i){\n";
 		str += "		if(currentLayerDepth < currentDepthMapValue){\n";
 		str += "			currentTexCoords -= deltaTexCoords;\n";
-		str += "			currentDepthMapValue = 1.0-Sam2DLodToColor(_index, currentTexCoords, 0.0).a;\n";
+		str += "			currentDepthMapValue = 1.0-Sam2DGradToColor(_index, currentTexCoords, dUVx, dUVy).a;\n";
 		str += "			currentLayerDepth += layerDepth;\n";
 		str += "		}	else	{break;}\n";
 		str += "	}\n";
 		str += "	vec2 prevTexCoords = currentTexCoords + deltaTexCoords;\n";
 		str += "	float afterDepth  = currentDepthMapValue - currentLayerDepth;\n";
-		str += "	float beforeDepth = 1.0-Sam2DLodToColor(_index, prevTexCoords, 0.0).a - currentLayerDepth + layerDepth;\n";
+		str += "	float beforeDepth = 1.0-Sam2DGradToColor(_index, prevTexCoords, dUVx, dUVy).a - currentLayerDepth + layerDepth;\n";
 		str += "	float weight = afterDepth / (afterDepth - beforeDepth);\n";
 		str += "	vec2 newUv = prevTexCoords * weight + currentTexCoords * (1.0 - weight);\n";
 		str += "	currentLayerDepth += beforeDepth * weight + afterDepth * (1.0 - weight);\n";
@@ -1656,6 +1694,55 @@ export class CShaderInterpretGL extends CShaderInterpret
 		// str += "mat4 Sam2DToMat(vec2 _uni,int _off) {\n";
 		// str += "	return Sam2DToMat(_uni,float(_off));\n";
 		// str += "}\n";
+
+		str += "vec4 Sam2DArrToCubeColor(float _off, vec3 _dir, float _texOff)\n";
+		str += "{\n";
+		str += "	_dir = normalize(_dir);\n";
+		str += "	vec3 absDir = abs(_dir);\n";
+		str += "	vec3 uvw;\n";
+		str += "	if(absDir.x>=absDir.y&&absDir.x>=absDir.z) {\n";
+		str += "		if(_dir.x>0.0) uvw=vec3(_dir.z,_dir.y,"+SDF.eShadow.Near+".0);\n";
+		str += "		else uvw=vec3(-_dir.z,_dir.y,"+SDF.eShadow.Far+".0);\n";
+		str += "	}\n";
+		str += "	else if(absDir.y>=absDir.x&&absDir.y>=absDir.z) {\n";
+		str += "		if(_dir.y>0.0) uvw=vec3(_dir.x,_dir.z,"+SDF.eShadow.Top+".0);\n";
+		str += "		else uvw=vec3(_dir.x,-_dir.z,"+SDF.eShadow.Bottom+".0);\n";
+		str += "	}\n";
+		str += "	else {\n";
+		str += "		if(_dir.z>0.0) uvw=vec3(-_dir.x,_dir.y,"+SDF.eShadow.Left+".0);\n";
+		str += "		else uvw=vec3(_dir.x,_dir.y,"+SDF.eShadow.Right+".0);\n";
+		str += "	}\n";
+		str += "	uvw.xy=uvw.xy/max(absDir.x,max(absDir.y,absDir.z))*0.5+0.5;\n";
+		//면 가장자리 텍셀 중심이 큐브 모서리가 되도록 줄인다. 2D 배열은 면끼리 필터링이 안 이어져서 이게 없으면 경계선이 보인다(CEnvMap fov, CImgPro.SphericalGaussianBlur와 같은 규칙)
+		str += "	float edgeS=max(Sam2DArrSize(_off).x,1.0);\n";
+		str += "	uvw.xy=(uvw.xy-0.5)*((edgeS-1.0)/edgeS)+0.5;\n";
+		str += "	uvw.z+=_texOff-"+SDF.eShadow.Near+".0;\n";
+		str += "	return Sam2DArrToColor(_off, uvw);\n";
+		str += "}\n";
+
+		str += "vec4 Sam2DArrLodToCubeColor(float _off,vec3 _dir,float _texOff,float _lod)\n";
+		str += "{\n";
+		str += "	_dir = normalize(_dir);\n";
+		str += "	vec3 absDir = abs(_dir);\n";
+		str += "	vec3 uvw;\n";
+		str += "	if(absDir.x>=absDir.y&&absDir.x>=absDir.z) {\n";
+		str += "		if(_dir.x>0.0) uvw=vec3(_dir.z,_dir.y,"+SDF.eShadow.Near+".0);\n";
+		str += "		else uvw=vec3(-_dir.z,_dir.y,"+SDF.eShadow.Far+".0);\n";
+		str += "	}\n";
+		str += "	else if(absDir.y>=absDir.x&&absDir.y>=absDir.z) {\n";
+		str += "		if(_dir.y>0.0) uvw=vec3(_dir.x,_dir.z,"+SDF.eShadow.Top+".0);\n";
+		str += "		else uvw=vec3(_dir.x,-_dir.z,"+SDF.eShadow.Bottom+".0);\n";
+		str += "	}\n";
+		str += "	else {\n";
+		str += "		if(_dir.z>0.0) uvw=vec3(-_dir.x,_dir.y,"+SDF.eShadow.Left+".0);\n";
+		str += "		else uvw=vec3(_dir.x,_dir.y,"+SDF.eShadow.Right+".0);\n";
+		str += "	}\n";
+		str += "	uvw.xy=uvw.xy/max(absDir.x,max(absDir.y,absDir.z))*0.5+0.5;\n";
+		str += "	float edgeS=max(Sam2DArrSize(_off).x*exp2(-_lod),1.0);\n";
+		str += "	uvw.xy=(uvw.xy-0.5)*((edgeS-1.0)/edgeS)+0.5;\n";
+		str += "	uvw.z+=_texOff-"+SDF.eShadow.Near+".0;\n";
+		str += "	return Sam2DArrLodToColor(_off, uvw, _lod);\n";
+		str += "}\n";
 
 		return str;
 	}

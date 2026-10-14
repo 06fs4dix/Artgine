@@ -27,6 +27,7 @@ process.on('uncaughtException', (e) => {
     console.error('[uncaughtException]', e);
 });
 process.on('unhandledRejection', (e) => { console.error('[unhandledRejection]', e); });
+process.time = Date.now();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 if (app.isPackaged) {
@@ -82,6 +83,19 @@ const createWindow = () => {
         gMainWindow.setAlwaysOnTop(true);
         gMainWindow.focus();
         gMainWindow.setAlwaysOnTop(false);
+    });
+    gMainWindow.webContents.on('will-prevent-unload', (event) => {
+        const choice = dialog.showMessageBoxSync(gMainWindow, {
+            type: 'question',
+            buttons: ['종료', '취소'],
+            defaultId: 1,
+            cancelId: 1,
+            title: '확인',
+            message: '이 페이지를 나가시겠습니까?',
+            detail: '변경사항이 저장되지 않을 수 있습니다.',
+        });
+        if (choice === 0)
+            event.preventDefault();
     });
     gMainWindow.webContents.on('context-menu', (_event, params) => {
         const template = [];

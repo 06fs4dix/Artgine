@@ -49,9 +49,11 @@ import { CRigidBody } from "../app/component/CRigidBody.js";
 import { CPaint } from "../app/component/paint/CPaint.js";
 import { CCollider } from "../app/component/CCollider.js";
 import { CLight } from "../app/component/CLight.js";
-import { CPaint2D } from "../app/component/paint/CPaint2D.js";
+import { CPaint2D, CPaint2DMerge } from "../app/component/paint/CPaint2D.js";
 import { CLocation } from "../app/subject/CLocation.js";
-import { CPaint3D } from "../app/component/paint/CPaint3D.js";
+import { CPaint3D, CPaint3DMerge } from "../app/component/paint/CPaint3D.js";
+import { CPaintVoxel } from "../app/component/paint/CPaintVoxel.js";
+import { CPaintTerrain } from "../app/component/paint/CPaintTerrain.js";
 import { CBrush } from "../app/canvas/CBrush.js";
 import { CColor } from "../render/CColor.js";
 import { CAlpha } from "../render/CAlpha.js";
@@ -75,6 +77,9 @@ let gBoundZX=new CBound();
 let gBoundTick=40;
 let gDragBound=0;
 let gMouse : CMouse=null;
+let gDownMouse : CMouse=null;
+let gPickMouse : CMouse=null;
+const gClickSlop=3;
 let gBTargetWidth=0;
 let gBTargetHeight=0;
 let gBWidth=0;
@@ -608,7 +613,7 @@ function DevToolRender()
 
         if(_font)
         {
-            gAtl.Frame().Dev().SetDepthTest(true);
+            gAtl.Frame().Dev().SetDepthTest(false);
             gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
 
             var fr = CFont.TextToTexName(gAtl.Frame().Ren(),_sub.Key(),new CFontOption(32,"white","black",2));
@@ -618,8 +623,8 @@ function DevToolRender()
             color.w=SDF.eColorModel.None;
             
             
-            wmat.mF32A[0]=fr.mRXSize/100;
-            wmat.mF32A[5]=fr.mRYSize/100;
+            wmat.mF32A[0]=fr.mRXSize*2;
+            wmat.mF32A[5]=fr.mRYSize*2;
             // wmat.mF32A[0]=1;
             // wmat.mF32A[5]=1;
             wmat.mF32A[10]=1;
@@ -769,6 +774,7 @@ function DevToolRender()
                 localMat.mF32A[0]=lsize.x;
                 localMat.mF32A[5]=lsize.y;
                 localMat.mF32A[10]=lsize.z;
+                localMat.UnitCheck();
                 CMath.MatMul(localMat,cl.GetBW().mMat,wmat);
 
                 MatToMat12Fun(wmat);
@@ -1149,6 +1155,7 @@ function DevToolDrop(_drop : CDrop)
                     if (mesh?.texture instanceof Array) {
                         for (let ti = 0; ti < mesh.texture.length; ++ti) {
                             const texPath = mesh.texture[ti];
+                            if (texPath.indexOf("&") != -1) continue;
                             const texName = texPath.split("/").pop()?.toLowerCase() ?? "";
 
                             if (textureMap.has(texName)) {
@@ -1335,7 +1342,10 @@ function DevToolUpdate(_delay)
 
         gMouse=mouse;
     }
-    if(gAtl.Frame().Input().KeyDown(CInput.eKey.LButton) && gDragBound==0 && gLeftSelect instanceof CSubject && 
+    if(gAtl.Frame().Input().KeyDown(CInput.eKey.LButton) && gDownMouse==null)
+        gDownMouse=gAtl.Frame().Input().Mouse().Export();
+
+    if(gAtl.Frame().Input().KeyDown(CInput.eKey.LButton) && gDragBound==0 && gLeftSelect instanceof CSubject &&
         CInput.eDragState.None==gAtl.Frame().Input().DragState())
     {
 
@@ -1387,99 +1397,112 @@ function DevToolUpdate(_delay)
         gAddMove.Zero();
         if(gAtl.Brush().GetCamDev().GetCamCon()!=null)
             gAtl.Brush().GetCamDev().GetCamCon().SetInput(gAtl.Frame().Input());
-        if(gDragBound==4)
-        {
-            gDragBound=0;
+        let upMouse=gAtl.Frame().Input().Mouse().Export();
+        let dragged=gDownMouse!=null &&
+            (Math.abs(upMouse.x-gDownMouse.x)>gClickSlop || Math.abs(upMouse.y-gDownMouse.y)>gClickSlop);
+        let wasDragBound=gDragBound;
+        gDownMouse=null;
+        gDragBound=0;
+        if(wasDragBound==4)
             return;
-        }
-        if(gDragBound!=0 || gAtl.Frame().Input().DragState()!=CInput.eDragState.None)
-        {
-            gDragBound=0;
-            //LeftSelect(gLeftSelect);
+        //기즈모를 눌렀더라도 실제로 끌지 않았으면 제자리 클릭이므로 재선택을 진행한다.
+        if(dragged)
             return;
-        }
-        
-        
-        let selectLen=1000000000;
-        let selectSub=null;
-        let bselectSub=null;
+
+
         //let t1=CPoolGeo.ProductRay();
-        let ray=gAtl.Brush().GetCamDev().GetRay(gAtl.Frame().Input().Mouse().x,gAtl.Frame().Input().Mouse().y);
-        if(gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z<-0.9)//2D는 가림 문제로 하드코딩
+        let ray=gAtl.Brush().GetCamDev().GetRay(upMouse.x,upMouse.y);
+        let flatZ=gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z<-0.9;
+        if(flatZ)//2D는 가림 문제로 하드코딩
             ray.GetOriginal().z+=1000;
-        for (let canvas of gAtl.mCanvasMap.values()) 
+
+        //초기화된 적 없는 바운드는 mMin>mMax인데, RayBoxIS가 lo/hi를 스왑해버려서
+        //±100000짜리 월드 전체 박스가 되어 모든 클릭에 히트한다. 반드시 먼저 걸러낸다.
+        let FunEmptyBound=(_bound : CBound)=>{
+            return _bound.GetType()==CBound.eType.Null ||
+                _bound.mMin.x>_bound.mMax.x || _bound.mMin.y>_bound.mMax.y || _bound.mMin.z>_bound.mMax.z;
+        };
+        //2D(직교+정면)에서는 CPaint2D가 컬링용으로 바운드 z를 ±OutRadius까지 부풀려 놓기 때문에
+        //레이 진입점 거리로 정렬하면 "z가 위인 것"이 아니라 "큰 스프라이트"가 이긴다. 그래서 월드 z로 정렬한다.
+        //CPaint2D는 바운드 중심 z가 곧 자기 z지만 CPaint2DMerge는 GetFMat().z가 0이라 중심 z를 써야 한다.
+        let FunDepth=(_bound : CBound)=>{
+            if(flatZ==false)    return CMath.V3Distance(ray.GetOriginal(),ray.GetPosition());
+            return -(_bound.mMin.z+_bound.mMax.z)*0.5;
+        };
+        //머지/복셀/터레인 페인트는 컴포넌트 하나가 수백 개 조각을 한 영역으로 그린다.
+        //바운드가 그 영역 전체라서 레이가 맞아도 그 픽셀에 뭔가 그려졌다는 뜻이 아니다.
+        //항상 개별 오브젝트에 자리를 내주고, 컨테이너끼리는 z로 겨루게 뒤 순위로 민다.
+        let FunContainer=(_pt : CPaint)=>{
+            return _pt instanceof CPaint2DMerge || _pt instanceof CPaint3DMerge ||
+                _pt instanceof CPaintVoxel || _pt instanceof CPaintTerrain;
+        };
+        let candArr : Array<{sub:CSubject,tier:number,depth:number,bound:CBound}>=[];
+        let FunAdd=(_sub : CSubject,_tier : number,_depth : number,_bound : CBound)=>{
+            for(let each0 of candArr)
+            {
+                if(each0.sub!=_sub)  continue;
+                if(_tier<each0.tier || (_tier==each0.tier && _depth<each0.depth))
+                {
+                    each0.tier=_tier;
+                    each0.depth=_depth;
+                    each0.bound.Import(_bound);
+                }
+                return;
+            }
+            let copy=new CBound();
+            copy.Import(_bound);
+            candArr.push({sub:_sub,tier:_tier,depth:_depth,bound:copy});
+        };
+        let FunPick=(_sub : CSubject)=>{
+            if(_sub.mSelect)
+            {
+                for(let pt of _sub.FindComps(CPaint))
+                {
+                    let bound=pt.GetBoundFMat();
+                    if(FunEmptyBound(bound))    continue;
+                    if(CUtilMath.RayBoxIS(bound.mMin,bound.mMax, ray)==false)    continue;
+                    FunAdd(_sub,FunContainer(pt)?1:0,FunDepth(bound),bound);
+                }
+                for(let cl of _sub.FindComps(CCollider))
+                {
+                    let bound=cl.GetBW();
+                    if(FunEmptyBound(bound.mWBound))    continue;
+                    if(CUtilMath.RayBoxIS(bound.mWBound.mMin,bound.mWBound.mMax, ray)==false)    continue;
+                    FunAdd(_sub,0,FunDepth(bound.mWBound),bound.mWBound);
+                }
+            }
+            for(let child of _sub.mChild)
+                FunPick(child);
+        };
+        for (let canvas of gAtl.mCanvasMap.values())
         {
             for(let subject of canvas.GetSubMap().values())
-            {
-                if(subject.mSelect==false)  continue;
-                
-                let ptArr=subject.FindComps(CPaint);
-                let clArr=subject.FindComps(CCollider);
-
-                ///ResetBoxXYZ(subject);
-
-                
-                
-                for(let pt of ptArr)
-                {
-                    if(selectSub==subject)  continue;
-                    let bound=pt.GetBoundFMat();
-
-                    if(CUtilMath.RayBoxIS(bound.mMin,bound.mMax, ray))
-                    {
-                        //CMath.V3MulMatCoordi(t1.GetPosition(), pt.GetFMat(),ray.mVec3List[1]);
-
-                        let len=CMath.V3Distance(ray.GetOriginal(),ray.GetPosition());
-                        if(len<selectLen)
-                        {
-                            bselectSub=selectSub;
-                            selectLen=len;
-                            selectSub=subject;
-                            gSelectBound=bound;
-                            break;
-                        }
-                        else if(bselectSub==null)
-                            bselectSub=subject;
-                    }
-                }
-                for(let cl of clArr)
-                {
-                    if(selectSub==subject)  continue;
-                    let bound=cl.GetBW();
-
-                    if(bound.mWBound.GetType()!= CBound.eType.Null && CUtilMath.RayBoxIS(bound.mWBound.mMin,bound.mWBound.mMax, ray))
-                    {
-                        //CMath.V3MulMatCoordi(t1.GetPosition(), cl.mGJKShape.GetMatrix(),ray.mVec3List[1]);
-
-                        let len=CMath.V3Distance(ray.GetOriginal(),ray.GetPosition());
-                        if(len<selectLen)
-                        {
-                            bselectSub=selectSub;
-                            selectLen=len;
-                            selectSub=subject;
-                            gSelectBound=bound.mWBound;
-                            
-                            break;
-                        }
-                        else if(bselectSub==null)
-                            bselectSub=subject;
-                    }
-                }
-
-                
-
-            }
+                FunPick(subject);
         }
         //CPoolGeo.RecycleRay(t1);
-        if(selectSub!=null)
+        if(candArr.length==0)
         {
-            if(gLeftSelect==selectSub && bselectSub!=null)
-                selectSub=bselectSub;
-            
-            LeftSelect(selectSub);
-        }
-        else
+            gPickMouse=null;
             LeftSelect(null);
+            return;
+        }
+        candArr.sort((a,b)=>a.tier!=b.tier? a.tier-b.tier : a.depth-b.depth);
+
+        //같은 자리를 다시 클릭할 때만 겹친 대상을 순환한다. 다른 자리를 찍으면 항상 맨 위가 잡힌다.
+        let idx=0;
+        if(gPickMouse!=null && gLeftSelect instanceof CSubject &&
+            Math.abs(upMouse.x-gPickMouse.x)<=gClickSlop && Math.abs(upMouse.y-gPickMouse.y)<=gClickSlop)
+        {
+            for(let i=0;i<candArr.length;++i)
+            {
+                if(candArr[i].sub!=gLeftSelect)  continue;
+                idx=(i+1)%candArr.length;
+                break;
+            }
+        }
+        gPickMouse=upMouse;
+        gSelectBound.Import(candArr[idx].bound);
+        LeftSelect(candArr[idx].sub);
     }//if LButton
  
     if(gAtl.Frame().Input().KeyUp(CInput.eKey.Esc))
@@ -2603,11 +2626,12 @@ function LeftSelect(_obj : CObject)
 
     
         
+    //뷰포트 클릭으로 자식 서브젝트가 잡히면 좌측 트리가 아직 생성되기 전일 수 있다.
     let li=CDOM.ID(_obj.ObjHash() + "_li");
 
- 
+
     // 현재 선택 카드 배경 회색 적용
-    const curCard = li.querySelector(".card") as HTMLElement;
+    const curCard = li?.querySelector(".card") as HTMLElement;
     if (curCard) curCard.classList.add("bg-info-subtle");
 
     // 우측 패널 갱신

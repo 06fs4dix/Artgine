@@ -1,7 +1,7 @@
 
 export class CTimer
 {
-	public mBegin : number;
+	private mBegin : number;
 	constructor(_time =0)
 	{
 		this.mBegin=_time;

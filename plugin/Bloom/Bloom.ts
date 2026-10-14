@@ -20,6 +20,12 @@ import { CRenderPass } from "../../artgine/render/CRenderPass.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
 import { CTexture, CTextureInfo } from "../../artgine/render/CTexture.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
+import { CRPAuto, CRPMgr } from "../../artgine/app/canvas/CRPMgr.js";
+import { CCondition } from "../../artgine/util/CCondition.js";
+import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
+import { CVec1 } from "../../artgine/geometry/CVec1.js";
+import { CVec4 } from "../../artgine/geometry/CVec4.js";
+import { SDF } from "../../artgine/z_file/SDF.js";
 
 export class CSurfaceDownSample extends CSurface
 {
@@ -334,7 +340,7 @@ export class CSurfaceBloom extends CSurface
 			//const texIndex = this.m_mipMax - i;
 			upSample.GetRP().mPriority=pri;
 			pri++;
-			upSample.m_blendFactor = this.GetBlendFactor(i, this.m_mipMax);
+			upSample.m_blendFactor = this.GetBlendFactor(this.m_mipMax - i, this.m_mipMax);
 			upSample.SetShaderAttr();
 		}
 
@@ -369,6 +375,126 @@ export class CSurfaceBloom extends CSurface
 	}
 }
 
+export type BloomOption = {
+	classes? : Array<string>,
+	tag? : string,
+	preset? : "Glow" | "Natural" | "OldSchool" | "ScreenBlur",
+	intensity? : number,
+	threshold? : number,
+	softThreshold? : number,
+	lowFrequencyBoost? : number,
+	lowFrequencyBoostCurvation? : number,
+	highPassFrequency? : number,
+};
+
+export class CRPMgrBloom extends CRPMgr
+{
+	static Tag(_pt : CPaint, _mask : number = 1, _tag : string = "bloom")
+	{
+		_pt.PushTag(_tag);
+		_pt.PushCShaderAttr(new CShaderAttr("mask", new CVec1(_mask)));
+	}
+
+	// 합성이 MainFrameTex를 읽어 기본 프레임버퍼로 내보내므로 이후 Ui 우선순위 패스는 화면에 나오지 않는다
+	static Append(_rpm : CRPMgr, _opt : BloomOption & { emissiveTo? : CRPMgr } = {})
+	{
+		const pal = CFrame.Main().Pal();
+		const emissiveKey = CRPMgrBloom.PushEmissive(_opt.emissiveTo ?? _rpm, _opt);
+		const bloom = CRPMgrBloom.PushBloom(_rpm, emissiveKey, _opt);
+
+		const last = _rpm.PushSuf(new CSurface());
+		const lrp = last.GetRP();
+		lrp.mRenderTarget = pal.GetDefaultFrameBuffer();
+		CRPMgrBloom.SetBlend(lrp, pal.GetMainFrameTex(), bloom.GetTexKey());
+		return bloom;
+	}
+
+	// CCanvasPluginRPMgr는 서피스를 Export 복사해서 캔버스에 넣으므로 블룸 파라미터는 부착 전에 확정해야 한다
+	constructor(_opt : BloomOption = {})
+	{
+		super();
+		// CClass.New 역직렬화 경로에서는 프레임이 없을 수 있다
+		if(CFrame.Main() == null)	return;
+
+		const pal = CFrame.Main().Pal();
+		const emissiveKey = CRPMgrBloom.PushEmissive(this, _opt);
+
+		// 캔버스 RP가 하나라도 붙으면 기본 Forward_2D(mRenderPass.length==0)에서 빠지므로 일반 패스를 대신 넣는다
+		const basicTex = new CTexture();
+		basicTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
+		const basicKey = this.PushTex("Bloom/basicTex.tex", basicTex);
+		const rp = this.PushRP(new CRPAuto());
+		for(const cls of _opt.classes ?? ["CPaint2D"])	rp.PushOr(new CCondition("class", "==", cls));
+		rp.mShader = pal.Sl2DKey();
+		rp.mCullFace = CRenderPass.eCull.None;
+		rp.mRenderTarget = basicKey;
+		rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.SingleShadowRead, pal.GetShadowReadTex()));
+
+		const bloom = CRPMgrBloom.PushBloom(this, emissiveKey, _opt);
+
+		// 기본 프레임버퍼가 아닌 MainFrameTex에 써야 이후 Ui 우선순위 패스가 위에 그려지고 자동 블릿이 유지된다
+		const last = this.PushSuf(new CSurface());
+		last.SetUseRT(false);
+		CRPMgrBloom.SetBlend(last.GetRP(), basicKey, bloom.GetTexKey());
+	}
+
+	private static PushEmissive(_rpm : CRPMgr, _opt : BloomOption)
+	{
+		const emissiveTex = new CTexture();
+		emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
+		const emissiveKey = _rpm.PushTex("Bloom/emissiveTex.tex", emissiveTex);
+		const rp = _rpm.PushRP(new CRPAuto());
+		for(const cls of _opt.classes ?? ["CPaint2D"])	rp.PushOr(new CCondition("class", "==", cls));
+		rp.PushAnd(new CCondition("mTag[" + (_opt.tag ?? "bloom") + "]"));
+		rp.mShader = CFrame.Main().Pal().Sl2DKey();
+		rp.mCullFace = CRenderPass.eCull.None;
+		rp.mRenderTarget = emissiveKey;
+		rp.mTag.add("mask");
+		return emissiveKey;
+	}
+
+	private static PushBloom(_rpm : CRPMgr, _emissiveKey : string, _opt : BloomOption)
+	{
+		const bloom = _rpm.PushSuf(new CSurfaceBloom()) as CSurfaceBloom;
+		const brp = bloom.GetRP();
+		brp.mShader = CFrame.Main().Pal().Sl2DKey();
+		brp.mTag.add("blit");
+		brp.mShaderAttr.push(new CShaderAttr(0, _emissiveKey));
+		const preset = _opt.preset ?? "Glow";
+		if(preset == "OldSchool")	bloom.OldSchool();
+		else if(preset == "ScreenBlur")	bloom.ScreenBlur();
+		else if(preset == "Glow")
+		{
+			// 발광 텍스처에는 태그된 페인트만 있으므로 임계값 없이 전부 받고, 이 값보다 강하면 작은 발광체도 화면 절반이 하얗게 날아간다
+			bloom.OldSchool();
+			bloom.m_threshold = 0;
+			bloom.m_softThreshold = 0;
+			bloom.m_intensity = 0.2;
+			bloom.m_lowFrequencyBoost = 1.6;
+		}
+		if(_opt.intensity != null)	bloom.m_intensity = _opt.intensity;
+		if(_opt.threshold != null)	bloom.m_threshold = _opt.threshold;
+		if(_opt.softThreshold != null)	bloom.m_softThreshold = _opt.softThreshold;
+		if(_opt.lowFrequencyBoost != null)	bloom.m_lowFrequencyBoost = _opt.lowFrequencyBoost;
+		if(_opt.lowFrequencyBoostCurvation != null)	bloom.m_lowFrequencyBoostCurvation = _opt.lowFrequencyBoostCurvation;
+		if(_opt.highPassFrequency != null)	bloom.m_highPassFrequency = _opt.highPassFrequency;
+		bloom.Refresh();
+		return bloom;
+	}
+
+	private static SetBlend(_rp : CRenderPass, _baseKey : string, _bloomKey : string)
+	{
+		_rp.mShader = CFrame.Main().Pal().SlPostKey();
+		_rp.mTag.add("blend");
+		_rp.mShaderAttr.push(new CShaderAttr(0, _baseKey));
+		_rp.mShaderAttr.push(new CShaderAttr(1, _bloomKey));
+		_rp.mShaderAttr.push(new CShaderAttr("BlendColor0", new CVec4(SDF.eBlend.Texture, 0)));
+		_rp.mShaderAttr.push(new CShaderAttr("BlendColor1", new CVec4(SDF.eBlend.Texture, 1)));
+		_rp.mShaderAttr.push(new CShaderAttr("BlendColor2", new CVec4(SDF.eBlend.LinearDodge, 0, 1, 1)));
+	}
+}
+
 CClass.Push(CSurfaceDownSample);
 CClass.Push(CSurfaceUpSample);
 CClass.Push(CSurfaceBloom);
+CClass.Push(CRPMgrBloom);

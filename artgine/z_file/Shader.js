@@ -241,12 +241,16 @@ export function Sam2DToV4(_uni, _off) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DToMat(_uni, _off) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DArrToV4(_uni, _off) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DArrToMat(_uni, _off) { return new CVec4(0, 0, 0, 0); }
+export function Sam2DArrNearestToV4(_uni, _off) { return new CVec4(0, 0, 0, 0); }
+export function Sam2DArrNearestToMat(_uni, _off) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DSize(_off) { return new CVec2(0, 0); }
 export function Sam2DArrSize(_off) { return new CVec3(0, 0, 0); }
 export function SamCubeSize(_off) { return new CVec2(0, 0); }
 export function SamCubeMaxLod(_off) { return 0; }
 export function Sam2DArrTileToColor(_number, _uv, _x, _y) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DArrTileToNormal(_number, _uv, _x, _y) { return new CVec4(0, 0, 0, 0); }
+export function Sam2DArrToCubeColor(_number, _dir, _layerOff) { return new CVec4(0, 0, 0, 0); }
+export function Sam2DArrLodToCubeColor(_number, _dir, _layerOff, _lod) { return new CVec4(0, 0, 0, 0); }
 export function ParallaxNormal(TangentViewPos, TangentFragPos, _index, _uv, height_scale) { return new CVec3(0, 0, 0); }
 export function MappingV3ToTex(_a) { return new CVec3(0, 0, 0); }
 export function MappingTexToV3(_a) { return new CVec3(0, 0, 0); }
@@ -313,6 +317,7 @@ export function ceil(_a) { return 0; }
 export function round(_a) { return 0; }
 export function sin(_rad) { return 0; }
 export function cos(_rad) { return 0; }
+export function tan(_rad) { return 0; }
 export function acos(_rad) { return 0; }
 export function asin(_rad) { return 0; }
 export function atan(_x, _y) { return 0; }

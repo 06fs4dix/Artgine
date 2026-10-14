@@ -24,6 +24,10 @@ export class CPhysics
 	//반발계수의 기본값. 실제 값은 CCollider.mBounce가 표면별로 가진다.
 	//0이면 되튀지 않고 밀어내기만 한다(기존 동작).
 	static SurfaceBounce=0;
+	//충돌로 밀린 힘이 줄어드는 속도의 기본값. 실제 값은 CRigidBody.mDamping이 물체별로 가진다.
+	//접촉면의 성질인 마찰(CCollider.mFriction)과 달리 물체 자신의 성질이다.
+	//400은 예전에 이 감쇠를 GravityAcc로 처리하던 시절의 값이라, 기본값에서는 동작이 그대로다.
+	static LinearDamping=400;
 	//되튀는 힘이 쓰는 키.
 	static BounceKey="b";
 	//이 속도 미만으로 부딪히면 되튀지 않는다.

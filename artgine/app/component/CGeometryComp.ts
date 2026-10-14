@@ -24,19 +24,28 @@ export class CGeometryInfo implements IAutoFixed
     Fixed(_update : CUpdate) : void
     {
         this.mFixedComp.Sort((a:CComponent,b:CComponent)=>{return a.mSysc-b.mSysc;})
-        for(let i=0;i<_update.FixedCount();++i)
+        const count=_update.FixedCount();
+        for(let i=0;i<count;++i)
         {
             for(let j=0;j<this.mFixedComp.Size();++j)
             {
                 let comp=this.mFixedComp.Find(j);
+                //Destroy()된 서브젝트는 WASM 월드행렬을 즉시 해제하므로, 이번 프레임에 이미 등록된 컴포넌트라도 건너뛴다
+                if(comp.IsDestroy())    continue;
                 comp.Fixed(_update);
             }
             for(let j=0;j<this.mFixedComp.Size();++j)
             {
                 let comp=this.mFixedComp.Find(j);
+                if(comp.IsDestroy())    continue;
                 comp.BuildGI();
             }
+            //정적 재빌드 신호(mStaticUpdate→mStaticBuild)는 마지막 서브스텝에서만 넘긴다. 중간에 넘기면
+            //다음 서브스텝 Build가 정적 콜라이더가 Insert되기 전에 재빌드해서 빈 정적 트리가 된다.
+            const su=this.mOctree.mStaticUpdate;
+            if(i<count-1)   this.mOctree.mStaticUpdate=false;
             this.mOctree.Build();
+            if(i<count-1)   this.mOctree.mStaticUpdate=su;
         }
 
         

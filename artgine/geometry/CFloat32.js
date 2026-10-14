@@ -6,12 +6,24 @@ export class CFloat32 extends CObject {
         return this.mF32A["ptr"];
     }
     NewWASM() {
-        this.mF32A = CWASM.ProductF32A(this.mF32A.length);
+        const old = this.mF32A;
+        this.mF32A = CWASM.ProductF32A(old.length);
+        const n = Math.min(old.length, this.mF32A.length);
+        for (let i = 0; i < n; ++i)
+            this.mF32A[i] = old[i];
         CWASM.RegisterF32A(this);
     }
     ReleaseWASM() {
+        const old = this.mF32A;
+        if (old == null || old["ptr"] == null)
+            return;
         CWASM.UnregisterF32A(this);
-        CWASM.Recycle(this.mF32A);
+        const copy = new Float32Array(old["len"] != null ? old["len"] : old.length);
+        const n = Math.min(copy.length, old.length);
+        for (let i = 0; i < n; ++i)
+            copy[i] = old[i];
+        this.mF32A = copy;
+        CWASM.Recycle(old);
     }
     IsZero() {
         for (let i = 0; i < this.mF32A.length; ++i) {
