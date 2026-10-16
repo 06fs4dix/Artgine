@@ -113,7 +113,8 @@ export class CImgPro
 		
 		return boundList; 
 	}
-    static SphericalGaussianBlur(_tex:CTexture,_mips:(Uint8Array|Float32Array)[][]=null):CTexture[]
+    /** _updatedLayers : 갱신된 배열 레이어 번호. 6레이어 큐브 중 하나라도 포함된 큐브만 처리하며 결과는 그 큐브들만 순서대로 담긴다. _mips는 큐브 번호(레이어/6)를 인덱스로 하는 희소 배열 */
+    static SphericalGaussianBlur(_tex:CTexture,_updatedLayers:Set<number>,_mips:(Uint8Array|Float32Array)[][]=null):CTexture[]
     {
         const v3 = CPoolGeo.ProductV3();
 
@@ -150,8 +151,15 @@ export class CImgPro
             if(info.mTarget !== CTexture.eTarget.Sigle) {
                 isFloatType = info.mFormat == CTexture.eFormat.RGBA32F;
                 const cubeStart = result.length;
-                for(let layer = 0; layer + 6 <= layerCount && (_mips == null || result.length < _mips.length); layer += 6)
-                    result.push(BlurCube(_mips != null ? _mips[result.length] : null, bufIndex + layer));
+                for(let layer = 0; layer + 6 <= layerCount; layer += 6)
+                {
+                    const cubeOff = bufIndex + layer;
+                    let dirty = false;
+                    for(let face = 0; face < 6 && !dirty; face++)
+                        dirty = _updatedLayers.has(cubeOff + face);
+                    if(dirty)
+                        result.push(BlurCube(_mips != null ? _mips[cubeOff / 6] : null, cubeOff));
+                }
                 const cubes = result.length - cubeStart;
                 if(cubes > 0)
                     outInfos.push({target:info.mTarget, format:info.mFormat, count:info.mTarget === CTexture.eTarget.Cube ? 1 : cubes * 6});

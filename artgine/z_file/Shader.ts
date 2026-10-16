@@ -180,6 +180,8 @@ export var sam2D=0;
 export var gl_Position : CVec4;
 export var discard=0;
 export var screenPos : CVec4;
+/** 정점 셰이더에서 현재 정점 번호(GL 의 gl_VertexID, WGSL 의 vertex_index). 정점 셰이더에서만 값이 있다 */
+export var vertexID : number;
 /**
  * 컴퓨트 진입점의 전역 스레드 번호(WGSL 의 global_invocation_id.x).
  * 렌더 셰이더에는 없다 - ps 없는 Build(=컴퓨트) 안에서만 값이 있다.

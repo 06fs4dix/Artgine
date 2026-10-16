@@ -84,7 +84,7 @@ export class CProviderLog {
     static async ListForKeyRange(_key, _afterId, _beforeId = 0) {
         const db = await CProviderLog.Init();
         const t = CProviderLog.sTable;
-        const before = _beforeId > 0 ? ' AND id < ?' : '';
+        const before = _beforeId > 0 ? ' AND id <= ?' : '';
         const params = [_afterId, ...(_beforeId > 0 ? [_beforeId] : []), _key, _key];
         const rows = await db.Recv(`SELECT ${CProviderLog.sCols} FROM ${t} WHERE id > ?${before} AND (${CProviderLog.OwnedBy()}) ORDER BY id ASC`, params);
         if (rows == null)

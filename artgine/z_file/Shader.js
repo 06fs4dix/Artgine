@@ -222,6 +222,7 @@ export var sam2D = 0;
 export var gl_Position;
 export var discard = 0;
 export var screenPos;
+export var vertexID;
 export var invocationID;
 export var invocationCount;
 export function Build(_key, _tag, _vs, _attribute, _VsToPs, _ps, _psOut, _insCount = 10) { }

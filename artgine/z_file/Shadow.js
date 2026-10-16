@@ -1,6 +1,6 @@
 import { ligDir } from "./Light";
 import { SDF } from "./SDF";
-import { abs, clamp, CMat, CVec2, CVec3, CVec4, FloatToInt, floor, fract, GridSamplingDisk, IntToFloat, max, min, mix, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrNearestToV4, Sam2DToColor, screenPos, ShadowPosToUv, sin, sqrt, step, TransposeMat3, TransposeMat4, V2AddV2, V2DivFloat, V2Dot, V2Floor, V2Mod, V2MulFloat, V3Abs, V3AddV3, V3Dot, V3Floor, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4Dot, V4MulMatCoordi } from "./Shader";
+import { abs, clamp, CMat, CVec2, CVec3, CVec4, FloatToInt, floor, fract, GridSamplingDisk, IntToFloat, max, min, mix, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrNearestToV4, Sam2DToColor, screenPos, ShadowPosToUv, sin, sqrt, step, TransposeMat3, TransposeMat4, V2AddV2, V2DivFloat, V2Dot, V2Floor, V2Mod, V2MulFloat, V3Abs, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4Dot, V4MulMatCoordi } from "./Shader";
 export var shadowCas0VPMatWithZRow = new Sam2DArrMat(1, SDF.eUni.MatShadowCas0VPWithZRow);
 export var shadowCas1VPMatWithZRow = new Sam2DArrMat(1, SDF.eUni.MatShadowCas1VPWithZRow);
 export var shadowCas2VPMatWithZRow = new Sam2DArrMat(1, SDF.eUni.MatShadowCas2VPWithZRow);
@@ -118,8 +118,7 @@ function CalcShadowDirectional(_index, _world, _normal, _ligDir, _camPos, _row0,
     var row1 = Sam2DArrNearestToV4(shadowInfoList, _index * 4.0 + 1.0);
     var row2 = Sam2DArrNearestToV4(shadowInfoList, _index * 4.0 + 2.0);
     var row3 = Sam2DArrNearestToV4(shadowInfoList, _index * 4.0 + 3.0);
-    var refPos = V3MulFloat(V3Floor(V3MulFloat(_camPos, 1.0 / 1024.0)), 1024.0);
-    var world = V3SubV3(_world.xyz, refPos);
+    var world = V3SubV3(_world.xyz, _camPos);
     var lastCasIndex;
     lastCasIndex.dummy = FloatToInt(row2.y);
     var fade = _row0.w;

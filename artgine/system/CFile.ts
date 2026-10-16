@@ -403,6 +403,29 @@ export class CFile
 		}
 	}
 
+	static async SaveChunk(_path: string, _data: ArrayBuffer, _offset: number, _last: boolean): Promise<boolean> {
+		if (!CUtil.IsNode()) return false;
+		await EnsureNodeModules();
+
+		const part = _path + ".part";
+		try {
+			const fh = await gFsPromises.open(part, _offset == 0 ? "w" : "r+");
+			try {
+				await fh.write(Buffer.from(_data), 0, _data.byteLength, _offset);
+			} finally {
+				await fh.close();
+			}
+			if (_last) {
+				await gFsPromises.rename(part, _path);
+				this.DeleteCache(_path);
+			}
+			return true;
+		} catch (err) {
+			console.warn("SaveChunk Error:", err);
+			return false;
+		}
+	}
+
 	/** 파일/폴더 이름 변경 또는 같은 볼륨 내 이동 (fs.rename) */
 	static async Rename(_oldPath: string, _newPath: string): Promise<boolean> {
 		if (!CUtil.IsNode()) return false;

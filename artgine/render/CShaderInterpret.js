@@ -159,6 +159,7 @@ export class CShaderInterpretGL extends CShaderInterpret {
         this.mKeyMap.set("UniToSam2D", "float");
         this.mKeyMap.set("screenPos", "gl_FragCoord");
         this.mKeyMap.set("screenDepth", "gl_FragDepth");
+        this.mKeyMap.set("vertexID", "float(gl_VertexID)");
         this.mKeyMap.set("int", "int");
         this.mKeyMap.set("V3Dot", "dot");
         this.mKeyMap.set("CMath.", "");
@@ -1265,6 +1266,7 @@ export class CShaderInterpretGPU extends CShaderInterpret {
     static kViewPort = "viewPort";
     static kScreenPos = "artScreenPos";
     static kInvID = "artInvID";
+    static kVtxID = "artVtxID";
     static kInvCount = "invocationCount";
     static kStorageGroup = 2;
     static kWGName = "wgSize";

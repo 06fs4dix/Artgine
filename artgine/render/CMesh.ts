@@ -4,6 +4,7 @@ import {CTree} from "../basic/CTree.js"
 import {CMat} from "../geometry/CMat.js"
 import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
+import { CFloat32Mgr } from "../geometry/CFloat32Mgr.js";
 //import {CMaterial} from "../render/CMaterial.js"
 import {CMeshDataNode} from "../render/CMeshDataNode.js"
 import { CAtlas } from "../util/CAtlas.js";
@@ -29,6 +30,51 @@ export class CMeshSkin extends CObject
 	public key ="";
 	public mat =new CMat();
 	//public link =new CMat();//임시
+}
+export class CMeshMorph extends CObject
+{
+	public names=new Array<string>();
+	//[타깃][정점][x,y,z] 순서의 위치 이동량
+	public delta=new CFloat32Mgr();
+
+	//같은 메시 안에서 내용이 같은 모프(프리미티브가 공유하는 것)가 같은 텍스처 키를 갖게 한다
+	GetTexKey(_meshKey : string) : string
+	{
+		let a=this.delta.GetArray();
+		let n=this.names.length*this.GetVertexCount()*3;
+		let h=2166136261;
+		let u=new Uint32Array(a.buffer,a.byteOffset,Math.min(n,a.length));
+		for(let i=0;i<u.length;++i)
+			h=Math.imul(h^u[i],16777619);
+		return _meshKey+".morph/"+this.names.length+"x"+this.GetVertexCount()+"/"+(h>>>0)+".tex";
+	}
+	GetVertexCount() : number
+	{
+		if(this.names.length==0)	return 0;
+		return this.delta.mSize/(this.names.length*3);
+	}
+	Remap(_map : Array<number>,_count : number) : CMeshMorph
+	{
+		let r=new CMeshMorph();
+		r.names=this.names.slice();
+		let T=this.names.length;
+		let n=this.GetVertexCount();
+		r.delta.Resize(T*_count*3);
+		let src=this.delta.GetArray();
+		let dst=r.delta.GetArray();
+		for(let t=0;t<T;++t)
+		{
+			for(let i=0;i<n;++i)
+			{
+				let s=(t*n+i)*3;
+				let d=(t*_count+_map[i])*3;
+				dst[d]=src[s];
+				dst[d+1]=src[s+1];
+				dst[d+2]=src[s+2];
+			}
+		}
+		return r;
+	}
 }
 export class CMeshIK
 {

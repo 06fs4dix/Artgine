@@ -23,11 +23,33 @@ export class CForgeFloraFactory {
     static sCount = 0;
     mFrame;
     mId;
+    mPBR = false;
+    mReal = false;
     mAsset = [];
-    constructor(_frame) {
+    mTexMesh = [];
+    constructor(_frame, _pbr = false, _real = false) {
         this.mFrame = _frame;
         this.mId = ++CForgeFloraFactory.sCount;
-        CForgeFloraTex.Build(_frame);
+        this.mPBR = _pbr;
+        this.mReal = _real;
+        CForgeFloraTex.Build(_frame, _pbr, _real);
+    }
+    ApplyReal(_on) {
+        if (this.mReal == _on)
+            return;
+        this.mReal = _on;
+        CForgeFloraTex.Build(this.mFrame, this.mPBR, true);
+        for (const m of this.mTexMesh) {
+            const mesh = this.mFrame.Res().Find(m.key);
+            if (mesh == null || mesh.texture == null)
+                continue;
+            const alb = _on ? m.albs.map(_k => CForgeFloraTex.Real(_k)) : m.albs;
+            for (let i = 0; i < alb.length; i++)
+                mesh.texture[i] = alb[i];
+            if (m.pbr)
+                for (let i = 0; i < alb.length; i++)
+                    mesh.texture[alb.length + i] = CForgeFloraTex.Mat(alb[i]);
+        }
     }
     Grass(_preset, _seed) {
         const a = this.Finish(CForgeFloraFactory.eKind.Grass, _preset, _seed, _l => CForgeFloraGrassGen.Build(_preset, _seed, _l), 2, CForgeFloraGrassGen.Tex(_preset), false, true);
@@ -114,8 +136,10 @@ export class CForgeFloraFactory {
                 CForgeFloraFactory.Fit(lod0, b);
             const key = pre + "_l" + l + ".mesh";
             const wind = _sway && l < CForgeFloraFactory.sWindLod;
-            if (!b.Commit(this.mFrame, key, _tex, bound, wind))
+            const alb = this.mReal ? _tex.map(_k => CForgeFloraTex.Real(_k)) : _tex;
+            if (!b.Commit(this.mFrame, key, alb, bound, wind, this.mPBR))
                 continue;
+            this.mTexMesh.push({ key, albs: _tex.slice(), pbr: this.mPBR });
             a.mLod.push(key);
             a.mWind.push(wind);
             a.mTris.push(b.mIdx.length / 3);

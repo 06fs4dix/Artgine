@@ -2,6 +2,7 @@ import { CComponent } from "../../artgine/app/component/CComponent.js";
 import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CTree } from "../../artgine/basic/CTree.js";
+import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";
 import { CMeshCopyNode } from "../../artgine/render/CMeshCopyNode.js";
@@ -27,6 +28,26 @@ class CResolverComp extends CComponent {
     SetTarget(_target) {
         this.m_resolver.m_target = _target;
     }
+    m_ready = false;
+    m_waitFrame = 0;
+    m_checkMat = new CMat();
+    IsReady(_p3d) {
+        if (this.m_ready)
+            return true;
+        CMath.MatMul(_p3d.GetMat(), this.mOwner.GetMat(), this.m_checkMat, true);
+        const a = this.m_checkMat.mF32A;
+        const b = _p3d.GetFMat().mF32A;
+        let same = true;
+        for (let i = 0; i < 16; i++) {
+            if (a[i] != b[i]) {
+                same = false;
+                break;
+            }
+        }
+        if (same || ++this.m_waitFrame > 10)
+            this.m_ready = true;
+        return this.m_ready;
+    }
     Update(_delay) {
         super.Update(_delay);
         const ptVec = this.mOwner.FindComps(CPaint3D);
@@ -35,6 +56,8 @@ class CResolverComp extends CComponent {
         this.m_p3d = ptVec[this.m_paintOff];
         const tree = this.m_p3d.GetTree();
         if (tree == null)
+            return;
+        if (!this.IsReady(this.m_p3d))
             return;
         this.Resolve(tree, _delay);
         this.m_p3d.UpdateLMat();
@@ -68,6 +91,8 @@ export class CAttacher extends CResolverComp {
         this.m_p3d = ptVec[this.m_paintOff];
         const stree = this.m_p3d.GetTree();
         if (stree == null)
+            return;
+        if (!this.IsReady(this.m_p3d))
             return;
         this.m_targetBone = stree.Find(this.m_bone);
         if (this.m_targetBone == null)

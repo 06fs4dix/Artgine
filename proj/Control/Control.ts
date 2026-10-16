@@ -499,6 +499,33 @@ async function loadAiProviderStatus() {
             const pad2 = (n: number) => String(n).padStart(2, '0');
             timeEl.textContent = `(${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())})`;
         }
+        const badgeEl = document.getElementById('claudeUsageBadge');
+        if (badgeEl) {
+            // 원격 주소는 길어서 호스트 첫 구간만 쓴다(IP면 전체).
+            const shortHost = (label: string) => {
+                try {
+                    const h = new URL(/^\w+:\/\//.test(label) ? label : 'http://' + label).hostname;
+                    return /^[\d.]+$/.test(h) ? h : h.split('.')[0];
+                } catch { return label; }
+            };
+            const parts: string[] = [];
+            for (const r of results) {
+                if (!r.ok || !r.resp) continue;
+                const hidden = aiProviderHiddenSet(r.s.remoteId);
+                const src = r.s.remoteId ? shortHost(r.s.label) : r.s.label;
+                const color = r.s.remoteId ? rdpColorName(r.s.remoteId) : 'success';
+                for (const p of r.resp.providers ?? []) {
+                    if (hidden.has(p.id) || !p.authenticated || !p.usage) continue;
+                    const vals = [p.usage.fiveHour, p.usage.weekly].filter(x => x >= 0).map(x => Math.round(x * 100) + '%');
+                    if (!vals.length) continue;
+                    const name = p.id.charAt(0).toUpperCase() + p.id.slice(1);
+                    const prefix = r.s.remoteId ? aiEscapeHtml(src) + '-' : '';
+                    parts.push(`<span class="badge rounded-pill text-bg-${color}">${prefix}${name} ${vals.join('/')}</span>`);
+                }
+            }
+            badgeEl.innerHTML = parts.join(' ');
+            badgeEl.style.display = parts.length ? '' : 'none';
+        }
     } catch (e) { console.error('provider-state error:', e); }
     finally {
         if (btn) btn.disabled = false;

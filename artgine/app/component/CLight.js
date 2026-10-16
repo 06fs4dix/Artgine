@@ -124,10 +124,7 @@ export class CLight extends CBrushComp {
             this.PushRPAuto(srp);
         }
         const frustumCull = (this.mShadowCullFrustum || this.mLightCullFrustum) && this.IsPointLight() && this.IsFrustumCull();
-        const lightCull = this.mLightCullFrustum && frustumCull;
-        if (lightCull != this.mLightCull)
-            this.mBrush.mUpdateLight = CUpdate.eType.Updated;
-        this.mLightCull = lightCull;
+        this.mLightCull = this.mLightCullFrustum && frustumCull;
         if (this.mTexKey != null) {
             this.mShadowOff = this.mColor.IsZero();
             if (!this.mShadowOff) {
@@ -382,7 +379,6 @@ export class CLight extends CBrushComp {
                 casIdx++;
             }
             const eye = cam3D.GetEye();
-            const ref = new CVec3(Math.floor(Math.fround(eye.x) / 1024) * 1024, Math.floor(Math.fround(eye.y) / 1024) * 1024, Math.floor(Math.fround(eye.z) / 1024) * 1024);
             const PVMat = CPoolGeo.ProductMat();
             for (let i = 0; i < activeCascades.length; ++i) {
                 const { slot, scam, zOffset } = activeCascades[i];
@@ -392,7 +388,7 @@ export class CLight extends CBrushComp {
                     ShadowView[slot][shadowBaseIdx + o + 0] = vp[o + 0];
                     ShadowView[slot][shadowBaseIdx + o + 1] = vp[o + 1];
                     ShadowView[slot][shadowBaseIdx + o + 2] = vp[o + 2];
-                    const t = Math.fround(vp[o + 3] + vp[o + 0] * ref.x + vp[o + 1] * ref.y + vp[o + 2] * ref.z);
+                    const t = Math.fround(vp[o + 3] + vp[o + 0] * eye.x + vp[o + 1] * eye.y + vp[o + 2] * eye.z);
                     if (ShadowView[slot][shadowBaseIdx + o + 3] !== t) {
                         ShadowView[slot][shadowBaseIdx + o + 3] = t;
                         this.mBrush.mUpdateShadow = CUpdate.eType.Updated;
@@ -402,7 +398,7 @@ export class CLight extends CBrushComp {
                 ShadowView[slot][shadowBaseIdx + 12] = vMat[2];
                 ShadowView[slot][shadowBaseIdx + 13] = vMat[6];
                 ShadowView[slot][shadowBaseIdx + 14] = vMat[10];
-                const tz = Math.fround(vMat[14] + zOffset + vMat[2] * ref.x + vMat[6] * ref.y + vMat[10] * ref.z);
+                const tz = Math.fround(vMat[14] + zOffset + vMat[2] * eye.x + vMat[6] * eye.y + vMat[10] * eye.z);
                 if (ShadowView[slot][shadowBaseIdx + 15] != tz) {
                     ShadowView[slot][shadowBaseIdx + 15] = tz;
                     this.mBrush.mUpdateShadow = CUpdate.eType.Updated;

@@ -1,5 +1,6 @@
 import {CVec3} from "../geometry/CVec3.js"
 import {CMeshCreateInfo} from "./CMeshCreateInfo.js"
+import type {CMeshMorph} from "./CMesh.js";
 
 import {CVec4} from "../geometry/CVec4.js";
 import {CObject} from "../basic/CObject.js";
@@ -22,6 +23,7 @@ export class CKeyFrame extends CObject
 export class CMeshDataNode extends CObject
 {
 	public ci : CMeshCreateInfo;
+	public morph : CMeshMorph=null;
 	//public draw : CMeshDraw;
 	public keyFramePos : Array<CKeyFrame>;
 	public keyFrameRot : Array<CKeyFrame>;

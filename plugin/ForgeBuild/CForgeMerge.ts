@@ -21,6 +21,8 @@ export class CForgeMergeOpt
     mNormal = true;         //0단계 노말맵
     mParallax = true;       //0단계 패럴랙스
     mMaterial = true;       //재질맵(모든 단계, 단계가 바뀔 때 밝기가 튀지 않게)
+    mPBR = false;           //재질맵을 PBR 값으로. 먼 단계는 그 맵의 평균 AO와 평평한 PBR 재질을 쓴다
+    mReal = false;          //실사 텍스처. 먼 단계는 그 맵의 평균 AO와 평평한 실사 재질을 쓴다
     constructor(_init : Partial<CForgeMergeOpt> = null) { if(_init != null) Object.assign(this, _init); }
 }
 
@@ -134,10 +136,12 @@ export class CForgeMerged
             if(p.buf.mIdx.length == 0) continue;
             const surf = p.tex != null ? CForgeTex.Surf(p.tex) : null;
             //1·2단계는 재질맵 대신 평균 AO를 색에 곱하고 재질은 한 장(sFlatMat)으로 묶어, 한 메시에 색을 더 담는다
-            const near = _lod == 0, ao = !near && surf != null && O.mMaterial ? CForgeTex.MeanAO(p.tex) : 1;
-            const d = p.tex != null ? CForgeTex.Tint(p.tex, p.rgb.map(_v => _v * ao)) : CForgeTex.Solid(p.rgb);
-            const n = near && O.mNormal && surf != null ? surf.mNor : null;
-            const m = O.mMaterial ? (near && surf != null ? surf.mMat : CForgeTex.sFlatMat) : null;
+            const near = _lod == 0, ao = !near && surf != null && O.mMaterial ? CForgeTex.MeanAO(p.tex, O.mPBR, O.mReal) : 1;
+            const d = p.tex != null ? CForgeTex.Tint(p.tex, p.rgb.map(_v => _v * ao), O.mReal) : CForgeTex.Solid(p.rgb);
+            const n = near && O.mNormal && surf != null ? (O.mReal && surf.mNorR != null ? surf.mNorR : surf.mNor) : null;
+            const mat = surf == null ? null : (O.mReal ? (O.mPBR ? surf.mMatPBRR : surf.mMatR) : (O.mPBR && surf.mMatPBR != null ? surf.mMatPBR : surf.mMat));
+            const flat = O.mReal ? (O.mPBR ? CForgeTex.sFlatMatPBRR : CForgeTex.sFlatMatR) : (O.mPBR ? CForgeTex.sFlatMatPBR : CForgeTex.sFlatMat);
+            const m = O.mMaterial ? (near && surf != null ? mat : flat) : null;
             const cls = n != null && O.mParallax && surf.mParallax > 0 ? "px" + surf.mParallax : "std";
             let list = _c.mPack.get(cls);
             if(list == null) { list = []; _c.mPack.set(cls, list); }
@@ -166,6 +170,11 @@ export class CForgeMerged
                     pt.SetTexCodi(new CVec4(1 / CForgeTex.sMeter, 1 / CForgeTex.sMeter, CForgeTex.sUVOff, CForgeTex.sUVOff));
                     if(this.mOpt.mMaterial) pt.SetMaterial(-1, -1, 1, -1);
                     pt.PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.Lambert));
+                    if(this.mOpt.mPBR)
+                    {
+                        pt.PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.CookTorrance));
+                        pt.Env();
+                    }
                     if(cls.startsWith("px")) pt.ParallaxNormal(Number(cls.slice(2)), CForgeTex.sParallaxNear, CForgeTex.sParallaxFar, 0);
                     pt.PushTag(CPaint.eTag.Light);
                     pt.PushTag(CPaint.eTag.Shadow);

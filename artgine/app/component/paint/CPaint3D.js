@@ -37,6 +37,12 @@ export class CPaint3D extends CPaint {
     mCamCompSet = new Set();
     mBakedLight = null;
     mWindInfluence = new CVec1(0.0);
+    mMorph = null;
+    mMorphWeight = null;
+    mMorphReady = false;
+    mMorphTexW = 0;
+    mMorphSA = null;
+    mMorphSAOff = null;
     mBrushCompArr = [];
     mTexLoad = false;
     constructor(_mesh = "Artgine/box.mesh", _centerPos = false, _targetScale = 0) {
@@ -78,7 +84,8 @@ export class CPaint3D extends CPaint {
     }
     IsShould(_member, _type) {
         if (_member == "mWeightMat" || _member == "mTreeNode" || _member == "mTree" || _member == "mMeshRes" ||
-            _member == "mCenterPos" || _member == "mTargetScale")
+            _member == "mCenterPos" || _member == "mTargetScale" ||
+            _member == "mMorph" || _member == "mMorphSA" || _member == "mMorphSAOff" || _member == "mMorphWeight" || _member == "mMorphReady" || _member == "mMorphTexW")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -88,6 +95,81 @@ export class CPaint3D extends CPaint {
             if (this.BuildMesh(this.mMesh) == false)
                 this.mInit = false;
         }
+    }
+    SetMorph(_name, _weight) {
+        if (this.mMorph == null)
+            return false;
+        let off = this.mMorph.names.indexOf(_name);
+        if (off < 0)
+            off = this.mMorph.names.findIndex(n => n.endsWith("_" + _name));
+        if (off < 0)
+            return false;
+        this.mMorphWeight[off] = _weight;
+        return true;
+    }
+    MorphTexUpdate() {
+        if (this.mMorph == null || this.mMorphReady)
+            return;
+        let frame = this.mOwner.GetFrame();
+        let key = this.mMorph.GetTexKey(this.mMesh);
+        let tex = frame.Res().Find(key);
+        if (tex == null) {
+            if (frame.Load().IsLoad(key))
+                return;
+            tex = CUtilRender.MorphTexBake(this.mMorph);
+            if (tex == null) {
+                this.mMorph = null;
+                return;
+            }
+            frame.Load().LoadSet().add(key);
+            frame.Ren().BuildTexture(tex).then(() => {
+                frame.Res().Push(key, tex);
+                frame.Load().LoadSet().delete(key);
+            });
+            return;
+        }
+        this.mMorphTexW = tex.GetWidth();
+        this.PushCShaderAttr(new CShaderAttr(8, key));
+        this.PushTag("morph");
+        this.mMorphReady = true;
+        this.ClearBatch();
+    }
+    MorphWeightUpdate() {
+        if (this.mMorphSA == null)
+            return;
+        let w = this.mMorphWeight;
+        let act = new Array();
+        for (let i = 0; i < w.length; ++i)
+            if (Math.abs(w[i]) > 0.0001)
+                act.push(i);
+        act.sort((a, b) => Math.abs(w[b]) - Math.abs(w[a]));
+        for (let k = 0; k < 8; ++k) {
+            let on = k < act.length;
+            this.mMorphSA[1 + (k >> 2)].mData.mF32A[k & 3] = on ? act[k] : -1;
+            this.mMorphSA[3 + (k >> 2)].mData.mF32A[k & 3] = on ? w[act[k]] : 0;
+        }
+    }
+    MorphBatch(_on) {
+        let bm = this.mOwner.GetFrame().BMgr();
+        if (this.mMorphSA == null) {
+            this.mMorphSA = [
+                new CShaderAttr("morphInfo", new CVec4(this.mMorph.GetVertexCount(), this.mMorphTexW, 0, 0)),
+                new CShaderAttr("morphIdx0", new CVec4(-1, -1, -1, -1)),
+                new CShaderAttr("morphIdx1", new CVec4(-1, -1, -1, -1)),
+                new CShaderAttr("morphW0", new CVec4(0, 0, 0, 0)),
+                new CShaderAttr("morphW1", new CVec4(0, 0, 0, 0)),
+            ];
+            this.mMorphSAOff = [
+                new CShaderAttr("morphInfo", new CVec4(0, this.mMorphTexW, 0, 0)),
+                new CShaderAttr("morphIdx0", new CVec4(-1, -1, -1, -1)),
+                new CShaderAttr("morphIdx1", new CVec4(-1, -1, -1, -1)),
+                new CShaderAttr("morphW0", new CVec4(0, 0, 0, 0)),
+                new CShaderAttr("morphW1", new CVec4(0, 0, 0, 0)),
+            ];
+            this.MorphWeightUpdate();
+        }
+        for (let sa of (_on ? this.mMorphSA : this.mMorphSAOff))
+            bm.SetBatchSA(sa);
     }
     SetWeightMat(_off, _tar) {
         for (var x = 0; x < 16; ++x) {
@@ -160,6 +242,15 @@ export class CPaint3D extends CPaint {
         }
         else
             this.mSkinType = SDF.eSkin.None;
+        this.mMorph = null;
+        this.mMorphReady = false;
+        for (let n of this.mMeshRes.meshTree.GetArray()) {
+            if (n.mData != null && n.mData.morph != null) {
+                this.mMorph = n.mData.morph;
+                this.mMorphWeight = new Float32Array(this.mMorph.names.length);
+                break;
+            }
+        }
         this.mTree = new CTree();
         this.mTree.mData = new CMeshCopyNode();
         CMeshTreeUpdate.TreeCopy(this.mMeshRes.meshTree, this.mTree, new CMat(), this.mBound);
@@ -186,6 +277,8 @@ export class CPaint3D extends CPaint {
     }
     Update(_update) {
         super.Update(_update);
+        this.MorphTexUpdate();
+        this.MorphWeightUpdate();
         if (this.mUpdateFMat == false)
             return;
         const node = this.mTreeNode;
@@ -287,6 +380,8 @@ export class CPaint3D extends CPaint {
                 this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("alphaModel", _node.mpi.mData.alpha));
             }
             this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey, _node.mpi.mData.textureOff);
+            if (this.mMorphReady)
+                this.MorphBatch(_node.md.mData.morph == this.mMorph);
             if (_vf.mUniform.get("material") != null)
                 this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
             if (_vf.mUniform.get("part") != null)

@@ -115,12 +115,6 @@ g_contentJBox.SetBody("<img id='ImageModalSrc' style='width:100%;height: auto;ma
 g_contentJBox.Hide();
 g_contentJBox.Open(CModal.ePos.Center);
 
-var g_deleteJBox = new CModal("delete_modal");
-g_deleteJBox.SetCloseToHide(true);
-g_deleteJBox.SetBody("<div id='Delete_div'/>");
-g_deleteJBox.Hide();
-g_deleteJBox.Open(CModal.ePos.Center);
-
 var g_musicJBox: CModalMusic;
 
 function vcsTag(fl: { Status?: string, name?: string }): string {
@@ -138,7 +132,6 @@ function vcsTag(fl: { Status?: string, name?: string }): string {
 
 let index = 0;
 var folderList = {"<>":"ul","class":"list-group","html":[] as any[]};
-var fileList = {"<>":"ul","class":"list-group","html":[] as any[]};
 
 // ---- 파일 항목 종류 분류 + 종류별 (아이콘 / 클릭 동작) 테이블 ----
 // code 계열은 CUtilWeb.sMonacoExtToLang / IsMonacoSourceExt로 판별한다.
@@ -464,9 +457,7 @@ function DirListRefresh()
 {
     updateFileUrlBar();
     CDOM.ID("File_div").innerHTML="";
-    CDOM.ID("Delete_div").innerHTML="";
     folderList={"<>":"ul","class":"list-group","html":[]};
-    fileList={"<>":"ul","class":"list-group","html":[]};
 
     if(gPath!=null && gPath!="/")
     {
@@ -494,16 +485,9 @@ function DirListRefresh()
             "html":`<i class='bi ${FILE_ICON[kind]}'>${fl.name}${vcsTag(fl)}`,
             ...makeLongPressHandlers(fl, kind)});
 
-        if(fl.file==true)
-        {
-            fileList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":`<i class='bi bi-file'>${fl.name}${vcsTag(fl)}`,"onclick":()=>Delete(fl.name)});
-        }
-
     }
 
     CDOM.ID("File_div").append(CDOM.DataToDom(folderList));
-    CDOM.ID("Delete_div").append(CDOM.DataToDom(fileList));
 }
 
 // F1 File Manager에서 마지막으로 고른 루트를 기억해뒀다가, URL 쿼리(path/RootPath)가 없는
@@ -751,37 +735,7 @@ function FolderCD(_path, _onDone?: () => void)
 }
 window["FolderCD"]=FolderCD;
 
-var g_fun="";
-var g_data="";
-var g_option="";
-function Redirection(_multi : boolean)
-{
-    var form = CDOM.ID("ThisPage") as HTMLFormElement;
-    form.setAttribute("charset", "UTF-8");
-    form.setAttribute("method", "Post");
-    // 원격 서버로 보낼 수도 있어 쿠키에 의존하지 않고 hidden input(token)으로 직접 인증한다.
-    form.setAttribute("action", FileApiUrl("File/Redirection"));
-
-    CDOM.IDValue("fun",g_fun);
-    CDOM.IDValue("data",g_data);
-    CDOM.IDValue("option",g_option);
-    CDOM.IDValue("path",gPath);
-    CDOM.IDValue("RootPath", RootPath ?? "");
-    CDOM.IDValue("redirToken", GetFileToken());
-
-    form.submit();
-}
-window["Redirection"]=Redirection;
-
 var g_menuList={"<>":"div","class":"d-flex align-items-center p-1","html":[
-    {"<>":"form","action":"FilePage.jsp","id":"ThisPage","name":"ThisPage","method":"post","accept-charset":"UTF-8","html":[
-        {"<>":"input","type":"hidden","id":"fun","name":"fun"},
-        {"<>":"input","type":"hidden","id":"data","name":"data"},
-        {"<>":"input","type":"hidden","id":"option","name":"option"},
-        {"<>":"input","type":"hidden","id":"path","name":"path"},
-        {"<>":"input","type":"hidden","id":"RootPath","name":"RootPath"},
-        {"<>":"input","type":"hidden","id":"redirToken","name":"token"},
-    ]},
     {"<>":"input","type":"file","multiple":"multiple","id":"uploadBtn","name":"uploadBtn","style":"display:none"},
     {"<>":"div","class":"d-flex align-items-center gap-1","html":[
         {"<>":"button","type":"button","class":"btn btn-sm btn-primary","text":"Music","onclick":()=>{
@@ -1241,14 +1195,6 @@ function renameFile(fl: DirEntry) {
     }, MODAL_DOM_DELAY);
 }
 window["renameFile"] = renameFile;
-function Delete(_file)
-{
-    g_fun="Delete";
-    g_data=gPath+_file;
-    Redirection(false);
-}
-window["Delete"]=Delete;
-
 type SrchFile = {hidden:boolean,file:boolean,name:string,ext:string};
 const SEARCH_EXCLUDE_DIRS = ['node_modules'];
 const isSearchExcluded = (name: string) => name.startsWith('.') || SEARCH_EXCLUDE_DIRS.includes(name);
@@ -1397,39 +1343,61 @@ CDOM.ID("uploadBtn").onchange=async (e)=>{
         reader.readAsDataURL(file);
     });
 
-    for(let i=0;i<fi.files.length;++i)
+    const CHUNK = 8 * 1024 * 1024;
+    const fileNum = fi.files.length;
+    let totalSize = 0;
+    for(let i=0;i<fileNum;++i) totalSize += fi.files[i].size;
+
+    const uid = Date.now();
+    const toMB = (b: number) => (b / 1024 / 1024).toFixed(1);
+    const progress = new CModal();
+    progress.SetHeader("Uploading");
+    progress.SetTitle(CModal.eTitle.Text);
+    progress.SetZIndex(CModal.eSort.Top);
+    progress.SetBody(`
+        <div class="d-flex flex-column gap-2 p-2" style="min-width:260px;word-break:break-all;">
+            <div id="upl_name_${uid}" class="small"></div>
+            <div class="progress" style="height:18px;">
+                <div id="upl_bar_${uid}" class="progress-bar" role="progressbar" style="width:0%"></div>
+            </div>
+            <div id="upl_text_${uid}" class="small text-secondary"></div>
+        </div>
+    `);
+    progress.Open(CModal.ePos.Center);
+
+    let sent = 0;
+    const updateProgress = (idx: number, name: string) => {
+        const pct = totalSize > 0 ? Math.floor(sent / totalSize * 100) : 100;
+        document.getElementById(`upl_name_${uid}`).textContent = `(${idx + 1}/${fileNum}) ${name}`;
+        const bar = document.getElementById(`upl_bar_${uid}`);
+        bar.style.width = pct + "%";
+        bar.textContent = pct + "%";
+        document.getElementById(`upl_text_${uid}`).textContent = `${toMB(sent)} / ${toMB(totalSize)} MB`;
+    };
+
+    for(let i=0;i<fileNum;++i)
     {
         try {
-            const name=fi.files[i].name;
-            const data=await readAsBase64(fi.files[i]);
-            await CFecth.Exe(FileApiUrl("File/Upload"), FileParam({data:[data],name:[name],path}));
+            const file=fi.files[i];
+            updateProgress(i, file.name);
+            for(let off=0;off==0||off<file.size;off+=CHUNK)
+            {
+                const data=await readAsBase64(file.slice(off,off+CHUNK) as File);
+                const last=off+CHUNK>=file.size;
+                await CFecth.Exe(FileApiUrl("File/Upload"), FileParam({data:[data],name:[file.name],path,offset:off,last}));
+                sent += Math.min(CHUNK, file.size - off);
+                updateProgress(i, file.name);
+            }
         } catch(err: any) {
+            progress.Close();
             CAlert.E('Upload failed: ' + (err?.message ?? String(err)));
             return;
         }
     }
-    Redirection(true);
-
+    progress.Close();
+    fi.value = "";
+    FolderCD(gPath);
 };
-
-function SoundPlayListSave()
-{
-    let confirm=new CConfirm();
-    confirm.SetBody('Enter file name to save:<br><input type="text" id="soundListSave" class="form-control form-control-sm" value="basic">');
-    confirm.SetConfirm(CConfirm.eConfirm.YesNo,[
-    ()=> {
-        g_fun="SoundPlayListSave";
-        g_data=JSON.stringify({fullPath:g_musicJBox.GetList()});
-        g_option=CDOM.IDValue("soundListSave");
-        Redirection(false);
-    },
-    ()=> {
-
-    },
-    ],["Yes","No"])
-    confirm.Open();
-}
-window["SoundPlayListSave"]=SoundPlayListSave;
 
 function RefreshOpen()
 {

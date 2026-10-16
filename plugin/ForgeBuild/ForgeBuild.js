@@ -40,6 +40,8 @@ export class CForgeOption {
     mNormal = true;
     mMaterial = true;
     mParallax = true;
+    mPBR = false;
+    mReal = false;
     constructor(_init = null) { if (_init != null)
         Object.assign(this, _init); }
 }
@@ -91,7 +93,7 @@ export class CForgeFactory {
         const ent = this.ToEntity(kind, _bottom, _top, opt), mon = CForgeFactory.sMonument[_type];
         if (mon != null)
             ent.over = { ...(ent.over ?? {}), mMonument: mon };
-        this.mPush.push({ kind, ent, affect: opt.mAffect, surf: { nor: opt.mNormal, mat: opt.mMaterial, px: opt.mNormal && opt.mParallax } });
+        this.mPush.push({ kind, ent, affect: opt.mAffect, surf: { nor: opt.mNormal, mat: opt.mMaterial, px: opt.mNormal && opt.mParallax, pbr: opt.mPBR, real: opt.mReal } });
         return this.mPush.length - 1;
     }
     Build() {
@@ -239,15 +241,16 @@ export class CForgeFactory {
         const frame = this.mCanvas.GetFrame(), U = CForgeScene.sUnit, ver = ++this.mVer;
         _parts.forEach((_p, _i) => {
             const key = `forge${this.mId}_${o.kind}_${ver}_${_i}.mesh`;
-            if (!_p.buf.Commit(frame, key, _p.tex ?? frame.Pal().GetBlackTex(), _p.tex != null && _so.nor, _p.tex != null && _so.mat))
+            if (!_p.buf.Commit(frame, key, _p.tex ?? frame.Pal().GetBlackTex(), _p.tex != null && _so.nor, _p.tex != null && _so.mat, _so.pbr, _p.tex != null && _so.real))
                 return;
             o.keys.push(key);
             o.verts += _p.buf.Count();
             const pt = _sub.PushComp(new CPaint3D(key));
+            const rgb = _p.tex != null && _so.real ? CForgeTex.Scale(_p.tex, _p.rgb) : _p.rgb;
             if (_p.tex == null)
                 pt.SetColorModel(new CColor(_p.rgb[0], _p.rgb[1], _p.rgb[2], CColor.eModel.RGBAdd));
             else {
-                pt.SetColorModel(new CColor(_p.rgb[0], _p.rgb[1], _p.rgb[2], CColor.eModel.RGBMul));
+                pt.SetColorModel(new CColor(rgb[0], rgb[1], rgb[2], CColor.eModel.RGBMul));
                 pt.SetTexCodi(new CVec4(1 / CForgeTex.sMeter, 1 / CForgeTex.sMeter, CForgeTex.sUVOff, CForgeTex.sUVOff));
                 const surf = _so.nor || _so.mat ? CForgeTex.Surf(_p.tex) : null;
                 if (surf != null && _so.mat)

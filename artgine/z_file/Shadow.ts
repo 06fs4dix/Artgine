@@ -156,8 +156,7 @@ function CalcShadowDirectional(_index : number, _world : CVec4, _normal : CVec3,
     var row3: CVec4 = Sam2DArrNearestToV4(shadowInfoList, _index * 4.0 + 3.0); //케스케이드2노말바이어스x 케스케이드3노말바이어스y 케스케이드4노말바이어스z 케스케이드5노말바이어스w
 
     // 16비트 지원을 위해 camPos를 제거하여 그림자를 원점부터 출발시킨다
-    var refPos : CVec3 = V3MulFloat(V3Floor(V3MulFloat(_camPos, 1.0 / 1024.0)), 1024.0);
-    var world : CVec3 = V3SubV3(_world.xyz, refPos);
+    var world : CVec3 = V3SubV3(_world.xyz, _camPos);
     
     var lastCasIndex : int; lastCasIndex.dummy = FloatToInt(row2.y);
     var fade : number = _row0.w;

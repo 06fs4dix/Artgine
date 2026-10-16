@@ -248,6 +248,14 @@ export async function login(call, base, projectRoot, password = getPassword(proj
 // 모든 도구가 이 하나를 쓴다. 인증은 COOKIE_FILE에 모여 있고 base로 구분되므로,
 // 서버를 몇 개를 오가든 각 서버 세션은 서로를 덮어쓰지 않는다.
 export function createApiClient(projectRoot) {
+    // 모든 호출이 이 클라이언트를 거치므로 여기서 한 번 치환한다. 도구마다 따로 부르면 빠뜨린 도구
+    // (log.js)만 자기 PC 서버에 공인 주소로 붙어 인증이 어긋난다. whoami 왕복은 base당 한 번만 한다.
+    const resolved = new Map();
+    function resolveBase(base) {
+        if (!resolved.has(base)) resolved.set(base, resolveLocalBase(base.replace(/\/$/, '')));
+        return resolved.get(base);
+    }
+
     async function send(method, base, path, payload) {
         const cookie = getEntry(base).cookie ?? '';
         const headers = {
@@ -336,7 +344,8 @@ export function createApiClient(projectRoot) {
         } catch { return false; }
     }
 
-    async function request(method, base, path, payload) {
+    async function request(method, rawBase, path, payload) {
+        const base = await resolveBase(rawBase);
         const first = await send(method, base, path, payload);
         if (path.startsWith('auth/') || !(await isAuthFailure(first.res))) return toJson(first.res);
         if (!(await reauth(base))) return toJson(first.res);
@@ -357,7 +366,8 @@ export function createApiClient(projectRoot) {
 
     // 도구의 명시적 login 명령. 이미 다른 봇이 인증해 둔 세션이 있으면 그대로 쓴다 - 봇 여러 개가
     // 동시에 기동해도 실제 로그인은 한 번, 2FA 승인 링크도 하나만 간다.
-    async function authLogin(base, password) {
+    async function authLogin(rawBase, password) {
+        const base = await resolveBase(rawBase);
         await acquireLock();
         try {
             if (await isAuthed(base)) return { ok: true, reused: true };

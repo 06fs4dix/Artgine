@@ -346,6 +346,30 @@ export class CFile {
             return false;
         }
     }
+    static async SaveChunk(_path, _data, _offset, _last) {
+        if (!CUtil.IsNode())
+            return false;
+        await EnsureNodeModules();
+        const part = _path + ".part";
+        try {
+            const fh = await gFsPromises.open(part, _offset == 0 ? "w" : "r+");
+            try {
+                await fh.write(Buffer.from(_data), 0, _data.byteLength, _offset);
+            }
+            finally {
+                await fh.close();
+            }
+            if (_last) {
+                await gFsPromises.rename(part, _path);
+                this.DeleteCache(_path);
+            }
+            return true;
+        }
+        catch (err) {
+            console.warn("SaveChunk Error:", err);
+            return false;
+        }
+    }
     static async Rename(_oldPath, _newPath) {
         if (!CUtil.IsNode())
             return false;

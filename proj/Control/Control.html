@@ -140,6 +140,11 @@ body.hide-left-sidebar #app-sidebar{display:none !important;}
 body.hide-right-sidebar #app-sidebar-right{display:none !important;}
 body.hide-left-sidebar #sidebarToggleBtnWrap{display:none !important;}
 body.hide-right-sidebar #sidebarToggleBtnWrapRight{display:none !important;}
+/* 오른쪽 사이드바가 닫혀 있을 때만 상단 메뉴에 Claude 사용량 배지를 보인다(도킹 레이아웃에서 열려 있으면 사이드바에 이미 표시됨). */
+#claudeUsageWrap{display:none;}
+body.hide-right-sidebar #claudeUsageWrap, body:not(.sidebar-layout-both) #claudeUsageWrap{display:block;}
+/* 좁은 화면에서는 배지가 메뉴바 폭을 넘겨 가로 스크롤을 만들므로 숨긴다(사용량은 우측 사이드바에서 확인). */
+@media (max-width:767.98px){#claudeUsageWrap{display:none !important;}}
 /* 히든 콘솔 채팅 트리거를 위해 탭 맨 앞에 작은 여백 확보 */
 #myTab{padding-left:14px;}
 #rdp-sidebar-list .ai-session-item, #agent-sidebar-list .ai-session-item, #other-sidebar-list .ai-session-item{cursor:pointer;}
@@ -418,6 +423,9 @@ body.tmux-dragging .tmux-leaf-dropzone{display:block;}
                 data-bs-toggle="offcanvas" data-bs-target="#app-sidebar" aria-controls="app-sidebar" data-CLan-title="ctrl.menu" title="Menu">
                 <i class="bi bi-list"></i>
             </button>
+        </li>
+        <li class="nav-item align-self-center" role="presentation" id="claudeUsageWrap">
+            <span id="claudeUsageBadge" class="me-2" style="display:none;"></span>
         </li>
         <li class="nav-item" role="presentation" style="display:none;" id="sidebarToggleBtnWrapRight">
             <button class="btn btn-outline-secondary mt-1" id="sidebarToggleBtnRight" type="button"

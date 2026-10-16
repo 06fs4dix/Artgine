@@ -1,7 +1,7 @@
 import { dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, writeFileSync } from 'fs';
-import { createApiClient, resolveLocalBase, tempPath, shotFormat } from './common.js';
+import { createApiClient, tempPath, shotFormat } from './common.js';
 import { wantsAnalysis, finishShot, finishFrames } from './image_tools.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -46,9 +46,7 @@ function usageAndExit() {
 
 if (!homeUrlArg || !homeUrlArg.startsWith('http') || !cmd) usageAndExit();
 
-const { base: rawBase, cwd, origin, rootUrl } = parseHomeUrl(homeUrlArg);
-// base는 세션 쿠키 맵의 키이기도 하므로 여기서 한 번 확정해 모든 명령이 같은 주소를 쓰게 한다.
-const base = await resolveLocalBase(rawBase);
+const { base, cwd, origin, rootUrl } = parseHomeUrl(homeUrlArg);
 
 if (cmd === 'login') {
     // 비밀번호 인자가 없으면 로컬(settings.json) 비밀번호로, 있으면 그 값을 그대로 해시해서 로그인한다.

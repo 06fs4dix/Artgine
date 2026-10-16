@@ -7,9 +7,9 @@ export class CProbe extends CSubject {
     mEnvMap;
     mDebugPaint = null;
     mDebugWant = false;
-    constructor(_tag) {
+    constructor() {
         super();
-        this.mEnvMap = this.PushComp(new CEnvMap(_tag));
+        this.mEnvMap = this.PushComp(new CEnvMap());
     }
     GetEnvMap() { return this.mEnvMap; }
     SetDebug(_debug) {
@@ -28,7 +28,8 @@ export class CProbe extends CSubject {
                 this.mDebugPaint.SetCullMask(CPaint.eCullMask.Nothing);
                 this.mDebugPaint.SetColorModel(new CColor(1, 1, 1, CColor.eModel.RGBAdd));
                 this.mDebugPaint.PushTag(CPaint.eTag.Light);
-                this.mDebugPaint.PushTag("env");
+                this.mDebugPaint.Env();
+                this.mDebugPaint.PushTag("envMap_NotReflected");
                 this.mDebugPaint.SetMaterial(0, 1);
             }
         }

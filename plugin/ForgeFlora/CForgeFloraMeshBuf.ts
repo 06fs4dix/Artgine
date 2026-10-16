@@ -5,6 +5,7 @@ import { CVertexFormat } from "../../artgine/render/CShader.js";
 import { CUtilRender } from "../../artgine/render/CUtilRender.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CForgeMeshBuf } from "../ForgeBuild/CForgeMeshBuf.js";
+import { CForgeFloraTex } from "./CForgeFloraTex.js";
 
 export type ForgeFloraV3 = number[];
 
@@ -59,13 +60,14 @@ export class CForgeFloraMeshBuf
 
     //_bound : LOD 단계끼리 같은 상자를 넣어야 한다. 덴시티 머지가 메시마다 최대 변을 1로 정규화해 상자가 다르면 전환 때 크기가 튄다
     //_wind : 정점 바람 가중치(Weight.x)를 넣는다. 셰이더 ApplyWind는 0.5 초과 정점만 흔든다
-    Commit(_frame : CFrame, _key : string, _tex : string[], _bound : number[], _wind : boolean) : boolean
+    //_pbr : 알베도 뒤에 재질맵을 붙이고 정점 z가 그 칸을 가리킨다. z가 0이면 거칠기를 알베도에서 읽는다
+    Commit(_frame : CFrame, _key : string, _tex : string[], _bound : number[], _wind : boolean, _pbr = false) : boolean
     {
         if(this.mIdx.length == 0) return false;
-        const n = this.Count(), U = CForgeFloraMeshBuf.sUnit;
+        const n = this.Count(), U = CForgeFloraMeshBuf.sUnit, tex = _pbr ? _tex.concat(_tex.map(_k => CForgeFloraTex.Mat(_k))) : _tex;
         const pos = new Float32Array(n * 3), ref = new Float32Array(n * 3);
         for(let i = 0; i < n * 3; i++) pos[i] = this.mPos[i] * U;
-        for(let i = 0; i < n; i++) ref[i * 3] = this.mSlot[i];
+        for(let i = 0; i < n; i++) { ref[i * 3] = this.mSlot[i]; if(_pbr) ref[i * 3 + 2] = _tex.length + this.mSlot[i]; }
         const uv = Float32Array.from(this.mUV), nor = Float32Array.from(this.mNor);
 
         const ci = new CMeshCreateInfo();
@@ -92,10 +94,10 @@ export class CForgeFloraMeshBuf
         ci.bound.SetType(CBound.eType.Box);
         ci.vertexCount = n;
         ci.indexCount = this.mIdx.length;
-        const mesh = CUtilRender.CMeshCreateInfoToCMesh(ci, _tex[0]);
-        mesh.texture.push(..._tex.slice(1));
+        const mesh = CUtilRender.CMeshCreateInfoToCMesh(ci, tex[0]);
+        mesh.texture.push(...tex.slice(1));
         //CMeshCreateInfoToCMesh는 텍스처 칸을 0~2로 고정한다. 목록 길이와 다르면 머지가 없는 키를 목록에 넣는다
-        mesh.meshTree.mData.textureOff = _tex.map((_k, _i) => _i);
+        mesh.meshTree.mData.textureOff = tex.map((_k, _i) => _i);
         _frame.Res().Push(_key, mesh);
         return true;
     }

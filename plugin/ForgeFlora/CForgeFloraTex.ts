@@ -27,9 +27,11 @@ export class CForgeFloraTex
     static sGrassCol = 8;
     static sCpu = new Map<string, IForgeFloraTexCpu>();
 
-    static Build(_frame : CFrame)
+    static Mat(_key : string) : string { return _key.replace(".tex", "_m.tex"); }
+    static Real(_key : string) : string { return _key.replace(".tex", "_r.tex"); }
+    static Build(_frame : CFrame, _pbr = false, _real = false)
     {
-        if(_frame.Res().Find(CForgeFloraTex.sGrass) != null) return;
+        if(_frame.Res().Find(CForgeFloraTex.sGrass) != null) { if(_pbr) CForgeFloraTex.Mats(_frame); if(_real) CForgeFloraTex.Reals(_frame); return; }
         CForgeFloraTex.Grass(_frame);
         CForgeFloraTex.Leaf(_frame);
         CForgeFloraTex.Needle(_frame);
@@ -42,6 +44,89 @@ export class CForgeFloraTex
         CForgeFloraTex.Lily(_frame);
         CForgeFloraTex.Bamboo(_frame);
         CForgeFloraTex.BambooLeaf(_frame);
+        if(_pbr) CForgeFloraTex.Mats(_frame);
+        if(_real) CForgeFloraTex.Reals(_frame);
+    }
+    //실사는 그린 무늬를 유지한다. 식생 메시에는 노말 칸이 없어, 잎맥·끝·홈의 차이는 재질 거칠기와 AO에만 더한다
+    private static Reals(_frame : CFrame)
+    {
+        const P : [string, number, number, number][] = [
+            [CForgeFloraTex.sGrass, 0.86, 0.14, 1], [CForgeFloraTex.sLeaf, 0.78, 0.18, 0], [CForgeFloraTex.sNeedle, 0.82, 0.12, 0],
+            [CForgeFloraTex.sBark, 0.9, 0.16, 2], [CForgeFloraTex.sBarkPine, 0.88, 0.16, 2], [CForgeFloraTex.sRock, 0.9, 0.2, 2],
+            [CForgeFloraTex.sFlower, 0.76, 0.14, 0], [CForgeFloraTex.sClover, 0.8, 0.14, 0], [CForgeFloraTex.sFern, 0.82, 0.12, 0],
+            [CForgeFloraTex.sLily, 0.74, 0.16, 0], [CForgeFloraTex.sBamboo, 0.78, 0.18, 0], [CForgeFloraTex.sBambooLeaf, 0.8, 0.14, 0],
+        ];
+        for(const [key, rough, v, kind] of P)
+        {
+            const rk = CForgeFloraTex.Real(key);
+            if(_frame.Res().Find(rk) != null) continue;
+            const src = CForgeFloraTex.sCpu.get(key);
+            if(src == null) continue;
+            const out = new Uint8Array(src.buf.length), b = src.buf, w = src.w, h = src.h, n = w * h;
+            const lum = new Float32Array(n), low = new Float32Array(n);
+            for(let i = 0; i < n; i++) lum[i] = b[i * 4 + 3] < 8 ? 0 : (b[i * 4] + b[i * 4 + 1] + b[i * 4 + 2]) / 765;
+            const rad = 2;
+            for(let y = 0; y < h; y++)
+                for(let x = 0; x < w; x++)
+                {
+                    let s = 0, c = 0;
+                    for(let ky = -rad; ky <= rad; ky++) for(let kx = -rad; kx <= rad; kx++)
+                    {
+                        const p = ((y + ky + h) % h) * w + (x + kx + w) % w;
+                        if(b[p * 4 + 3] < 8) continue;
+                        s += lum[p]; c++;
+                    }
+                    low[y * w + x] = c > 0 ? s / c : lum[y * w + x];
+                }
+            for(let i = 0; i < n; i++)
+            {
+                const a = b[i * 4 + 3], o = i * 4;
+                out[o + 3] = a;
+                if(a < 8) continue;
+                const avg = (b[o] + b[o + 1] + b[o + 2]) / 3, sat = 1.12;
+                out[o] = Math.max(0, Math.min(255, avg + (b[o] - avg) * sat));
+                out[o + 1] = Math.max(0, Math.min(255, avg + (b[o + 1] - avg) * sat));
+                out[o + 2] = Math.max(0, Math.min(255, avg + (b[o + 2] - avg) * (sat * 0.96)));
+            }
+            CForgeFloraTex.Upload(_frame, rk, w, h, out, src.repeat, false);
+            const mk = CForgeFloraTex.Mat(rk), orm = new Uint8Array(out.length);
+            for(let i = 0; i < n; i++)
+            {
+                const y = Math.floor(i / w), tip = kind == 1 && y < h * 0.18 ? v * 0.35 : 0;
+                const rgh = Math.min(1, Math.max(rough, rough + Math.max(0, 0.5 - lum[i]) * v + Math.abs(lum[i] - low[i]) * v + tip));
+                const ao = Math.max(0.58, Math.min(1, 0.72 + lum[i] * 0.28));
+                const o = i * 4;
+                orm[o] = ao * 255; orm[o + 1] = rgh * 255; orm[o + 2] = 0; orm[o + 3] = 255;
+            }
+            CForgeFloraTex.Upload(_frame, mk, w, h, orm, src.repeat, false);
+        }
+    }
+    //알베도 밝기를 높이 대신 쓴다. 어두운 홈·잎맥이 더 거칠고 AO가 낮다. 금속은 없다.
+    //IBL이 AO를 다시 곱하므로 바닥을 0.62로 둬 식생이 꺼지지 않게 한다
+    private static Mats(_frame : CFrame)
+    {
+        const P : [string, number, number][] = [
+            [CForgeFloraTex.sGrass, 0.8, 0.08], [CForgeFloraTex.sLeaf, 0.48, 0.16], [CForgeFloraTex.sNeedle, 0.58, 0.1],
+            [CForgeFloraTex.sBark, 0.84, 0.12], [CForgeFloraTex.sBarkPine, 0.78, 0.12], [CForgeFloraTex.sRock, 0.7, 0.18],
+            [CForgeFloraTex.sFlower, 0.38, 0.12], [CForgeFloraTex.sClover, 0.58, 0.12], [CForgeFloraTex.sFern, 0.66, 0.1],
+            [CForgeFloraTex.sLily, 0.36, 0.14], [CForgeFloraTex.sBamboo, 0.38, 0.16], [CForgeFloraTex.sBambooLeaf, 0.5, 0.12],
+        ];
+        for(const [key, rough, v] of P)
+        {
+            const mk = CForgeFloraTex.Mat(key);
+            if(_frame.Res().Find(mk) != null) continue;
+            const src = CForgeFloraTex.sCpu.get(key);
+            if(src == null) continue;
+            const out = new Uint8Array(src.buf.length), b = src.buf;
+            for(let i = 0; i < b.length; i += 4)
+            {
+                const lum = (b[i] + b[i + 1] + b[i + 2]) / 765;
+                const rgh = Math.max(0.04, Math.min(1, rough + (0.5 - lum) * v));
+                const ao = Math.max(0.62, Math.min(1, 0.8 + lum * 0.2));
+                out[i] = ao * 255; out[i + 1] = rgh * 255; out[i + 2] = 0; out[i + 3] = 255;
+            }
+            CForgeFloraTex.Upload(_frame, mk, src.w, src.h, out, src.repeat, false);
+        }
     }
     //2x2 아틀라스 칸 _q의 [u0, v0, u1, v1]. 칸 0·1이 이미지 위쪽(v 큰 쪽)
     static Quad(_q : number) : number[]

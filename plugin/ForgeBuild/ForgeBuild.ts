@@ -48,10 +48,12 @@ export class CForgeOption
     mNormal = true;         //노말맵(텍스처 1장 더 읽음)
     mMaterial = true;       //재질맵: AO·거칠기(텍스처 1장 더 읽음)
     mParallax = true;       //패럴랙스(픽셀마다 수십 번 읽어 가장 비싸다. 노말맵이 켜져 있어야 동작)
+    mPBR = false;           //재질맵을 PBR 값으로(낮은 거칠기·납선 금속·홈만 있는 AO). 램버트용 맵은 그대로 남는다
+    mReal = false;          //실사 텍스처(색이 구워진 알베도·잔주름 노말·실사 재질). 끄면 밝기 무늬
     constructor(_init : Partial<CForgeOption> = null) { if(_init != null) Object.assign(this, _init); }
 }
 
-interface IForgeSurfOpt { nor : boolean; mat : boolean; px : boolean; }
+interface IForgeSurfOpt { nor : boolean; mat : boolean; px : boolean; pbr : boolean; real : boolean; }
 interface IForgePushed { kind : string; ent : IForgeEntity; affect : boolean; surf : IForgeSurfOpt; }
 interface IForgeOwn { kind : string; sig : string; r : any; keys : string[]; verts : number; }
 
@@ -114,7 +116,7 @@ export class CForgeFactory
         const opt = _opt ?? new CForgeOption();
         const ent = this.ToEntity(kind, _bottom, _top, opt) as any, mon = CForgeFactory.sMonument[_type];
         if(mon != null) ent.over = { ...(ent.over ?? {}), mMonument : mon };
-        this.mPush.push({ kind, ent, affect : opt.mAffect, surf : { nor : opt.mNormal, mat : opt.mMaterial, px : opt.mNormal && opt.mParallax } });
+        this.mPush.push({ kind, ent, affect : opt.mAffect, surf : { nor : opt.mNormal, mat : opt.mMaterial, px : opt.mNormal && opt.mParallax, pbr : opt.mPBR, real : opt.mReal } });
         return this.mPush.length - 1;
     }
 
@@ -254,14 +256,15 @@ export class CForgeFactory
         const frame = this.mCanvas.GetFrame(), U = CForgeScene.sUnit, ver = ++this.mVer;
         _parts.forEach((_p, _i) => {
             const key = `forge${this.mId}_${o.kind}_${ver}_${_i}.mesh`;
-            if(!_p.buf.Commit(frame, key, _p.tex ?? frame.Pal().GetBlackTex(), _p.tex != null && _so.nor, _p.tex != null && _so.mat)) return;
+            if(!_p.buf.Commit(frame, key, _p.tex ?? frame.Pal().GetBlackTex(), _p.tex != null && _so.nor, _p.tex != null && _so.mat, _so.pbr, _p.tex != null && _so.real)) return;
             o.keys.push(key);
             o.verts += _p.buf.Count();
             const pt = _sub.PushComp(new CPaint3D(key));
+            const rgb = _p.tex != null && _so.real ? CForgeTex.Scale(_p.tex, _p.rgb) : _p.rgb;
             if(_p.tex == null) pt.SetColorModel(new CColor(_p.rgb[0], _p.rgb[1], _p.rgb[2], CColor.eModel.RGBAdd));
             else
             {
-                pt.SetColorModel(new CColor(_p.rgb[0], _p.rgb[1], _p.rgb[2], CColor.eModel.RGBMul));
+                pt.SetColorModel(new CColor(rgb[0], rgb[1], rgb[2], CColor.eModel.RGBMul));
                 pt.SetTexCodi(new CVec4(1 / CForgeTex.sMeter, 1 / CForgeTex.sMeter, CForgeTex.sUVOff, CForgeTex.sUVOff));
                 const surf = _so.nor || _so.mat ? CForgeTex.Surf(_p.tex) : null;
                 if(surf != null && _so.mat) pt.SetMaterial(-1, -1, 1, -1);

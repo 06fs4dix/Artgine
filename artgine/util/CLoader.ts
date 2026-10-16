@@ -312,6 +312,8 @@ export class CLoader
 
 
 		this.mLoadSet.add(_file);
+		if(this.IsTintKey(_file))
+			return await this.TintTexLoad(_file,_option);
 		if(this.IsChannelKey(_file))
 			return await this.ChannelTexLoad(_file,_option);
 		var pos=_file.lastIndexOf(".")+1;
@@ -460,8 +462,8 @@ export class CLoader
 		if(ext=="fbx")	par = new CParserFBX(_option.mColorTex,_option.mComputeNormal,_option.mMergeStatic);
 		else if(ext=="obj") 	par = new CParserOBJ(_option.mComputeNormal,_option.mMergeStatic);
 		else 	par = new CParserGLTF(_option.mInch,_option.mColorTex,_option.mTexBufRaw,_option.mComputeNormal,_option.mMergeStatic);
-		
-		
+
+
 
 		par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
 		await par.Load(_file)
@@ -488,8 +490,8 @@ export class CLoader
 		let channelArr=new Array<number>();
 		for (let i = 0; i < mesh.texture.length; i++)
 		{
-			// 채널 합성 텍스쳐는 #n 참조 대상(임베디드 텍스쳐)이 이름을 받고 로드된 뒤에 만든다
-			if(typeof mesh.texture[i]=="string" && this.IsChannelKey(mesh.texture[i]))
+			// 채널/틴트 합성 텍스쳐는 #n 참조 대상(임베디드 텍스쳐)이 이름을 받고 로드된 뒤에 만든다
+			if(typeof mesh.texture[i]=="string" && (this.IsChannelKey(mesh.texture[i]) || this.IsTintKey(mesh.texture[i])))
 			{
 				channelArr.push(i);
 				continue;
@@ -552,19 +554,144 @@ export class CLoader
 			}
 			
 		}
-		for(let [key,value] of texMap)		
+		const embedKeys=channelArr.some((i)=>this.IsTintKey(mesh.texture[i]))?[...texMap.keys()]:[];
+		for(const key of embedKeys)
+			this.mEmbedBuf.set(key,texMap.get(key));
+		for(let [key,value] of texMap)
 		{
 			await this.LoadSwitch(key, value, option);
 		}
 		for(let i of channelArr)
 		{
+			if(this.IsTintKey(mesh.texture[i]))
+			{
+				mesh.texture[i]=await this.TintKeyResolve(mesh.texture[i],mesh,option);
+				continue;
+			}
 			mesh.texture[i]=mesh.texture[i].split("&").map((p)=>/^#\d+$/.test(p)?mesh.texture[Number(p.substring(1))]:p).join("&");
 			await this.Exe(mesh.texture[i],option);
 		}
+		for(const key of embedKeys)
+			this.mEmbedBuf.delete(key);
 	}
 	IsChannelKey(_key : string)
 	{
 		return _key.indexOf("&")!=-1 && _key.indexOf("://")==-1 && _key.startsWith("base64:")==false;
+	}
+	private mEmbedBuf=new Map<string,ArrayBufferLike>();
+	private async PixelLoad(_file : string,_option : CLoaderOption) : Promise<{buf:ArrayLike<number>,w:number,h:number}>
+	{
+		const src=await this.Exe(_file,_option);
+		let buf=src instanceof CTexture?src.GetBuf()[0]:null;
+		//GPU로 로드된 원본은 CPU 픽셀이 비워졌으므로 캐시를 거치지 않고 한 번 더 디코딩해 픽셀을 읽는다
+		if(buf==null && src instanceof CTexture)
+		{
+			const par=_file.toLowerCase().endsWith(".tga")?new CParserTGA():new CParserIMG();
+			//임베디드 텍스쳐는 서버에 파일이 없으므로 보관해 둔 원본 바이트로 디코딩한다(로드 때와 같은 알파 옵션)
+			const raw0=this.mEmbedBuf.get(_file);
+			if(raw0!=null)
+			{
+				par.mAlphaCut=_option.mAlphaCut;
+				par.mAlphaBleed=_option.mAlphaBleed;
+				par.SetBuffer(new Uint8Array(raw0),raw0.byteLength);
+			}
+			await par.Load(_file);
+			const raw=par.GetResult();
+			buf=raw!=null?raw.GetBuf()[0]:null;
+		}
+		if(src instanceof CTexture && (buf instanceof Uint8Array || buf instanceof Uint8ClampedArray))
+			return {buf:buf,w:src.GetWidth(),h:src.GetHeight()};
+		return null;
+	}
+	IsTintKey(_key : string)
+	{
+		return typeof _key=="string" && _key.startsWith("tint|");
+	}
+	//_key : "tint|r,g,b,a|모드|컷오프|원본" 모드는 O(OPAQUE) M(MASK) B(BLEND), 색은 glTF baseColorFactor(선형), 원본은 텍스쳐 경로 또는 #n
+	//원본에 곱할 게 없으면(흰색이고 알파도 그대로 쓸 수 있으면) 합성 없이 원본 키를 돌려준다
+	private async TintKeyResolve(_key : string,_mesh : CMesh,_option : CLoaderOption) : Promise<string>
+	{
+		const part=_key.split("|");
+		let srcKey=part.slice(4).join("|");
+		if(/^#\d+$/.test(srcKey))
+			srcKey=_mesh.texture[Number(srcKey.substring(1))] as string;
+		const src=await this.Exe(srcKey,_option);
+		if(!(src instanceof CTexture))
+		{
+			this.mLoadSet.delete(_key);
+			return srcKey;
+		}
+		const white=part[1].split(",").every((v)=>Number(v)==1);
+		if(white && (part[2]=="B" || src.GetAlpha()==false))
+		{
+			this.mLoadSet.delete(_key);
+			return srcKey;
+		}
+		const key=part.slice(0,4).join("|")+"|"+srcKey;
+		await this.Exe(key,_option);
+		return key;
+	}
+	//선형 공간에서 곱한 뒤 sRGB로 되돌린다. 텍스쳐 픽셀(sRGB)에 factor(선형)를 그대로 곱하면 어두운 색이 틀어진다
+	private async TintTexLoad(_key : string,_option : CLoaderOption)
+	{
+		if(_option==null)	_option=new CLoaderOption();
+		const part=_key.split("|");
+		const col=part[1].split(",").map(Number);
+		const mode=part[2];
+		const cutoff=Number(part[3]);
+		const srcKey=part.slice(4).join("|");
+		const src=srcKey.startsWith("#")?null:await this.PixelLoad(srcKey,_option);
+		if(src==null)
+		{
+			CConsol.Log("TintTexLoad fail : "+srcKey);
+			this.mLoadSet.delete(_key);
+			return null;
+		}
+		const toLinear=(v : number)=>v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4);
+		const toSRGB=(l : number)=>
+		{
+			l=Math.min(1,Math.max(0,l));
+			return l<=0.0031308?l*12.92:1.055*Math.pow(l,1/2.4)-0.055;
+		};
+		const rgbLut=[0,1,2].map((c)=>
+		{
+			const lut=new Uint8Array(256);
+			for(let v=0;v<256;++v)
+				lut[v]=Math.round(toSRGB(toLinear(v/255)*col[c])*255);
+			return lut;
+		});
+		const aLut=new Uint8Array(256);
+		for(let v=0;v<256;++v)
+		{
+			const a=v/255*col[3];
+			if(mode=="O")			aLut[v]=255;
+			else if(mode=="M")		aLut[v]=a>=cutoff?255:0;
+			else					aLut[v]=Math.round(Math.min(1,Math.max(0,a))*255);
+		}
+		const tex=new CTexture();
+		tex.SetSize(src.w,src.h);
+		tex.CreateBuf();
+		const dst=tex.GetBuf()[0];
+		let partial=false;
+		for(let i=0;i<src.w*src.h*4;i+=4)
+		{
+			dst[i]=rgbLut[0][src.buf[i]];
+			dst[i+1]=rgbLut[1][src.buf[i+1]];
+			dst[i+2]=rgbLut[2][src.buf[i+2]];
+			const a=aLut[src.buf[i+3]];
+			dst[i+3]=a;
+			if(a!=0 && a!=255)	partial=true;
+		}
+		tex.SetAlpha(partial);
+		tex.SetFilter(_option.mFilter);
+		tex.SetWrap(_option.mWrap);
+		tex.SetMipMap(_option.mMipMap);
+		tex.SetAniso(_option.mAniso);
+		tex.SetKey(_key);
+		if(this.mRender!=null && _option.mGPU)	this.mRender.BuildTexture(tex);
+		if(this.mRes!=null)	this.mRes.Push(_key,tex);
+		this.mLoadSet.delete(_key);
+		return tex;
 	}
 	//_key : "R&G&B&A" 항목마다 텍스쳐 경로(같은 순번 채널을 가져옴) 또는 0~255 상수
 	private async ChannelTexLoad(_key : string,_option : CLoaderOption)
@@ -587,21 +714,12 @@ export class CLoader
 				constArr[c]=Math.min(255,Number(part));
 				continue;
 			}
-			const src=await this.Exe(part,_option);
-			let buf=src instanceof CTexture?src.GetBuf()[0]:null;
-			//GPU로 로드된 원본은 CPU 픽셀이 비워졌으므로 캐시를 거치지 않고 한 번 더 디코딩해 채널을 읽는다
-			if(buf==null && src instanceof CTexture)
+			const pix=await this.PixelLoad(part,_option);
+			if(pix!=null)
 			{
-				const par=part.toLowerCase().endsWith(".tga")?new CParserTGA():new CParserIMG();
-				await par.Load(part);
-				const raw=par.GetResult();
-				buf=raw!=null?raw.GetBuf()[0]:null;
-			}
-			if(buf instanceof Uint8Array || buf instanceof Uint8ClampedArray)
-			{
-				srcArr[c]={buf:buf,w:src.GetWidth(),h:src.GetHeight()};
-				w=Math.max(w,src.GetWidth());
-				h=Math.max(h,src.GetHeight());
+				srcArr[c]=pix;
+				w=Math.max(w,pix.w);
+				h=Math.max(h,pix.h);
 			}
 			else
 				CConsol.Log("ChannelTexLoad fail : "+part);

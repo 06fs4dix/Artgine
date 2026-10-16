@@ -108,10 +108,11 @@ export class CRenderer
 	Begin(_tex : CTexture=null,_surface=false,_rtUse:Set<number>=null,_rtLevel=0){	return false;	}
 	End(_tex : CTexture=null,_rtUse :Set<number>=null,_rtLevel=0){}
 
-	BlurEnvmap(_texKey : string)
+	/** _updatedLayers : 갱신된 배열 레이어 번호. 큐브(6레이어) 단위로 하나라도 포함되면 그 큐브만 다시 블러한다 */
+	BlurEnvmap(_texKey : string,_updatedLayers : Set<number>)
 	{
 		const tex = this.mRes.Find(_texKey) as CTexture;
-		if(this.mDev.GL() == null || tex == null || tex.GetGBuf().length == 0)
+		if(this.mDev.GL() == null || tex == null || tex.GetGBuf().length == 0 || _updatedLayers.size == 0)
 			return;
 
 		const info = tex.GetInfo()[0];
@@ -128,8 +129,15 @@ export class CRenderer
 		this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D_ARRAY, gTex);
 
 		const mips : (Uint8Array|Float32Array)[][] = [];
+		const cubeLayers : number[] = [];
 		for(let layer = 0; layer + 6 <= info.mCount; layer += 6)
 		{
+			let dirty = false;
+			for(let face = 0; face < 6 && !dirty; face++)
+				dirty = _updatedLayers.has(layer + face);
+			if(!dirty)
+				continue;
+			cubeLayers.push(layer);
 			const faces : (Uint8Array|Float32Array)[] = [];
 			for(let lod = 0; lod < lodCount; lod++)
 			{
@@ -142,16 +150,22 @@ export class CRenderer
 					faces.push(buf);
 				}
 			}
-			mips.push(faces);
+			mips[layer / 6] = faces;
 		}
 
-		const blurred = CImgPro.SphericalGaussianBlur(tex, mips);
-		for(let lod = 0; lod < blurred.length; lod++)
+		if(cubeLayers.length > 0)
 		{
-			const s = size >> lod;
-			const bufs = blurred[lod].GetBuf();
-			for(let layer = 0; layer < bufs.length; layer++)
-				this.mDev.GL().texSubImage3D(this.mDev.GL().TEXTURE_2D_ARRAY, lod, 0, 0, layer, s, s, 1, this.mDev.GL().RGBA, type, bufs[layer] as ArrayBufferView);
+			const blurred = CImgPro.SphericalGaussianBlur(tex, _updatedLayers, mips);
+			for(let lod = 0; lod < blurred.length; lod++)
+			{
+				const s = size >> lod;
+				const bufs = blurred[lod].GetBuf();
+				for(let i = 0; i < bufs.length; i++)
+				{
+					const layer = cubeLayers[Math.floor(i / 6)] + i % 6;
+					this.mDev.GL().texSubImage3D(this.mDev.GL().TEXTURE_2D_ARRAY, lod, 0, 0, layer, s, s, 1, this.mDev.GL().RGBA, type, bufs[i] as ArrayBufferView);
+				}
+			}
 		}
 
 		this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D_ARRAY, null);
@@ -769,7 +783,7 @@ export class CRendererGPU extends CRenderer
 	mRTMipSet=new Set<CTexture>();
 	mEnvBlurBusy=false;
 	mEnvBlurAgain=false;
-	override BlurEnvmap(_texKey : string)
+	override BlurEnvmap(_texKey : string,_updatedLayers : Set<number>)
 	{
 	}
 	async BlurEnvmapAsync(_tex : CTexture)

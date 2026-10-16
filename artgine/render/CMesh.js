@@ -3,6 +3,7 @@ import { CTree } from "../basic/CTree.js";
 import { CMat } from "../geometry/CMat.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
+import { CFloat32Mgr } from "../geometry/CFloat32Mgr.js";
 import { CHash } from "../basic/CHash.js";
 export class CWeightMat {
     mat;
@@ -19,6 +20,43 @@ export class CMeshAniInfo {
 export class CMeshSkin extends CObject {
     key = "";
     mat = new CMat();
+}
+export class CMeshMorph extends CObject {
+    names = new Array();
+    delta = new CFloat32Mgr();
+    GetTexKey(_meshKey) {
+        let a = this.delta.GetArray();
+        let n = this.names.length * this.GetVertexCount() * 3;
+        let h = 2166136261;
+        let u = new Uint32Array(a.buffer, a.byteOffset, Math.min(n, a.length));
+        for (let i = 0; i < u.length; ++i)
+            h = Math.imul(h ^ u[i], 16777619);
+        return _meshKey + ".morph/" + this.names.length + "x" + this.GetVertexCount() + "/" + (h >>> 0) + ".tex";
+    }
+    GetVertexCount() {
+        if (this.names.length == 0)
+            return 0;
+        return this.delta.mSize / (this.names.length * 3);
+    }
+    Remap(_map, _count) {
+        let r = new CMeshMorph();
+        r.names = this.names.slice();
+        let T = this.names.length;
+        let n = this.GetVertexCount();
+        r.delta.Resize(T * _count * 3);
+        let src = this.delta.GetArray();
+        let dst = r.delta.GetArray();
+        for (let t = 0; t < T; ++t) {
+            for (let i = 0; i < n; ++i) {
+                let s = (t * n + i) * 3;
+                let d = (t * _count + _map[i]) * 3;
+                dst[d] = src[s];
+                dst[d + 1] = src[s + 1];
+                dst[d + 2] = src[s + 2];
+            }
+        }
+        return r;
+    }
 }
 export class CMeshIK {
     bones = new Array();

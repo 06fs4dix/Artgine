@@ -46,16 +46,6 @@
     ],
     "codex": [
       {
-        "value": "gpt-5.5",
-        "label": "GPT-5.5",
-        "costInputPer1M": 5,
-        "costOutputPer1M": 30,
-        "costCachedReadPer1M": 0.5,
-        "costCachedWritePer1M": null,
-        "costRatioInput": 2500,
-        "costRatioOutput": 2500
-      },
-      {
         "value": "gpt-5.6-terra",
         "label": "GPT-5.6-Terra",
         "costInputPer1M": 2,
@@ -504,6 +494,136 @@
         "costOutputPer1M": 0,
         "costCachedReadPer1M": 0,
         "costCachedWritePer1M": null,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gemma4:12b",
+        "label": "Ollama (1.220.132.130:11434) - gemma4:12b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gemma4:26b",
+        "label": "Ollama (1.220.132.130:11434) - gemma4:26b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gemma4:31b",
+        "label": "Ollama (1.220.132.130:11434) - gemma4:31b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gemma4:e4b",
+        "label": "Ollama (1.220.132.130:11434) - gemma4:e4b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gpt-oss:20b",
+        "label": "Ollama (1.220.132.130:11434) - gpt-oss:20b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/huihui_ai/gemma-4-abliterated:26b",
+        "label": "Ollama (1.220.132.130:11434) - huihui_ai/gemma-4-abliterated:26b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/laguna-xs-2.1:q4_K_M",
+        "label": "Ollama (1.220.132.130:11434) - laguna-xs-2.1:q4_K_M",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/mistral-small3.2:24b",
+        "label": "Ollama (1.220.132.130:11434) - mistral-small3.2:24b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/ornith:35b",
+        "label": "Ollama (1.220.132.130:11434) - ornith:35b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/ornith:9b",
+        "label": "Ollama (1.220.132.130:11434) - ornith:9b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/qwen3.5:9b",
+        "label": "Ollama (1.220.132.130:11434) - qwen3.5:9b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/qwen3.6:27b",
+        "label": "Ollama (1.220.132.130:11434) - qwen3.6:27b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
+        "costRatioInput": 0,
+        "costRatioOutput": 0
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/qwen3.6:35b",
+        "label": "Ollama (1.220.132.130:11434) - qwen3.6:35b",
+        "costInputPer1M": 0,
+        "costOutputPer1M": 0,
+        "costCachedReadPer1M": 0,
+        "costCachedWritePer1M": 0,
         "costRatioInput": 0,
         "costRatioOutput": 0
       }

@@ -4,6 +4,7 @@ import { CMeshCreateInfo } from "../../artgine/render/CMeshCreateInfo.js";
 import { CVertexFormat } from "../../artgine/render/CShader.js";
 import { CUtilRender } from "../../artgine/render/CUtilRender.js";
 import { CForgeMeshBuf } from "../ForgeBuild/CForgeMeshBuf.js";
+import { CForgeFloraTex } from "./CForgeFloraTex.js";
 export class CForgeFloraMeshBuf {
     static sUnit = 100;
     mPos = [];
@@ -45,15 +46,18 @@ export class CForgeFloraMeshBuf {
             }
         return b;
     }
-    Commit(_frame, _key, _tex, _bound, _wind) {
+    Commit(_frame, _key, _tex, _bound, _wind, _pbr = false) {
         if (this.mIdx.length == 0)
             return false;
-        const n = this.Count(), U = CForgeFloraMeshBuf.sUnit;
+        const n = this.Count(), U = CForgeFloraMeshBuf.sUnit, tex = _pbr ? _tex.concat(_tex.map(_k => CForgeFloraTex.Mat(_k))) : _tex;
         const pos = new Float32Array(n * 3), ref = new Float32Array(n * 3);
         for (let i = 0; i < n * 3; i++)
             pos[i] = this.mPos[i] * U;
-        for (let i = 0; i < n; i++)
+        for (let i = 0; i < n; i++) {
             ref[i * 3] = this.mSlot[i];
+            if (_pbr)
+                ref[i * 3 + 2] = _tex.length + this.mSlot[i];
+        }
         const uv = Float32Array.from(this.mUV), nor = Float32Array.from(this.mNor);
         const ci = new CMeshCreateInfo();
         const Set = (_id, _a) => { const f = ci.Create(_id).bufF; f.mF32A = _a; f.mSize = _a.length; };
@@ -79,9 +83,9 @@ export class CForgeFloraMeshBuf {
         ci.bound.SetType(CBound.eType.Box);
         ci.vertexCount = n;
         ci.indexCount = this.mIdx.length;
-        const mesh = CUtilRender.CMeshCreateInfoToCMesh(ci, _tex[0]);
-        mesh.texture.push(..._tex.slice(1));
-        mesh.meshTree.mData.textureOff = _tex.map((_k, _i) => _i);
+        const mesh = CUtilRender.CMeshCreateInfoToCMesh(ci, tex[0]);
+        mesh.texture.push(...tex.slice(1));
+        mesh.meshTree.mData.textureOff = tex.map((_k, _i) => _i);
         _frame.Res().Push(_key, mesh);
         return true;
     }

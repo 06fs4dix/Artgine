@@ -17,16 +17,16 @@ export default class CEnvMap extends CBrushComp
 {
     //구 반사 반지름(월드 단위). 반사 방향을 이 구에 투영한다. 0이면 무한거리
     mRadius : number = 0;
+    mSize : number = 128;
+    mCycle : number = 100000;
 
-    constructor(_tag : string) {
+    constructor() {
         super("envMap_" + CUniqueID.Get());
-
-        this.mReadTag = _tag;
+        this.mReadTag = this.mTexKey;
     }
 
     override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
-
         if(this.mBrush != null) this.UpdateBrush(_update);
     }
 
@@ -39,6 +39,7 @@ export default class CEnvMap extends CBrushComp
             let pal=this.mBrush.mFrame.Pal();
 
             const rp2D=this.PushRPAuto(new CRPAuto(pal.Sl2DKey()));
+            rp2D.mCopy=false;
 			rp2D.SetKey("Forward_2D");
 			rp2D.mCullFace=CRenderPass.eCull.None;
 			rp2D.PushOr([
@@ -102,7 +103,38 @@ export default class CEnvMap extends CBrushComp
         }
 
         // -----------------------------------------------
-        // 1. 카메라
+        // 1. RP 세팅
+        // -----------------------------------------------
+        this.mTexOff =this.mBrush.mEnvmapTexOff;
+        for(let i = 0; i < 6; i++)
+        {
+            for(const rp of this.mWriteRP)
+            {
+                const srpKey = this.mTexKey + rp.Key() + i;
+                let srp: CRPAuto = this.mBrush.FindAutoRP(srpKey);
+                if (srp == null) {
+                    srp = this.mBrush.PushAutoRP(srpKey, rp.Export());
+                    srp.mPriority += i + this.mBrush.mEnvmapTexOff;
+                    srp.PushOr(new CCondition("GetTagKey().indexOf(envMap_)","==",-1,"envmapChk"));
+                    srp.PushOr(new CCondition(`mTag[${this.mReadTag}]`,"envmapChk"));
+                    srp.mRenderTarget = this.GetTex();
+                    srp.mCamera = this.mTexKey + i;
+                    srp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, "NoneEnv.tex"));
+                    srp.Reset();
+                }
+                if(srp.mOr[srp.mOr.length - 1].mState != `mTag[${this.mReadTag}]`) {
+                    this.mBrush.ClearRen(); // clearRen 대신 이 RP의 ren정보만 날려야 함, 하지만 일단 임시로 이렇게 둠
+                }
+                if(srp.mRenderTargetUse.has(this.mBrush.mEnvmapTexOff + i) == false || srp.mCycle != this.mCycle) {
+                    srp.mRenderTargetUse = new Set<number>([this.mBrush.mEnvmapTexOff + i]);
+                    srp.mCycle = this.mCycle;
+                    this.UpdateThisEnvMap(i);
+                }
+            }
+        }
+
+        // -----------------------------------------------
+        // 2. 카메라
         // -----------------------------------------------
         if(this.mBrush.mCameraMap.has(this.mTexKey+0) == false || this.GetOwner().mUpdateMat != 0)
         {
@@ -115,77 +147,73 @@ export default class CEnvMap extends CBrushComp
                 new CVec3(0, 1, 0), new CVec3(0, 1, 0), new CVec3(0, 0, 1),
                 new CVec3(0, 0, -1), new CVec3(0, 1, 0), new CVec3(0, 1, 0)
             ];
+            const far = this.mRadius == 0 ? 100000 : this.mRadius;
 
             for(let i = 0; i < 6; i++) {
                 const virtualCam = this.mBrush.GetCamera(this.mTexKey+i);
 
                 const slook = CMath.V3AddV3(seye, cubeDir[i]);
-                if(virtualCam.Init(seye, slook, cubeUp[i]))
+                if(virtualCam.Init(seye, slook, cubeUp[i]) || far != virtualCam.GetFar())
                 {
                     //가장자리 텍셀 중심이 큐브 모서리에 오도록 90도보다 살짝 넓힌다(Sam2DArrToCubeColor의 uv 축소와 짝)
-                    virtualCam.SetFov(2 * Math.atan(128 / 127));
-                    virtualCam.mWidth=128;
-                    virtualCam.mHeight=128;
-                    virtualCam.SetSize(128, 128);
+                    virtualCam.SetFov(2 * Math.atan(this.mSize / (this.mSize - 1)));
+                    virtualCam.SetFar(far); // 프러스텀 컬링을 위해서 추가
+                    virtualCam.mWidth=this.mSize;
+                    virtualCam.mHeight=this.mSize;
+                    virtualCam.SetSize(this.mSize, this.mSize);
                     virtualCam.ResetPerspective();
+                    this.UpdateThisEnvMap(i);
+                    this.mBrush.mUpdateEnv = CUpdate.eType.Updated;
                 }
             }
         }
 
         // -----------------------------------------------
-        // 2. 브러시 envmap 버퍼 입력. 셰이더가 픽셀마다 가장 가까운 하나를 고르고, 레이어는 인덱스*6이다(Light.ts)
+        // 3. 브러시 envmap 버퍼 입력. 셰이더가 픽셀마다 가장 가까운 하나를 고르고, 레이어는 인덱스*6이다(Light.ts)
         // -----------------------------------------------
-        const o = this.mBrush.mEnvmapCount * 4;
-        if(o + 4 <= this.mBrush.mEnvmapPos.length)
-        {
-            const pos = this.GetOwner().GetMat().xyz;
-            this.mBrush.mEnvmapPos[o + 0] = pos.x;
-            this.mBrush.mEnvmapPos[o + 1] = pos.y;
-            this.mBrush.mEnvmapPos[o + 2] = pos.z;
-            this.mBrush.mEnvmapPos[o + 3] = this.mRadius;
-        }
+        this.mBrush.mEnvmapPos[this.mBrush.mEnvmapCount * 4 + 0] = this.GetOwner().GetMat().F32A()[12];
+        this.mBrush.mEnvmapPos[this.mBrush.mEnvmapCount * 4 + 1] = this.GetOwner().GetMat().F32A()[13];
+        this.mBrush.mEnvmapPos[this.mBrush.mEnvmapCount * 4 + 2] = this.GetOwner().GetMat().F32A()[14];
+        this.mBrush.mEnvmapPos[this.mBrush.mEnvmapCount * 4 + 3] = this.mRadius;
+        this.mBrush.mUpdateEnv = CUpdate.eType.Updated;
+
+        this.mBrush.mEnvmapTexOff += 6;
+        this.mBrush.mEnvmapCount++;
 
         // -----------------------------------------------
-        // 3. 랜더타겟 크기 검사. 새로 만들면 기존 내용이 사라지므로 mUpdateEnv로 전체 envmap을 다시 그린다(CBrush.Update)
+        // 4. 랜더타겟 크기 검사. 새로 만들면 기존 내용이 사라지므로 mUpdateEnv로 전체 envmap을 다시 그린다(CBrush.Update)
         // -----------------------------------------------
-        const needLayer = this.mBrush.mEnvmapTexOff + 6;
-        if(envmapTex.GetInfo()[0].mCount < needLayer) {
+        if(envmapTex.GetInfo()[0].mCount < this.mBrush.mEnvmapTexOff) {
             this.mBrush.mFrame.Ren().BuildRenderTarget(
-                [new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA8, needLayer)],
+                [new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA8, this.mBrush.mEnvmapTexOff)],
                 new CVec2(envmapTex.GetWidth(), envmapTex.GetHeight()),
                 this.GetOwner().GetFrame().Pal().GetEnvMapTex()
             );
-            (this.mBrush.mFrame.Res().Find(this.GetTex()) as CTexture).SetAutoResize(false);
-            this.mBrush.mUpdateEnv = CUpdate.eType.Updated;
+            this.UpdateAllEnvMap();
         }
+    }
 
-        // -----------------------------------------------
-        // 4. RP 세팅
-        // -----------------------------------------------
-        this.mTexOff =this.mBrush.mEnvmapTexOff;
-        for(let i = 0; i < 6; i++)
-        {
-            for(const rp of this.mWriteRP)
-            {
-                const srpKey = this.mTexKey + rp.Key() + i;
-                let srp: CRPAuto = this.mBrush.FindAutoRP(srpKey);
-                if (srp == null) {
-                    srp = this.mBrush.PushAutoRP(srpKey, rp.Export());
-                    srp.mPriority += i + this.mBrush.mEnvmapTexOff;
-                    srp.PushAnd(new CCondition(`mTag[${this.mReadTag}]`));
-                    srp.mRenderTarget = this.GetTex();
-                    srp.mCamera = this.mTexKey + i;
-                    srp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, "NoneEnv.tex"));
-                    srp.Reset();
+    UpdateAllEnvMap() {
+        if(this.mBrush == null) return;
+        for(const ri of this.mBrush.mRenInfoMap.values()) {
+            if(ri.mRP != null && ri.mRP.mRenderTarget==this.GetTex())
+                ri.mSleepReset=true;
+        }
+    }
+
+    UpdateThisEnvMap(_faceIdx : number = -1) {
+        if(this.mBrush == null) return;
+        for(const rp of this.mWriteRP) {
+            const srpKey = this.mTexKey + rp.Key() + _faceIdx;
+            const srp: CRPAuto = this.mBrush.FindAutoRP(srpKey);
+            if(srp == null) continue;
+            for(const ri of this.mBrush.mRenInfoMap.values()) {
+                if(ri.mRP != null && ri.mRP.Key() == srp.Key() && ri.mRP.mRenderTarget==this.GetTex()) {
+                    ri.mSleepReset=true;
+                    break;
                 }
-                srp.mRenderTargetUse = new Set<number>([this.mBrush.mEnvmapTexOff + i]);
-
-                srp.mAnd[srp.mAnd.length - 1].mState = `mTag[${this.mReadTag}]`;
-                srp.mCycle = 100000000;
             }
         }
-        this.mBrush.mEnvmapTexOff += 6;
-        this.mBrush.mEnvmapCount++;
     }
 
     Refresh() {

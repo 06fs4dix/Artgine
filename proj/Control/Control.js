@@ -90,6 +90,10 @@ function updateSidebarMode() {
 }
 updateSidebarMode();
 window.addEventListener('resize', updateSidebarMode);
+window.addEventListener('beforeunload', (e) => {
+    e.preventDefault();
+    e.returnValue = '';
+});
 const THEME_STORAGE_KEY = 'artgine-control-theme';
 const themeSelect = document.getElementById('theme-select');
 function applyTheme(theme) {
@@ -430,6 +434,38 @@ async function loadAiProviderStatus() {
             const now = new Date();
             const pad2 = (n) => String(n).padStart(2, '0');
             timeEl.textContent = `(${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())})`;
+        }
+        const badgeEl = document.getElementById('claudeUsageBadge');
+        if (badgeEl) {
+            const shortHost = (label) => {
+                try {
+                    const h = new URL(/^\w+:\/\//.test(label) ? label : 'http://' + label).hostname;
+                    return /^[\d.]+$/.test(h) ? h : h.split('.')[0];
+                }
+                catch {
+                    return label;
+                }
+            };
+            const parts = [];
+            for (const r of results) {
+                if (!r.ok || !r.resp)
+                    continue;
+                const hidden = aiProviderHiddenSet(r.s.remoteId);
+                const src = r.s.remoteId ? shortHost(r.s.label) : r.s.label;
+                const color = r.s.remoteId ? rdpColorName(r.s.remoteId) : 'success';
+                for (const p of r.resp.providers ?? []) {
+                    if (hidden.has(p.id) || !p.authenticated || !p.usage)
+                        continue;
+                    const vals = [p.usage.fiveHour, p.usage.weekly].filter(x => x >= 0).map(x => Math.round(x * 100) + '%');
+                    if (!vals.length)
+                        continue;
+                    const name = p.id.charAt(0).toUpperCase() + p.id.slice(1);
+                    const prefix = r.s.remoteId ? aiEscapeHtml(src) + '-' : '';
+                    parts.push(`<span class="badge rounded-pill text-bg-${color}">${prefix}${name} ${vals.join('/')}</span>`);
+                }
+            }
+            badgeEl.innerHTML = parts.join(' ');
+            badgeEl.style.display = parts.length ? '' : 'none';
         }
     }
     catch (e) {
@@ -884,7 +920,7 @@ function sessionItemDragKey(spec) {
     return null;
 }
 document.addEventListener('dragstart', (e) => {
-    if (e.target?.closest?.('.ai-session-item, .top-tab-item'))
+    if (e.target?.closest?.('.ai-session-item, .tmux-tab-item'))
         document.body.classList.add('tmux-dragging');
 });
 document.addEventListener('dragend', () => document.body.classList.remove('tmux-dragging'));
@@ -944,11 +980,12 @@ function createSessionItem(spec) {
     item.querySelector(`[data-act="${spec.deleteAct}"]`).addEventListener('click', () => item._spec.onDelete());
     return item;
 }
-const SESS_ACTIVE_CLASSES = ['ai-session-item-active', 'ai-session-item-active-remote', 'ai-session-item-active-main', 'ai-session-item-active-sub'];
+const SESS_ACTIVE_CLASSES = ['ai-session-item-active', 'ai-session-item-active-remote', 'ai-session-item-active-pane'];
 function applySessActiveClasses(el, spec) {
     el.classList.remove(...SESS_ACTIVE_CLASSES);
     if (spec.isActive)
         el.classList.add(spec.activeClass);
+    el.style.cssText = spec.accentStyle ?? '';
 }
 function updateSessionItem(el, spec) {
     const item = el;
@@ -1010,15 +1047,20 @@ function showPooledFrame(ctx, key, src) {
     return f;
 }
 function syncSidebarTabToFrame(key) {
+    if (sbSubTab === 'file')
+        return;
     const isAgent = /^(chat:|term:|term-new:)/.test(key);
-    const isOther = /^(browser:|editor:)/.test(key);
+    const isOther = /^(browser:|editor:|web:)/.test(key);
     if (isAgent && sbSubTab !== 'agent') {
         sbSubTab = 'agent';
         localStorage.setItem(SB_TAB_LS, 'agent');
         applySidebarSubTab();
     }
-    if (isOther)
-        window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('right-other-tab')).show();
+    if (isOther && sbSubTab !== 'other') {
+        sbSubTab = 'other';
+        localStorage.setItem(SB_TAB_LS, 'other');
+        applySidebarSubTab();
+    }
 }
 const rdpFrameCtx = {
     pool: rdpIframePool,
@@ -1311,7 +1353,7 @@ CDOM.ID('ctrlSideFileRootSel')?.addEventListener('change', () => {
         return;
     if ((currentWebRootUrl || '') !== (nextWeb || '')) {
         currentWebRootUrl = nextWeb;
-        logOnServerChanged();
+        loadAiProviderStatus();
     }
     ctrlSelectedRootPath = next;
     ctrlSideSrchStop();
@@ -1327,7 +1369,7 @@ function rdpOpenLocal() {
     if (fileIframe?.contentWindow)
         CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: '' });
     ctrlRefreshRootSelect();
-    logOnServerChanged();
+    loadAiProviderStatus();
 }
 async function rdpClickRemote(remoteId) {
     const remote = rdpRemotes.find(r => r.remoteId === remoteId);
@@ -1362,7 +1404,7 @@ function rdpOpenRemote(remoteId) {
     if (fileIframe?.contentWindow)
         CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: remote.entryUrl });
     ctrlRefreshRootSelect();
-    logOnServerChanged();
+    loadAiProviderStatus();
 }
 function rdpShowShareLink(remoteUrl) {
     const shareUrl = `${rdpRemoteWebRootUrl(remoteUrl)}artgine/server/html/RemoteDesktop.html`;
@@ -1621,7 +1663,7 @@ function ctrlSideFileOpenFromSearch(scope, pathVal) {
     const nextWeb = scope.remoteId ? scope.webRootUrl : '';
     if ((currentWebRootUrl || '') !== (nextWeb || '')) {
         currentWebRootUrl = nextWeb;
-        logOnServerChanged();
+        loadAiProviderStatus();
     }
     if (ctrlNormPath(ctrlSelectedRootPath ?? '') !== ctrlNormPath(scope.rootPath ?? '')) {
         ctrlSelectedRootPath = scope.rootPath ?? '';
@@ -1773,8 +1815,11 @@ async function ctrlFileSearch(onlyKey) {
         return item;
     };
     const keyOf = (scopeKey, dirPath, name) => scopeKey + ' ' + dirPath + ' ' + name;
+    const ctrlSrchTokens = (query) => query.split(/[\/\s]+/).filter(Boolean);
+    const ctrlSrchMatch = (tokens, fullPathLower) => tokens.every(t => fullPathLower.includes(t));
     const renderFromCache = (activeScopes, query, shown) => {
         let found = 0;
+        const tokens = ctrlSrchTokens(query);
         for (const { key: scopeKey, scope } of activeScopes) {
             const cache = g_ctrlSrchCache.get(scopeKey);
             if (!cache)
@@ -1783,7 +1828,7 @@ async function ctrlFileSearch(onlyKey) {
                 for (const fl of list) {
                     if (fl.hidden || ctrlIsSearchExcluded(fl.name))
                         continue;
-                    if (fl.name.toLowerCase().includes(query)) {
+                    if (ctrlSrchMatch(tokens, (dirPath + fl.name).toLowerCase())) {
                         const key = keyOf(scopeKey, dirPath, fl.name);
                         if (shown.has(key))
                             continue;
@@ -1801,6 +1846,7 @@ async function ctrlFileSearch(onlyKey) {
         const query = input.value.trim().toLowerCase();
         if (!query)
             return;
+        const tokens = ctrlSrchTokens(query);
         const checkedKeys = new Set(Array.from(scopesEl.querySelectorAll('.ctrl-srch-scope-cb'))
             .filter(cb => cb.checked)
             .map(cb => cb.dataset.key));
@@ -1850,7 +1896,7 @@ async function ctrlFileSearch(onlyKey) {
                     for (const fl of data.list) {
                         if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name))
                             queue.push(dirPath + fl.name + '/');
-                        if (!fl.hidden && fl.name.toLowerCase().includes(query) && found < 200) {
+                        if (!fl.hidden && ctrlSrchMatch(tokens, (dirPath + fl.name).toLowerCase()) && found < 200) {
                             const key = keyOf(scopeKey, dirPath, fl.name);
                             if (shown.has(key))
                                 continue;
@@ -2410,13 +2456,18 @@ const CTRL_SIDE_SRCH_SCAN_CAP = 100000;
 const CTRL_SIDE_SRCH_CONCURRENCY = 16;
 let g_ctrlSideSrch = { rootKey: '', indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
 let ctrlSideSrchSeq = 0;
+let g_ctrlSideSrchTs = { rootKey: '', indexed: false, indexing: false, cache: new Map() };
+let ctrlSideSrchTsSeq = 0;
+let ctrlSideSrchMode = 'file';
 function ctrlSideSrchKey() {
     return (currentWebRootUrl || '') + '|' + (ctrlSelectedRootPath || '');
 }
 function ctrlSideSrchStop() {
     ctrlSideSrchSeq++;
-    const wasIndexing = g_ctrlSideSrch.indexing;
+    ctrlSideSrchTsSeq++;
+    const wasIndexing = g_ctrlSideSrch.indexing || g_ctrlSideSrchTs.indexing;
     g_ctrlSideSrch = { rootKey: '', indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+    g_ctrlSideSrchTs = { rootKey: '', indexed: false, indexing: false, cache: new Map() };
     if (wasIndexing) {
         ctrlSideFileSearchInputEl.disabled = false;
         ctrlSideFileSearchInputEl.placeholder = L('ctrl.ph.sideSearch', 'Search (click to index)');
@@ -2424,8 +2475,73 @@ function ctrlSideSrchStop() {
     ctrlSideFileSearchInputEl.value = '';
     ctrlSideFileSearchResultsEl.classList.add('d-none');
 }
+const CTRL_SIDE_SRCH_LS_PREFIX = 'ctrl-side-file-index-v1:';
+const CTRL_SIDE_SRCH_IDB_PREFIX = 'ctrl-side-file-index-v2:';
+async function ctrlSideSrchLoadSavedIndex(key) {
+    try {
+        localStorage.removeItem(CTRL_SIDE_SRCH_LS_PREFIX + key);
+    }
+    catch (_) { }
+    try {
+        const saved = await CStorage.IGet(CTRL_SIDE_SRCH_IDB_PREFIX + key);
+        return saved && saved.cache ? saved : null;
+    }
+    catch (_) {
+        return null;
+    }
+}
+function ctrlSideSrchSaveIndex(key, state) {
+    const saved = { root: state.root, down: state.down, cache: Object.fromEntries(state.cache), ts: Date.now() };
+    CStorage.ISet(CTRL_SIDE_SRCH_IDB_PREFIX + key, saved).catch(() => { });
+}
+function ctrlSideSrchDeleteSavedIndex(key) {
+    CStorage.ISet(CTRL_SIDE_SRCH_IDB_PREFIX + key, null).catch(() => { });
+}
+function ctrlSideSrchApplySaved(key, saved) {
+    if (ctrlSideSrchKey() !== key)
+        return;
+    g_ctrlSideSrch = { rootKey: key, indexed: true, indexing: false, cache: new Map(Object.entries(saved.cache)), root: saved.root, down: saved.down };
+}
+let ctrlSideSrchPending = null;
 async function ctrlSideSrchIndex() {
     const key = ctrlSideSrchKey();
+    if (g_ctrlSideSrch.rootKey !== key)
+        g_ctrlSideSrch = { rootKey: key, indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
+    if (g_ctrlSideSrch.indexed || g_ctrlSideSrch.indexing)
+        return;
+    if (ctrlSideSrchPending?.key === key)
+        return ctrlSideSrchPending.promise;
+    const promise = (async () => {
+        const saved = await ctrlSideSrchLoadSavedIndex(key);
+        if (ctrlSideSrchKey() !== key)
+            return;
+        await ctrlSideSrchUseSavedOrScan(key, saved);
+    })();
+    ctrlSideSrchPending = { key, promise };
+    try {
+        await promise;
+    }
+    finally {
+        if (ctrlSideSrchPending?.promise === promise)
+            ctrlSideSrchPending = null;
+    }
+}
+async function ctrlSideSrchUseSavedOrScan(key, saved) {
+    if (saved) {
+        await new Promise((resolve) => {
+            CConfirm.List(L('ctrl.msg.reuseIndexBody', 'A previously saved file index exists for this folder. Load the saved index, or scan again?'), [
+                () => { ctrlSideSrchApplySaved(key, saved); resolve(); },
+                () => { ctrlSideSrchDeleteSavedIndex(key); ctrlSideSrchScan(key).then(resolve); },
+            ], [
+                L('ctrl.btn.reuseIndex', 'Load saved'),
+                L('ctrl.btn.reindex', 'Scan again'),
+            ]);
+        });
+        return;
+    }
+    await ctrlSideSrchScan(key);
+}
+async function ctrlSideSrchScan(key) {
     if (g_ctrlSideSrch.rootKey !== key)
         g_ctrlSideSrch = { rootKey: key, indexed: false, indexing: false, cache: new Map(), root: '', down: '' };
     if (g_ctrlSideSrch.indexed || g_ctrlSideSrch.indexing)
@@ -2484,6 +2600,59 @@ async function ctrlSideSrchIndex() {
     g_ctrlSideSrch.indexed = true;
     ctrlSideFileSearchInputEl.disabled = false;
     ctrlSideFileSearchInputEl.placeholder = prevPlaceholder;
+    ctrlSideSrchSaveIndex(key, g_ctrlSideSrch);
+}
+async function ctrlSideSrchTsIndex() {
+    const key = ctrlSideSrchKey();
+    if (g_ctrlSideSrchTs.rootKey !== key)
+        g_ctrlSideSrchTs = { rootKey: key, indexed: false, indexing: false, cache: new Map() };
+    if (g_ctrlSideSrchTs.indexed || g_ctrlSideSrchTs.indexing)
+        return;
+    await ctrlSideSrchIndex();
+    while (g_ctrlSideSrch.indexing && ctrlSideSrchKey() === key)
+        await new Promise(r => setTimeout(r, 50));
+    if (ctrlSideSrchKey() !== key || !g_ctrlSideSrch.indexed)
+        return;
+    const seq = ++ctrlSideSrchTsSeq;
+    g_ctrlSideSrchTs.indexing = true;
+    ctrlSideFileSearchInputEl.disabled = true;
+    const prevPlaceholder = ctrlSideFileSearchInputEl.placeholder;
+    const queue = [];
+    for (const [dirPath, list] of g_ctrlSideSrch.cache) {
+        for (const fl of list) {
+            if (fl.file && !fl.hidden && fl.name.toLowerCase().endsWith('.ts'))
+                queue.push(dirPath + fl.name);
+        }
+    }
+    const total = queue.length;
+    let done = 0;
+    ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingTsCount', 'Indexing .ts content... ({0}/{1})', 0, total);
+    const worker = async () => {
+        while (queue.length > 0 && seq === ctrlSideSrchTsSeq) {
+            const relPath = queue.shift();
+            if (relPath === undefined)
+                break;
+            try {
+                const res = await fetch(g_ctrlSideSrch.down + ctrlEncodeUrlPath(relPath));
+                const text = res.ok ? await res.text() : '';
+                if (seq !== ctrlSideSrchTsSeq)
+                    return;
+                g_ctrlSideSrchTs.cache.set(relPath, text);
+            }
+            catch { }
+            if (seq !== ctrlSideSrchTsSeq)
+                return;
+            done++;
+            ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingTsCount', 'Indexing .ts content... ({0}/{1})', done, total);
+        }
+    };
+    await Promise.all(Array.from({ length: CTRL_SIDE_SRCH_CONCURRENCY }, () => worker()));
+    if (seq !== ctrlSideSrchTsSeq)
+        return;
+    g_ctrlSideSrchTs.indexing = false;
+    g_ctrlSideSrchTs.indexed = true;
+    ctrlSideFileSearchInputEl.disabled = false;
+    ctrlSideFileSearchInputEl.placeholder = prevPlaceholder;
 }
 function ctrlSideSrchRenderResults(query) {
     ctrlSideFileSearchResultsEl.innerHTML = '';
@@ -2491,6 +2660,10 @@ function ctrlSideSrchRenderResults(query) {
         ctrlSideFileSearchResultsEl.classList.add('d-none');
         return;
     }
+    const found = ctrlSideSrchMode === 'ts' ? ctrlSideSrchRenderTsResults(query) : ctrlSideSrchRenderFileResults(query);
+    ctrlSideFileSearchResultsEl.classList.toggle('d-none', found === 0);
+}
+function ctrlSideSrchRenderFileResults(query) {
     let found = 0;
     outer: for (const [dirPath, list] of g_ctrlSideSrch.cache) {
         for (const fl of list) {
@@ -2525,9 +2698,46 @@ function ctrlSideSrchRenderResults(query) {
                 break outer;
         }
     }
-    ctrlSideFileSearchResultsEl.classList.toggle('d-none', found === 0);
+    return found;
 }
-ctrlSideFileSearchInputEl.addEventListener('focus', () => { void ctrlSideSrchIndex(); });
+function ctrlSideSrchRenderTsResults(query) {
+    let found = 0;
+    for (const [relPath, content] of g_ctrlSideSrchTs.cache) {
+        const idx = content.toLowerCase().indexOf(query);
+        if (idx < 0)
+            continue;
+        const lineStart = content.lastIndexOf('\n', idx) + 1;
+        const lineEndIdx = content.indexOf('\n', idx);
+        const snippet = content.slice(lineStart, lineEndIdx < 0 ? content.length : lineEndIdx).trim();
+        const name = relPath.split('/').pop() || relPath;
+        const dirPath = relPath.slice(0, relPath.length - name.length);
+        const item = document.createElement('div');
+        item.className = 'list-group-item list-group-item-action py-1 px-2';
+        item.innerHTML =
+            `<i class="bi bi-file-earmark-code me-1"></i><strong>${aiEscapeHtml(name)}</strong>` +
+                `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(dirPath)}</span>` +
+                `<div class="text-truncate text-secondary" style="font-size:11px;font-family:monospace;">${aiEscapeHtml(snippet)}</div>`;
+        item.addEventListener('click', () => {
+            ctrlSideFileSearchInputEl.value = '';
+            ctrlSideFileSearchResultsEl.classList.add('d-none');
+            editorOpenFile(g_ctrlSideSrch.root + relPath, currentWebRootUrl, g_ctrlSideSrch.down + ctrlEncodeUrlPath(relPath));
+        });
+        ctrlSideFileSearchResultsEl.appendChild(item);
+        if (++found >= 100)
+            break;
+    }
+    return found;
+}
+const ctrlSideFileSearchModeEl = CDOM.ID('ctrlSideFileSearchMode');
+ctrlSideFileSearchModeEl.addEventListener('change', () => {
+    ctrlSideSrchMode = ctrlSideFileSearchModeEl.value;
+    if (ctrlSideSrchMode === 'ts')
+        void ctrlSideSrchTsIndex();
+    ctrlSideSrchRenderResults(ctrlSideFileSearchInputEl.value.trim().toLowerCase());
+});
+ctrlSideFileSearchInputEl.addEventListener('focus', () => {
+    void (ctrlSideSrchMode === 'ts' ? ctrlSideSrchTsIndex() : ctrlSideSrchIndex());
+});
 ctrlSideFileSearchInputEl.addEventListener('input', () => {
     ctrlSideSrchRenderResults(ctrlSideFileSearchInputEl.value.trim().toLowerCase());
 });
@@ -2628,9 +2838,9 @@ function runControlArrowKey(dir) {
     const items = Array.from(agentSidebarList.querySelectorAll('.ai-session-item')).filter(el => el.offsetParent !== null);
     if (items.length === 0)
         return false;
-    let curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-main') || el.classList.contains('ai-session-item-active-remote'));
+    let curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-pane') || el.classList.contains('ai-session-item-active-remote'));
     if (curIdx < 0)
-        curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active-sub') || el.classList.contains('ai-session-item-active'));
+        curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active'));
     const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
     if (nxt === curIdx)
         return false;
@@ -2641,7 +2851,8 @@ function runControlArrowKey(dir) {
 function runControlSubTabArrowKey(dir) {
     if (!isSidebarFocused())
         return false;
-    const next = dir === 1 ? 'file' : 'agent';
+    const idx = SB_SUBTABS.indexOf(sbSubTab);
+    const next = SB_SUBTABS[(idx + dir + SB_SUBTABS.length) % SB_SUBTABS.length];
     if (sbSubTab === next)
         return false;
     sbSubTab = next;
@@ -2696,10 +2907,10 @@ CIframeMsg.Recv({
     'file-remote-changed': (data) => {
         currentWebRootUrl = String(data.baseUrl ?? '');
         memoSendRemoteInfo();
-        logOnServerChanged();
+        loadAiProviderStatus();
     },
     'file-opened': (data) => {
-        promptSourceAction(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
+        promptSourceAction(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''), false);
     },
     'open-chat': (data) => chatStartNew(data.cwd || undefined),
     'open-term': (data) => termStartNew('cmd', data.cwd || undefined),
@@ -2752,28 +2963,30 @@ CIframeMsg.Recv({
 const logAccordionList = CDOM.ID('logAccordionList');
 const logLoadMoreBtn = CDOM.ID('logLoadMoreBtn');
 const logSearchInput = CDOM.ID('logSearchInput');
-const logSourceLabel = CDOM.ID('logSourceLabel');
 let logNextBefore = null;
 let logSearchTerm = '';
 const LOG_PAGE_SIZE = 15;
+const logServerSelect = CDOM.ID('logServerSelect');
 function logServerCtx() {
-    const prefix = 'rdp:remote:';
-    const remoteId = selectedRdpKey.startsWith(prefix) ? selectedRdpKey.slice(prefix.length) : '';
-    return serverCtxOf(remoteId) ?? localServerCtx();
+    return serverCtxOf(logServerSelect.value || '') ?? localServerCtx();
 }
-function logUpdateSource() {
+function logPopulateServerSelect() {
+    const prev = logServerSelect.value;
+    const sources = aiProviderAllSources();
+    logServerSelect.innerHTML = sources.map(s => `<option value="${aiEscapeHtml(s.remoteId)}" title="${aiEscapeHtml(s.baseUrl)}">${aiEscapeHtml(s.label)}</option>`).join('');
+    if (sources.some(s => s.remoteId === prev))
+        logServerSelect.value = prev;
+    logApplySelectStyle();
+}
+function logApplySelectStyle() {
     const ctx = logServerCtx();
-    const addr = remoteEntryUrl(ctx.remoteId);
-    logSourceLabel.className = 'small fw-normal text-truncate ' + (ctx.remoteId ? 'text-danger' : 'text-secondary');
-    logSourceLabel.title = addr || CPath.WebRootUrl();
-    logSourceLabel.textContent = ctx.remoteId ? addr : L('ctrl.local', 'Local');
+    logServerSelect.className = 'form-select form-select-sm w-auto ' + (ctx.remoteId ? 'text-danger' : '');
 }
-function logOnServerChanged() {
-    logUpdateSource();
+logServerSelect.addEventListener('change', () => {
+    logApplySelectStyle();
     if (isPanelShown('log-panel'))
         logLoadSessions(true);
-    loadAiProviderStatus();
-}
+});
 function logRegexEscape(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -2887,13 +3100,14 @@ async function logLoadSessionBody(ctx, sessionId, bodyEl) {
             bodyEl.innerHTML = `<span class="text-secondary small">${L('ctrl.noMessages', 'No messages.')}</span>`;
             return;
         }
-        bodyEl.innerHTML = records.map(rec => {
+        bodyEl.innerHTML = records.map((rec, idx) => {
+            const noTag = `<span title="id ${rec.id}">#${idx + 1}</span> &middot; `;
             if (rec.role === 'tool') {
                 const toolName = (rec.tool || '?').trim();
                 const filePath = (rec.file || '').trim();
                 return `<div class="d-flex justify-content-start">` +
                     `<div class="px-2 py-1 rounded border bg-body-tertiary text-secondary" style="max-width:95%;font-size:0.82em;">` +
-                    `<div style="font-size:0.68em;opacity:0.75;">${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)} &middot; tool</div>` +
+                    `<div style="font-size:0.68em;opacity:0.75;">${noTag}${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)} &middot; tool</div>` +
                     `<div class="log-body-text" style="word-break:break-word;font-family:var(--bs-font-monospace);">` +
                     `<span class="badge text-bg-dark me-1">${aiEscapeHtml(toolName)}</span>` +
                     (filePath ? `<span class="text-body-secondary">${aiEscapeHtml(filePath)}</span>` : '') +
@@ -2902,7 +3116,7 @@ async function logLoadSessionBody(ctx, sessionId, bodyEl) {
             const isUser = rec.role === 'user';
             return `<div class="d-flex ${isUser ? 'justify-content-end' : 'justify-content-start'}">` +
                 `<div class="p-2 rounded ${isUser ? 'bg-primary text-white' : 'bg-secondary-subtle'}" style="max-width:85%;">` +
-                `<div style="font-size:0.68em;opacity:0.75;">${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)}</div>` +
+                `<div style="font-size:0.68em;opacity:0.75;">${noTag}${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)}</div>` +
                 `<div class="log-body-text" style="word-break:break-word;">${logRenderMarkdown(rec.text.trim())}</div>` +
                 `</div></div>`;
         }).join('');
@@ -2928,6 +3142,7 @@ function logCreateAccordionItem(ctx, entry) {
     const bodyId = `logBody_${entry.offset}`;
     const preview = entry.firstText.replace(/\s+/g, ' ').trim();
     item.dataset.preview = preview;
+    const copyValue = ctx.remoteId ? `${entry.name}@${ctx.apiUrl.replace(/\/$/, '')}` : entry.name;
     item.innerHTML = `
         <div class="d-flex align-items-center gap-2 p-2 bg-body-tertiary rounded" style="cursor:pointer;" data-act="toggle">
             <i class="bi bi-chevron-right log-chevron flex-shrink-0"></i>
@@ -2936,8 +3151,10 @@ function logCreateAccordionItem(ctx, entry) {
                     <span class="badge text-bg-secondary flex-shrink-0">${aiEscapeHtml(entry.model || '?')}</span>
                     <span class="text-truncate small log-title-text">${aiEscapeHtml(preview)}</span>
                 </div>
-                <div class="text-truncate text-secondary" style="font-size:0.72em;">
-                    <i class="bi bi-folder2"></i> ${aiEscapeHtml(entry.cwd || '-')} &middot; ${logFormatTime(entry.time)} &middot; <i class="bi bi-key"></i> ${aiEscapeHtml(entry.name)}
+                <div class="d-flex align-items-center text-secondary" style="font-size:0.72em;">
+                    <span class="text-truncate"><i class="bi bi-folder2"></i> ${aiEscapeHtml(entry.cwd || '-')} &middot; ${logFormatTime(entry.time)}</span>
+                    <i class="bi bi-key flex-shrink-0 ms-1"></i>
+                    <input type="text" class="form-control form-control-sm log-session-key flex-shrink-0 ms-1" style="font-size:0.72em; height:auto; padding:0 4px; width:11rem;" value="${aiEscapeHtml(copyValue)}" readonly title="${aiEscapeHtml(copyValue)}">
                 </div>
             </div>
             <button type="button" class="btn btn-sm btn-link text-danger p-0 flex-shrink-0" data-act="del" title="Delete"><i class="bi bi-x-lg"></i></button>
@@ -2962,6 +3179,9 @@ function logCreateAccordionItem(ctx, entry) {
         loaded = true;
         logLoadSessionBody(ctx, entry.name, item.querySelector('[data-role="body"]'));
     });
+    const keyInput = item.querySelector('.log-session-key');
+    keyInput.addEventListener('click', (e) => { e.stopPropagation(); keyInput.select(); });
+    keyInput.addEventListener('focus', () => keyInput.select());
     item.querySelector('[data-act="del"]').addEventListener('click', (e) => {
         e.stopPropagation();
         const dlg = new CConfirm();
@@ -2996,7 +3216,6 @@ async function logLoadSessions(reset) {
         logAccordionList.innerHTML = '';
         logNextBefore = null;
     }
-    logUpdateSource();
     const ctx = logServerCtx();
     if (ctx.remoteId && !ctx.authToken) {
         logLoadMoreBtn.style.display = 'none';
@@ -3019,12 +3238,11 @@ async function logLoadSessions(reset) {
         console.error('logLoadSessions error:', e);
     }
 }
-CDOM.ID('log-tab').addEventListener('shown.bs.tab', () => logLoadSessions(true));
+logPopulateServerSelect();
+CDOM.ID('log-tab').addEventListener('shown.bs.tab', () => { logPopulateServerSelect(); logLoadSessions(true); });
 if (CDOM.ID('log-panel').classList.contains('active')) {
     logLoadSessions(true);
 }
-else
-    logUpdateSource();
 CDOM.ID('logRefreshBtn').addEventListener('click', () => logLoadSessions(true));
 logLoadMoreBtn.addEventListener('click', () => logLoadSessions(false));
 CDOM.ID('logClearBtn').addEventListener('click', () => {
@@ -3230,7 +3448,7 @@ function ctrlRequireAuthed() {
     return false;
 }
 window.ctrlRequireAuthed = ctrlRequireAuthed;
-['rdp-panel-tab', 'chat-panel-tab', 'browser-panel-tab', 'editor-panel-tab', 'term-tab', 'memo-tab', 'log-tab', 'messenger-tab'].forEach((tabId) => {
+['rdp-panel-tab', 'chat-panel-tab', 'browser-panel-tab', 'editor-panel-tab', 'term-tab', 'log-tab', 'messenger-tab'].forEach((tabId) => {
     CDOM.ID(tabId)?.addEventListener('show.bs.tab', (e) => {
         if (!ctrlRequireAuthed())
             e.preventDefault();
@@ -3284,6 +3502,7 @@ const agentSidebarList = CDOM.ID("agent-sidebar-list");
 const otherSidebarList = CDOM.ID("other-sidebar-list");
 const agentAddFolderBtn = CDOM.ID("agentAddFolderBtn");
 const leftFilePanel = CDOM.ID("left-file-panel");
+const leftOtherPanel = CDOM.ID("left-other-panel");
 const SB_TAB_LS = 'ctrl.sidebar.subtab';
 const SB_COLLAPSE_LS = 'ctrl.sidebar.collapsed';
 function sbSafeArr(s) { try {
@@ -3293,103 +3512,23 @@ function sbSafeArr(s) { try {
 catch {
     return [];
 } }
-let sbSubTab = localStorage.getItem(SB_TAB_LS) === 'file' ? 'file' : 'agent';
+const SB_SUBTABS = ['agent', 'file', 'other'];
+let sbSubTab = SB_SUBTABS.includes(localStorage.getItem(SB_TAB_LS)) ? localStorage.getItem(SB_TAB_LS) : 'agent';
 const collapsedGroups = new Set(sbSafeArr(localStorage.getItem(SB_COLLAPSE_LS)));
 function saveCollapsedGroups() { localStorage.setItem(SB_COLLAPSE_LS, JSON.stringify(Array.from(collapsedGroups))); }
 function applySidebarSubTab() {
     agentSidebarList.classList.toggle('d-none', sbSubTab !== 'agent');
     agentAddFolderBtn.classList.toggle('d-none', sbSubTab !== 'agent');
     leftFilePanel.classList.toggle('d-none', sbSubTab !== 'file');
+    leftOtherPanel.classList.toggle('d-none', sbSubTab !== 'other');
     CDOM.ID('sb-agent-tab').classList.toggle('active', sbSubTab === 'agent');
     CDOM.ID('sb-file-tab').classList.toggle('active', sbSubTab === 'file');
+    CDOM.ID('sb-other-tab').classList.toggle('active', sbSubTab === 'other');
 }
 CDOM.ID('sb-agent-tab').addEventListener('click', () => { sbSubTab = 'agent'; localStorage.setItem(SB_TAB_LS, 'agent'); applySidebarSubTab(); });
 CDOM.ID('sb-file-tab').addEventListener('click', () => { sbSubTab = 'file'; localStorage.setItem(SB_TAB_LS, 'file'); applySidebarSubTab(); });
+CDOM.ID('sb-other-tab').addEventListener('click', () => { sbSubTab = 'other'; localStorage.setItem(SB_TAB_LS, 'other'); applySidebarSubTab(); });
 applySidebarSubTab();
-const topTabStripEl = CDOM.ID("top-tab-strip");
-const TOP_TAB_ICON = { chat: 'bi-chat-dots', term: 'bi-terminal', 'term-new': 'bi-terminal', browser: 'bi-browser-chrome', editor: 'bi-file-earmark-code', web: 'bi-globe' };
-const TOP_TAB_DRAG_MIME = 'application/x-control-top-tab-key';
-let topTabOrder = [];
-let topTabLastEntries = [];
-function topTabMoveTo(draggedKey, beforeKey) {
-    const from = topTabOrder.indexOf(draggedKey);
-    if (from < 0)
-        return;
-    topTabOrder.splice(from, 1);
-    if (beforeKey) {
-        const to = topTabOrder.indexOf(beforeKey);
-        topTabOrder.splice(to < 0 ? topTabOrder.length : to, 0, draggedKey);
-    }
-    else {
-        topTabOrder.push(draggedKey);
-    }
-    setTimeout(() => renderTopTabStrip(topTabLastEntries), 0);
-}
-if (topTabStripEl) {
-    topTabStripEl.addEventListener('dragover', (ev) => {
-        if (ev.dataTransfer?.types.includes(TOP_TAB_DRAG_MIME))
-            ev.preventDefault();
-    });
-    topTabStripEl.addEventListener('drop', (ev) => {
-        const draggedKey = ev.dataTransfer?.getData(TOP_TAB_DRAG_MIME);
-        if (!draggedKey)
-            return;
-        ev.preventDefault();
-        topTabMoveTo(draggedKey, null);
-    });
-}
-function renderTopTabStrip(entries) {
-    if (!topTabStripEl)
-        return;
-    topTabLastEntries = entries;
-    const specByKey = new Map(entries.map(e => [e.key, e.spec]));
-    topTabOrder = topTabOrder.filter(k => specByKey.has(k));
-    const newKeys = entries.filter(e => !topTabOrder.includes(e.key)).sort((a, b) => b.sortKey - a.sortKey).map(e => e.key);
-    topTabOrder = [...newKeys, ...topTabOrder];
-    topTabStripEl.innerHTML = '';
-    for (const key of topTabOrder) {
-        const spec = specByKey.get(key);
-        if (!spec)
-            continue;
-        const prefix = key.slice(0, key.indexOf(':'));
-        const tab = document.createElement('div');
-        tab.className = 'top-tab-item d-flex align-items-center gap-1' + (spec.isActive ? ' ' + spec.activeClass : '');
-        tab.title = spec.shortLabel;
-        tab.innerHTML = `<i class="bi ${TOP_TAB_ICON[prefix] ?? 'bi-app'}"></i>`
-            + `<span class="text-truncate">${aiEscapeHtml(spec.shortLabel)}</span>`
-            + `<button type="button" class="btn-close" aria-label="Close"></button>`;
-        tab.addEventListener('click', (ev) => {
-            if (ev.target.closest('.btn-close'))
-                return;
-            spec.onClick();
-        });
-        tab.draggable = true;
-        tab.addEventListener('dragstart', (ev) => {
-            const dragKey = sessionItemDragKey(spec);
-            if (dragKey)
-                ev.dataTransfer?.setData('text/plain', dragKey);
-            ev.dataTransfer?.setData(TOP_TAB_DRAG_MIME, key);
-            if (ev.dataTransfer)
-                ev.dataTransfer.effectAllowed = 'copyMove';
-        });
-        tab.addEventListener('dragover', (ev) => {
-            if (!ev.dataTransfer?.types.includes(TOP_TAB_DRAG_MIME))
-                return;
-            ev.preventDefault();
-            ev.stopPropagation();
-        });
-        tab.addEventListener('drop', (ev) => {
-            const draggedKey = ev.dataTransfer?.getData(TOP_TAB_DRAG_MIME);
-            if (!draggedKey || draggedKey === key)
-                return;
-            ev.preventDefault();
-            ev.stopPropagation();
-            topTabMoveTo(draggedKey, key);
-        });
-        tab.querySelector('.btn-close')?.addEventListener('click', (ev) => { ev.stopPropagation(); spec.onDelete(); });
-        topTabStripEl.appendChild(tab);
-    }
-}
 let sessionOrderFrozen = false;
 let frozenSessionOrder = [];
 let frozenAgentGroupOrder = [];
@@ -3628,6 +3767,12 @@ function ctxApiUrl(ctx, apiPath) {
         return url;
     return url + (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(ctx.authToken);
 }
+function ctxPageUrl(ctx, relPath) {
+    const url = ctx.artgineUrl + relPath;
+    if (!ctx.authToken)
+        return url;
+    return url + (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(ctx.authToken);
+}
 const REMOTE_FETCH_TIMEOUT_MS = 8000;
 function ctxFetch(ctx, apiPath, init) {
     const url = ctxApiUrl(ctx, apiPath);
@@ -3724,31 +3869,49 @@ let termAuthState = 'unknown';
 let browserAuthState = 'unknown';
 let lastChatSessions = null;
 let lastTermSessions = null;
-function tmuxPaneRole(key) {
+const TMUX_PANE_COLOR_NAMES = ['danger', 'primary', 'success', 'warning', 'info', 'dark'];
+function tmuxLeafOrderIds() {
+    const ids = [];
+    (function walk(p) {
+        if (p.split && p.children) {
+            walk(p.children[0]);
+            walk(p.children[1]);
+            return;
+        }
+        ids.push(p.id);
+    })(tmuxRoot);
+    return ids;
+}
+function tmuxPaneColorName(paneId) {
+    const idx = tmuxLeafOrderIds().indexOf(paneId);
+    return TMUX_PANE_COLOR_NAMES[Math.max(0, Math.min(idx, TMUX_PANE_COLOR_NAMES.length - 1))];
+}
+function tmuxPaneAccentStyle(paneId) {
+    const name = tmuxPaneColorName(paneId);
+    return `--tmux-pane-accent:var(--bs-${name});--tmux-pane-accent-bg:var(--bs-${name}-bg-subtle);`;
+}
+function tmuxPaneIdForKey(key) {
     if (!tmuxTreeReady)
         return null;
-    const mainId = tmuxFirstPaneId();
-    let role = null;
+    let paneId = null;
     (function walk(p) {
-        if (role === 'main')
+        if (paneId)
             return;
         if (p.split && p.children) {
             walk(p.children[0]);
             walk(p.children[1]);
             return;
         }
-        if (p.contentKey !== key)
-            return;
-        role = p.id === mainId ? 'main' : 'sub';
+        if (p.contentKey === key)
+            paneId = p.id;
     })(tmuxRoot);
-    return role;
+    return paneId;
 }
 function sessActiveFromKey(key) {
-    const role = tmuxPaneRole(key);
-    return {
-        activeClass: role === 'main' ? 'ai-session-item-active-main' : 'ai-session-item-active-sub',
-        isActive: role != null,
-    };
+    const paneId = tmuxPaneIdForKey(key);
+    if (!paneId)
+        return { activeClass: '', isActive: false };
+    return { activeClass: 'ai-session-item-active-pane', isActive: true, accentStyle: tmuxPaneAccentStyle(paneId) };
 }
 function refreshRdpHighlights() {
     for (const el of Array.from(rdpSidebarList.querySelectorAll('.ai-session-item'))) {
@@ -3780,8 +3943,7 @@ function flushSessionSidebar() {
             clearSessionItems();
             clearAgentGroups();
             otherSidebarList.innerHTML = '';
-            topTabOrder = [];
-            topTabStripEl.innerHTML = '';
+            tmuxSetTabEntries([], false);
             renderSignInPrompt(agentSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
         }
         return;
@@ -3829,7 +3991,7 @@ function flushSessionSidebar() {
         || !!otherSidebarList.querySelector('.dropdown-menu.show');
     renderAgentGroups(agentEntries, frozen, hiddenByGroup);
     renderOtherList(otherEntries, frozen);
-    renderTopTabStrip([...agentEntries, ...otherEntries]);
+    tmuxSetTabEntries([...agentEntries, ...otherEntries], true);
 }
 function renderAgentGroups(entries, frozen, hiddenByGroup) {
     const byGroup = new Map();
@@ -4032,7 +4194,7 @@ function editorFrameSrc(s) {
     const root = s.baseUrl || CPath.WebRootArtgineUrl();
     return `${root}artgine/server/html/Editor.html?path=${encodeURIComponent(s.path)}&url=${encodeURIComponent(s.url)}`;
 }
-function editorOpenFile(path, baseUrl, url) {
+function editorOpenFile(path, baseUrl, url, activate = true) {
     const key = `editor:${baseUrl}|${path}`;
     let s = editorSessions.get(key);
     if (!s) {
@@ -4043,7 +4205,8 @@ function editorOpenFile(path, baseUrl, url) {
         s.url = url;
         s.openedAt = Date.now();
     }
-    editorActivatePane();
+    if (activate)
+        editorActivatePane();
     showEditorFrame(key, editorFrameSrc(s));
     renderSessionSidebar();
 }
@@ -4111,7 +4274,7 @@ async function ctrlSaveOpenedSheet(filePath, base64, baseUrl) {
         CAlert.E('저장 실패: ' + e.message);
     }
 }
-function promptSourceAction(fullPath, baseUrl, url) {
+function promptSourceAction(fullPath, baseUrl, url, activate = true) {
     const ext = fileExtOf(fullPath);
     if (ext === 'sqlite' || ext === 'db') {
         const token = baseUrl ? getAuthToken(baseUrl) : '';
@@ -4124,10 +4287,10 @@ function promptSourceAction(fullPath, baseUrl, url) {
     }
     const canExecute = ext === 'html' || ext === 'htm';
     if (!canExecute) {
-        editorOpenFile(fullPath, baseUrl, url);
+        editorOpenFile(fullPath, baseUrl, url, activate);
         return;
     }
-    const actions = [() => editorOpenFile(fullPath, baseUrl, url), () => executeOpenedSource(fullPath, url), () => { }];
+    const actions = [() => editorOpenFile(fullPath, baseUrl, url, activate), () => executeOpenedSource(fullPath, url), () => { }];
     const labels = [L('ctrl.edit', 'Edit'), L('ctrl.execute', 'Execute'), L('ctrl.cancel', 'Cancel')];
     const confirm = new CConfirm();
     confirm.SetBody(`"${aiEscapeHtml(fullPath)}"`);
@@ -4357,7 +4520,7 @@ function chatStartNew(initialWorkingDir, remoteId = '') {
             if (!writeCheck.checked)
                 params.set('write', '0');
             chatActivatePane();
-            showChatFrame(sessKey('chat', remoteId, sid), `${ctx.artgineUrl}artgine/server/html/Chat.html?${params.toString()}`);
+            showChatFrame(sessKey('chat', remoteId, sid), ctxPageUrl(ctx, `artgine/server/html/Chat.html?${params.toString()}`));
             chatRenderList();
             setTimeout(chatRenderList, 1500);
             setTimeout(chatRenderList, 4000);
@@ -4373,7 +4536,7 @@ function chatLoadSession(s) {
     if (!ctx)
         return;
     chatActivatePane();
-    showChatFrame(sessKey('chat', s.remoteId, s.sessionId), `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`);
+    showChatFrame(sessKey('chat', s.remoteId, s.sessionId), ctxPageUrl(ctx, `artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`));
     renderSessionSidebar();
 }
 function chatItemSpec(s) {
@@ -4421,7 +4584,7 @@ function chatItemSpec(s) {
             }
             chatRenderList();
         },
-        popup: { url: () => `${ctx?.artgineUrl ?? CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.remoteId}_${s.sessionId}` },
+        popup: { url: () => ctxPageUrl(ctx ?? localServerCtx(), `artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`), title: s.title, winName: `chat_${s.remoteId}_${s.sessionId}` },
     };
 }
 let chatListInFlight = false;
@@ -4581,7 +4744,7 @@ function termItemSpec(s) {
     return {
         ...sessActiveFromKey(key),
         dataAttr: { name: 'key', value: key },
-        shortLabel: s.key || s.mode || s.token,
+        shortLabel: `${s.mode.slice(0, 3)}-${s.token.slice(0, 5)}`,
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
             ${dot}
@@ -4600,7 +4763,7 @@ function termItemSpec(s) {
         onShare: () => { if (ctx)
             termShowShareLink(ctx, s.token); },
         onDelete: () => termKillSession(s),
-        popup: { url: () => `${ctx?.apiUrl ?? CPath.WebRootUrl()}cmd/terminal-proxy?token=${s.token}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.remoteId}_${s.token.slice(0, 8)}` },
+        popup: { url: () => ctxApiUrl(ctx ?? localServerCtx(), `cmd/terminal-proxy?token=${s.token}`), title: s.key || s.mode || 'Terminal', winName: `term_${s.remoteId}_${s.token.slice(0, 8)}` },
     };
 }
 let termListInFlight = false;
@@ -4672,6 +4835,11 @@ async function termRenderList() {
                         walk(p.children[0]);
                         walk(p.children[1]);
                         return;
+                    }
+                    const ti = p.tabs ? p.tabs.indexOf(newKey) : -1;
+                    if (ti >= 0) {
+                        p.tabs[ti] = key;
+                        promoted = true;
                     }
                     if (p.contentKey === newKey) {
                         p.contentKey = key;
@@ -4953,7 +5121,7 @@ function browserLoadSession(remoteId, sessionId) {
     if (!ctx)
         return;
     browserActivatePane();
-    showBrowserFrame(sessKey('browser', remoteId, sessionId), `${ctx.artgineUrl}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`);
+    showBrowserFrame(sessKey('browser', remoteId, sessionId), ctxPageUrl(ctx, `artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`));
     renderSessionSidebar();
 }
 function browserFmtTtl(expiresAt) {
@@ -4994,7 +5162,7 @@ function browserItemSpec(s) {
         onClick: () => browserLoadSession(s.remoteId, s.sessionId),
         onShare: () => browserShowShareLink(ctx, s.sessionId, s.url),
         onDelete: () => browserRemoveSession(s.remoteId, s.sessionId),
-        popup: { url: () => `${ctx?.artgineUrl ?? CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.remoteId}_${s.sessionId}` },
+        popup: { url: () => ctxPageUrl(ctx ?? localServerCtx(), `artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`), title: s.url, winName: `browser_${s.remoteId}_${s.sessionId}` },
     };
 }
 function browserAddSession(sessionId, url, browserName = '', expiresAt = 0, navigate = true, createdAt = Date.now(), remoteId = '') {
@@ -5205,24 +5373,47 @@ async function sessionPollOnce() {
 })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden)
     renderSessionSidebar(); });
-const TMUX_LS_KEY = 'ctrl-tmux-layout-v1';
+const TMUX_LS_KEY = 'ctrl-tmux-layout-v2';
+const TMUX_LS_KEY_V1 = 'ctrl-tmux-layout-v1';
+const TMUX_TAB_DRAG_MIME = 'application/x-control-tmux-tab';
+const TMUX_RATIO_MIN = 0.1, TMUX_RATIO_MAX = 0.9;
+const TMUX_DROP_EDGE = 0.25;
+const TMUX_TAB_ICON = { chat: 'bi-chat-dots', term: 'bi-terminal', 'term-new': 'bi-terminal', browser: 'bi-browser-chrome', editor: 'bi-file-earmark-code', web: 'bi-globe', rdp: 'bi-display' };
 const tmuxPaneEls = new Map();
 const tmuxTreeRoot = CDOM.ID('tmux-tree-root');
 const tmuxTreeStruct = CDOM.ID('tmux-tree-struct');
 const tmuxAllFrames = new Map();
+let tmuxTabEntries = [];
+let tmuxActivePaneId = null;
+function tmuxClampRatio(r) { return Math.max(TMUX_RATIO_MIN, Math.min(TMUX_RATIO_MAX, r)); }
+function tmuxNormalize(p) {
+    if (p && p.split && Array.isArray(p.children) && p.children.length === 2) {
+        return {
+            id: String(p.id || genUuid()),
+            split: p.split === 'col' ? 'col' : 'row',
+            ratio: tmuxClampRatio(typeof p.ratio === 'number' ? p.ratio : 0.5),
+            children: [tmuxNormalize(p.children[0]), tmuxNormalize(p.children[1])],
+        };
+    }
+    const tabs = Array.isArray(p?.tabs) ? p.tabs.filter((k) => typeof k === 'string' && k) : [];
+    const contentKey = typeof p?.contentKey === 'string' && p.contentKey ? p.contentKey : null;
+    if (contentKey && !tabs.includes(contentKey))
+        tabs.push(contentKey);
+    return { id: String(p?.id || genUuid()), tabs, contentKey: contentKey ?? (tabs.length ? tabs[tabs.length - 1] : null) };
+}
 function tmuxLoadLayout() {
     try {
-        const raw = localStorage.getItem(TMUX_LS_KEY);
+        const raw = localStorage.getItem(TMUX_LS_KEY) ?? localStorage.getItem(TMUX_LS_KEY_V1);
         if (raw)
-            return JSON.parse(raw);
+            return tmuxNormalize(JSON.parse(raw));
     }
     catch (_) { }
-    return { id: genUuid(), contentKey: null };
+    return { id: genUuid(), tabs: [], contentKey: null };
 }
 function tmuxStrip(p) {
     if (p.split && p.children)
-        return { id: p.id, split: p.split, children: [tmuxStrip(p.children[0]), tmuxStrip(p.children[1])] };
-    return { id: p.id, contentKey: p.contentKey ?? null };
+        return { id: p.id, split: p.split, ratio: p.ratio ?? 0.5, children: [tmuxStrip(p.children[0]), tmuxStrip(p.children[1])] };
+    return { id: p.id, tabs: [...(p.tabs ?? [])], contentKey: p.contentKey ?? null };
 }
 function tmuxSaveLayout() {
     try {
@@ -5260,12 +5451,56 @@ function tmuxFindParent(node, id, parent = null) {
     }
     return null;
 }
+function tmuxLeaves() {
+    const out = [];
+    (function walk(p) {
+        if (p.split && p.children) {
+            walk(p.children[0]);
+            walk(p.children[1]);
+            return;
+        }
+        out.push(p);
+    })(tmuxRoot);
+    return out;
+}
 function tmuxFirstPaneId() {
     let p = tmuxRoot;
     while (p.split && p.children)
         p = p.children[0];
     return p.id;
 }
+function tmuxTargetPaneId() {
+    if (tmuxActivePaneId) {
+        const p = tmuxFind(tmuxRoot, tmuxActivePaneId);
+        if (p && !p.split)
+            return p.id;
+    }
+    return tmuxFirstPaneId();
+}
+function tmuxSetActivePane(paneId) {
+    if (tmuxActivePaneId === paneId)
+        return;
+    tmuxActivePaneId = paneId;
+    tmuxRefreshActiveClass();
+}
+function tmuxRefreshActiveClass() {
+    tmuxPaneEls.forEach((el, id) => el.classList.toggle('tmux-leaf-active', id === tmuxActivePaneId && el.classList.contains('tmux-leaf')));
+}
+window.addEventListener('blur', () => {
+    setTimeout(() => {
+        const ae = document.activeElement;
+        if (!(ae instanceof HTMLIFrameElement))
+            return;
+        for (const [key, f] of tmuxAllFrames) {
+            if (f === ae) {
+                const pid = tmuxFindPaneIdByKey(key);
+                if (pid)
+                    tmuxSetActivePane(pid);
+                return;
+            }
+        }
+    }, 0);
+});
 function tmuxPoolForKey(key) {
     if (key.startsWith('term:') || key.startsWith('term-new:'))
         return { pool: termIframePool, onCreate: wirePooledFrameHotkeys };
@@ -5300,67 +5535,179 @@ function tmuxEnsurePooledFrame(key) {
     tmuxTreeRoot.appendChild(f);
     return f;
 }
-function tmuxAssignPaneContent(paneId, key) {
-    const affected = new Set([paneId]);
-    (function walk(p) {
-        if (p.split && p.children) {
-            walk(p.children[0]);
-            walk(p.children[1]);
-            return;
-        }
-        if (key && p.contentKey === key && p.id !== paneId) {
-            p.contentKey = null;
-            affected.add(p.id);
-        }
-    })(tmuxRoot);
-    const pane = tmuxFind(tmuxRoot, paneId);
-    if (pane && !pane.split)
-        pane.contentKey = key;
-    affected.forEach(tmuxRefreshEmptyState);
+function tmuxRemovePane(paneId) {
+    const found = tmuxFindParent(tmuxRoot, paneId);
+    if (!found)
+        return false;
+    if (!found.parent) {
+        found.pane.tabs = [];
+        found.pane.contentKey = null;
+        return false;
+    }
+    const parent = found.parent;
+    const sibling = parent.children[0].id === paneId ? parent.children[1] : parent.children[0];
+    const gp = tmuxFindParent(tmuxRoot, parent.id)?.parent;
+    if (!gp)
+        tmuxRoot = sibling;
+    else
+        gp.children[gp.children[0] === parent ? 0 : 1] = sibling;
+    if (tmuxActivePaneId === paneId)
+        tmuxActivePaneId = null;
+    return true;
 }
-function tmuxRefreshEmptyState(paneId) {
+function tmuxDetachKey(key, exceptPaneId) {
+    let touched = false;
+    const emptied = [];
+    for (const p of tmuxLeaves()) {
+        if (p.id === exceptPaneId)
+            continue;
+        const tabs = p.tabs ?? (p.tabs = []);
+        const idx = tabs.indexOf(key);
+        if (idx < 0 && p.contentKey !== key)
+            continue;
+        touched = true;
+        if (idx >= 0)
+            tabs.splice(idx, 1);
+        if (p.contentKey === key)
+            p.contentKey = tabs.length ? tabs[Math.min(Math.max(idx, 0), tabs.length - 1)] : null;
+        if (!tabs.length)
+            emptied.push(p.id);
+    }
+    let changed = false;
+    for (const id of emptied)
+        if (tmuxRemovePane(id))
+            changed = true;
+    return { touched, changed };
+}
+function tmuxCommit(structChanged) {
+    if (structChanged)
+        tmuxRenderAll();
+    else {
+        tmuxLeaves().forEach(p => tmuxRefreshLeaf(p.id));
+        tmuxSyncPanePositions();
+        tmuxRefreshActiveClass();
+    }
+    tmuxSaveLayout();
+}
+function tmuxSetPaneContent(paneId, key) {
+    if (!key) {
+        tmuxClosePane(paneId);
+        return;
+    }
     const pane = tmuxFind(tmuxRoot, paneId);
     if (!pane || pane.split)
         return;
-    const content = tmuxPaneEls.get(paneId)?.querySelector('.tmux-leaf-content');
-    if (!content)
+    tmuxEnsurePooledFrame(key);
+    const { changed } = tmuxDetachKey(key, paneId);
+    const tabs = pane.tabs ?? (pane.tabs = []);
+    if (!tabs.includes(key))
+        tabs.push(key);
+    pane.contentKey = key;
+    tmuxActivePaneId = paneId;
+    tmuxCommit(changed);
+}
+function tmuxCloseTab(paneId, key) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split)
         return;
-    content.querySelectorAll('.tmux-leaf-empty').forEach(e => e.remove());
-    if (!pane.contentKey) {
-        const empty = document.createElement('div');
-        empty.className = 'tmux-leaf-empty';
-        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — pick content from the Multiplexer menu');
-        content.appendChild(empty);
+    const tabs = pane.tabs ?? (pane.tabs = []);
+    const idx = tabs.indexOf(key);
+    if (idx < 0)
+        return;
+    tabs.splice(idx, 1);
+    if (pane.contentKey === key)
+        pane.contentKey = tabs.length ? tabs[Math.min(idx, tabs.length - 1)] : null;
+    const changed = tabs.length ? false : tmuxRemovePane(paneId);
+    tmuxCommit(changed);
+}
+function tmuxClosePane(paneId) {
+    tmuxCommit(tmuxRemovePane(paneId));
+}
+function tmuxMoveTabBefore(paneId, key, beforeKey) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split || key === beforeKey)
+        return;
+    tmuxEnsurePooledFrame(key);
+    const { changed } = tmuxDetachKey(key, paneId);
+    const tabs = pane.tabs ?? (pane.tabs = []);
+    const from = tabs.indexOf(key);
+    if (from >= 0)
+        tabs.splice(from, 1);
+    const to = beforeKey ? tabs.indexOf(beforeKey) : -1;
+    if (to < 0)
+        tabs.push(key);
+    else
+        tabs.splice(to, 0, key);
+    pane.contentKey = key;
+    tmuxActivePaneId = paneId;
+    tmuxCommit(changed);
+}
+function tmuxSplitPane(paneId, dir, opts) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    if (!pane || pane.split)
+        return;
+    const key = opts?.key;
+    if (key) {
+        if ((pane.tabs?.length ?? 0) <= 1 && pane.contentKey === key)
+            return;
+        tmuxEnsurePooledFrame(key);
+        tmuxDetachKey(key);
     }
+    const keep = { id: genUuid(), tabs: [...(pane.tabs ?? [])], contentKey: pane.contentKey ?? null };
+    const fresh = { id: genUuid(), tabs: key ? [key] : [], contentKey: key ?? null };
+    pane.split = dir;
+    pane.ratio = 0.5;
+    pane.children = opts?.before ? [fresh, keep] : [keep, fresh];
+    delete pane.tabs;
+    delete pane.contentKey;
+    tmuxActivePaneId = fresh.id;
+    tmuxCommit(true);
+}
+function tmuxClearIfShowing(key) {
+    const { touched, changed } = tmuxDetachKey(key);
+    if (touched)
+        tmuxCommit(changed);
+}
+function tmuxPlaceFrame(key, _f) {
+    tmuxSetPaneContent(tmuxFindPaneIdWithTab(key) ?? tmuxTargetPaneId(), key);
+    tmuxShowPanel();
+}
+function tmuxFindPaneIdByKey(key) {
+    return tmuxLeaves().find(p => p.contentKey === key)?.id ?? null;
+}
+function tmuxFindPaneIdWithTab(key) {
+    return tmuxLeaves().find(p => (p.tabs ?? []).includes(key))?.id ?? null;
 }
 function tmuxSyncPanePositions() {
     const rootRect = tmuxTreeRoot.getBoundingClientRect();
     const assignedKeys = new Set();
-    (function walk(p) {
-        if (p.split && p.children) {
-            walk(p.children[0]);
-            walk(p.children[1]);
-            return;
-        }
+    for (const p of tmuxLeaves()) {
         if (!p.contentKey)
-            return;
+            continue;
         const f = tmuxEnsurePooledFrame(p.contentKey);
         if (!f)
-            return;
+            continue;
         assignedKeys.add(p.contentKey);
         const leafContent = tmuxPaneEls.get(p.id)?.querySelector('.tmux-leaf-content');
         if (!leafContent)
-            return;
+            continue;
         const r = leafContent.getBoundingClientRect();
-        f.style.left = `${r.left - rootRect.left}px`;
-        f.style.top = `${r.top - rootRect.top}px`;
-        f.style.width = `${r.width}px`;
-        f.style.height = `${r.height}px`;
+        const left = `${r.left - rootRect.left}px`, top = `${r.top - rootRect.top}px`;
+        const width = `${r.width}px`, height = `${r.height}px`;
+        const moved = f.style.left !== left || f.style.top !== top || f.style.width !== width || f.style.height !== height;
+        f.style.left = left;
+        f.style.top = top;
+        f.style.width = width;
+        f.style.height = height;
         if (f.style.display !== 'block') {
             f.style.display = 'block';
             postFrameVisible(f, true);
         }
-    })(tmuxRoot);
+        if (moved) {
+            f.style.pointerEvents = 'none';
+            requestAnimationFrame(() => { f.style.pointerEvents = ''; });
+        }
+    }
     tmuxAllFrames.forEach((f, key) => {
         if (!assignedKeys.has(key) && f.style.display !== 'none') {
             postFrameVisible(f, false);
@@ -5369,62 +5716,11 @@ function tmuxSyncPanePositions() {
     });
 }
 new ResizeObserver(() => tmuxSyncPanePositions()).observe(tmuxTreeRoot);
-function tmuxPlaceInPane(paneId, key) {
-    tmuxAssignPaneContent(paneId, key);
-    tmuxSyncPanePositions();
-}
-function tmuxFindPaneIdByKey(key) {
-    let found = null;
-    (function walk(p) {
-        if (found)
-            return;
-        if (p.split && p.children) {
-            walk(p.children[0]);
-            walk(p.children[1]);
-            return;
-        }
-        if (p.contentKey === key)
-            found = p.id;
-    })(tmuxRoot);
-    return found;
-}
-function tmuxPlaceFrame(key, _f) {
-    tmuxPlaceInPane(tmuxFindPaneIdByKey(key) ?? tmuxFirstPaneId(), key);
-    tmuxSaveLayout();
-    tmuxShowPanel();
-}
-function tmuxClearIfShowing(key) {
-    let changed = false;
-    (function walk(p) {
-        if (p.split && p.children) {
-            walk(p.children[0]);
-            walk(p.children[1]);
-            return;
-        }
-        if (p.contentKey !== key)
-            return;
-        p.contentKey = null;
-        tmuxRefreshEmptyState(p.id);
-        changed = true;
-    })(tmuxRoot);
-    if (changed) {
-        tmuxSyncPanePositions();
-        tmuxSaveLayout();
-    }
-}
-function tmuxCollectIds(p, out = []) {
-    out.push(p.id);
-    if (p.children) {
-        tmuxCollectIds(p.children[0], out);
-        tmuxCollectIds(p.children[1], out);
-    }
-    return out;
-}
 function tmuxKeyToSrc(key) {
     if (key.startsWith('chat:')) {
         const p = parseSessKey(key);
         const ctx = serverCtxOf(p.remoteId);
-        return ctx ? `${ctx.artgineUrl}artgine/server/html/Chat.html?session=${encodeURIComponent(p.id)}` : null;
+        return ctx ? ctxPageUrl(ctx, `artgine/server/html/Chat.html?session=${encodeURIComponent(p.id)}`) : null;
     }
     if (key.startsWith('term:')) {
         const p = parseSessKey(key);
@@ -5434,7 +5730,7 @@ function tmuxKeyToSrc(key) {
     if (key.startsWith('browser:')) {
         const p = parseSessKey(key);
         const ctx = serverCtxOf(p.remoteId);
-        return ctx ? `${ctx.artgineUrl}artgine/server/html/Browser.html?session=${encodeURIComponent(p.id)}` : null;
+        return ctx ? ctxPageUrl(ctx, `artgine/server/html/Browser.html?session=${encodeURIComponent(p.id)}`) : null;
     }
     if (key === 'rdp:local') {
         return `${CPath.WebRootArtgineUrl()}artgine/server/html/RemoteDesktop.html`;
@@ -5453,93 +5749,281 @@ function tmuxKeyToSrc(key) {
     }
     return null;
 }
+function tmuxApplyRatio(splitEl, pane) {
+    const r = tmuxClampRatio(pane.ratio ?? 0.5);
+    const kids = Array.from(splitEl.children).filter(c => !c.classList.contains('tmux-splitter'));
+    if (kids[0])
+        kids[0].style.flex = `${r} 1 0`;
+    if (kids[1])
+        kids[1].style.flex = `${1 - r} 1 0`;
+}
+function tmuxBuildSplitter(splitEl, pane) {
+    const bar = document.createElement('div');
+    bar.className = 'tmux-splitter';
+    bar.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0)
+            return;
+        e.preventDefault();
+        bar.setPointerCapture(e.pointerId);
+        document.body.classList.add('tmux-resizing');
+        document.body.style.cursor = pane.split === 'row' ? 'col-resize' : 'row-resize';
+        let raf = 0;
+        const onMove = (ev) => {
+            const rect = splitEl.getBoundingClientRect();
+            const t = pane.split === 'row' ? (ev.clientX - rect.left) / rect.width : (ev.clientY - rect.top) / rect.height;
+            pane.ratio = tmuxClampRatio(t);
+            tmuxApplyRatio(splitEl, pane);
+            if (!raf)
+                raf = requestAnimationFrame(() => { raf = 0; tmuxSyncPanePositions(); });
+        };
+        const onUp = () => {
+            bar.removeEventListener('pointermove', onMove);
+            bar.removeEventListener('pointerup', onUp);
+            bar.removeEventListener('pointercancel', onUp);
+            document.body.classList.remove('tmux-resizing');
+            document.body.style.cursor = '';
+            tmuxSyncPanePositions();
+            tmuxSaveLayout();
+        };
+        bar.addEventListener('pointermove', onMove);
+        bar.addEventListener('pointerup', onUp);
+        bar.addEventListener('pointercancel', onUp);
+    });
+    return bar;
+}
+function tmuxDropZoneAt(el, e) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height)
+        return 'center';
+    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    const d = [['left', fx], ['right', 1 - fx], ['top', fy], ['bottom', 1 - fy]];
+    d.sort((a, b) => a[1] - b[1]);
+    return d[0][1] <= TMUX_DROP_EDGE ? d[0][0] : 'center';
+}
+function tmuxAfterDrop(fn) {
+    document.body.classList.remove('tmux-dragging');
+    setTimeout(fn, 0);
+}
+function tmuxIsSessionDrag(e) {
+    return document.body.classList.contains('tmux-dragging') && !!e.dataTransfer && (e.dataTransfer.types.includes(TMUX_TAB_DRAG_MIME) || e.dataTransfer.types.includes('text/plain'));
+}
 function tmuxBuildEl(pane) {
     if (pane.split && pane.children) {
         const el = document.createElement('div');
         el.className = `tmux-split tmux-split-${pane.split}`;
         el.dataset.paneId = pane.id;
         el.appendChild(tmuxBuildEl(pane.children[0]));
+        el.appendChild(tmuxBuildSplitter(el, pane));
         el.appendChild(tmuxBuildEl(pane.children[1]));
+        tmuxApplyRatio(el, pane);
         tmuxPaneEls.set(pane.id, el);
         return el;
     }
     const el = document.createElement('div');
     el.className = 'tmux-leaf';
     el.dataset.paneId = pane.id;
+    const tabbar = document.createElement('div');
+    tabbar.className = 'tmux-leaf-tabbar';
+    tabbar.addEventListener('pointerdown', () => tmuxSetActivePane(pane.id));
+    el.appendChild(tabbar);
     const content = document.createElement('div');
     content.className = 'tmux-leaf-content';
     el.appendChild(content);
-    if (!pane.contentKey) {
-        const empty = document.createElement('div');
-        empty.className = 'tmux-leaf-empty';
-        empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — pick content from the Multiplexer menu');
-        content.appendChild(empty);
+    if (tmuxRoot.split) {
+        const outline = document.createElement('div');
+        outline.className = 'tmux-leaf-outline';
+        outline.style.borderColor = `var(--bs-${tmuxPaneColorName(pane.id)})`;
+        el.appendChild(outline);
     }
     const dropzone = document.createElement('div');
     dropzone.className = 'tmux-leaf-dropzone';
-    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('tmux-leaf-dragover'); });
+    const indicator = document.createElement('div');
+    indicator.className = 'tmux-drop-indicator';
+    dropzone.appendChild(indicator);
+    let zone = 'center';
+    dropzone.addEventListener('dragover', (e) => {
+        if (!tmuxIsSessionDrag(e))
+            return;
+        e.preventDefault();
+        zone = tmuxDropZoneAt(dropzone, e);
+        indicator.dataset.zone = zone;
+        dropzone.classList.add('tmux-leaf-dragover');
+    });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('tmux-leaf-dragover'));
     dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropzone.classList.remove('tmux-leaf-dragover');
         const key = e.dataTransfer?.getData('text/plain');
-        if (key)
-            tmuxSetPaneContent(pane.id, key);
+        if (!key)
+            return;
+        const z = zone;
+        tmuxAfterDrop(() => {
+            if (z === 'center')
+                tmuxSetPaneContent(pane.id, key);
+            else
+                tmuxSplitPane(pane.id, z === 'left' || z === 'right' ? 'row' : 'col', { key, before: z === 'left' || z === 'top' });
+            tmuxShowPanel();
+        });
     });
     el.appendChild(dropzone);
     tmuxPaneEls.set(pane.id, el);
+    tmuxRefreshLeaf(pane.id);
     return el;
+}
+function tmuxRefreshLeaf(paneId) {
+    const pane = tmuxFind(tmuxRoot, paneId);
+    const el = tmuxPaneEls.get(paneId);
+    if (!pane || pane.split || !el)
+        return;
+    const content = el.querySelector('.tmux-leaf-content');
+    if (content) {
+        content.querySelectorAll('.tmux-leaf-empty').forEach(e => e.remove());
+        if (!pane.contentKey) {
+            const empty = document.createElement('div');
+            empty.className = 'tmux-leaf-empty';
+            empty.textContent = L('ctrl.tmux.emptyPane', 'Empty — drop a session here or pick one with the list button');
+            content.appendChild(empty);
+        }
+    }
+    const bar = el.querySelector('.tmux-leaf-tabbar');
+    if (bar)
+        tmuxRenderTabBar(pane, bar);
+}
+function tmuxRenderTabBar(pane, bar) {
+    const specByKey = new Map(tmuxTabEntries.map(e => [e.key, e.spec]));
+    bar.innerHTML = '';
+    const tabs = document.createElement('div');
+    tabs.className = 'tmux-tabs';
+    for (const key of pane.tabs ?? []) {
+        const spec = specByKey.get(key);
+        const isActive = key === pane.contentKey;
+        const prefix = key.slice(0, key.indexOf(':'));
+        const tab = document.createElement('div');
+        tab.className = 'tmux-tab-item' + (isActive ? ' tmux-tab-active' : '');
+        if (isActive)
+            tab.style.cssText = tmuxPaneAccentStyle(pane.id);
+        const label = spec?.shortLabel ?? tmuxKeyLabel(key);
+        tab.title = label;
+        tab.dataset.key = key;
+        tab.innerHTML = `<i class="bi ${TMUX_TAB_ICON[prefix] ?? 'bi-app'}"></i>`
+            + `<span class="text-truncate">${aiEscapeHtml(label)}</span>`
+            + `<button type="button" class="btn-close" aria-label="Close"></button>`;
+        tab.addEventListener('click', (ev) => {
+            if (ev.target.closest('.btn-close'))
+                return;
+            tmuxSetPaneContent(pane.id, key);
+        });
+        tab.addEventListener('mousedown', (ev) => { if (ev.button === 1)
+            ev.preventDefault(); });
+        tab.addEventListener('auxclick', (ev) => { if (ev.button !== 1)
+            return; ev.preventDefault(); tmuxCloseTab(pane.id, key); });
+        tab.querySelector('.btn-close')?.addEventListener('click', (ev) => { ev.stopPropagation(); tmuxCloseTab(pane.id, key); });
+        tab.draggable = true;
+        tab.addEventListener('dragstart', (ev) => {
+            ev.dataTransfer?.setData('text/plain', key);
+            ev.dataTransfer?.setData(TMUX_TAB_DRAG_MIME, key);
+            if (ev.dataTransfer)
+                ev.dataTransfer.effectAllowed = 'copyMove';
+        });
+        tab.addEventListener('dragover', (ev) => {
+            if (!tmuxIsSessionDrag(ev))
+                return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            tab.classList.add('tmux-tab-dragover');
+        });
+        tab.addEventListener('dragleave', () => tab.classList.remove('tmux-tab-dragover'));
+        tab.addEventListener('drop', (ev) => {
+            tab.classList.remove('tmux-tab-dragover');
+            const dragged = ev.dataTransfer?.getData('text/plain');
+            if (!dragged || dragged === key)
+                return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            tmuxAfterDrop(() => tmuxMoveTabBefore(pane.id, dragged, key));
+        });
+        tabs.appendChild(tab);
+    }
+    tabs.addEventListener('dragover', (ev) => { if (tmuxIsSessionDrag(ev)) {
+        ev.preventDefault();
+        tabs.classList.add('tmux-tabs-dragover');
+    } });
+    tabs.addEventListener('dragleave', () => tabs.classList.remove('tmux-tabs-dragover'));
+    tabs.addEventListener('drop', (ev) => {
+        tabs.classList.remove('tmux-tabs-dragover');
+        const dragged = ev.dataTransfer?.getData('text/plain');
+        if (!dragged)
+            return;
+        ev.preventDefault();
+        tmuxAfterDrop(() => tmuxMoveTabBefore(pane.id, dragged, null));
+    });
+    bar.appendChild(tabs);
+    const actions = document.createElement('div');
+    actions.className = 'tmux-tab-actions';
+    const canClose = !!tmuxFindParent(tmuxRoot, pane.id)?.parent;
+    actions.innerHTML =
+        `<button type="button" class="btn btn-sm btn-link" data-act="split-h" title="${aiEscapeHtml(L('ctrl.tmux.splitH', 'Split right'))}"><i class="bi bi-layout-split"></i></button>` +
+            `<button type="button" class="btn btn-sm btn-link" data-act="split-v" title="${aiEscapeHtml(L('ctrl.tmux.splitV', 'Split down'))}"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>` +
+            `<button type="button" class="btn btn-sm btn-link" data-act="select" title="${aiEscapeHtml(L('ctrl.tmux.select', 'Open a session here'))}"><i class="bi bi-card-list"></i></button>` +
+            (canClose ? `<button type="button" class="btn btn-sm btn-link" data-act="close" title="${aiEscapeHtml(L('ctrl.tmux.closePane', 'Close pane'))}"><i class="bi bi-x-lg"></i></button>` : '');
+    actions.querySelector('[data-act="split-h"]')?.addEventListener('click', () => tmuxSplitPane(pane.id, 'row'));
+    actions.querySelector('[data-act="split-v"]')?.addEventListener('click', () => tmuxSplitPane(pane.id, 'col'));
+    actions.querySelector('[data-act="select"]')?.addEventListener('click', () => tmuxOpenSelectModal(pane.id));
+    actions.querySelector('[data-act="close"]')?.addEventListener('click', () => tmuxClosePane(pane.id));
+    bar.appendChild(actions);
+    const act = tabs.querySelector('.tmux-tab-active');
+    if (act) {
+        const l = act.offsetLeft, r = l + act.offsetWidth;
+        if (l < tabs.scrollLeft)
+            tabs.scrollLeft = l;
+        else if (r > tabs.scrollLeft + tabs.clientWidth)
+            tabs.scrollLeft = r - tabs.clientWidth;
+    }
 }
 function tmuxRenderAll() {
     tmuxPaneEls.clear();
     tmuxTreeStruct.innerHTML = '';
     tmuxTreeStruct.appendChild(tmuxBuildEl(tmuxRoot));
     tmuxSyncPanePositions();
+    tmuxRefreshActiveClass();
     tmuxUpdateWideMode();
+}
+function tmuxSetTabEntries(entries, prune) {
+    tmuxTabEntries = entries;
+    let changed = false;
+    if (prune && lastChatSessions && lastTermSessions) {
+        const known = new Set(entries.map(e => e.key));
+        const keep = (k) => known.has(k) || tmuxAllFrames.has(k) || k.startsWith('rdp:');
+        const emptied = [];
+        let pruned = false;
+        for (const p of tmuxLeaves()) {
+            const tabs = p.tabs ?? (p.tabs = []);
+            const next = tabs.filter(keep);
+            if (next.length === tabs.length)
+                continue;
+            pruned = true;
+            p.tabs = next;
+            if (p.contentKey && !next.includes(p.contentKey))
+                p.contentKey = next.length ? next[next.length - 1] : null;
+            if (!next.length)
+                emptied.push(p.id);
+        }
+        for (const id of emptied)
+            if (tmuxRemovePane(id))
+                changed = true;
+        if (pruned) {
+            tmuxCommit(changed);
+            return;
+        }
+    }
+    if (document.body.classList.contains('tmux-dragging'))
+        return;
+    tmuxLeaves().forEach(p => tmuxRefreshLeaf(p.id));
 }
 function tmuxUpdateWideMode() {
     const isSplit = !!(tmuxRoot.split && tmuxRoot.children);
     const isShown = CDOM.ID('tmux-panel-tab').classList.contains('active');
     document.body.classList.toggle('tmux-split-wide', isSplit && isShown);
-}
-function tmuxSplitPane(paneId, dir) {
-    const pane = tmuxFind(tmuxRoot, paneId);
-    if (!pane || pane.split)
-        return;
-    const oldEl = tmuxPaneEls.get(pane.id);
-    const child1 = { id: genUuid(), contentKey: pane.contentKey ?? null };
-    const child2 = { id: genUuid(), contentKey: null };
-    pane.split = dir;
-    pane.children = [child1, child2];
-    delete pane.contentKey;
-    const splitEl = document.createElement('div');
-    splitEl.className = `tmux-split tmux-split-${dir}`;
-    splitEl.dataset.paneId = pane.id;
-    splitEl.appendChild(tmuxBuildEl(child1));
-    splitEl.appendChild(tmuxBuildEl(child2));
-    oldEl?.replaceWith(splitEl);
-    tmuxPaneEls.set(pane.id, splitEl);
-    tmuxSyncPanePositions();
-    tmuxSaveLayout();
-}
-function tmuxMergePane(paneId) {
-    const found = tmuxFindParent(tmuxRoot, paneId);
-    if (!found || !found.parent)
-        return;
-    const { pane, parent } = found;
-    const keptContentKey = pane.contentKey ?? null;
-    const staleIds = tmuxCollectIds(parent);
-    const parentEl = tmuxPaneEls.get(parent.id);
-    parent.split = undefined;
-    parent.children = undefined;
-    parent.contentKey = keptContentKey;
-    const newLeafEl = tmuxBuildEl(parent);
-    parentEl?.replaceWith(newLeafEl);
-    staleIds.forEach(id => { if (id !== parent.id)
-        tmuxPaneEls.delete(id); });
-    tmuxPaneEls.set(parent.id, newLeafEl);
-    tmuxSyncPanePositions();
-    tmuxSaveLayout();
 }
 function tmuxOpenSelectModal(paneId) {
     const chatItems = (lastChatSessions ?? []).map(s => ({ key: sessKey('chat', s.remoteId, s.sessionId), label: s.title || s.sessionId, sub: s.workingDir }));
@@ -5563,10 +6047,9 @@ function tmuxOpenSelectModal(paneId) {
                 <span class="d-block text-truncate">${aiEscapeHtml(it.label)}</span>
                 ${it.sub ? `<span class="d-block text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(it.sub)}</span>` : ''}
             </button>`).join('') : `<div class="small text-secondary fst-italic">${L('ctrl.tmux.noSessions', 'None')}</div>`}
-        </div>`).join('') +
-        `<button type="button" class="btn btn-sm btn-outline-danger w-100 mt-1" id="tmux-select-clear">${L('ctrl.tmux.clearPane', 'Clear')}</button>`;
+        </div>`).join('');
     const modal = new CModal();
-    modal.SetHeader(L('ctrl.tmux.select', 'Select content'));
+    modal.SetHeader(L('ctrl.tmux.select', 'Open a session here'));
     modal.SetBody(bodyHtml);
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetSize(420, 480);
@@ -5579,37 +6062,12 @@ function tmuxOpenSelectModal(paneId) {
                 modal.Close();
             });
         });
-        document.getElementById('tmux-select-clear')?.addEventListener('click', () => {
-            tmuxSetPaneContent(paneId, null);
-            modal.Close();
-        });
     }, MODAL_DOM_DELAY);
 }
-function tmuxSetPaneContent(paneId, key) {
-    const pane = tmuxFind(tmuxRoot, paneId);
-    if (!pane || pane.split)
-        return;
-    if (key)
-        tmuxEnsurePooledFrame(key);
-    const sourcePaneId = key ? tmuxFindPaneIdByKey(key) : null;
-    if (sourcePaneId && sourcePaneId !== paneId) {
-        const sourcePane = tmuxFind(tmuxRoot, sourcePaneId);
-        const displaced = pane.contentKey ?? null;
-        sourcePane.contentKey = displaced;
-        pane.contentKey = key;
-        tmuxRefreshEmptyState(sourcePaneId);
-        tmuxRefreshEmptyState(paneId);
-    }
-    else {
-        tmuxAssignPaneContent(paneId, key);
-    }
-    tmuxSyncPanePositions();
-    tmuxSaveLayout();
-}
-function tmuxPaneLabel(pane) {
-    const key = pane.contentKey;
-    if (!key)
-        return L('ctrl.tmux.emptyPane2', 'Empty');
+function tmuxKeyLabel(key) {
+    const tab = tmuxTabEntries.find(e => e.key === key);
+    if (tab)
+        return tab.spec.shortLabel;
     if (key === 'rdp:local')
         return 'RDP · Local';
     if (key.startsWith('rdp:remote:')) {
@@ -5622,7 +6080,7 @@ function tmuxPaneLabel(pane) {
     }
     if (key.startsWith('chat:'))
         return 'Chat';
-    if (key.startsWith('term:'))
+    if (key.startsWith('term:') || key.startsWith('term-new:'))
         return 'Terminal';
     if (key.startsWith('browser:'))
         return 'Browser';
@@ -5631,6 +6089,13 @@ function tmuxPaneLabel(pane) {
         return s ? `Web · ${s.url}` : 'Web';
     }
     return key;
+}
+function tmuxPaneLabel(pane) {
+    const key = pane.contentKey;
+    if (!key)
+        return L('ctrl.tmux.emptyPane2', 'Empty');
+    const rest = (pane.tabs?.length ?? 1) - 1;
+    return tmuxKeyLabel(key) + (rest > 0 ? ` (+${rest})` : '');
 }
 function tmuxShowPanel() {
     window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('tmux-panel-tab')).show();
@@ -5672,61 +6137,39 @@ function tmuxToggleSidebar(side) {
 }
 appSidebar?.addEventListener('show.bs.offcanvas', () => { document.body.classList.remove('hide-left-sidebar'); updateSidebarMode(); });
 appSidebarRight?.addEventListener('show.bs.offcanvas', () => { document.body.classList.remove('hide-right-sidebar'); updateSidebarMode(); });
-function tmuxCollectLeavesGrouped() {
-    const out = [];
-    let groupSeq = 0;
-    (function walk(p, group) {
-        if (p.split && p.children) {
-            const g = ++groupSeq;
-            walk(p.children[0], g);
-            walk(p.children[1], g);
-        }
-        else {
-            out.push({ pane: p, group });
-        }
-    })(tmuxRoot, 0);
-    return out;
-}
 function tmuxRenderMenu() {
     const menu = CDOM.ID('tmux-dropdown-menu');
     if (!menu)
         return;
-    const entries = tmuxCollectLeavesGrouped();
-    let rowsHtml = '';
-    entries.forEach((entry, i) => {
-        if (i > 0 && entry.group !== entries[i - 1].group)
-            rowsHtml += `<li><hr class="dropdown-divider"></li>`;
-        const { pane } = entry;
-        const canMerge = !!tmuxFindParent(tmuxRoot, pane.id)?.parent;
-        const numPrefix = entry.group > 0 ? `${aiEscapeHtml(String(entry.group))}. ` : '';
-        rowsHtml += `<li>
-            <div class="tmux-menu-pane" data-pane-id="${pane.id}">
-                <span class="tmux-menu-pane-label" data-act="show">${numPrefix}${aiEscapeHtml(tmuxPaneLabel(pane))}</span>
-                <div class="tmux-menu-pane-actions">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-act="split-h" data-CLan-title="ctrl.tmux.splitH" title="Split horizontal"><i class="bi bi-layout-split"></i></button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-act="split-v" data-CLan-title="ctrl.tmux.splitV" title="Split vertical"><i class="bi bi-layout-split" style="display:inline-block;transform:rotate(90deg);"></i></button>
-                    ${canMerge ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-act="merge" data-CLan-title="ctrl.tmux.merge" title="Merge"><i class="bi bi-arrows-angle-contract"></i></button>` : ''}
-                    <button type="button" class="btn btn-sm btn-outline-primary" data-act="select" data-CLan-title="ctrl.tmux.select" title="Select content"><i class="bi bi-card-list"></i></button>
-                </div>
-            </div>
-        </li>`;
-    });
     const rightVisible = tmuxSidebarVisible('right');
     const leftVisible = tmuxSidebarVisible('left');
+    const rowsHtml = tmuxLeaves().map((pane, i) => {
+        const color = tmuxPaneColorName(pane.id);
+        return `<li><button type="button" class="dropdown-item text-truncate tmux-menu-pane" data-pane-id="${pane.id}"><i class="bi bi-square-fill me-1" style="color:var(--bs-${color});font-size:0.6rem;"></i>${i + 1}. ${aiEscapeHtml(tmuxPaneLabel(pane))}</button></li>`;
+    }).join('');
     menu.innerHTML =
         `<li><button type="button" class="dropdown-item" id="tmux-toggle-left-btn"><i class="bi bi-layout-sidebar-inset"></i> ${aiEscapeHtml(leftVisible ? L('ctrl.tmux.hideLeft', 'Turn off left side') : L('ctrl.tmux.showLeft', 'Turn on left side'))}</button></li>
         <li><button type="button" class="dropdown-item" id="tmux-toggle-right-btn"><i class="bi bi-layout-sidebar-inset-reverse"></i> ${aiEscapeHtml(rightVisible ? L('ctrl.tmux.hideRight', 'Turn off right side') : L('ctrl.tmux.showRight', 'Turn on right side'))}</button></li>
+        <li><button type="button" class="dropdown-item" id="tmux-reset-btn"><i class="bi bi-grid-1x2"></i> ${aiEscapeHtml(L('ctrl.tmux.resetLayout', 'Reset layout (single pane)'))}</button></li>
         <li><hr class="dropdown-divider"></li>` +
             rowsHtml;
     CDOM.ID('tmux-toggle-left-btn')?.addEventListener('click', () => tmuxToggleSidebar('left'));
     CDOM.ID('tmux-toggle-right-btn')?.addEventListener('click', () => tmuxToggleSidebar('right'));
+    CDOM.ID('tmux-reset-btn')?.addEventListener('click', () => {
+        const leaves = tmuxLeaves();
+        const tabs = [];
+        for (const p of leaves)
+            for (const k of p.tabs ?? [])
+                if (!tabs.includes(k))
+                    tabs.push(k);
+        const contentKey = leaves.find(p => p.id === tmuxActivePaneId)?.contentKey ?? leaves.find(p => p.contentKey)?.contentKey ?? null;
+        tmuxRoot = { id: genUuid(), tabs, contentKey };
+        tmuxActivePaneId = tmuxRoot.id;
+        tmuxCommit(true);
+        tmuxShowPanel();
+    });
     menu.querySelectorAll('.tmux-menu-pane').forEach(row => {
-        const paneId = row.dataset.paneId;
-        row.querySelector('[data-act="show"]')?.addEventListener('click', () => tmuxShowPanel());
-        row.querySelector('[data-act="split-h"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxSplitPane(paneId, 'row'); tmuxShowPanel(); });
-        row.querySelector('[data-act="split-v"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxSplitPane(paneId, 'col'); tmuxShowPanel(); });
-        row.querySelector('[data-act="merge"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxMergePane(paneId); tmuxShowPanel(); });
-        row.querySelector('[data-act="select"]')?.addEventListener('click', (e) => { e.stopPropagation(); tmuxOpenSelectModal(paneId); });
+        row.addEventListener('click', () => { tmuxSetActivePane(row.dataset.paneId); tmuxShowPanel(); });
     });
     applyLanIn(menu);
 }
@@ -6100,6 +6543,11 @@ async function teamOpenModal() {
             <input id="team-limit-min" type="number" min="0" step="1" class="form-control form-control-sm" value="60">
             <div class="form-text" style="font-size:0.7rem;">${L('ctrl.lbl.stopHint', 'If any task fails, the whole team stops immediately regardless of time.')}</div>
         </div>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.remindMin', 'Stall reminder interval (min)')}</label>
+            <input id="team-remind-min" type="number" min="1" step="1" class="form-control form-control-sm" value="3">
+            <div class="form-text" style="font-size:0.7rem;">${L('ctrl.lbl.remindHint', 'If tasks are still pending and the leader stays quiet this long, the server wakes it to run check/watchdog.')}</div>
+        </div>
         <div class="d-flex justify-content-between">
             <button id="team-modal-create" class="btn btn-primary">${L('ctrl.create', 'Create')}</button>
             <button id="team-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
@@ -6196,6 +6644,7 @@ async function teamOpenModal() {
                     subAgents: subAgents.join(','),
                     autoAgents: JSON.stringify(autoRows),
                     limitMin: String(Number((container.querySelector('#team-limit-min')).value) || 0),
+                    remindMin: String(Math.max(1, Number((container.querySelector('#team-remind-min')).value) || 3)),
                 });
                 const r = await authedFetch(`${CPath.WebRootUrl()}cmd/start-team?${params.toString()}`);
                 const j = await r.json();

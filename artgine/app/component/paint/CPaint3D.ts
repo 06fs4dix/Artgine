@@ -16,7 +16,7 @@ import { CVec4 } from "../../../geometry/CVec4.js";
 import { CFloat32Mgr } from "../../../geometry/CFloat32Mgr.js";
 import { CBatch } from "../../../render/CBatchMgr.js";
 import {CDevice} from "../../../render/CDevice.js";
-import {CMesh} from "../../../render/CMesh.js";
+import {CMesh, CMeshMorph} from "../../../render/CMesh.js";
 import { CMeshCopyNode } from "../../../render/CMeshCopyNode.js";
 import { CMeshCreateInfo } from "../../../render/CMeshCreateInfo.js";
 import { CMeshDataNode } from "../../../render/CMeshDataNode.js";
@@ -47,6 +47,12 @@ export class CPaint3D extends CPaint
 	public mCamCompSet : Set<CBrushComp>=new Set<CBrushComp>();
 	public mBakedLight : string = null;
 	public mWindInfluence : CVec1 = new CVec1(0.0);
+	public mMorph : CMeshMorph=null;
+	public mMorphWeight : Float32Array=null;
+	public mMorphReady=false;
+	public mMorphTexW=0;
+	public mMorphSA : Array<CShaderAttr>=null;
+	public mMorphSAOff : Array<CShaderAttr>=null;
 
 	public mBrushCompArr=[];
 	public mTexLoad=false;
@@ -109,7 +115,8 @@ export class CPaint3D extends CPaint
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
 		if(_member=="mWeightMat" || _member=="mTreeNode" || _member=="mTree" || _member=="mMeshRes" ||
-			_member=="mCenterPos" || _member=="mTargetScale"
+			_member=="mCenterPos" || _member=="mTargetScale" ||
+			_member=="mMorph" || _member=="mMorphSA" || _member=="mMorphSAOff" || _member=="mMorphWeight" || _member=="mMorphReady" || _member=="mMorphTexW"
 		)
 			return false;
 		return super.IsShould(_member,_type);
@@ -127,6 +134,86 @@ export class CPaint3D extends CPaint
 			
 
 		
+	}
+	//이름은 모프 타깃 이름 전체이거나 끝부분(예: "Fcl_MTH_A")이다
+	SetMorph(_name : string,_weight : number) : boolean
+	{
+		if(this.mMorph==null)	return false;
+		let off=this.mMorph.names.indexOf(_name);
+		if(off<0)	off=this.mMorph.names.findIndex(n=>n.endsWith("_"+_name));
+		if(off<0)	return false;
+		this.mMorphWeight[off]=_weight;
+		return true;
+	}
+	private MorphTexUpdate()
+	{
+		if(this.mMorph==null || this.mMorphReady)	return;
+		let frame=this.mOwner.GetFrame();
+		let key=this.mMorph.GetTexKey(this.mMesh);
+		let tex=frame.Res().Find(key) as CTexture;
+		if(tex==null)
+		{
+			if(frame.Load().IsLoad(key))	return;
+			tex=CUtilRender.MorphTexBake(this.mMorph);
+			if(tex==null)
+			{
+				this.mMorph=null;
+				return;
+			}
+			frame.Load().LoadSet().add(key);
+			frame.Ren().BuildTexture(tex).then(()=>{
+				frame.Res().Push(key,tex);
+				frame.Load().LoadSet().delete(key);
+			});
+			return;
+		}
+		this.mMorphTexW=tex.GetWidth();
+		this.PushCShaderAttr(new CShaderAttr(8,key));
+		this.PushTag("morph");
+		this.mMorphReady=true;
+		this.ClearBatch();
+	}
+	//셰이더가 한 번에 받는 모프는 8개다. 가중치 절댓값이 큰 순서로 담는다.
+	//배치는 캐시되므로 속성 객체를 한 번만 만들고 값만 매 프레임 그 자리에서 고친다
+	private MorphWeightUpdate()
+	{
+		if(this.mMorphSA==null)	return;
+		let w=this.mMorphWeight;
+		let act=new Array<number>();
+		for(let i=0;i<w.length;++i)
+			if(Math.abs(w[i])>0.0001)	act.push(i);
+		act.sort((a,b)=>Math.abs(w[b])-Math.abs(w[a]));
+		for(let k=0;k<8;++k)
+		{
+			let on=k<act.length;
+			(this.mMorphSA[1+(k>>2)].mData as CVec4).mF32A[k&3]=on?act[k]:-1;
+			(this.mMorphSA[3+(k>>2)].mData as CVec4).mF32A[k&3]=on?w[act[k]]:0;
+		}
+	}
+	//같은 셰이더로 그리는 배치는 속성 목록이 같아야 해서, 모프가 없는 노드에도 빈 값을 같은 이름으로 넣는다
+	private MorphBatch(_on : boolean)
+	{
+		let bm=this.mOwner.GetFrame().BMgr();
+		if(this.mMorphSA==null)
+		{
+			this.mMorphSA=[
+				new CShaderAttr("morphInfo",new CVec4(this.mMorph.GetVertexCount(),this.mMorphTexW,0,0)),
+				new CShaderAttr("morphIdx0",new CVec4(-1,-1,-1,-1)),
+				new CShaderAttr("morphIdx1",new CVec4(-1,-1,-1,-1)),
+				new CShaderAttr("morphW0",new CVec4(0,0,0,0)),
+				new CShaderAttr("morphW1",new CVec4(0,0,0,0)),
+			];
+			this.mMorphSAOff=[
+				new CShaderAttr("morphInfo",new CVec4(0,this.mMorphTexW,0,0)),
+				new CShaderAttr("morphIdx0",new CVec4(-1,-1,-1,-1)),
+				new CShaderAttr("morphIdx1",new CVec4(-1,-1,-1,-1)),
+				new CShaderAttr("morphW0",new CVec4(0,0,0,0)),
+				new CShaderAttr("morphW1",new CVec4(0,0,0,0)),
+			];
+			this.MorphWeightUpdate();
+		}
+		for(let sa of (_on?this.mMorphSA:this.mMorphSAOff))
+			bm.SetBatchSA(sa);
 	}
 	//SetPivot(_pivot)	{	this.m_pivot=_pivot;	}
 	SetWeightMat(_off,_tar : CMat)
@@ -239,7 +326,19 @@ export class CPaint3D extends CPaint
 			this.mSkinType=SDF.eSkin.None;
 		
 	
-		this.mTree = new CTree();
+		this.mMorph=null;
+			this.mMorphReady=false;
+			for(let n of this.mMeshRes.meshTree.GetArray())
+			{
+				if(n.mData!=null && n.mData.morph!=null)
+				{
+					this.mMorph=n.mData.morph;
+					this.mMorphWeight=new Float32Array(this.mMorph.names.length);
+					break;
+				}
+			}
+
+			this.mTree = new CTree();
 		this.mTree.mData=new CMeshCopyNode();
 		CMeshTreeUpdate.TreeCopy(this.mMeshRes.meshTree,this.mTree,new CMat(),this.mBound);
 		this.UpdateLMat();
@@ -303,6 +402,8 @@ export class CPaint3D extends CPaint
 	{
 		super.Update(_update);
 
+		this.MorphTexUpdate();
+		this.MorphWeightUpdate();
 
 		if(this.mUpdateFMat==false)	return;
 		// if(CWASM.IsWASM())
@@ -508,7 +609,9 @@ export class CPaint3D extends CPaint
 			// 	this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture(_node.mpi.mData.textureOff));
 			// else
 			this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey,_node.mpi.mData.textureOff);
-			
+			if(this.mMorphReady)
+				this.MorphBatch(_node.md.mData.morph==this.mMorph);
+
 			if (_vf.mUniform.get("material") != null)
 				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
 			

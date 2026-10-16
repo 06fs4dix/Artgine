@@ -1,4 +1,6 @@
 import { CAlert } from "../basic/CAlert.js";
+import { CMeshMorph } from "./CMesh.js";
+import { SDF } from "../z_file/SDF.js";
 import { CTree } from "../basic/CTree.js";
 import { CBound } from "../geometry/CBound.js";
 import { CFloat32Mgr } from "../geometry/CFloat32Mgr.js";
@@ -15,6 +17,7 @@ import { CMeshDataNode } from "./CMeshDataNode.js";
 import { CMeshPaint } from "./CMeshPaint.js";
 import { CMeshTreeUpdate } from "./CMeshTreeUpdate.js";
 import { CVertexFormat } from "./CShader.js";
+import { CTexture, CTextureInfo } from "./CTexture.js";
 const g_fEpsilon = 0.0001;
 class s_FACE {
     Tface;
@@ -441,7 +444,7 @@ export class CUtilRender {
         pa_po_weight.Swap(L_we);
         pa_po_weightIndex.Swap(L_weI);
     }
-    static UvIndexToVertexIndex(pa_po_vertex, pa_po_uv, pa_po_weight, pa_po_weightIndex, pa_po_texOff, RF_index) {
+    static UvIndexToVertexIndex(pa_po_vertex, pa_po_uv, pa_po_weight, pa_po_weightIndex, pa_po_texOff, RF_index, _srcMap = null) {
         var L_indexNum = RF_index.length / 3;
         var nv = new CFloat32Mgr();
         var nu = new Array();
@@ -475,6 +478,8 @@ export class CUtilRender {
                         nwi.Push(pa_po_weightIndex.V4(RF_index[i * 3 + j]));
                     }
                     nto.Push(pa_po_texOff.V3(RF_index[i * 3 + j]));
+                    if (_srcMap != null)
+                        _srcMap.push(RF_index[i * 3 + j]);
                     var off = nv.Size(3) - 1;
                     ni.push(off);
                     itMap.set(key, off);
@@ -1009,12 +1014,12 @@ export class CUtilRender {
         rVal.indexCount = inb.bufI.length;
         return rVal;
     }
-    static WeldVerticesByPosUvNor(_ci, posEps = 1e-6, uvEps = 1e-6, norEps = 1e-6, useUV = true, useNormal = true) {
+    static WeldVerticesByPosUvNor(_ci, posEps = 1e-6, uvEps = 1e-6, norEps = 1e-6, useUV = true, useNormal = true, _morph = null) {
         const posEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
         const norEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
         if (!posEnt) {
             console.error("Position buffer not found.");
-            return;
+            return null;
         }
         const posBuf = posEnt.bufF;
         const uvEnts = _ci.GetVFType(CVertexFormat.eIdentifier.UV);
@@ -1050,6 +1055,15 @@ export class CUtilRender {
                 k += `|${vb.vfType}:`;
                 for (let j = 0; j < e; ++j)
                     k += f[i * e + j] + ",";
+            }
+            if (_morph != null) {
+                const md = _morph.delta.GetArray();
+                const mn = _morph.GetVertexCount();
+                for (let t = 0; t < _morph.names.length; ++t) {
+                    const o = (t * mn + i) * 3;
+                    if (md[o] != 0 || md[o + 1] != 0 || md[o + 2] != 0)
+                        k += `|m${t}:${md[o]},${md[o + 1]},${md[o + 2]}`;
+                }
             }
             return k;
         };
@@ -1100,14 +1114,15 @@ export class CUtilRender {
             _ci.vertex[b].bufF = outBufs[b];
         _ci.vertexCount = outPos.Size(3);
         _ci.indexCount = inb.bufI.length;
+        return mapOldToNew;
     }
-    static RebuildNormals(_ci, posEps = 1e-6, uvEps = 1e-6, norEps = 1e-6, useUV = true, useNormal = true) {
-        CUtilRender.WeldVerticesByPosUvNor(_ci, posEps, uvEps, norEps, useUV, useNormal);
+    static RebuildNormals(_ci, posEps = 1e-6, uvEps = 1e-6, norEps = 1e-6, useUV = true, useNormal = true, smoothAngleDeg = 60, _morph = null) {
+        const weldMap = CUtilRender.WeldVerticesByPosUvNor(_ci, posEps, uvEps, norEps, useUV, useNormal, _morph);
         const posEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
         let norEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
         if (!posEnt) {
             console.error("Position buffer not found.");
-            return;
+            return weldMap;
         }
         if (!norEnt)
             norEnt = _ci.Create(CVertexFormat.eIdentifier.Normal);
@@ -1131,10 +1146,83 @@ export class CUtilRender {
             accNormals[i1] = CMath.V3AddV3(accNormals[i1], faceNormal);
             accNormals[i2] = CMath.V3AddV3(accNormals[i2], faceNormal);
         }
+        if (smoothAngleDeg > 0) {
+            const cosLimit = Math.cos(smoothAngleDeg * Math.PI / 180);
+            const q = (v) => Math.round(v / 1e-5);
+            const groups = new Map();
+            for (let i = 0; i < vertCount; ++i) {
+                const p = posBuf.V3(i);
+                const k = `${q(p.x)},${q(p.y)},${q(p.z)}`;
+                const g = groups.get(k);
+                if (g)
+                    g.push(i);
+                else
+                    groups.set(k, [i]);
+            }
+            const unit = accNormals.map(n => (CMath.V3Len(n) > 1e-12) ? CMath.V3Nor(n) : new CVec3(0, 0, 0));
+            const out = new Array(vertCount);
+            for (const g of groups.values()) {
+                if (g.length < 2)
+                    continue;
+                for (const a of g) {
+                    let sum = accNormals[a];
+                    for (const b of g) {
+                        if (a === b || CMath.V3Dot(unit[a], unit[b]) < cosLimit)
+                            continue;
+                        sum = CMath.V3AddV3(sum, accNormals[b]);
+                    }
+                    out[a] = sum;
+                }
+            }
+            for (let i = 0; i < vertCount; ++i)
+                if (out[i])
+                    accNormals[i] = out[i];
+        }
         for (let i = 0; i < vertCount; ++i) {
             let n = accNormals[i];
             norBuf.V3(i, (CMath.V3Len(n) > 1e-6) ? CMath.V3Nor(n) : new CVec3(0, 1, 0));
         }
+        return weldMap;
+    }
+    static DoubleSide(_ci, _morph = null) {
+        const inb = _ci.GetVFType(CVertexFormat.eIdentifier.Index)[0];
+        const posEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+        if (inb == null || posEnt == null)
+            return _morph;
+        const vc = posEnt.bufF.Size(3);
+        if (vc == 0)
+            return _morph;
+        for (const vb of _ci.vertex) {
+            if (vb.vfType == CVertexFormat.eIdentifier.Index)
+                continue;
+            const n = vb.bufF.mSize;
+            if (n == 0 || n % vc != 0)
+                continue;
+            vb.bufF.Resize(n * 2);
+            const a = vb.bufF.GetArray();
+            a.copyWithin(n, 0, n);
+            if (vb.vfType == CVertexFormat.eIdentifier.Normal)
+                for (let i = n; i < n * 2; ++i)
+                    a[i] = -a[i];
+        }
+        const n0 = inb.bufI.length;
+        for (let f = 0; f < n0; f += 3)
+            inb.bufI.push(inb.bufI[f] + vc, inb.bufI[f + 2] + vc, inb.bufI[f + 1] + vc);
+        _ci.vertexCount = vc * 2;
+        _ci.indexCount = inb.bufI.length;
+        if (_morph == null || _morph.names.length == 0)
+            return _morph;
+        const r = new CMeshMorph();
+        r.names = _morph.names.slice();
+        const T = r.names.length;
+        r.delta.Resize(T * vc * 2 * 3);
+        const src = _morph.delta.GetArray();
+        const dst = r.delta.GetArray();
+        for (let t = 0; t < T; ++t) {
+            dst.set(src.subarray(t * vc * 3, (t + 1) * vc * 3), t * vc * 2 * 3);
+            dst.set(src.subarray(t * vc * 3, (t + 1) * vc * 3), (t * vc * 2 + vc) * 3);
+        }
+        return r;
     }
     static CollectMeshLeaf(_PMat, _tNode, _out) {
         let LMat = CMath.MatScale(_tNode.mData.sca);
@@ -1265,6 +1353,8 @@ export class CUtilRender {
         CUtilRender.CollectMeshLeaf(new CMat(), _mesh.meshTree, leaves);
         if (leaves.length == 0)
             return false;
+        if (leaves.some(l => l.node.mData.morph != null))
+            return false;
         let groupMap = new Map();
         let groupOrder = new Array();
         for (let leaf of leaves) {
@@ -1322,6 +1412,31 @@ export class CUtilRender {
         for (let i = 0; i < node.length; ++i) {
             MeshNodeBoundUpdate(skinMat, node[i]);
         }
+    }
+    static MorphTexBake(_morph) {
+        let total = _morph.GetVertexCount() * _morph.names.length;
+        if (total == 0)
+            return null;
+        let w = Math.min(SDF.TexSizeMax, total);
+        let h = Math.ceil(total / w);
+        if (h > SDF.TexSizeMax) {
+            CAlert.E("모프 델타 텍스처가 너무 큽니다: " + _morph.names.length + "x" + _morph.GetVertexCount());
+            return null;
+        }
+        let tex = new CTexture();
+        tex.SetSize(w, h);
+        tex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA32F)]);
+        tex.SetAutoResize(false);
+        tex.SetYFlip(false);
+        tex.CreateBuf();
+        let buf = tex.GetBuf()[0];
+        let src = _morph.delta.GetArray();
+        for (let i = 0; i < total; ++i) {
+            buf[i * 4] = src[i * 3];
+            buf[i * 4 + 1] = src[i * 3 + 1];
+            buf[i * 4 + 2] = src[i * 3 + 2];
+        }
+        return tex;
     }
     static MeshAniBake(_texture, _amesh, _pmesh, _st, _end, _aniFrame) {
         let buf = _texture.GetBuf()[0];

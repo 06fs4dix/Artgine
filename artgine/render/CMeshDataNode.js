@@ -13,6 +13,7 @@ export class CKeyFrame extends CObject {
 }
 export class CMeshDataNode extends CObject {
     ci;
+    morph = null;
     keyFramePos;
     keyFrameRot;
     keyFrameSca;

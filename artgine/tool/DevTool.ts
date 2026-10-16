@@ -49,6 +49,7 @@ import { CRigidBody } from "../app/component/CRigidBody.js";
 import { CPaint } from "../app/component/paint/CPaint.js";
 import { CCollider } from "../app/component/CCollider.js";
 import { CLight } from "../app/component/CLight.js";
+import CEnvMap from "../app/component/CEnvMap.js";
 import { CPaint2D, CPaint2DMerge } from "../app/component/paint/CPaint2D.js";
 import { CLocation } from "../app/subject/CLocation.js";
 import { CPaint3D, CPaint3DMerge } from "../app/component/paint/CPaint3D.js";
@@ -812,6 +813,28 @@ function DevToolRender()
             wmat.mF32A[0]=lt.GetInRadius()*2;
             wmat.mF32A[5]=lt.GetInRadius()*2;
             wmat.mF32A[10]=lt.GetInRadius()*2;
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
+            render.MeshDrawNodeRender(shader,meshDrawSphere);
+        }
+
+        let emArr=_sub.FindComps(CEnvMap);
+        for(let em of emArr)
+        {
+            if(em.GetOwner()==null || em.GetOwner().IsEnable()==false || em.mRadius<=0) continue;
+
+            color.x=0.2;
+            color.y=0.8;
+            color.z=1;
+            color.w=SDF.eColorModel.RGBAdd;
+            alpha.x=0.35;
+            wmat.xyz=em.GetOwner().GetPos();
+            wmat.mF32A[0]=em.mRadius*2;
+            wmat.mF32A[5]=em.mRadius*2;
+            wmat.mF32A[10]=em.mRadius*2;
             render.SendGPU(shader,color,"colorModel");
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);

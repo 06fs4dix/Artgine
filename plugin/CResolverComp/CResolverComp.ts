@@ -3,7 +3,7 @@ import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
 import { CSubject } from "../../artgine/app/subject/CSubject.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CTree } from "../../artgine/basic/CTree.js";
-import { IMat } from "../../artgine/geometry/CMat.js";
+import { CMat, IMat } from "../../artgine/geometry/CMat.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";
@@ -46,7 +46,26 @@ class CResolverComp extends CComponent
     SetTarget(_target : IMat) {
         this.m_resolver.m_target = _target;
     }
-    
+
+    private m_ready = false;
+    private m_waitFrame = 0;
+    private m_checkMat = new CMat();
+    //리졸버는 첫 계산에서 기준 방향/회전을 저장해 두고 계속 쓴다. 페인트의 최종 행렬이 아직 계산 전(단위행렬)일 때
+    //첫 계산이 돌면 기준이 틀어지므로, 최종 행렬이 계산된 뒤에야 시작한다
+    protected IsReady(_p3d : CPaint3D) : boolean {
+        if(this.m_ready) return true;
+        CMath.MatMul(_p3d.GetMat(), this.mOwner.GetMat(), this.m_checkMat, true);
+        const a = this.m_checkMat.mF32A;
+        const b = _p3d.GetFMat().mF32A;
+        let same = true;
+        for(let i = 0; i < 16; i++) {
+            if(a[i] != b[i]) { same = false; break; }
+        }
+        //최종 행렬을 따로 지정하는 경우처럼 끝내 일치하지 않아도 IK가 멈추지 않게 한다
+        if(same || ++this.m_waitFrame > 10) this.m_ready = true;
+        return this.m_ready;
+    }
+
     Update(_delay: any): void {
         super.Update(_delay);
 
@@ -57,6 +76,7 @@ class CResolverComp extends CComponent
         this.m_p3d = ptVec[this.m_paintOff] as CPaint3D;
         const tree = this.m_p3d.GetTree();
         if(tree == null) return;
+        if(!this.IsReady(this.m_p3d)) return;
         this.Resolve(tree, _delay);
         this.m_p3d.UpdateLMat();
     }
@@ -99,6 +119,7 @@ export class CAttacher extends CResolverComp
         this.m_p3d = ptVec[this.m_paintOff] as CPaint3D;
         const stree = this.m_p3d.GetTree();
         if(stree == null) return;
+        if(!this.IsReady(this.m_p3d)) return;
         this.m_targetBone = stree.Find(this.m_bone);
         if(this.m_targetBone == null) return;
 

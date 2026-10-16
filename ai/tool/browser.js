@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createApiClient, resolveLocalBase, shotFormat, saveScreenshot } from './common.js';
+import { createApiClient, shotFormat, saveScreenshot } from './common.js';
 import { wantsAnalysis, finishShot, finishFrames } from './image_tools.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -29,7 +29,7 @@ if (!baseArg || !baseArg.startsWith('http')) {
     process.exit(1);
 }
 
-const base = await resolveLocalBase(baseArg.replace(/\/$/, ''));
+const base = baseArg.replace(/\/$/, '');
 
 if (cmd === 'login') {
     // 비밀번호를 인자로 줄 수 있다. 생략하면 settings.json 값을 쓴다

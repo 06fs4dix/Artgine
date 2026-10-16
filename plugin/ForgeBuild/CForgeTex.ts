@@ -6,13 +6,21 @@ import { CForgeRand } from "./CForgeRand.js";
 //텍스처 한 장이 2m를 덮는다(메시 UV는 m 단위, 페인트에서 0.5배로 줄여 쓴다)
 export class CForgeTexSurf
 {
-    constructor(public mNor : string, public mMat : string, public mParallax : number) {}
+    mAlbR : string = null;
+    mNorR : string = null;
+    mMatR : string = null;
+    mMatPBRR : string = null;
+    mRef : number[] = null;
+    mLum = 1;
+    constructor(public mNor : string, public mMat : string, public mParallax : number, public mMatPBR : string = null) {}
 }
 
 export class CForgeTex
 {
     static sSize = 256;
     static sMeter = 2;
+    //실사만 크게 굽는다. 256에서는 1cm 알갱이가 한 픽셀이라 면이 찰흙으로 남는다
+    static sRealSize = 1024;
     //엔진 셰이더가 정점 UV에 abs()를 씌워 0을 가로지르는 면은 무늬가 접힌다. 정수만큼 밀어 항상 양수로 둔다(반복 위치는 그대로)
     static sUVOff = 256;
     static sParallaxNear = 1000;
@@ -27,6 +35,9 @@ export class CForgeTex
     static sThatch = "forge_thatch.tex";
     static sShingle = "forge_shingle.tex";
     static sFlatMat = "forge_flat_m.tex";
+    static sFlatMatPBR = "forge_flat_mp.tex";
+    static sFlatMatR = "forge_flat_mr.tex";
+    static sFlatMatPBRR = "forge_flat_mpr.tex";
     static sGiwa = "forge_giwa.tex";
     static sChangho = "forge_changho.tex";
     static sChoga = "forge_choga.tex";
@@ -101,6 +112,8 @@ export class CForgeTex
     static Build(_frame : CFrame)
     {
         CForgeTex.sFrame = _frame;
+        CForgeTex.FillPBR();
+        CForgeTex.FillReal();
         if(_frame.Res().Find(CForgeTex.sPlaster) != null) return;
         const N = CForgeTex.sSize;
         CForgeTex.Make(_frame, CForgeTex.sPlaster, (x, y) =>
@@ -182,14 +195,8 @@ export class CForgeTex
             const slat = sx < 2 || band, paper = 0.93 + (CForgeTex.Fbm(x / N * 6, y / N * 6, 6, 95) - 0.5) * 0.06;
             return slat ? [0.42, 0.9] : [paper, 0.25];
         }, 5, 0.85, 0.1, 2, 0);
-        //한국 초가: 단을 짓지 않고 매끈하게 덮은 볏짚(경사 방향 가는 결) 위에 0.5m 격자로 새끼줄을 매어 누른다. 새끼줄은 높고 조금 어둡다
-        CForgeTex.Make(_frame, CForgeTex.sChoga, (x, y) =>
-        {
-            const g = N / 4, fx = x % g, fy = y % g, rope = Math.min(fx, g - fx, fy, g - fy);
-            const str = CForgeTex.TNoise2(x / N * 70, y / N * 5, 70, 5, 97), clump = CForgeTex.Fbm(x / N * 5, y / N * 5, 5, 98);
-            if(rope < 2) return [0.62 + (str - 0.5) * 0.1, 0.85 - rope * 0.1];
-            return [0.8 + (str - 0.5) * 0.22 + (clump - 0.5) * 0.18, 0.45 + (str - 0.5) * 0.25 + (clump - 0.5) * 0.3 - Math.max(0, 6 - rope) * 0.03];
-        }, 5, 0.95, 0.2, 2.2, 0.03);
+        //칸마다 능선을 세우면 골진 천이 된다. 밝기 결은 서로 다른 굵기로 겹치고, 새끼만 가로로 꼬아 살짝 올린다
+        CForgeTex.Make(_frame, CForgeTex.sChoga, CForgeTex.ChogaFn(N), 6, 0.95, 0.2, 2.2, 0.03);
         CForgeTex.Make(_frame, CForgeTex.sSeongdol, CForgeTex.SeongdolFn(N), 11, 0.88, 0.2, 3.2, 0.05);
         CForgeTex.Make(_frame, CForgeTex.sDoldam, CForgeTex.DoldamFn(N), 12, 0.92, 0.25, 3.5, 0.04);
         //일본 기와(산가와라): 2m에 7골. 한식처럼 수키와·암키와가 따로 줄지지 않고 등과 골이 한 장에 물결로 이어진다. 0.25m마다 겹친 단(위 단 끝 아래가 그늘)
@@ -409,38 +416,80 @@ export class CForgeTex
             const rim = d < 1.2 ? (1.2 - d) * 0.05 : 0;
             return [0.92 + (n - 0.5) * 0.12 - (rows ? 0.08 : 0) + rim, 0.6 + (n - 0.5) * 0.15 - (rows ? 0.12 : 0)];
         }, 7, 0.9, 0.15, 2.6, 0.02);
-        const m = new Uint8Array(16 * 4);
-        for(let i = 0; i < 16; i++) { m[i * 4] = 255; m[i * 4 + 1] = 0.8 * 255; m[i * 4 + 3] = 255; }
+        const m = new Uint8Array(16 * 4), mp = new Uint8Array(16 * 4);
+        for(let i = 0; i < 16; i++)
+        {
+            m[i * 4] = mp[i * 4] = 255; m[i * 4 + 3] = mp[i * 4 + 3] = 255;
+            m[i * 4 + 1] = 0.8 * 255; mp[i * 4 + 1] = 0.72 * 255;
+        }
+        const mr = new Uint8Array(16 * 4), mpr = new Uint8Array(16 * 4);
+        for(let i = 0; i < 16; i++)
+        {
+            mr[i * 4] = mpr[i * 4] = 255; mr[i * 4 + 3] = mpr[i * 4 + 3] = 255;
+            mr[i * 4 + 1] = 0.96 * 255; mpr[i * 4 + 1] = 0.96 * 255;
+        }
         CForgeTex.Upload(_frame, CForgeTex.sFlatMat, m, 4);
+        CForgeTex.Upload(_frame, CForgeTex.sFlatMatPBR, mp, 4);
+        CForgeTex.Upload(_frame, CForgeTex.sFlatMatR, mr, 4);
+        CForgeTex.Upload(_frame, CForgeTex.sFlatMatPBRR, mpr, 4);
     }
 
     private static Q(_rgb : number[]) : number[] { return _rgb.map(_v => Math.max(0, Math.min(255, Math.round(_v * 255)))); }
     private static sAO = new Map<string, number>();
-    //재질맵 AO(R)의 평균. 멀리서 재질맵을 빼고 그릴 때 색에 곱해 밝기를 맞춘다
-    static MeanAO(_key : string) : number
+    private static sAOP = new Map<string, number>();
+    private static sAOR = new Map<string, number>();
+    private static sBaseR = new Map<string, Uint8Array>();
+    private static sReal = new Map<string, number[]>();
+    private static sKeep = new Map<string, { h : Float32Array, g : Uint8Array, depth : number, detail : Float32Array }>();
+    //재질맵 AO(R)의 평균. 멀리서 재질맵을 빼고 그릴 때 색에 곱해 밝기를 맞춘다. _pbr이면 하늘 기울기가 없는 맵의 평균
+    static MeanAO(_key : string, _pbr = false, _real = false) : number
     {
-        let v = CForgeTex.sAO.get(_key);
+        const tab = _real ? CForgeTex.sAOR : _pbr ? CForgeTex.sAOP : CForgeTex.sAO;
+        let v = tab.get(_key);
         if(v != null) return v;
         v = 1;
         CForgeTex.Surf(_key);
-        const m = CForgeTex.sMatBuf.get(_key);
-        if(m != null) { let a = 0; for(let i = 0; i < m.length; i += 4) a += m[i]; v = a / (m.length / 4) / 255; }
-        CForgeTex.sAO.set(_key, v);
+        if(_real) { CForgeTex.EnsureReal(_key); v = CForgeTex.sAOR.get(_key) ?? 1; }
+        else if(_pbr) v = CForgeTex.sAOP.get(_key) ?? 1;
+        else
+        {
+            const m = CForgeTex.sMatBuf.get(_key);
+            if(m != null) { let a = 0; for(let i = 0; i < m.length; i += 4) a += m[i]; v = a / (m.length / 4) / 255; }
+        }
+        tab.set(_key, v);
         return v;
     }
     private static sMatBuf = new Map<string, Uint8Array>();
     //기본 텍스처(밝기 무늬)에 부위 색을 곱한 사본. 여러 집을 한 메시로 합칠 때 색을 페인트 대신 텍스처로 나눈다
-    static Tint(_key : string, _rgb : number[]) : string
+    static Tint(_key : string, _rgb : number[], _real = false) : string
     {
-        const q = CForgeTex.Q(_rgb), key = _key.replace(".tex", `_t${q[0]}_${q[1]}_${q[2]}.tex`);
+        const q = CForgeTex.Q(_rgb), key = _key.replace(".tex", `_${_real ? "tr" : "t"}${q[0]}_${q[1]}_${q[2]}.tex`);
         if(CForgeTex.sFrame.Res().Find(key) != null) return key;
-        const src = CForgeTex.sBase.get(_key), out = new Uint8Array(src.length);
-        for(let i = 0; i < src.length; i += 4)
+        const colored = _real ? (CForgeTex.EnsureReal(_key), CForgeTex.sBaseR.get(_key)) : null;
+        const src = colored ?? CForgeTex.sBase.get(_key), out = new Uint8Array(src.length);
+        if(colored != null)
         {
-            out[i] = src[i] * q[0] / 255; out[i + 1] = src[i + 1] * q[1] / 255; out[i + 2] = src[i + 2] * q[2] / 255; out[i + 3] = 255;
+            const s = CForgeTex.Scale(_key, _rgb);
+            for(let i = 0; i < src.length; i += 4)
+            {
+                out[i] = Math.min(255, src[i] * s[0]); out[i + 1] = Math.min(255, src[i + 1] * s[1]); out[i + 2] = Math.min(255, src[i + 2] * s[2]); out[i + 3] = 255;
+            }
         }
-        CForgeTex.Upload(CForgeTex.sFrame, key, out);
+        else
+            for(let i = 0; i < src.length; i += 4)
+            {
+                out[i] = src[i] * q[0] / 255; out[i + 1] = src[i + 1] * q[1] / 255; out[i + 2] = src[i + 2] * q[2] / 255; out[i + 3] = 255;
+            }
+        CForgeTex.Upload(CForgeTex.sFrame, key, out, Math.round(Math.sqrt(out.length / 4)));
         return key;
+    }
+    //비실사는 흰 밝기 무늬에 테마 색을 곱한다. 실사 알베도는 이미 색이 있어서 그대로 곱하면 두 번 어두워진다.
+    //평균이 비실사(밝기 평균 × 테마 색)와 같게 나눠, 얼룩·줄눈 색은 남기고 양식 색만 맞춘다
+    static Scale(_key : string, _rgb : number[]) : number[]
+    {
+        const s = CForgeTex.EnsureReal(_key);
+        if(s == null || s.mRef == null) return _rgb;
+        return _rgb.map((_v, _i) => Math.max(0.2, Math.min(2.4, _v * s.mLum / Math.max(0.04, s.mRef[_i]))));
     }
     //글씨 현판(색이 구워진 텍스처, 부위 색은 흰색으로 둔다). 가로:세로 = _aspect인 판에 0~1 UV로 붙인다 — 정사각 텍스처에 가로로 눌러 그려 늘어나도 글자 비율이 맞다.
     //_style 0 = 한국(녹색·주홍 테두리에 검은 바탕), 1 = 일본(검은 테두리에 짙은 나무 바탕), 2 = 중국(금 테두리에 파란 바탕). 캔버스가 없는 환경이면 null
@@ -643,10 +692,37 @@ export class CForgeTex
         };
     }
 
+    //한국 초가. 같은 간격의 능선은 골판이 되어, 굵기가 다른 세로 결을 겹친다. 가닥은 중간중간 끊긴다.
+    //새끼는 가로로만 꼬고 가운데만 살짝 높다. 휘어짐·꼬임은 텍스처 한 장 주기로 감긴다
+    private static ChogaFn(N : number) : (_x : number, _y : number) => number[]
+    {
+        const ch = N / 4;
+        return (x, y) =>
+        {
+            const bend = (CForgeTex.TNoise2(x / N * 2, y / N * 3, 2, 3, 41) - 0.5) * 10;
+            const sx = ((x + bend + N * 2) % N) / N;
+            const a = CForgeTex.TNoise2(sx * 31, y / N * 2, 31, 2, 71);
+            const b = CForgeTex.TNoise2(sx * 17, y / N * 3, 17, 3, 79);
+            const c = CForgeTex.TNoise2(sx * 53, y / N * 5, 53, 5, 83);
+            const grp = CForgeTex.TNoise2(sx * 7, y / N * 2, 7, 2, 91);
+            const brk = CForgeTex.TNoise2(sx * 31, y / N * 7, 31, 7, 29);
+            let lum = 0.46 + a * 0.26 + b * 0.16 + c * 0.1 + (grp - 0.5) * 0.12;
+            if(brk < 0.22) lum *= 0.78;
+            const sag = Math.sin(x / N * Math.PI * 3) * 3.2, ropeC = ch * 0.48;
+            const ry = (y % ch - sag + ch) % ch, side = (ry - ropeC) / 2.3;
+            if(Math.abs(side) < 1)
+            {
+                const twist = 0.5 + 0.5 * Math.sin(x / N * Math.PI * 34 + side * Math.PI);
+                return [(0.4 + twist * 0.38) * (Math.abs(side) > 0.72 ? 0.82 : 1), 0.46 + (1 - Math.abs(side)) * 0.08];
+            }
+            return [lum, 0.46];
+        };
+    }
     //_fn(x, y) → [밝기, 높이]. _depth : 노말 세기, _rough·_roughVar : 거칠기(낮은 곳일수록 거칠게), _aoStr : 줄눈 AO 세기, _parallax : 높이 0~1의 UV 깊이(0이면 끔)
     private static Make(_frame : CFrame, _key : string, _fn : (_x : number, _y : number) => number[], _depth : number, _rough : number, _roughVar : number, _aoStr : number, _parallax : number)
     {
         const N = CForgeTex.sSize, col = new Uint8Array(N * N * 4), hgt = new Float32Array(N * N);
+        let lum = 0;
         for(let y = 0; y < N; y++)
             for(let x = 0; x < N; x++)
             {
@@ -654,17 +730,33 @@ export class CForgeTex
                 col[o * 4] = col[o * 4 + 1] = col[o * 4 + 2] = v;
                 col[o * 4 + 3] = 255;
                 hgt[o] = Math.max(0, Math.min(1, h));
+                lum += v;
             }
+        lum /= N * N * 255;
         CForgeTex.Upload(_frame, _key, col);
         CForgeTex.sBase.set(_key, col);
         CForgeTex.sPend.set(_key, () =>
         {
-            const nk = _key.replace(".tex", "_n.tex"), mk = _key.replace(".tex", "_m.tex"), nor = CForgeTex.Normal(hgt, N, _depth);
+            const nk = _key.replace(".tex", "_n.tex"), mk = _key.replace(".tex", "_m.tex"), pk = _key.replace(".tex", "_mp.tex");
+            const detail = CForgeTex.DetailH(_key, hgt, col, N, _depth), small = CForgeTex.DownH(detail, CForgeTex.sRealSize, N), nor = CForgeTex.Normal(small, N, _depth);
+            for(let y = 0; y < N; y++)
+                for(let x = 0; x < N; x++)
+                {
+                    let s = 0;
+                    for(let k = -1; k <= 1; k++) for(let m = -1; m <= 1; m++) s += hgt[((y + k + N) % N) * N + ((x + m + N) % N)];
+                    nor.buf[(y * N + x) * 4 + 3] = (0.1 + 0.9 * s / 9) * 255;
+                }
             CForgeTex.Upload(_frame, nk, nor.buf);
             const mat = CForgeTex.Material(hgt, nor.ny, N, _rough, _roughVar, _aoStr);
             CForgeTex.sMatBuf.set(_key, mat);
             CForgeTex.Upload(_frame, mk, mat);
-            return new CForgeTexSurf(nk, mk, _parallax);
+            const pb = CForgeTex.sPBR.get(_key) ?? [_rough, _roughVar * 0.5, _aoStr * 0.4, 0], pbr = CForgeTex.MaterialPBR(hgt, N, pb[0], pb[1], pb[2], pb[3]);
+            CForgeTex.sAOP.set(_key, pbr.ao);
+            CForgeTex.Upload(_frame, pk, pbr.buf);
+            const surf = new CForgeTexSurf(nk, mk, _parallax, pk);
+            surf.mLum = lum;
+            CForgeTex.sKeep.set(_key, { h : hgt, g : col, depth : _depth, detail });
+            return surf;
         });
     }
     //노말·재질 텍스처. 노말·재질을 끈 오브젝트만 쓰면 만들지 않도록 처음 요청할 때 만든다
@@ -678,6 +770,30 @@ export class CForgeTex
             CForgeTex.sSurf.set(_key, s);
         }
         return s ?? null;
+    }
+    //실사 맵은 그 옵션을 켠 오브젝트가 있을 때만 굽는다
+    static EnsureReal(_key : string) : CForgeTexSurf
+    {
+        const surf = CForgeTex.Surf(_key);
+        if(surf == null || surf.mAlbR != null) return surf;
+        const pack = CForgeTex.sKeep.get(_key);
+        if(pack == null) return surf;
+        const N = CForgeTex.sSize, hi = pack.detail != null ? pack.detail : CForgeTex.DetailH(_key, pack.h, pack.g, N, pack.depth);
+        const real = CForgeTex.BakeReal(_key, pack.h, pack.g, N, pack.depth, hi);
+        surf.mRef = real.ref;
+        surf.mAlbR = _key.replace(".tex", "_c.tex");
+        surf.mNorR = _key.replace(".tex", "_nr.tex");
+        surf.mMatR = _key.replace(".tex", "_mr.tex");
+        surf.mMatPBRR = _key.replace(".tex", "_mpr.tex");
+        CForgeTex.sBaseR.set(_key, real.alb);
+        CForgeTex.sAOR.set(_key, real.ao);
+        const Rn = CForgeTex.sRealSize;
+        CForgeTex.Upload(CForgeTex.sFrame, surf.mAlbR, real.alb, Rn);
+        CForgeTex.Upload(CForgeTex.sFrame, surf.mNorR, real.nor, Rn);
+        CForgeTex.Upload(CForgeTex.sFrame, surf.mMatR, real.mat, Rn);
+        CForgeTex.Upload(CForgeTex.sFrame, surf.mMatPBRR, real.matP, Rn);
+        CForgeTex.sKeep.delete(_key);
+        return surf;
     }
 
     //높이에서 접선 공간 노말(RGB)을 구하고 A에 패럴랙스용 높이를 넣는다(셰이더는 1-A를 깊이로 쓴다).
@@ -719,6 +835,361 @@ export class CForgeTex
                 out[i + 3] = 255;
             }
         return out;
+    }
+    //r 높이 0.5의 거칠기, v 낮은 곳일수록 더하는 양, a 홈 AO 세기, mh 높은 곳(납선) 금속. 램버트 맵(_m)은 바꾸지 않고 _mp를 따로 만든다
+    private static sPBR = new Map<string, number[]>();
+    private static FillPBR()
+    {
+        if(CForgeTex.sPBR.size > 0) return;
+        const M = (_k : string, _r : number, _v : number, _a : number, _mh = 0) => CForgeTex.sPBR.set(_k, [_r, _v, _a, _mh]), T = CForgeTex;
+        M(T.sPlaster, 0.72, 0.08, 0.55);
+        M(T.sStone, 0.68, 0.16, 1.1);
+        M(T.sTile, 0.42, 0.16, 0.9);
+        M(T.sWood, 0.55, 0.12, 0.9);
+        M(T.sGlass, 0.12, -0.7, 0.35, 0.85);
+        M(T.sPlank, 0.58, 0.14, 0.9);
+        M(T.sLog, 0.7, 0.12, 1);
+        M(T.sThatch, 0.92, 0.06, 1.1);
+        M(T.sShingle, 0.62, 0.12, 0.95);
+        M(T.sGiwa, 0.36, 0.12, 1);
+        M(T.sChangho, 0.72, 0.1, 0.6);
+        M(T.sChoga, 0.9, 0.06, 0.75);
+        M(T.sSeongdol, 0.6, 0.16, 1.15);
+        M(T.sDoldam, 0.78, 0.16, 1.25);
+        M(T.sKawara, 0.32, 0.12, 0.95);
+        M(T.sShitami, 0.58, 0.12, 0.85);
+        M(T.sKoshi, 0.5, 0.1, 0.85);
+        M(T.sShoji, 0.7, 0.08, 0.55);
+        M(T.sTake, 0.4, 0.1, 0.85);
+        M(T.sIshigaki, 0.7, 0.16, 1.15);
+        M(T.sKaya, 0.9, 0.06, 0.8);
+        M(T.sQingzhuan, 0.62, 0.12, 0.95);
+        M(T.sChuang, 0.5, 0.1, 0.85);
+        M(T.sBrickWall, 0.62, 0.12, 0.85);
+        M(T.sSash, 0.22, -0.85, 0.35);
+        M(T.sTurf, 0.9, 0.05, 0.75);
+        M(T.sHangtu, 0.85, 0.08, 0.85);
+        M(T.sAdobe, 0.84, 0.08, 0.75);
+        M(T.sMudBrick, 0.86, 0.08, 0.95);
+        M(T.sAshlar, 0.48, 0.12, 0.85);
+        M(T.sInca, 0.58, 0.14, 1.15);
+        M(T.sFelt, 0.94, 0.03, 0.35);
+        M(T.sDryCourse, 0.72, 0.16, 1.15);
+        M(T.sHiero, 0.55, 0.12, 0.95);
+    }
+    //IBL이 AO를 한 번 더 곱한다. 램버트 맵처럼 노말 y로 하늘을 넣으면 음영이 두 번 깔린다. 금속은 납선(높이)만
+    private static MaterialPBR(_h : Float32Array, N : number, _rough : number, _roughVar : number, _aoStr : number, _metalHi : number) : { buf : Uint8Array, ao : number }
+    {
+        const R = 4, H = (_x : number, _y : number) => _h[((_y + N) % N) * N + ((_x + N) % N)], out = new Uint8Array(N * N * 4);
+        let sum = 0;
+        for(let y = 0; y < N; y++)
+            for(let x = 0; x < N; x++)
+            {
+                let s = 0, n = 0;
+                for(let k = -R; k <= R; k += 2) for(let m = -R; m <= R; m += 2) { s += H(x + m, y + k); n++; }
+                const h = H(x, y), cav = 1 - Math.max(0, s / n - h) * _aoStr, i = (y * N + x) * 4;
+                const ao = Math.max(0.45, Math.min(1, cav));
+                const rough = Math.max(0.04, Math.min(1, _rough + (0.5 - h) * _roughVar));
+                const metal = _metalHi > 0 ? Math.max(0, Math.min(1, (h - 0.55) / 0.3)) * _metalHi : 0;
+                out[i] = ao * 255; out[i + 1] = rough * 255; out[i + 2] = metal * 255; out[i + 3] = 255;
+                sum += ao;
+            }
+        return { buf : out, ao : sum / (N * N) };
+    }
+    //몸 색, 줄눈 색, 기본 거칠기, 홈 보정, 잔주름, 이끼, 모드, 기본 금속
+    //기본 거칠기·금속이 재질 상수다. 보정은 그 위로 거칠기만 더하고, 금속 상수는 유리 납선만 쓴다
+    //모드 1: 기본 거칠기 = 유리, 홈 보정 = 납선에 더하는 거칠기. 모드 2: 기본 거칠기 = 창틀, 홈 보정 = 유리
+    private static FillReal()
+    {
+        if(CForgeTex.sReal.size > 0) return;
+        const M = (_k : string, _b : number[], _j : number[], _rough : number, _gap : number, _micro : number, _moss = 0, _mode = 0, _metal = 0) =>
+            CForgeTex.sReal.set(_k, [..._b, ..._j, _rough, _gap, _micro, _moss, _mode, _metal]), T = CForgeTex;
+        M(T.sPlaster, [0.78, 0.74, 0.66], [0.62, 0.56, 0.48], 0.96, 0.04, 0.16, 0);
+        M(T.sStone, [0.62, 0.60, 0.56], [0.46, 0.43, 0.38], 0.96, 0.04, 0.14, 0.22);
+        M(T.sTile, [0.58, 0.26, 0.18], [0.28, 0.16, 0.12], 0.74, 0.16, 0.1, 0.04);
+        M(T.sWood, [0.46, 0.30, 0.16], [0.28, 0.17, 0.09], 0.9, 0.06, 0.07);
+        M(T.sGlass, [0.42, 0.43, 0.40], [0.34, 0.46, 0.52], 0.08, 0.4, 0.02, 0, 1, 0.85);
+        M(T.sPlank, [0.52, 0.36, 0.20], [0.30, 0.20, 0.12], 0.9, 0.06, 0.07);
+        M(T.sLog, [0.42, 0.28, 0.16], [0.55, 0.48, 0.32], 0.96, 0.04, 0.08, 0.1);
+        M(T.sThatch, [0.62, 0.48, 0.24], [0.40, 0.30, 0.14], 0.96, 0.04, 0.18);
+        M(T.sShingle, [0.40, 0.28, 0.22], [0.24, 0.16, 0.12], 0.94, 0.04, 0.1, 0.12);
+        M(T.sGiwa, [0.34, 0.34, 0.36], [0.18, 0.18, 0.17], 0.74, 0.16, 0.04, 0.1);
+        M(T.sChangho, [0.84, 0.76, 0.60], [0.42, 0.28, 0.16], 0.94, 0.04, 0.06);
+        M(T.sChoga, [0.70, 0.56, 0.28], [0.46, 0.36, 0.16], 0.96, 0.04, 0.16);
+        M(T.sSeongdol, [0.70, 0.68, 0.64], [0.28, 0.27, 0.25], 0.96, 0.04, 0.12, 0.1);
+        M(T.sDoldam, [0.52, 0.48, 0.42], [0.40, 0.32, 0.22], 0.96, 0.04, 0.16, 0.45);
+        M(T.sKawara, [0.30, 0.32, 0.34], [0.16, 0.16, 0.16], 0.74, 0.16, 0.04, 0.08);
+        M(T.sShitami, [0.44, 0.34, 0.24], [0.26, 0.18, 0.12], 0.9, 0.06, 0.08, 0.15);
+        M(T.sKoshi, [0.50, 0.34, 0.20], [0.32, 0.22, 0.12], 0.9, 0.06, 0.06);
+        M(T.sShoji, [0.90, 0.86, 0.74], [0.48, 0.34, 0.20], 0.94, 0.04, 0.05);
+        M(T.sTake, [0.55, 0.58, 0.30], [0.32, 0.34, 0.16], 0.9, 0.06, 0.06);
+        M(T.sIshigaki, [0.48, 0.46, 0.42], [0.20, 0.19, 0.16], 0.96, 0.04, 0.14, 0.4);
+        M(T.sKaya, [0.66, 0.52, 0.26], [0.42, 0.34, 0.16], 0.96, 0.04, 0.16);
+        M(T.sQingzhuan, [0.42, 0.44, 0.48], [0.72, 0.68, 0.60], 0.96, 0.04, 0.08, 0.12);
+        M(T.sChuang, [0.48, 0.30, 0.18], [0.30, 0.20, 0.12], 0.9, 0.06, 0.06);
+        M(T.sBrickWall, [0.56, 0.26, 0.18], [0.70, 0.64, 0.54], 0.96, 0.04, 0.08, 0.16);
+        M(T.sSash, [0.42, 0.28, 0.16], [0.40, 0.52, 0.58], 0.9, 0.08, 0.04, 0, 2);
+        M(T.sTurf, [0.32, 0.46, 0.18], [0.36, 0.28, 0.16], 0.96, 0.04, 0.2);
+        M(T.sHangtu, [0.62, 0.46, 0.32], [0.48, 0.36, 0.24], 0.96, 0.04, 0.16);
+        M(T.sAdobe, [0.70, 0.54, 0.38], [0.52, 0.40, 0.28], 0.96, 0.04, 0.14);
+        M(T.sMudBrick, [0.56, 0.40, 0.28], [0.46, 0.38, 0.30], 0.96, 0.04, 0.14, 0.08);
+        M(T.sAshlar, [0.74, 0.72, 0.66], [0.56, 0.52, 0.46], 0.96, 0.04, 0.08, 0.06);
+        M(T.sInca, [0.58, 0.52, 0.44], [0.26, 0.24, 0.20], 0.96, 0.04, 0.12, 0.18);
+        M(T.sFelt, [0.58, 0.36, 0.26], [0.42, 0.26, 0.18], 0.96, 0.04, 0.1);
+        M(T.sDryCourse, [0.50, 0.46, 0.40], [0.34, 0.30, 0.24], 0.96, 0.04, 0.14, 0.2);
+        M(T.sHiero, [0.76, 0.64, 0.44], [0.52, 0.42, 0.28], 0.96, 0.04, 0.1, 0.05);
+    }
+    //면 픽셀만 모아 사각으로 평균한다. 줄눈 가중치가 0이라 옆 돌 색이 줄눈을 건너 섞이지 않는다
+    private static FaceBlur(_lum : Float32Array, _w : Float32Array, N : number, _rad : number) : Float32Array
+    {
+        const tmp = new Float32Array(N * N), tw = new Float32Array(N * N), out = new Float32Array(N * N);
+        for(let y = 0; y < N; y++)
+            for(let x = 0; x < N; x++)
+            {
+                let s = 0, w = 0;
+                for(let k = -_rad; k <= _rad; k++)
+                {
+                    const o = y * N + (x + k + N) % N, wt = _w[o];
+                    s += _lum[o] * wt; w += wt;
+                }
+                const o = y * N + x;
+                tmp[o] = s; tw[o] = w;
+            }
+        for(let y = 0; y < N; y++)
+            for(let x = 0; x < N; x++)
+            {
+                let s = 0, w = 0;
+                for(let k = -_rad; k <= _rad; k++)
+                {
+                    const o = ((y + k + N) % N) * N + x;
+                    s += tmp[o]; w += tw[o];
+                }
+                out[y * N + x] = w > 1e-4 ? s / w : _lum[y * N + x];
+            }
+        return out;
+    }
+    //주기 경계에서 이어지는 쌍선형. 실사 확대가 256 격자의 한 칸을 그대로 네모로 키우지 않게 한다
+    private static Sample(_src : Float32Array, N : number, _x : number, _y : number) : number
+    {
+        const x = ((_x % N) + N) % N, y = ((_y % N) + N) % N, x0 = Math.floor(x), y0 = Math.floor(y);
+        const x1 = (x0 + 1) % N, y1 = (y0 + 1) % N, fx = x - x0, fy = y - y0;
+        const a = _src[y0 * N + x0], b = _src[y0 * N + x1], c = _src[y1 * N + x0], d = _src[y1 * N + x1];
+        return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+    }
+    private static SampleU(_src : Uint8Array, N : number, _x : number, _y : number, _c : number) : number
+    {
+        const x = ((_x % N) + N) % N, y = ((_y % N) + N) % N, x0 = Math.floor(x), y0 = Math.floor(y);
+        const x1 = (x0 + 1) % N, y1 = (y0 + 1) % N, fx = x - x0, fy = y - y0;
+        const At = (_ix : number, _iy : number) => _src[(_iy * N + _ix) * 4 + _c] / 255;
+        const a = At(x0, y0), b = At(x1, y0), c = At(x0, y1), d = At(x1, y1);
+        return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+    }
+    //1024 높이를 칸 평균으로 줄인다. 비실사 노말은 실사와 같은 무늬를 이 크기로만 쓴다
+    private static DownH(_src : Float32Array, M : number, N : number) : Float32Array
+    {
+        const s = (M / N) | 0, out = new Float32Array(N * N), inv = 1 / (s * s);
+        for(let y = 0; y < N; y++)
+            for(let x = 0; x < N; x++)
+            {
+                let a = 0;
+                const y0 = y * s, x0 = x * s;
+                for(let j = 0; j < s; j++)
+                    for(let i = 0; i < s; i++) a += _src[(y0 + j) * M + x0 + i];
+                out[y * N + x] = a * inv;
+            }
+        return out;
+    }
+    //실사 노말의 높이. 비실사는 DownH로 256에 맞춰 같은 무늬를 쓴다. 결은 면 위에만 더하고 모서리 턱은 생성 높이에 남긴다
+    private static DetailH(_key : string, _h : Float32Array, _gray : Uint8Array, N : number, _depth : number) : Float32Array
+    {
+        const p = CForgeTex.sReal.get(_key) ?? [0.7, 0.68, 0.64, 0.45, 0.42, 0.38, 0.7, 0.15, 0.12, 0, 0, 0];
+        const micro = p[8], mode = p[10];
+        const fiber = _key == CForgeTex.sThatch || _key == CForgeTex.sChoga || _key == CForgeTex.sKaya || _key == CForgeTex.sTurf;
+        const one = new Float32Array(N * N);
+        one.fill(1);
+        const lum = new Float32Array(N * N), sA = new Float32Array(N * N), flatA = new Float32Array(N * N);
+        for(let i = 0; i < N * N; i++)
+        {
+            const u = Math.max(0, Math.min(1, (_h[i] - 0.16) / 0.34));
+            lum[i] = _gray[i * 4] / 255;
+            sA[i] = u * u * (3 - 2 * u);
+        }
+        const lS = CForgeTex.FaceBlur(lum, one, N, 8), hLow = CForgeTex.FaceBlur(_h, one, N, 3), h2 = new Float32Array(N * N);
+        for(let i = 0; i < N * N; i++)
+        {
+            const flat = 1 - Math.min(1, Math.abs(_h[i] - hLow[i]) / 0.05);
+            flatA[i] = flat;
+            h2[i] = _h[i] + (fiber ? 0 : (lum[i] - lS[i]) * micro * (0.45 + 1.2 * flat));
+        }
+        const M = CForgeTex.sRealSize, hH = new Float32Array(M * M), bal = Math.min(2.2, 6 / Math.max(0.8, _depth));
+        let seed = 1;
+        for(let i = 0; i < _key.length; i++) seed = (Math.imul(seed, 33) + _key.charCodeAt(i)) >>> 0;
+        const px = fiber ? [44, 108, 232] : [36, 84, 188], py = fiber ? [11, 24, 46] : px, amp = fiber ? [0.2, 0.11, 0.05] : [0.42, 0.2, 0.09];
+        for(let y = 0; y < M; y++)
+            for(let x = 0; x < M; x++)
+            {
+                const lx = (x + 0.5) * N / M - 0.5, ly = (y + 0.5) * N / M - 0.5, o = y * M + x;
+                const h = CForgeTex.Sample(h2, N, lx, ly), s = CForgeTex.Sample(sA, N, lx, ly), flat = CForgeTex.Sample(flatA, N, lx, ly);
+                let strand = 0;
+                if(_key == CForgeTex.sChoga)
+                {
+                    const u = (x + 0.5) / M, v = (y + 0.5) / M;
+                    const bend = (CForgeTex.TNoise2(u * 2, v * 3, 2, 3, 41) - 0.5) * 10;
+                    const sx = (((u * N + bend) % N) + N) % N / N;
+                    const fa = CForgeTex.TNoise2(sx * 31, v * 2, 31, 2, 71);
+                    const fb = CForgeTex.TNoise2(sx * 17, v * 3, 17, 3, 79);
+                    const fc = CForgeTex.TNoise2(sx * 53, v * 5, 53, 5, 83);
+                    const fg = CForgeTex.TNoise2(sx * 7, v * 2, 7, 2, 91);
+                    const fl = (fa - 0.5) * 0.26 + (fb - 0.5) * 0.16 + (fc - 0.5) * 0.1 + (fg - 0.5) * 0.12;
+                    const ropeW = Math.max(0, Math.min(1, (h - 0.478) / 0.025));
+                    strand = Math.max(-0.14, Math.min(0.14, fl * 0.75)) * (1 - ropeW);
+                }
+                let g = 0;
+                for(let k = 0; k < 3; k++) g += (CForgeTex.TNoise2(x / M * px[k], y / M * py[k], px[k], py[k], seed + k * 19) - 0.5) * amp[k];
+                const gain = (mode == 1 ? 0.22 : mode == 2 ? 0.4 + 0.6 * s : 1) * (0.42 + 0.58 * Math.max(0, Math.min(1, flat)));
+                hH[o] = h + strand + g * gain * bal;
+            }
+        return hH;
+    }
+    //모서리로 갈수록 어두워지는 값은 높이가 이미 갖고 있어 디퓨즈에서 뺀다. 남기면 노말 조명과 겹친다.
+    //돌·판의 톤과 결은 디퓨즈에 남긴다. 납선·창유리처럼 높이 차가 재질 차이인 경우는 기울기 상한으로 대비를 남긴다.
+    private static BakeReal(_key : string, _h : Float32Array, _gray : Uint8Array, N : number, _depth : number, _hi : Float32Array) : { alb : Uint8Array, nor : Uint8Array, mat : Uint8Array, matP : Uint8Array, ao : number, ref : number[] }
+    {
+        const p = CForgeTex.sReal.get(_key) ?? [0.7, 0.68, 0.64, 0.45, 0.42, 0.38, 0.7, 0.15, 0.12, 0, 0, 0];
+        const body = p.slice(0, 3), joint = p.slice(3, 6), rough = p[6], gap = p[7], micro = p[8], moss = p[9], mode = p[10], metalHi = p[11];
+        const mossC = [0.30, 0.38, 0.20];
+        const Clamp = (_v : number) => Math.max(0, Math.min(1, _v));
+        const Y = (_r : number, _g : number, _b : number) => _r * 0.3 + _g * 0.59 + _b * 0.11;
+        const lum = new Float32Array(N * N), sA = new Float32Array(N * N), one = new Float32Array(N * N);
+        one.fill(1);
+        for(let y = 0; y < N; y++)
+            for(let x = 0; x < N; x++)
+            {
+                const o = y * N + x, u = Math.max(0, Math.min(1, (_h[o] - 0.16) / 0.34));
+                lum[o] = _gray[o * 4] / 255;
+                sA[o] = u * u * (3 - 2 * u);
+            }
+        const hS = CForgeTex.FaceBlur(_h, one, N, 8), lS = CForgeTex.FaceBlur(lum, one, N, 8);
+        let meanH = 0, meanL = 0;
+        for(let i = 0; i < N * N; i++) { meanH += hS[i]; meanL += lS[i]; }
+        meanH /= N * N; meanL /= N * N;
+        let varH = 0, cov = 0;
+        for(let i = 0; i < N * N; i++)
+        {
+            const dh = hS[i] - meanH, dl = lS[i] - meanL;
+            varH += dh * dh; cov += dh * dl;
+        }
+        const slope = varH > 1e-4 ? cov / varH : 0, bUse = Math.max(0, Math.min(0.4, slope));
+        const pat = new Float32Array(N * N), hfA = new Float32Array(N * N);
+        let sumPat = 0, fs = 0, fw = 0, js = 0, jw = 0;
+        for(let i = 0; i < N * N; i++)
+        {
+            pat[i] = lum[i] - bUse * (hS[i] - meanH);
+            hfA[i] = lum[i] - lS[i];
+            sumPat += pat[i];
+            const s = sA[i], wf = s * s, wj = (1 - s) * (1 - s);
+            fs += pat[i] * wf; fw += wf; js += pat[i] * wj; jw += wj;
+        }
+        const meanPat = sumPat / (N * N);
+        const faceMean = fw > 1e-4 ? fs / fw : meanPat, jointMean = jw > 1e-4 ? js / jw : meanPat;
+        const fiber = _key == CForgeTex.sThatch || _key == CForgeTex.sChoga || _key == CForgeTex.sKaya || _key == CForgeTex.sTurf;
+        const hLow = CForgeTex.FaceBlur(_h, one, N, 3), h2 = new Float32Array(N * N);
+        for(let i = 0; i < N * N; i++)
+        {
+            const flat = 1 - Math.min(1, Math.abs(_h[i] - hLow[i]) / 0.05);
+            //패럴랙스에는 생성기 높이만 넣는다. 짚 가닥까지 넣으면 시점에서 흐른다
+            h2[i] = _h[i] + (fiber ? 0 : hfA[i] * micro * (0.45 + 1.2 * flat));
+        }
+        const aoA = new Float32Array(N * N);
+        const Rb = 4, Hh = (_x : number, _y : number) => _h[((_y + N) % N) * N + ((_x + N) % N)];
+        const pb = CForgeTex.sPBR.get(_key), aoStr = (pb != null ? pb[2] : 0.8) * 0.7;
+        for(let y = 0; y < N; y++)
+            for(let x = 0; x < N; x++)
+            {
+                let acc = 0, n = 0;
+                for(let k = -Rb; k <= Rb; k += 2) for(let m = -Rb; m <= Rb; m += 2) { acc += Hh(x + m, y + k); n++; }
+                aoA[y * N + x] = Math.max(0.62, Math.min(1, 1 - Math.max(0, acc / n - Hh(x, y)) * aoStr));
+            }
+        const alb = new Uint8Array(N * N * 4);
+        let sr = 0, sg = 0, sb = 0;
+        for(let i = 0; i < N * N; i++)
+        {
+            const s = sA[i], faceN = pat[i] / Math.max(0.05, faceMean), jointN = pat[i] / Math.max(0.05, jointMean);
+            let k = mode == 0 ? jointN + (faceN - jointN) * s : pat[i] / Math.max(0.05, meanPat);
+            k = Math.max(0.45, Math.min(1.55, k));
+            let r = (joint[0] + (body[0] - joint[0]) * s) * k, g = (joint[1] + (body[1] - joint[1]) * s) * k, b = (joint[2] + (body[2] - joint[2]) * s) * k;
+            if(_key == CForgeTex.sChoga)
+            {
+                //세로 결을 같은 색의 명암으로 두면 실사 조명에서 나무판이 된다. 면은 대비를 낮추고 밝은 가닥만 노랗게, 새끼 꼬임은 남긴다
+                const rope = _h[i] > 0.47, t = rope ? k : 1 + (k - 1) * 0.5, u = Clamp((t - 0.5) / 0.85);
+                const hi = [body[0] + 0.14, body[1] + 0.08, Math.max(0, body[2] - 0.06)];
+                r = joint[0] + (hi[0] - joint[0]) * u; g = joint[1] + (hi[1] - joint[1]) * u; b = joint[2] + (hi[2] - joint[2]) * u;
+            }
+            if(moss > 0 && mode == 0)
+            {
+                const mk = Math.min(0.5, moss * (1 - s) * (1 - s));
+                if(mk > 0)
+                {
+                    const y0 = Y(r, g, b);
+                    r = r * (1 - mk) + mossC[0] * mk; g = g * (1 - mk) + mossC[1] * mk; b = b * (1 - mk) + mossC[2] * mk;
+                    const y1 = Y(r, g, b);
+                    if(y1 > 1e-4) { const sc = y0 / y1; r *= sc; g *= sc; b *= sc; }
+                }
+            }
+            r = Clamp(r); g = Clamp(g); b = Clamp(b);
+            const o = i * 4;
+            alb[o] = r * 255; alb[o + 1] = g * 255; alb[o + 2] = b * 255; alb[o + 3] = 255;
+            sr += r; sg += g; sb += b;
+        }
+        const M = CForgeTex.sRealSize, Sc = M / N, albH = new Uint8Array(M * M * 4);
+        const mat = new Uint8Array(M * M * 4), matP = new Uint8Array(M * M * 4);
+        let seed = 1;
+        for(let i = 0; i < _key.length; i++) seed = (Math.imul(seed, 33) + _key.charCodeAt(i)) >>> 0;
+        const freq = Math.max(24, Math.round(36 + micro * 640));
+        const px = fiber ? Math.max(80, Math.round(120 + micro * 560)) : freq, py = fiber ? Math.max(16, Math.round(18 + micro * 120)) : freq;
+        const At = (_src : Float32Array, _x : number, _y : number) => CForgeTex.Sample(_src, N, _x, _y);
+        let sum = 0;
+        for(let y = 0; y < M; y++)
+            for(let x = 0; x < M; x++)
+            {
+                const lx = (x + 0.5) * N / M - 0.5, ly = (y + 0.5) * N / M - 0.5, o = y * M + x;
+                const h = At(h2, lx, ly), s = At(sA, lx, ly), hf = At(hfA, lx, ly), ao = At(aoA, lx, ly);
+                const g1 = CForgeTex.TNoise2(x / M * px, y / M * py, px, py, seed) - 0.5;
+                const qx = Math.max(8, Math.round(px * 0.42)), qy = fiber ? Math.max(8, Math.round(py * 0.7)) : qx;
+                const g2 = CForgeTex.TNoise2(x / M * qx, y / M * qy, qx, qy, seed + 19) - 0.5;
+                const grit = g1 * 0.62 + g2 * 0.38;
+                const i = o * 4;
+                albH[i] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 0)) * 255;
+                albH[i + 1] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 1)) * 255;
+                albH[i + 2] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 2)) * 255;
+                albH[i + 3] = 255;
+                let rg = rough, met = 0;
+                if(mode == 1)
+                {
+                    const came = Math.max(0, Math.min(1, (h - 0.55) / 0.3));
+                    met = came * metalHi; rg = Math.min(1, rough + came * gap);
+                }
+                else if(mode == 2) rg = Math.min(1, gap + s * Math.max(0, rough - gap));
+                else
+                {
+                    const grain = Math.min(micro, Math.abs(hf) * 0.85), pore = Math.min(micro * 0.4, Math.abs(grit) * micro);
+                    rg = Math.min(1, rough + (1 - s) * gap + grain + pore);
+                }
+                const aoV = mode == 0 ? Math.max(0.62, Math.min(1, ao * (0.78 + 0.22 * s) * (hf < -0.06 ? 0.92 : 1))) : ao;
+                const rl = Math.max(rg, Math.min(1, rg + 0.25));
+                mat[i] = matP[i] = aoV * 255; mat[i + 3] = matP[i + 3] = 255;
+                mat[i + 1] = rl * 255; matP[i + 1] = rg * 255; mat[i + 2] = 0; matP[i + 2] = met * 255;
+                sum += aoV;
+            }
+        const nor = CForgeTex.Normal(_hi, M, _depth * Sc).buf;
+        for(let y = 0; y < M; y++)
+            for(let x = 0; x < M; x++)
+            {
+                const hm = At(h2, (x + 0.5) * N / M - 0.5, (y + 0.5) * N / M - 0.5);
+                nor[(y * M + x) * 4 + 3] = (0.1 + 0.9 * Math.max(0, Math.min(1, hm))) * 255;
+            }
+        const c = N * N;
+        return { alb : albH, nor, mat, matP, ao : sum / (M * M), ref : [sr / c, sg / c, sb / c] };
     }
 
     private static Upload(_frame : CFrame, _key : string, _buf : Uint8Array, N : number = CForgeTex.sSize)

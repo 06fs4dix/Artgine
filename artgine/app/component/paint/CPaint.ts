@@ -795,7 +795,7 @@ export class CPaint extends CComponent implements IMat
 	}
 	RemoveTag(_tag : string)
 	{
-		this.mTag.delete(_tag);
+		if(this.mTag.delete(_tag)==false)	return;
 		this.mTagKey=null;
 		this.ClearBatch();
 	}

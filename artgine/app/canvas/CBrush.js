@@ -297,7 +297,7 @@ export class CBrush extends CObject {
                 rpShadowReadTerrain.mRenderTarget = pal.GetShadowReadTex();
                 rpShadowReadTerrain.mAlpha = false;
                 rpShadowReadTerrain.mTag.add("shadowRead");
-                rpShadowReadTerrain.mPriority = CRenderPass.ePriority.BackGround;
+                rpShadowReadTerrain.mPriority = CRenderPass.ePriority.BackGround + 10;
                 rpShadowReadTerrain.PushOr([
                     new CCondition("class", "==", "CPaintTerrain", "Paint_OR_Group")
                 ]);
@@ -357,16 +357,6 @@ export class CBrush extends CObject {
                 this.mAutoRPUpdate = CUpdate.eType.Already;
             else if (this.mAutoRPUpdate == CUpdate.eType.Already)
                 this.mAutoRPUpdate = CUpdate.eType.Not;
-            if (this.mUpdateEnv == CUpdate.eType.Updated) {
-                const envTex = this.mFrame.Pal().GetEnvMapTex();
-                for (const ri of this.mRenInfoMap.values()) {
-                    if (ri.mRP != null && ri.mRP.mRenderTarget == envTex)
-                        ri.mSleepReset = true;
-                }
-                this.mUpdateEnv = CUpdate.eType.Already;
-            }
-            else if (this.mUpdateEnv == CUpdate.eType.Already)
-                this.mUpdateEnv = CUpdate.eType.Not;
             this.mLightCount = 0;
             this.mShadowCount = 0;
             this.mShadowTexOff = 0;

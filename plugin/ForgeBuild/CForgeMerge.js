@@ -17,6 +17,8 @@ export class CForgeMergeOpt {
     mNormal = true;
     mParallax = true;
     mMaterial = true;
+    mPBR = false;
+    mReal = false;
     constructor(_init = null) { if (_init != null)
         Object.assign(this, _init); }
 }
@@ -131,10 +133,12 @@ export class CForgeMerged {
             if (p.buf.mIdx.length == 0)
                 continue;
             const surf = p.tex != null ? CForgeTex.Surf(p.tex) : null;
-            const near = _lod == 0, ao = !near && surf != null && O.mMaterial ? CForgeTex.MeanAO(p.tex) : 1;
-            const d = p.tex != null ? CForgeTex.Tint(p.tex, p.rgb.map(_v => _v * ao)) : CForgeTex.Solid(p.rgb);
-            const n = near && O.mNormal && surf != null ? surf.mNor : null;
-            const m = O.mMaterial ? (near && surf != null ? surf.mMat : CForgeTex.sFlatMat) : null;
+            const near = _lod == 0, ao = !near && surf != null && O.mMaterial ? CForgeTex.MeanAO(p.tex, O.mPBR, O.mReal) : 1;
+            const d = p.tex != null ? CForgeTex.Tint(p.tex, p.rgb.map(_v => _v * ao), O.mReal) : CForgeTex.Solid(p.rgb);
+            const n = near && O.mNormal && surf != null ? (O.mReal && surf.mNorR != null ? surf.mNorR : surf.mNor) : null;
+            const mat = surf == null ? null : (O.mReal ? (O.mPBR ? surf.mMatPBRR : surf.mMatR) : (O.mPBR && surf.mMatPBR != null ? surf.mMatPBR : surf.mMat));
+            const flat = O.mReal ? (O.mPBR ? CForgeTex.sFlatMatPBRR : CForgeTex.sFlatMatR) : (O.mPBR ? CForgeTex.sFlatMatPBR : CForgeTex.sFlatMat);
+            const m = O.mMaterial ? (near && surf != null ? mat : flat) : null;
             const cls = n != null && O.mParallax && surf.mParallax > 0 ? "px" + surf.mParallax : "std";
             let list = _c.mPack.get(cls);
             if (list == null) {
@@ -167,6 +171,10 @@ export class CForgeMerged {
                     if (this.mOpt.mMaterial)
                         pt.SetMaterial(-1, -1, 1, -1);
                     pt.PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.Lambert));
+                    if (this.mOpt.mPBR) {
+                        pt.PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.CookTorrance));
+                        pt.Env();
+                    }
                     if (cls.startsWith("px"))
                         pt.ParallaxNormal(Number(cls.slice(2)), CForgeTex.sParallaxNear, CForgeTex.sParallaxFar, 0);
                     pt.PushTag(CPaint.eTag.Light);

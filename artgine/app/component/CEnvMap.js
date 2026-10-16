@@ -14,9 +14,11 @@ import { CShaderAttr } from "../../render/CShaderAttr.js";
 import { SDF } from "../../z_file/SDF.js";
 export default class CEnvMap extends CBrushComp {
     mRadius = 0;
-    constructor(_tag) {
+    mSize = 128;
+    mCycle = 100000;
+    constructor() {
         super("envMap_" + CUniqueID.Get());
-        this.mReadTag = _tag;
+        this.mReadTag = this.mTexKey;
     }
     Update(_update) {
         super.Update(_update);
@@ -28,6 +30,7 @@ export default class CEnvMap extends CBrushComp {
         if (this.mWriteRP.length == 0) {
             let pal = this.mBrush.mFrame.Pal();
             const rp2D = this.PushRPAuto(new CRPAuto(pal.Sl2DKey()));
+            rp2D.mCopy = false;
             rp2D.SetKey("Forward_2D");
             rp2D.mCullFace = CRenderPass.eCull.None;
             rp2D.PushOr([
@@ -77,6 +80,31 @@ export default class CEnvMap extends CBrushComp {
             this.mBrush.mFrame.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA8, 1)], new CVec2(2, 2), "NoneEnv.tex");
             this.mBrush.mFrame.Res().Find("NoneEnv.tex").SetAutoResize(false);
         }
+        this.mTexOff = this.mBrush.mEnvmapTexOff;
+        for (let i = 0; i < 6; i++) {
+            for (const rp of this.mWriteRP) {
+                const srpKey = this.mTexKey + rp.Key() + i;
+                let srp = this.mBrush.FindAutoRP(srpKey);
+                if (srp == null) {
+                    srp = this.mBrush.PushAutoRP(srpKey, rp.Export());
+                    srp.mPriority += i + this.mBrush.mEnvmapTexOff;
+                    srp.PushOr(new CCondition("GetTagKey().indexOf(envMap_)", "==", -1, "envmapChk"));
+                    srp.PushOr(new CCondition(`mTag[${this.mReadTag}]`, "envmapChk"));
+                    srp.mRenderTarget = this.GetTex();
+                    srp.mCamera = this.mTexKey + i;
+                    srp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, "NoneEnv.tex"));
+                    srp.Reset();
+                }
+                if (srp.mOr[srp.mOr.length - 1].mState != `mTag[${this.mReadTag}]`) {
+                    this.mBrush.ClearRen();
+                }
+                if (srp.mRenderTargetUse.has(this.mBrush.mEnvmapTexOff + i) == false || srp.mCycle != this.mCycle) {
+                    srp.mRenderTargetUse = new Set([this.mBrush.mEnvmapTexOff + i]);
+                    srp.mCycle = this.mCycle;
+                    this.UpdateThisEnvMap(i);
+                }
+            }
+        }
         if (this.mBrush.mCameraMap.has(this.mTexKey + 0) == false || this.GetOwner().mUpdateMat != 0) {
             const seye = this.GetOwner().GetMat().xyz;
             const cubeDir = [
@@ -87,53 +115,57 @@ export default class CEnvMap extends CBrushComp {
                 new CVec3(0, 1, 0), new CVec3(0, 1, 0), new CVec3(0, 0, 1),
                 new CVec3(0, 0, -1), new CVec3(0, 1, 0), new CVec3(0, 1, 0)
             ];
+            const far = this.mRadius == 0 ? 100000 : this.mRadius;
             for (let i = 0; i < 6; i++) {
                 const virtualCam = this.mBrush.GetCamera(this.mTexKey + i);
                 const slook = CMath.V3AddV3(seye, cubeDir[i]);
-                if (virtualCam.Init(seye, slook, cubeUp[i])) {
-                    virtualCam.SetFov(2 * Math.atan(128 / 127));
-                    virtualCam.mWidth = 128;
-                    virtualCam.mHeight = 128;
-                    virtualCam.SetSize(128, 128);
+                if (virtualCam.Init(seye, slook, cubeUp[i]) || far != virtualCam.GetFar()) {
+                    virtualCam.SetFov(2 * Math.atan(this.mSize / (this.mSize - 1)));
+                    virtualCam.SetFar(far);
+                    virtualCam.mWidth = this.mSize;
+                    virtualCam.mHeight = this.mSize;
+                    virtualCam.SetSize(this.mSize, this.mSize);
                     virtualCam.ResetPerspective();
+                    this.UpdateThisEnvMap(i);
+                    this.mBrush.mUpdateEnv = CUpdate.eType.Updated;
                 }
             }
         }
-        const o = this.mBrush.mEnvmapCount * 4;
-        if (o + 4 <= this.mBrush.mEnvmapPos.length) {
-            const pos = this.GetOwner().GetMat().xyz;
-            this.mBrush.mEnvmapPos[o + 0] = pos.x;
-            this.mBrush.mEnvmapPos[o + 1] = pos.y;
-            this.mBrush.mEnvmapPos[o + 2] = pos.z;
-            this.mBrush.mEnvmapPos[o + 3] = this.mRadius;
-        }
-        const needLayer = this.mBrush.mEnvmapTexOff + 6;
-        if (envmapTex.GetInfo()[0].mCount < needLayer) {
-            this.mBrush.mFrame.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA8, needLayer)], new CVec2(envmapTex.GetWidth(), envmapTex.GetHeight()), this.GetOwner().GetFrame().Pal().GetEnvMapTex());
-            this.mBrush.mFrame.Res().Find(this.GetTex()).SetAutoResize(false);
-            this.mBrush.mUpdateEnv = CUpdate.eType.Updated;
-        }
-        this.mTexOff = this.mBrush.mEnvmapTexOff;
-        for (let i = 0; i < 6; i++) {
-            for (const rp of this.mWriteRP) {
-                const srpKey = this.mTexKey + rp.Key() + i;
-                let srp = this.mBrush.FindAutoRP(srpKey);
-                if (srp == null) {
-                    srp = this.mBrush.PushAutoRP(srpKey, rp.Export());
-                    srp.mPriority += i + this.mBrush.mEnvmapTexOff;
-                    srp.PushAnd(new CCondition(`mTag[${this.mReadTag}]`));
-                    srp.mRenderTarget = this.GetTex();
-                    srp.mCamera = this.mTexKey + i;
-                    srp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, "NoneEnv.tex"));
-                    srp.Reset();
-                }
-                srp.mRenderTargetUse = new Set([this.mBrush.mEnvmapTexOff + i]);
-                srp.mAnd[srp.mAnd.length - 1].mState = `mTag[${this.mReadTag}]`;
-                srp.mCycle = 100000000;
-            }
-        }
+        this.mBrush.mEnvmapPos[this.mBrush.mEnvmapCount * 4 + 0] = this.GetOwner().GetMat().F32A()[12];
+        this.mBrush.mEnvmapPos[this.mBrush.mEnvmapCount * 4 + 1] = this.GetOwner().GetMat().F32A()[13];
+        this.mBrush.mEnvmapPos[this.mBrush.mEnvmapCount * 4 + 2] = this.GetOwner().GetMat().F32A()[14];
+        this.mBrush.mEnvmapPos[this.mBrush.mEnvmapCount * 4 + 3] = this.mRadius;
+        this.mBrush.mUpdateEnv = CUpdate.eType.Updated;
         this.mBrush.mEnvmapTexOff += 6;
         this.mBrush.mEnvmapCount++;
+        if (envmapTex.GetInfo()[0].mCount < this.mBrush.mEnvmapTexOff) {
+            this.mBrush.mFrame.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA8, this.mBrush.mEnvmapTexOff)], new CVec2(envmapTex.GetWidth(), envmapTex.GetHeight()), this.GetOwner().GetFrame().Pal().GetEnvMapTex());
+            this.UpdateAllEnvMap();
+        }
+    }
+    UpdateAllEnvMap() {
+        if (this.mBrush == null)
+            return;
+        for (const ri of this.mBrush.mRenInfoMap.values()) {
+            if (ri.mRP != null && ri.mRP.mRenderTarget == this.GetTex())
+                ri.mSleepReset = true;
+        }
+    }
+    UpdateThisEnvMap(_faceIdx = -1) {
+        if (this.mBrush == null)
+            return;
+        for (const rp of this.mWriteRP) {
+            const srpKey = this.mTexKey + rp.Key() + _faceIdx;
+            const srp = this.mBrush.FindAutoRP(srpKey);
+            if (srp == null)
+                continue;
+            for (const ri of this.mBrush.mRenInfoMap.values()) {
+                if (ri.mRP != null && ri.mRP.Key() == srp.Key() && ri.mRP.mRenderTarget == this.GetTex()) {
+                    ri.mSleepReset = true;
+                    break;
+                }
+            }
+        }
     }
     Refresh() {
         if (this.mBrush != null && this.mTexKey != null) {

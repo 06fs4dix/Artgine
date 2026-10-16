@@ -376,7 +376,6 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 				rpShadowRead3D.PushAnd(new CCondition("mTag[shadow]"));
 				rpShadowRead3D.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, pal.GetShadowWriteTex()));//그림자라이트텍스쳐
 
-
 				const rpShadowReadVoxel=this.PushAutoRP("ShadowRead_Voxel",new CRPAuto(pal.SlVoxelKey()));
 				rpShadowReadVoxel.SetKey("ShadowRead_Voxel");
 				rpShadowReadVoxel.mRenderTarget = pal.GetShadowReadTex();//그림자리드텍스쳐
@@ -396,7 +395,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 				rpShadowReadTerrain.mRenderTarget = pal.GetShadowReadTex();//그림자리드텍스쳐
 				rpShadowReadTerrain.mAlpha=false;
 				rpShadowReadTerrain.mTag.add("shadowRead");
-				rpShadowReadTerrain.mPriority=CRenderPass.ePriority.BackGround;
+				rpShadowReadTerrain.mPriority=CRenderPass.ePriority.BackGround+10;//지형을 나중에 그려 3D 물체에 가려진 부분은 early-Z로 버린다
 				rpShadowReadTerrain.PushOr([
 					new CCondition("class","==","CPaintTerrain","Paint_OR_Group")
 				]);
@@ -481,20 +480,6 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 				this.mAutoRPUpdate=CUpdate.eType.Already;
 			else if(this.mAutoRPUpdate==CUpdate.eType.Already)
 				this.mAutoRPUpdate=CUpdate.eType.Not;
-			if(this.mUpdateEnv==CUpdate.eType.Updated)
-			{
-				//envmap RP는 mCycle이 커서 한 번만 그려진다. 슬립을 다시 맞추게 해서 이번 프레임에 전부 다시 그린다.
-				//Updated는 이전 프레임 컴포넌트 업데이트 중에 켜지므로, 그 프레임에 먼저 처리된 envmap까지 여기서 한 번에 처리된다
-				const envTex=this.mFrame.Pal().GetEnvMapTex();
-				for(const ri of this.mRenInfoMap.values())
-				{
-					if(ri.mRP!=null && ri.mRP.mRenderTarget==envTex)
-						ri.mSleepReset=true;
-				}
-				this.mUpdateEnv=CUpdate.eType.Already;
-			}
-			else if(this.mUpdateEnv==CUpdate.eType.Already)
-				this.mUpdateEnv=CUpdate.eType.Not;
 
 			this.mLightCount=0;
 			this.mShadowCount=0;

@@ -82,12 +82,15 @@ export class CForgeMeshBuf {
         }
         return { nan, badIdx, degenerate };
     }
-    Commit(_frame, _key, _tex, _nor = false, _mat = false) {
+    Commit(_frame, _key, _tex, _nor = false, _mat = false, _pbr = false, _real = false) {
         if (this.mIdx.length == 0)
             return false;
         const n = this.Count();
-        const surf = _nor || _mat ? CForgeTex.Surf(_tex) : null, list = [_tex];
-        const ni = surf != null && _nor ? list.push(surf.mNor) - 1 : 0, mi = surf != null && _mat ? list.push(surf.mMat) - 1 : 0;
+        const surf = _real ? CForgeTex.EnsureReal(_tex) : (_nor || _mat ? CForgeTex.Surf(_tex) : null);
+        const alb = _real && surf != null && surf.mAlbR != null ? surf.mAlbR : _tex, list = [alb];
+        const nor = surf == null ? null : (_real && surf.mNorR != null ? surf.mNorR : surf.mNor);
+        const mat = surf == null ? null : (_real ? (_pbr ? surf.mMatPBRR : surf.mMatR) : (_pbr && surf.mMatPBR != null ? surf.mMatPBR : surf.mMat));
+        const ni = surf != null && _nor && nor != null ? list.push(nor) - 1 : 0, mi = surf != null && _mat && mat != null ? list.push(mat) - 1 : 0;
         const tex = new Float32Array(n * 3);
         for (let i = 0; i < n; i++) {
             tex[i * 3 + 1] = ni;

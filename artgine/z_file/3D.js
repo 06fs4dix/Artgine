@@ -1,4 +1,4 @@
-import { Build, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, MatTypeToMat, Sam2DToColor, Sam2DGradToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrNearestToMat, clamp, floor, min, abs, max, dFdy, dFdx, length, SaturateFloat, smoothstep, V2SubV2, V2MulFloat, V2DivV2, V2AddV2, V2Len, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V3Len, V3Mix, V3SubV3, SaturateV3, V3Cross, V3Sqrt, V3MulV3, V4MulMatCoordi, V4Min, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, Sam2DArrNearestToV4, sqrt, sin, } from "./Shader";
+import { Build, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, MatTypeToMat, Sam2DToColor, Sam2DGradToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrNearestToMat, clamp, floor, min, abs, max, dFdy, dFdx, length, SaturateFloat, smoothstep, V2SubV2, V2MulFloat, V2DivV2, V2AddV2, V2Len, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V3Len, V3Mix, V3SubV3, SaturateV3, V3Cross, V3Sqrt, V3MulV3, V4MulMatCoordi, V4Min, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, Sam2DArrNearestToV4, sqrt, sin, Sam2DToV4, vertexID, } from "./Shader";
 import { SDF } from "./SDF";
 import { VFXDown2, GetTexCodiedUV, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, ColorModalFun, AlphaModalFun, vfxMat0, vfxMat1 } from "./ColorFun";
 import { ambientColor, envCount, envPos, EnvNearest, GetMaterial, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, material, cullMask, sam2DCount, samCubeCount } from "./Light";
@@ -43,6 +43,12 @@ var screenResolution = new CVec2(1.0, 1.0);
 var weightArrMat = new Sam2DArrMat(1, SDF.eUni.MatSkin);
 var weightBakeMat = 9.0;
 var weightBakeIndex;
+var morphTex = 8.0;
+var morphInfo = new CVec4(0.0, 2048.0, 0.0, 0.0);
+var morphIdx0 = new CVec4(-1.0, -1.0, -1.0, -1.0);
+var morphIdx1 = new CVec4(-1.0, -1.0, -1.0, -1.0);
+var morphW0 = new CVec4(0.0, 0.0, 0.0, 0.0);
+var morphW1 = new CVec4(0.0, 0.0, 0.0, 0.0);
 var time = Attribute(0, "time");
 var waterDeep = new CVec4(0.0, 0.0, 0.0, 0.0);
 var shallowColor = new CVec3(0.0, 0.0, 0.0);
@@ -175,6 +181,27 @@ function GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff, sam2DCount, _dx, _
     }
     return N;
 }
+function MorphOne(_pos, _idx, _w) {
+    var rPos = _pos;
+    if (_idx > -0.5 && _w != 0.0) {
+        var id = _idx * morphInfo.x + vertexID;
+        var row = floor(id / morphInfo.y);
+        var d = Sam2DToV4(new CVec2(morphTex, row), id - row * morphInfo.y);
+        rPos = V3AddV3(_pos, V3MulFloat(d.xyz, _w));
+    }
+    return rPos;
+}
+function ApplyMorph(_pos) {
+    var p = MorphOne(_pos, morphIdx0.x, morphW0.x);
+    p = MorphOne(p, morphIdx0.y, morphW0.y);
+    p = MorphOne(p, morphIdx0.z, morphW0.z);
+    p = MorphOne(p, morphIdx0.w, morphW0.w);
+    p = MorphOne(p, morphIdx1.x, morphW1.x);
+    p = MorphOne(p, morphIdx1.y, morphW1.y);
+    p = MorphOne(p, morphIdx1.z, morphW1.z);
+    p = MorphOne(p, morphIdx1.w, morphW1.w);
+    return p;
+}
 function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_ref) {
     BranchBegin("codi", "C", [texCodi]);
     to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
@@ -191,7 +218,11 @@ function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_ref) {
     BranchBegin("weightMat", "WG", [weightArrMat, weightBakeMat, weightBakeIndex]);
     woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     BranchEnd();
-    var P = new CVec4(f3_ver, 1.0);
+    var morphPos = f3_ver;
+    BranchBegin("morph", "MP", [morphTex, morphInfo, morphIdx0, morphIdx1, morphW0, morphW1]);
+    morphPos = ApplyMorph(f3_ver);
+    BranchEnd();
+    var P = new CVec4(morphPos, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
     P = ApplyWind(P, skin, f4_we, time);
@@ -247,7 +278,11 @@ function vs_main_gBuffer(f3_ver, f2_uv, f4_wi, f4_we, f3_nor, f4_tan, f3_ref) {
     to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
     to_tangent = V3Nor(V3SubV3(to_tangent, V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))));
     to_binormal = V3Nor(V3MulFloat(V3Cross(to_normal, to_tangent), f4_tan.w));
-    var P = new CVec4(f3_ver, 1.0);
+    var morphPos = f3_ver;
+    BranchBegin("morph", "MP", [morphTex, morphInfo, morphIdx0, morphIdx1, morphW0, morphW1]);
+    morphPos = ApplyMorph(f3_ver);
+    BranchEnd();
+    var P = new CVec4(morphPos, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
     P = ApplyWind(P, skin, f4_we, time);
@@ -500,7 +535,11 @@ function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv, f3_ref) {
     BranchBegin("weightMat", "WG", [weightArrMat, weightBakeMat, weightBakeIndex]);
     woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     BranchEnd();
-    var P = new CVec4(f3_ver, 1.0);
+    var morphPos = f3_ver;
+    BranchBegin("morph", "MP", [morphTex, morphInfo, morphIdx0, morphIdx1, morphW0, morphW1]);
+    morphPos = ApplyMorph(f3_ver);
+    BranchEnd();
+    var P = new CVec4(morphPos, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
     P = ApplyWind(P, skin, f4_we, time);
@@ -555,7 +594,11 @@ function vs_main_shadow_read(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_ref
     BranchBegin("weightMat", "WG", [weightArrMat, weightBakeMat, weightBakeIndex]);
     woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     BranchEnd();
-    var P = new CVec4(f3_ver, 1.0);
+    var morphPos = f3_ver;
+    BranchBegin("morph", "MP", [morphTex, morphInfo, morphIdx0, morphIdx1, morphW0, morphW1]);
+    morphPos = ApplyMorph(f3_ver);
+    BranchEnd();
+    var P = new CVec4(morphPos, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
     P = ApplyWind(P, skin, f4_we, time);

@@ -419,6 +419,22 @@ export class CClipShaderAttr extends CClip
 		
 	}
 };
+//모프 타깃 하나의 가중치를 mTime부터 mDelay 동안 mST에서 mED로 바꾼다. 끝난 뒤에는 mED가 유지된다
+export class CClipMorph extends CClip
+{
+	public mName : string;
+	public mST : number;
+	public mED : number;
+
+	public mCurve=new CCurve();
+	constructor(_time : number,_delay : number,_name : string="",_st : number=0,_ed : number=1)
+	{
+		super(_time,_delay);
+		this.mName=_name;
+		this.mST=_st;
+		this.mED=_ed;
+	}
+};
 export class CClipForce extends CClip
 {
 	public mForce : CForce;

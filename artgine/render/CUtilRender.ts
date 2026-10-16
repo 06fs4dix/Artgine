@@ -1,4 +1,6 @@
 import { CAlert } from "../basic/CAlert.js";
+import { CMeshMorph } from "./CMesh.js";
+import { SDF } from "../z_file/SDF.js";
 import { CConsol } from "../basic/CConsol.js";
 import { CTree } from "../basic/CTree.js";
 import { CBound } from "../geometry/CBound.js";
@@ -17,7 +19,7 @@ import { CMeshDataNode } from "./CMeshDataNode.js";
 import { CMeshPaint } from "./CMeshPaint.js";
 import { CMeshTreeUpdate } from "./CMeshTreeUpdate.js";
 import { CVertexFormat } from "./CShader.js";
-import { CTexture } from "./CTexture.js";
+import { CTexture, CTextureInfo } from "./CTexture.js";
 
 
 
@@ -556,7 +558,7 @@ export class CUtilRender
 	//인덱스에 T페이스가 다르다는 것은 새로운 정점을 만들어야 한다는 의미다.
 	//텍스쳐 좌표를 공유할수 없다는 의미
 	static UvIndexToVertexIndex(pa_po_vertex: CFloat32Mgr, pa_po_uv: Array<CMeshBuf>, pa_po_weight: CFloat32Mgr,
-		pa_po_weightIndex: CFloat32Mgr, pa_po_texOff: CFloat32Mgr, RF_index: Array<number>) {
+		pa_po_weightIndex: CFloat32Mgr, pa_po_texOff: CFloat32Mgr, RF_index: Array<number>, _srcMap: Array<number> = null) {
 
 		var L_indexNum = RF_index.length / 3;
 
@@ -598,6 +600,7 @@ export class CUtilRender
 						nwi.Push(pa_po_weightIndex.V4(RF_index[i * 3 + j]));
 					}
 					nto.Push(pa_po_texOff.V3(RF_index[i * 3 + j]));
+					if (_srcMap != null) _srcMap.push(RF_index[i * 3 + j]);
 
 
 					var off = nv.Size(3) - 1;
@@ -1859,11 +1862,12 @@ export class CUtilRender
 		uvEps: number = 1e-6,
 		norEps: number = 1e-6,
 		useUV: boolean = true,
-		useNormal: boolean = true
-	): void {
+		useNormal: boolean = true,
+		_morph: CMeshMorph = null
+	): Array<number> {
 		const posEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
 		const norEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
-		if (!posEnt) { console.error("Position buffer not found."); return; }
+		if (!posEnt) { console.error("Position buffer not found."); return null; }
 
 		const posBuf = posEnt.bufF as CFloat32Mgr;
 		const uvEnts = _ci.GetVFType(CVertexFormat.eIdentifier.UV);
@@ -1904,6 +1908,16 @@ export class CUtilRender
 				const f = vb.bufF.GetArray();
 				k += `|${vb.vfType}:`;
 				for (let j = 0; j < e; ++j) k += f[i * e + j] + ",";
+			}
+			if (_morph != null) {
+				//같은 위치라도 모프 이동량이 다르면 합치지 않는다
+				const md = _morph.delta.GetArray();
+				const mn = _morph.GetVertexCount();
+				for (let t = 0; t < _morph.names.length; ++t) {
+					const o = (t * mn + i) * 3;
+					if (md[o] != 0 || md[o + 1] != 0 || md[o + 2] != 0)
+						k += `|m${t}:${md[o]},${md[o + 1]},${md[o + 2]}`;
+				}
 			}
 			return k;
 		};
@@ -1954,6 +1968,7 @@ export class CUtilRender
 		for (let b = 0; b < _ci.vertex.length; ++b) _ci.vertex[b].bufF = outBufs[b];
 		_ci.vertexCount = outPos.Size(3);
 		_ci.indexCount = inb.bufI.length;
+		return mapOldToNew;
 	}
 	/*
 		angleDeg=10° → 중앙 주변이 하드 스플릿되어 별무늬/광택 꼬임이 사라짐.
@@ -1981,15 +1996,17 @@ export class CUtilRender
 		uvEps: number = 1e-6,
 		norEps: number = 1e-6,
 		useUV: boolean = true,
-		useNormal: boolean = true
-	): void {
+		useNormal: boolean = true,
+		smoothAngleDeg: number = 60,
+		_morph: CMeshMorph = null
+	): Array<number> {
 		// 1) 웰딩
-		CUtilRender.WeldVerticesByPosUvNor(_ci, posEps, uvEps, norEps, useUV, useNormal);
+		const weldMap = CUtilRender.WeldVerticesByPosUvNor(_ci, posEps, uvEps, norEps, useUV, useNormal, _morph);
 
 		// 2) 노멀 재계산 (네 함수)
 		const posEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
 		let norEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
-		if (!posEnt) { console.error("Position buffer not found."); return; }
+		if (!posEnt) { console.error("Position buffer not found."); return weldMap; }
 		if (!norEnt) norEnt = _ci.Create(CVertexFormat.eIdentifier.Normal);
 
 		const posBuf = posEnt.bufF as CFloat32Mgr;
@@ -2013,10 +2030,83 @@ export class CUtilRender
 			accNormals[i2] = CMath.V3AddV3(accNormals[i2], faceNormal);
 		}
 
+		// UV 심/기존 노말 차이로 웰딩되지 않은 같은 위치 정점끼리 노말을 공유하지 않으면 심을 따라 명암 줄이 생긴다
+		if (smoothAngleDeg > 0) {
+			const cosLimit = Math.cos(smoothAngleDeg * Math.PI / 180);
+			const q = (v: number) => Math.round(v / 1e-5);
+			const groups = new Map<string, number[]>();
+			for (let i = 0; i < vertCount; ++i) {
+				const p = posBuf.V3(i);
+				const k = `${q(p.x)},${q(p.y)},${q(p.z)}`;
+				const g = groups.get(k);
+				if (g) g.push(i); else groups.set(k, [i]);
+			}
+			const unit: CVec3[] = accNormals.map(n => (CMath.V3Len(n) > 1e-12) ? CMath.V3Nor(n) : new CVec3(0, 0, 0));
+			const out: CVec3[] = new Array(vertCount);
+			for (const g of groups.values()) {
+				if (g.length < 2) continue;
+				for (const a of g) {
+					let sum = accNormals[a];
+					for (const b of g) {
+						if (a === b || CMath.V3Dot(unit[a], unit[b]) < cosLimit) continue;
+						sum = CMath.V3AddV3(sum, accNormals[b]);
+					}
+					out[a] = sum;
+				}
+			}
+			for (let i = 0; i < vertCount; ++i) if (out[i]) accNormals[i] = out[i];
+		}
+
 		for (let i = 0; i < vertCount; ++i) {
 			let n = accNormals[i];
 			norBuf.V3(i, (CMath.V3Len(n) > 1e-6) ? CMath.V3Nor(n) : new CVec3(0, 1, 0));
 		}
+		return weldMap;
+	}
+
+	/**
+	 * 양면 재질용으로 정점 전체를 복제하고 삼각형 순서를 뒤집어 반대면을 만든다. 복제본의 법선은 반전한다.
+	 * 법선 재계산(RebuildNormals)이 끝난 뒤에 불러야 한다(앞면/뒷면 법선이 서로 상쇄되어 사라진다).
+	 * 모프가 있으면 복제된 정점 수에 맞춘 새 모프를 돌려준다(복제본의 정점 번호는 원본 + 원래 정점 수).
+	 */
+	static DoubleSide(_ci : CMeshCreateInfo,_morph : CMeshMorph=null) : CMeshMorph
+	{
+		const inb=_ci.GetVFType(CVertexFormat.eIdentifier.Index)[0];
+		const posEnt=_ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+		if(inb==null || posEnt==null)	return _morph;
+		const vc=posEnt.bufF.Size(3);
+		if(vc==0)	return _morph;
+
+		for(const vb of _ci.vertex)
+		{
+			if(vb.vfType==CVertexFormat.eIdentifier.Index)	continue;
+			const n=vb.bufF.mSize;
+			if(n==0 || n%vc!=0)	continue;
+			vb.bufF.Resize(n*2);
+			const a=vb.bufF.GetArray();
+			a.copyWithin(n,0,n);
+			if(vb.vfType==CVertexFormat.eIdentifier.Normal)
+				for(let i=n;i<n*2;++i)	a[i]=-a[i];
+		}
+		const n0=inb.bufI.length;
+		for(let f=0;f<n0;f+=3)
+			inb.bufI.push(inb.bufI[f]+vc,inb.bufI[f+2]+vc,inb.bufI[f+1]+vc);
+		_ci.vertexCount=vc*2;
+		_ci.indexCount=inb.bufI.length;
+
+		if(_morph==null || _morph.names.length==0)	return _morph;
+		const r=new CMeshMorph();
+		r.names=_morph.names.slice();
+		const T=r.names.length;
+		r.delta.Resize(T*vc*2*3);
+		const src=_morph.delta.GetArray();
+		const dst=r.delta.GetArray();
+		for(let t=0;t<T;++t)
+		{
+			dst.set(src.subarray(t*vc*3,(t+1)*vc*3),t*vc*2*3);
+			dst.set(src.subarray(t*vc*3,(t+1)*vc*3),(t*vc*2+vc)*3);
+		}
+		return r;
 	}
 
 	/**
@@ -2190,6 +2280,7 @@ export class CUtilRender
 		let leaves=new Array<{node:CTree<CMeshDataNode>,mat:CMat}>();
 		CUtilRender.CollectMeshLeaf(new CMat(),_mesh.meshTree,leaves);
 		if(leaves.length==0)	return false;
+		if(leaves.some(l=>l.node.mData.morph!=null))	return false;
 
 		// 2) 텍스처 조합(정렬된 전역 인덱스 목록)이 같은 노드끼리 그룹핑
 		let groupMap=new Map<string,Array<{node:CTree<CMeshDataNode>,mat:CMat}>>();
@@ -2273,6 +2364,34 @@ export class CUtilRender
 		}
 	}
 
+	static MorphTexBake(_morph : CMeshMorph) : CTexture
+	{
+		let total=_morph.GetVertexCount()*_morph.names.length;
+		if(total==0)	return null;
+		//텍셀 번호는 타깃*정점수+정점 번호이고, 가로로 채워 다음 줄로 넘어간다
+		let w=Math.min(SDF.TexSizeMax,total);
+		let h=Math.ceil(total/w);
+		if(h>SDF.TexSizeMax)
+		{
+			CAlert.E("모프 델타 텍스처가 너무 큽니다: "+_morph.names.length+"x"+_morph.GetVertexCount());
+			return null;
+		}
+		let tex=new CTexture();
+		tex.SetSize(w,h);
+		tex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F)]);
+		tex.SetAutoResize(false);
+		tex.SetYFlip(false);
+		tex.CreateBuf();
+		let buf=tex.GetBuf()[0] as Float32Array;
+		let src=_morph.delta.GetArray();
+		for(let i=0;i<total;++i)
+		{
+			buf[i*4]=src[i*3];
+			buf[i*4+1]=src[i*3+1];
+			buf[i*4+2]=src[i*3+2];
+		}
+		return tex;
+	}
 	static MeshAniBake(_texture : CTexture,_amesh : CMesh,_pmesh : CMesh,_st : number,_end : number,_aniFrame : number)
 	{
 

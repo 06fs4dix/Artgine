@@ -127,12 +127,13 @@ export class CProviderLog {
         return Number(rows[0][0]) || 0;
     }
 
-    // 워크오더 한 건의 처리 내역: _key 소속 행(ListForTerminalKey와 같은 기준) 중 _afterId < id < _beforeId.
-    // _beforeId가 0이면 끝까지.
+    // 워크오더 한 건의 처리 내역: _key 소속 행(ListForTerminalKey와 같은 기준) 중 _afterId < id <= _beforeId.
+    // _beforeId가 0이면 끝까지. 끝을 포함하는 이유: 호출자가 넘기는 다음 의뢰의 logId는 배분 '직전'의 마지막 행 id라
+    // 이 의뢰의 최종 답변 행 자신이다(미포함이면 최종 답변이 항상 빠진다).
     public static async ListForKeyRange(_key: string, _afterId: number, _beforeId: number = 0): Promise<ProviderLogRecord[]> {
         const db = await CProviderLog.Init();
         const t = CProviderLog.sTable;
-        const before = _beforeId > 0 ? ' AND id < ?' : '';
+        const before = _beforeId > 0 ? ' AND id <= ?' : '';
         const params: any[] = [_afterId, ...(_beforeId > 0 ? [_beforeId] : []), _key, _key];
         const rows = await db.Recv(
             `SELECT ${CProviderLog.sCols} FROM ${t} WHERE id > ?${before} AND (${CProviderLog.OwnedBy()}) ORDER BY id ASC`,

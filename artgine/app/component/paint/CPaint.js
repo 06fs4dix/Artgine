@@ -506,7 +506,8 @@ export class CPaint extends CComponent {
         return true;
     }
     RemoveTag(_tag) {
-        this.mTag.delete(_tag);
+        if (this.mTag.delete(_tag) == false)
+            return;
         this.mTagKey = null;
         this.ClearBatch();
     }

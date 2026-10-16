@@ -32,13 +32,33 @@ export class CForgeFloraFactory
 
     mFrame : CFrame;
     mId : number;
+    mPBR = false;
+    mReal = false;
     mAsset : CForgeFloraAsset[] = [];
+    private mTexMesh : { key : string, albs : string[], pbr : boolean }[] = [];
 
-    constructor(_frame : CFrame)
+    constructor(_frame : CFrame, _pbr = false, _real = false)
     {
         this.mFrame = _frame;
         this.mId = ++CForgeFloraFactory.sCount;
-        CForgeFloraTex.Build(_frame);
+        this.mPBR = _pbr;
+        this.mReal = _real;
+        CForgeFloraTex.Build(_frame, _pbr, _real);
+    }
+    //메쉬에 박힌 텍스처 이름만 바꾼다. 덴시티가 청크를 다시 만들면 그 이름을 읽는다
+    ApplyReal(_on : boolean)
+    {
+        if(this.mReal == _on) return;
+        this.mReal = _on;
+        CForgeFloraTex.Build(this.mFrame, this.mPBR, true);
+        for(const m of this.mTexMesh)
+        {
+            const mesh = this.mFrame.Res().Find(m.key) as { texture? : string[] };
+            if(mesh == null || mesh.texture == null) continue;
+            const alb = _on ? m.albs.map(_k => CForgeFloraTex.Real(_k)) : m.albs;
+            for(let i = 0; i < alb.length; i++) mesh.texture[i] = alb[i];
+            if(m.pbr) for(let i = 0; i < alb.length; i++) mesh.texture[alb.length + i] = CForgeFloraTex.Mat(alb[i]);
+        }
     }
 
     Grass(_preset : string, _seed : number) : CForgeFloraAsset
@@ -128,7 +148,9 @@ export class CForgeFloraFactory
             else if(lod0 != null) CForgeFloraFactory.Fit(lod0, b);
             const key = pre + "_l" + l + ".mesh";
             const wind = _sway && l < CForgeFloraFactory.sWindLod;
-            if(!b.Commit(this.mFrame, key, _tex, bound, wind)) continue;
+            const alb = this.mReal ? _tex.map(_k => CForgeFloraTex.Real(_k)) : _tex;
+            if(!b.Commit(this.mFrame, key, alb, bound, wind, this.mPBR)) continue;
+            this.mTexMesh.push({ key, albs : _tex.slice(), pbr : this.mPBR });
             a.mLod.push(key);
             a.mWind.push(wind);
             a.mTris.push(b.mIdx.length / 3);

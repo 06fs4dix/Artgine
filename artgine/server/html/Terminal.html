@@ -112,6 +112,30 @@
   term.loadAddon(new Unicode11Addon.Unicode11Addon());
   term.unicode.activeVersion = "11";
   term.open(document.getElementById("xt"));
+  // grok은 접속하면 마우스 추적(DECSET 1000/1002/1003 + SGR 1006)을 켠다. xterm이 이를 받으면 드래그·클릭이 전부 grok으로
+  // 넘어가 다른 터미널과 달리 xterm 자체 선택(Ctrl+C 복사)이 안 되고 grok이 자기 선택·자동 복사·클릭 동작을 한다.
+  // 다른 모드와 같은 동작이 되도록 xterm에는 그 모드 설정 시퀀스를 전달하지 않는다. grok이 마우스를 원하는지는
+  // _grokMouseOn에 따로 기록해 휠 스크롤(_grokWheel)과 스크롤백 포커스 복귀 판정이 계속 쓴다.
+  var _grokMouseOn = false;
+  (function () {
+    var MOUSE_MODES = { 1000: 1, 1001: 1, 1002: 1, 1003: 1, 1005: 1, 1006: 1, 1015: 1, 1016: 1 };
+    function filter(on) {
+      return function (params) {
+        if (MODE !== "grok") return false;
+        var rest = [], hit = false;
+        for (var i = 0; i < params.length; i++) {
+          var p = typeof params[i] === "number" ? params[i] : params[i][0];
+          if (MOUSE_MODES[p]) { hit = true; if (p !== 1005 && p !== 1006 && p !== 1015 && p !== 1016) _grokMouseOn = on; }
+          else rest.push(p);
+        }
+        if (!hit) return false;
+        if (rest.length) term.write("\x1b[?" + rest.join(";") + (on ? "h" : "l"));
+        return true;
+      };
+    }
+    term.parser.registerCsiHandler({ prefix: "?", final: "h" }, filter(true));
+    term.parser.registerCsiHandler({ prefix: "?", final: "l" }, filter(false));
+  })();
   // xterm 코어는 스크롤바를 실측해 폭이 0이면(우리가 CSS로 숨겼으므로) "0 || FALLBACK_SCROLL_BAR_WIDTH"
   // 폴백(15px)에 걸려 스크롤바가 안 보여도 그 폭만큼 컬럼 계산에서 항상 빼버린다(우측에 빈 여백 발생).
   // FitAddon.fit() 호출마다 이 값을 0으로 되돌려 실제 폭을 온전히 컬럼 계산에 쓰게 한다.
@@ -307,7 +331,7 @@
   // 한 프레임 동안 모아 한 메시지로 보낸다.
   var _grokWheelBuf = "";
   function _grokWheel(up) {
-    if (term.modes.mouseTrackingMode === "none") return;
+    if (!_grokMouseOn) return;
     if (!_grokWheelBuf) setTimeout(function () { var s = _grokWheelBuf; _grokWheelBuf = ""; sendRaw(s); }, 16);
     _grokWheelBuf += "\x1b[<" + (up ? 64 : 65) + ";2;" + Math.max(2, Math.floor(term.rows / 3)) + "M";
   }
@@ -999,7 +1023,7 @@
     // 않아서 입력 박스를 직접 클릭한다. 인라인 편집 중엔 첫 클릭이 편집 취소만 하고 포커스는 스크롤백에 남으므로
     // (실측), 클릭 후 화면을 다시 읽어 복귀가 확인될 때까지 반복한 뒤에 전송한다.
     function _grokScrollPromptRow() {
-      if (term.modes.mouseTrackingMode === "none") return -1;
+      if (!_grokMouseOn) return -1;
       var b = term.buffer.active, row = -1, scrollFocused = false;
       for (var i = term.rows - 1; i >= 0; i--) {
         var line = b.getLine(b.viewportY + i);
@@ -1041,6 +1065,9 @@
         // 한 번 씹히더라도 이 빈 줄 하나만 사라질 뿐 실제 입력 내용은 보존된다.
         sendRaw("\r");
         if (MODE === "gemini" || MODE === "antigravity") sendRaw("\x1b[200~" + text + "\x1b[201~");
+        // grok은 LF(\n)를 무시하고(bracketed paste 안의 LF도 마찬가지 — ConPTY가 입력을 키 이벤트로 바꾸며 Ctrl+J로 넘김)
+        // 여러 줄 입력이 공백도 없이 한 줄로 합쳐진다(실측 1.0.52). Alt+Enter(ESC CR)는 프롬프트에 줄바꿈으로 들어간다.
+        else if (MODE === "grok") sendRaw(text.replace(/[\r\n]+$/, "").replace(/\r\n|\r|\n/g, "\x1b\r"));
         else sendRaw(text);
         if (text[0] !== "/") {
           // CLI(codex 등)는 문자 입력이 짧은 시간에 몰려 들어오면(우리처럼 한 프레임에 전송) 이를 붙여넣기로

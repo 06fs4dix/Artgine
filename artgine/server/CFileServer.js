@@ -169,7 +169,6 @@ let CFileServer = class CFileServer extends CAuthServer {
     constructor() {
         super();
         this.On("/File/Root", this.onRoot.bind(this));
-        this.On("/File/Redirection", this.onRedirection.bind(this));
         this.On("/File/List", this.onList.bind(this));
         this.On("/File/Mkdir", this.onMkdir.bind(this));
         this.On("/File/Delete", this.onDelete.bind(this));
@@ -197,59 +196,6 @@ let CFileServer = class CFileServer extends CAuthServer {
             RootUrl: root.url,
             roots,
         });
-    }
-    async onRedirection(_json, _req, _res) {
-        const body = (_req.body && typeof _req.body === 'object') ? _req.body : {};
-        let path = body["path"] || "/";
-        let fun = body["fun"];
-        let data = body["data"];
-        let option = body["option"];
-        let rootParam = body["RootPath"];
-        let extraQ = "";
-        if (rootParam) {
-            const root = await validateRoot(rootParam);
-            if (root)
-                extraQ += `&RootPath=${encodeURIComponent(rootParam)}&RootUrl=${encodeURIComponent(root.url)}`;
-        }
-        const fix = (_str) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
-        if (fun?.includes("CreateFolder") || fun?.includes("Delete") || fun?.includes("SoundPlayList")) {
-            if (!this.IsAuth(_json, _req)) {
-                _res.status(403);
-                return JSON.stringify({ ok: false, msg: "Unauthorized" });
-            }
-            const currentRoot = await validateRoot(rootParam);
-            if (currentRoot === null) {
-                _res.status(403);
-                return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
-            }
-            const currentRootPath = currentRoot.path;
-            if (fun?.includes("CreateFolder")) {
-                const targetPath = fix(currentRootPath + data);
-                if (!isInsideRoot(currentRootPath, targetPath)) {
-                    _res.status(403);
-                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
-                }
-                await CFile.FolderCreate(targetPath);
-            }
-            else if (fun?.includes("Delete")) {
-                const targetPath = fix(currentRootPath + data);
-                if (!isInsideRoot(currentRootPath, targetPath)) {
-                    _res.status(403);
-                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
-                }
-                await CFile.Delete(targetPath);
-            }
-            else if (fun?.includes("SoundPlayList")) {
-                const targetPath = fix(currentRootPath + path + option + ".soundlist");
-                if (!isInsideRoot(currentRootPath, targetPath)) {
-                    _res.status(403);
-                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
-                }
-                CFile.Save(data, targetPath);
-            }
-        }
-        _res.redirect(302, "../proj/Control/Control.html" + `?path=${path}${extraQ}`);
-        return null;
     }
     async onList(_json, _req, _res) {
         const fileListPublic = CStorage.Get("fileListPublic", "false") === "true";
@@ -413,6 +359,15 @@ let CFileServer = class CFileServer extends CAuthServer {
                 _res.status(403);
                 return JSON.stringify({ ok: false, msg: "Path escapes root" });
             }
+        }
+        const offset = _json.GetInt("offset");
+        if (offset != null) {
+            const ok = await CFile.SaveChunk(filePaths[0], CUtil.Base64ToArray(dataArr.mArray[0]), offset, _json.GetBool("last") === true);
+            if (!ok) {
+                _res.status(500);
+                return JSON.stringify({ ok: false, msg: "Chunk save failed" });
+            }
+            return JSON.stringify({ ok: true });
         }
         for (let i = 0; i < nameArr.mArray.length; ++i) {
             const filePath = filePaths[i];
@@ -659,6 +614,6 @@ let CFileServer = class CFileServer extends CAuthServer {
     }
 };
 CFileServer = __decorate([
-    URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/Rename", "/File/VCS", "/File/Restart", "/File/MusicAI", "/File/MusicLyricsEn"])
+    URLPatterns(["/File/Root", "/File/List", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/Rename", "/File/VCS", "/File/Restart", "/File/MusicAI", "/File/MusicLyricsEn"])
 ], CFileServer);
 export { CFileServer };

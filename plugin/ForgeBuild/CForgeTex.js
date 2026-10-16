@@ -4,15 +4,24 @@ export class CForgeTexSurf {
     mNor;
     mMat;
     mParallax;
-    constructor(mNor, mMat, mParallax) {
+    mMatPBR;
+    mAlbR = null;
+    mNorR = null;
+    mMatR = null;
+    mMatPBRR = null;
+    mRef = null;
+    mLum = 1;
+    constructor(mNor, mMat, mParallax, mMatPBR = null) {
         this.mNor = mNor;
         this.mMat = mMat;
         this.mParallax = mParallax;
+        this.mMatPBR = mMatPBR;
     }
 }
 export class CForgeTex {
     static sSize = 256;
     static sMeter = 2;
+    static sRealSize = 1024;
     static sUVOff = 256;
     static sParallaxNear = 1000;
     static sParallaxFar = 3500;
@@ -26,6 +35,9 @@ export class CForgeTex {
     static sThatch = "forge_thatch.tex";
     static sShingle = "forge_shingle.tex";
     static sFlatMat = "forge_flat_m.tex";
+    static sFlatMatPBR = "forge_flat_mp.tex";
+    static sFlatMatR = "forge_flat_mr.tex";
+    static sFlatMatPBRR = "forge_flat_mpr.tex";
     static sGiwa = "forge_giwa.tex";
     static sChangho = "forge_changho.tex";
     static sChoga = "forge_choga.tex";
@@ -94,6 +106,8 @@ export class CForgeTex {
     }
     static Build(_frame) {
         CForgeTex.sFrame = _frame;
+        CForgeTex.FillPBR();
+        CForgeTex.FillReal();
         if (_frame.Res().Find(CForgeTex.sPlaster) != null)
             return;
         const N = CForgeTex.sSize;
@@ -157,13 +171,7 @@ export class CForgeTex {
             const slat = sx < 2 || band, paper = 0.93 + (CForgeTex.Fbm(x / N * 6, y / N * 6, 6, 95) - 0.5) * 0.06;
             return slat ? [0.42, 0.9] : [paper, 0.25];
         }, 5, 0.85, 0.1, 2, 0);
-        CForgeTex.Make(_frame, CForgeTex.sChoga, (x, y) => {
-            const g = N / 4, fx = x % g, fy = y % g, rope = Math.min(fx, g - fx, fy, g - fy);
-            const str = CForgeTex.TNoise2(x / N * 70, y / N * 5, 70, 5, 97), clump = CForgeTex.Fbm(x / N * 5, y / N * 5, 5, 98);
-            if (rope < 2)
-                return [0.62 + (str - 0.5) * 0.1, 0.85 - rope * 0.1];
-            return [0.8 + (str - 0.5) * 0.22 + (clump - 0.5) * 0.18, 0.45 + (str - 0.5) * 0.25 + (clump - 0.5) * 0.3 - Math.max(0, 6 - rope) * 0.03];
-        }, 5, 0.95, 0.2, 2.2, 0.03);
+        CForgeTex.Make(_frame, CForgeTex.sChoga, CForgeTex.ChogaFn(N), 6, 0.95, 0.2, 2.2, 0.03);
         CForgeTex.Make(_frame, CForgeTex.sSeongdol, CForgeTex.SeongdolFn(N), 11, 0.88, 0.2, 3.2, 0.05);
         CForgeTex.Make(_frame, CForgeTex.sDoldam, CForgeTex.DoldamFn(N), 12, 0.92, 0.25, 3.5, 0.04);
         CForgeTex.Make(_frame, CForgeTex.sKawara, (x, y) => {
@@ -376,46 +384,88 @@ export class CForgeTex {
             const rim = d < 1.2 ? (1.2 - d) * 0.05 : 0;
             return [0.92 + (n - 0.5) * 0.12 - (rows ? 0.08 : 0) + rim, 0.6 + (n - 0.5) * 0.15 - (rows ? 0.12 : 0)];
         }, 7, 0.9, 0.15, 2.6, 0.02);
-        const m = new Uint8Array(16 * 4);
+        const m = new Uint8Array(16 * 4), mp = new Uint8Array(16 * 4);
         for (let i = 0; i < 16; i++) {
-            m[i * 4] = 255;
+            m[i * 4] = mp[i * 4] = 255;
+            m[i * 4 + 3] = mp[i * 4 + 3] = 255;
             m[i * 4 + 1] = 0.8 * 255;
-            m[i * 4 + 3] = 255;
+            mp[i * 4 + 1] = 0.72 * 255;
+        }
+        const mr = new Uint8Array(16 * 4), mpr = new Uint8Array(16 * 4);
+        for (let i = 0; i < 16; i++) {
+            mr[i * 4] = mpr[i * 4] = 255;
+            mr[i * 4 + 3] = mpr[i * 4 + 3] = 255;
+            mr[i * 4 + 1] = 0.96 * 255;
+            mpr[i * 4 + 1] = 0.96 * 255;
         }
         CForgeTex.Upload(_frame, CForgeTex.sFlatMat, m, 4);
+        CForgeTex.Upload(_frame, CForgeTex.sFlatMatPBR, mp, 4);
+        CForgeTex.Upload(_frame, CForgeTex.sFlatMatR, mr, 4);
+        CForgeTex.Upload(_frame, CForgeTex.sFlatMatPBRR, mpr, 4);
     }
     static Q(_rgb) { return _rgb.map(_v => Math.max(0, Math.min(255, Math.round(_v * 255)))); }
     static sAO = new Map();
-    static MeanAO(_key) {
-        let v = CForgeTex.sAO.get(_key);
+    static sAOP = new Map();
+    static sAOR = new Map();
+    static sBaseR = new Map();
+    static sReal = new Map();
+    static sKeep = new Map();
+    static MeanAO(_key, _pbr = false, _real = false) {
+        const tab = _real ? CForgeTex.sAOR : _pbr ? CForgeTex.sAOP : CForgeTex.sAO;
+        let v = tab.get(_key);
         if (v != null)
             return v;
         v = 1;
         CForgeTex.Surf(_key);
-        const m = CForgeTex.sMatBuf.get(_key);
-        if (m != null) {
-            let a = 0;
-            for (let i = 0; i < m.length; i += 4)
-                a += m[i];
-            v = a / (m.length / 4) / 255;
+        if (_real) {
+            CForgeTex.EnsureReal(_key);
+            v = CForgeTex.sAOR.get(_key) ?? 1;
         }
-        CForgeTex.sAO.set(_key, v);
+        else if (_pbr)
+            v = CForgeTex.sAOP.get(_key) ?? 1;
+        else {
+            const m = CForgeTex.sMatBuf.get(_key);
+            if (m != null) {
+                let a = 0;
+                for (let i = 0; i < m.length; i += 4)
+                    a += m[i];
+                v = a / (m.length / 4) / 255;
+            }
+        }
+        tab.set(_key, v);
         return v;
     }
     static sMatBuf = new Map();
-    static Tint(_key, _rgb) {
-        const q = CForgeTex.Q(_rgb), key = _key.replace(".tex", `_t${q[0]}_${q[1]}_${q[2]}.tex`);
+    static Tint(_key, _rgb, _real = false) {
+        const q = CForgeTex.Q(_rgb), key = _key.replace(".tex", `_${_real ? "tr" : "t"}${q[0]}_${q[1]}_${q[2]}.tex`);
         if (CForgeTex.sFrame.Res().Find(key) != null)
             return key;
-        const src = CForgeTex.sBase.get(_key), out = new Uint8Array(src.length);
-        for (let i = 0; i < src.length; i += 4) {
-            out[i] = src[i] * q[0] / 255;
-            out[i + 1] = src[i + 1] * q[1] / 255;
-            out[i + 2] = src[i + 2] * q[2] / 255;
-            out[i + 3] = 255;
+        const colored = _real ? (CForgeTex.EnsureReal(_key), CForgeTex.sBaseR.get(_key)) : null;
+        const src = colored ?? CForgeTex.sBase.get(_key), out = new Uint8Array(src.length);
+        if (colored != null) {
+            const s = CForgeTex.Scale(_key, _rgb);
+            for (let i = 0; i < src.length; i += 4) {
+                out[i] = Math.min(255, src[i] * s[0]);
+                out[i + 1] = Math.min(255, src[i + 1] * s[1]);
+                out[i + 2] = Math.min(255, src[i + 2] * s[2]);
+                out[i + 3] = 255;
+            }
         }
-        CForgeTex.Upload(CForgeTex.sFrame, key, out);
+        else
+            for (let i = 0; i < src.length; i += 4) {
+                out[i] = src[i] * q[0] / 255;
+                out[i + 1] = src[i + 1] * q[1] / 255;
+                out[i + 2] = src[i + 2] * q[2] / 255;
+                out[i + 3] = 255;
+            }
+        CForgeTex.Upload(CForgeTex.sFrame, key, out, Math.round(Math.sqrt(out.length / 4)));
         return key;
+    }
+    static Scale(_key, _rgb) {
+        const s = CForgeTex.EnsureReal(_key);
+        if (s == null || s.mRef == null)
+            return _rgb;
+        return _rgb.map((_v, _i) => Math.max(0.2, Math.min(2.4, _v * s.mLum / Math.max(0.04, s.mRef[_i]))));
     }
     static Sign(_text, _aspect, _style = 0) {
         const key = `forge_sign_${encodeURIComponent(_text)}_${Math.round(_aspect * 10)}_${_style}.tex`;
@@ -621,24 +671,64 @@ export class CForgeTex {
             return [tone * shade * (gap ? 0.85 : 1) + (CForgeRand.HashF(x, y, 8) - 0.5) * 0.03, h];
         };
     }
+    static ChogaFn(N) {
+        const ch = N / 4;
+        return (x, y) => {
+            const bend = (CForgeTex.TNoise2(x / N * 2, y / N * 3, 2, 3, 41) - 0.5) * 10;
+            const sx = ((x + bend + N * 2) % N) / N;
+            const a = CForgeTex.TNoise2(sx * 31, y / N * 2, 31, 2, 71);
+            const b = CForgeTex.TNoise2(sx * 17, y / N * 3, 17, 3, 79);
+            const c = CForgeTex.TNoise2(sx * 53, y / N * 5, 53, 5, 83);
+            const grp = CForgeTex.TNoise2(sx * 7, y / N * 2, 7, 2, 91);
+            const brk = CForgeTex.TNoise2(sx * 31, y / N * 7, 31, 7, 29);
+            let lum = 0.46 + a * 0.26 + b * 0.16 + c * 0.1 + (grp - 0.5) * 0.12;
+            if (brk < 0.22)
+                lum *= 0.78;
+            const sag = Math.sin(x / N * Math.PI * 3) * 3.2, ropeC = ch * 0.48;
+            const ry = (y % ch - sag + ch) % ch, side = (ry - ropeC) / 2.3;
+            if (Math.abs(side) < 1) {
+                const twist = 0.5 + 0.5 * Math.sin(x / N * Math.PI * 34 + side * Math.PI);
+                return [(0.4 + twist * 0.38) * (Math.abs(side) > 0.72 ? 0.82 : 1), 0.46 + (1 - Math.abs(side)) * 0.08];
+            }
+            return [lum, 0.46];
+        };
+    }
     static Make(_frame, _key, _fn, _depth, _rough, _roughVar, _aoStr, _parallax) {
         const N = CForgeTex.sSize, col = new Uint8Array(N * N * 4), hgt = new Float32Array(N * N);
+        let lum = 0;
         for (let y = 0; y < N; y++)
             for (let x = 0; x < N; x++) {
                 const [l, h] = _fn(x, y), o = y * N + x, v = Math.max(0, Math.min(1, l)) * 255;
                 col[o * 4] = col[o * 4 + 1] = col[o * 4 + 2] = v;
                 col[o * 4 + 3] = 255;
                 hgt[o] = Math.max(0, Math.min(1, h));
+                lum += v;
             }
+        lum /= N * N * 255;
         CForgeTex.Upload(_frame, _key, col);
         CForgeTex.sBase.set(_key, col);
         CForgeTex.sPend.set(_key, () => {
-            const nk = _key.replace(".tex", "_n.tex"), mk = _key.replace(".tex", "_m.tex"), nor = CForgeTex.Normal(hgt, N, _depth);
+            const nk = _key.replace(".tex", "_n.tex"), mk = _key.replace(".tex", "_m.tex"), pk = _key.replace(".tex", "_mp.tex");
+            const detail = CForgeTex.DetailH(_key, hgt, col, N, _depth), small = CForgeTex.DownH(detail, CForgeTex.sRealSize, N), nor = CForgeTex.Normal(small, N, _depth);
+            for (let y = 0; y < N; y++)
+                for (let x = 0; x < N; x++) {
+                    let s = 0;
+                    for (let k = -1; k <= 1; k++)
+                        for (let m = -1; m <= 1; m++)
+                            s += hgt[((y + k + N) % N) * N + ((x + m + N) % N)];
+                    nor.buf[(y * N + x) * 4 + 3] = (0.1 + 0.9 * s / 9) * 255;
+                }
             CForgeTex.Upload(_frame, nk, nor.buf);
             const mat = CForgeTex.Material(hgt, nor.ny, N, _rough, _roughVar, _aoStr);
             CForgeTex.sMatBuf.set(_key, mat);
             CForgeTex.Upload(_frame, mk, mat);
-            return new CForgeTexSurf(nk, mk, _parallax);
+            const pb = CForgeTex.sPBR.get(_key) ?? [_rough, _roughVar * 0.5, _aoStr * 0.4, 0], pbr = CForgeTex.MaterialPBR(hgt, N, pb[0], pb[1], pb[2], pb[3]);
+            CForgeTex.sAOP.set(_key, pbr.ao);
+            CForgeTex.Upload(_frame, pk, pbr.buf);
+            const surf = new CForgeTexSurf(nk, mk, _parallax, pk);
+            surf.mLum = lum;
+            CForgeTex.sKeep.set(_key, { h: hgt, g: col, depth: _depth, detail });
+            return surf;
         });
     }
     static Surf(_key) {
@@ -649,6 +739,30 @@ export class CForgeTex {
             CForgeTex.sSurf.set(_key, s);
         }
         return s ?? null;
+    }
+    static EnsureReal(_key) {
+        const surf = CForgeTex.Surf(_key);
+        if (surf == null || surf.mAlbR != null)
+            return surf;
+        const pack = CForgeTex.sKeep.get(_key);
+        if (pack == null)
+            return surf;
+        const N = CForgeTex.sSize, hi = pack.detail != null ? pack.detail : CForgeTex.DetailH(_key, pack.h, pack.g, N, pack.depth);
+        const real = CForgeTex.BakeReal(_key, pack.h, pack.g, N, pack.depth, hi);
+        surf.mRef = real.ref;
+        surf.mAlbR = _key.replace(".tex", "_c.tex");
+        surf.mNorR = _key.replace(".tex", "_nr.tex");
+        surf.mMatR = _key.replace(".tex", "_mr.tex");
+        surf.mMatPBRR = _key.replace(".tex", "_mpr.tex");
+        CForgeTex.sBaseR.set(_key, real.alb);
+        CForgeTex.sAOR.set(_key, real.ao);
+        const Rn = CForgeTex.sRealSize;
+        CForgeTex.Upload(CForgeTex.sFrame, surf.mAlbR, real.alb, Rn);
+        CForgeTex.Upload(CForgeTex.sFrame, surf.mNorR, real.nor, Rn);
+        CForgeTex.Upload(CForgeTex.sFrame, surf.mMatR, real.mat, Rn);
+        CForgeTex.Upload(CForgeTex.sFrame, surf.mMatPBRR, real.matP, Rn);
+        CForgeTex.sKeep.delete(_key);
+        return surf;
     }
     static Normal(_h, N, _depth) {
         const H = (_x, _y) => _h[((_y + N) % N) * N + ((_x + N) % N)], out = new Uint8Array(N * N * 4), ny = new Float32Array(N * N);
@@ -687,6 +801,365 @@ export class CForgeTex {
                 out[i + 3] = 255;
             }
         return out;
+    }
+    static sPBR = new Map();
+    static FillPBR() {
+        if (CForgeTex.sPBR.size > 0)
+            return;
+        const M = (_k, _r, _v, _a, _mh = 0) => CForgeTex.sPBR.set(_k, [_r, _v, _a, _mh]), T = CForgeTex;
+        M(T.sPlaster, 0.72, 0.08, 0.55);
+        M(T.sStone, 0.68, 0.16, 1.1);
+        M(T.sTile, 0.42, 0.16, 0.9);
+        M(T.sWood, 0.55, 0.12, 0.9);
+        M(T.sGlass, 0.12, -0.7, 0.35, 0.85);
+        M(T.sPlank, 0.58, 0.14, 0.9);
+        M(T.sLog, 0.7, 0.12, 1);
+        M(T.sThatch, 0.92, 0.06, 1.1);
+        M(T.sShingle, 0.62, 0.12, 0.95);
+        M(T.sGiwa, 0.36, 0.12, 1);
+        M(T.sChangho, 0.72, 0.1, 0.6);
+        M(T.sChoga, 0.9, 0.06, 0.75);
+        M(T.sSeongdol, 0.6, 0.16, 1.15);
+        M(T.sDoldam, 0.78, 0.16, 1.25);
+        M(T.sKawara, 0.32, 0.12, 0.95);
+        M(T.sShitami, 0.58, 0.12, 0.85);
+        M(T.sKoshi, 0.5, 0.1, 0.85);
+        M(T.sShoji, 0.7, 0.08, 0.55);
+        M(T.sTake, 0.4, 0.1, 0.85);
+        M(T.sIshigaki, 0.7, 0.16, 1.15);
+        M(T.sKaya, 0.9, 0.06, 0.8);
+        M(T.sQingzhuan, 0.62, 0.12, 0.95);
+        M(T.sChuang, 0.5, 0.1, 0.85);
+        M(T.sBrickWall, 0.62, 0.12, 0.85);
+        M(T.sSash, 0.22, -0.85, 0.35);
+        M(T.sTurf, 0.9, 0.05, 0.75);
+        M(T.sHangtu, 0.85, 0.08, 0.85);
+        M(T.sAdobe, 0.84, 0.08, 0.75);
+        M(T.sMudBrick, 0.86, 0.08, 0.95);
+        M(T.sAshlar, 0.48, 0.12, 0.85);
+        M(T.sInca, 0.58, 0.14, 1.15);
+        M(T.sFelt, 0.94, 0.03, 0.35);
+        M(T.sDryCourse, 0.72, 0.16, 1.15);
+        M(T.sHiero, 0.55, 0.12, 0.95);
+    }
+    static MaterialPBR(_h, N, _rough, _roughVar, _aoStr, _metalHi) {
+        const R = 4, H = (_x, _y) => _h[((_y + N) % N) * N + ((_x + N) % N)], out = new Uint8Array(N * N * 4);
+        let sum = 0;
+        for (let y = 0; y < N; y++)
+            for (let x = 0; x < N; x++) {
+                let s = 0, n = 0;
+                for (let k = -R; k <= R; k += 2)
+                    for (let m = -R; m <= R; m += 2) {
+                        s += H(x + m, y + k);
+                        n++;
+                    }
+                const h = H(x, y), cav = 1 - Math.max(0, s / n - h) * _aoStr, i = (y * N + x) * 4;
+                const ao = Math.max(0.45, Math.min(1, cav));
+                const rough = Math.max(0.04, Math.min(1, _rough + (0.5 - h) * _roughVar));
+                const metal = _metalHi > 0 ? Math.max(0, Math.min(1, (h - 0.55) / 0.3)) * _metalHi : 0;
+                out[i] = ao * 255;
+                out[i + 1] = rough * 255;
+                out[i + 2] = metal * 255;
+                out[i + 3] = 255;
+                sum += ao;
+            }
+        return { buf: out, ao: sum / (N * N) };
+    }
+    static FillReal() {
+        if (CForgeTex.sReal.size > 0)
+            return;
+        const M = (_k, _b, _j, _rough, _gap, _micro, _moss = 0, _mode = 0, _metal = 0) => CForgeTex.sReal.set(_k, [..._b, ..._j, _rough, _gap, _micro, _moss, _mode, _metal]), T = CForgeTex;
+        M(T.sPlaster, [0.78, 0.74, 0.66], [0.62, 0.56, 0.48], 0.96, 0.04, 0.16, 0);
+        M(T.sStone, [0.62, 0.60, 0.56], [0.46, 0.43, 0.38], 0.96, 0.04, 0.14, 0.22);
+        M(T.sTile, [0.58, 0.26, 0.18], [0.28, 0.16, 0.12], 0.74, 0.16, 0.1, 0.04);
+        M(T.sWood, [0.46, 0.30, 0.16], [0.28, 0.17, 0.09], 0.9, 0.06, 0.07);
+        M(T.sGlass, [0.42, 0.43, 0.40], [0.34, 0.46, 0.52], 0.08, 0.4, 0.02, 0, 1, 0.85);
+        M(T.sPlank, [0.52, 0.36, 0.20], [0.30, 0.20, 0.12], 0.9, 0.06, 0.07);
+        M(T.sLog, [0.42, 0.28, 0.16], [0.55, 0.48, 0.32], 0.96, 0.04, 0.08, 0.1);
+        M(T.sThatch, [0.62, 0.48, 0.24], [0.40, 0.30, 0.14], 0.96, 0.04, 0.18);
+        M(T.sShingle, [0.40, 0.28, 0.22], [0.24, 0.16, 0.12], 0.94, 0.04, 0.1, 0.12);
+        M(T.sGiwa, [0.34, 0.34, 0.36], [0.18, 0.18, 0.17], 0.74, 0.16, 0.04, 0.1);
+        M(T.sChangho, [0.84, 0.76, 0.60], [0.42, 0.28, 0.16], 0.94, 0.04, 0.06);
+        M(T.sChoga, [0.70, 0.56, 0.28], [0.46, 0.36, 0.16], 0.96, 0.04, 0.16);
+        M(T.sSeongdol, [0.70, 0.68, 0.64], [0.28, 0.27, 0.25], 0.96, 0.04, 0.12, 0.1);
+        M(T.sDoldam, [0.52, 0.48, 0.42], [0.40, 0.32, 0.22], 0.96, 0.04, 0.16, 0.45);
+        M(T.sKawara, [0.30, 0.32, 0.34], [0.16, 0.16, 0.16], 0.74, 0.16, 0.04, 0.08);
+        M(T.sShitami, [0.44, 0.34, 0.24], [0.26, 0.18, 0.12], 0.9, 0.06, 0.08, 0.15);
+        M(T.sKoshi, [0.50, 0.34, 0.20], [0.32, 0.22, 0.12], 0.9, 0.06, 0.06);
+        M(T.sShoji, [0.90, 0.86, 0.74], [0.48, 0.34, 0.20], 0.94, 0.04, 0.05);
+        M(T.sTake, [0.55, 0.58, 0.30], [0.32, 0.34, 0.16], 0.9, 0.06, 0.06);
+        M(T.sIshigaki, [0.48, 0.46, 0.42], [0.20, 0.19, 0.16], 0.96, 0.04, 0.14, 0.4);
+        M(T.sKaya, [0.66, 0.52, 0.26], [0.42, 0.34, 0.16], 0.96, 0.04, 0.16);
+        M(T.sQingzhuan, [0.42, 0.44, 0.48], [0.72, 0.68, 0.60], 0.96, 0.04, 0.08, 0.12);
+        M(T.sChuang, [0.48, 0.30, 0.18], [0.30, 0.20, 0.12], 0.9, 0.06, 0.06);
+        M(T.sBrickWall, [0.56, 0.26, 0.18], [0.70, 0.64, 0.54], 0.96, 0.04, 0.08, 0.16);
+        M(T.sSash, [0.42, 0.28, 0.16], [0.40, 0.52, 0.58], 0.9, 0.08, 0.04, 0, 2);
+        M(T.sTurf, [0.32, 0.46, 0.18], [0.36, 0.28, 0.16], 0.96, 0.04, 0.2);
+        M(T.sHangtu, [0.62, 0.46, 0.32], [0.48, 0.36, 0.24], 0.96, 0.04, 0.16);
+        M(T.sAdobe, [0.70, 0.54, 0.38], [0.52, 0.40, 0.28], 0.96, 0.04, 0.14);
+        M(T.sMudBrick, [0.56, 0.40, 0.28], [0.46, 0.38, 0.30], 0.96, 0.04, 0.14, 0.08);
+        M(T.sAshlar, [0.74, 0.72, 0.66], [0.56, 0.52, 0.46], 0.96, 0.04, 0.08, 0.06);
+        M(T.sInca, [0.58, 0.52, 0.44], [0.26, 0.24, 0.20], 0.96, 0.04, 0.12, 0.18);
+        M(T.sFelt, [0.58, 0.36, 0.26], [0.42, 0.26, 0.18], 0.96, 0.04, 0.1);
+        M(T.sDryCourse, [0.50, 0.46, 0.40], [0.34, 0.30, 0.24], 0.96, 0.04, 0.14, 0.2);
+        M(T.sHiero, [0.76, 0.64, 0.44], [0.52, 0.42, 0.28], 0.96, 0.04, 0.1, 0.05);
+    }
+    static FaceBlur(_lum, _w, N, _rad) {
+        const tmp = new Float32Array(N * N), tw = new Float32Array(N * N), out = new Float32Array(N * N);
+        for (let y = 0; y < N; y++)
+            for (let x = 0; x < N; x++) {
+                let s = 0, w = 0;
+                for (let k = -_rad; k <= _rad; k++) {
+                    const o = y * N + (x + k + N) % N, wt = _w[o];
+                    s += _lum[o] * wt;
+                    w += wt;
+                }
+                const o = y * N + x;
+                tmp[o] = s;
+                tw[o] = w;
+            }
+        for (let y = 0; y < N; y++)
+            for (let x = 0; x < N; x++) {
+                let s = 0, w = 0;
+                for (let k = -_rad; k <= _rad; k++) {
+                    const o = ((y + k + N) % N) * N + x;
+                    s += tmp[o];
+                    w += tw[o];
+                }
+                out[y * N + x] = w > 1e-4 ? s / w : _lum[y * N + x];
+            }
+        return out;
+    }
+    static Sample(_src, N, _x, _y) {
+        const x = ((_x % N) + N) % N, y = ((_y % N) + N) % N, x0 = Math.floor(x), y0 = Math.floor(y);
+        const x1 = (x0 + 1) % N, y1 = (y0 + 1) % N, fx = x - x0, fy = y - y0;
+        const a = _src[y0 * N + x0], b = _src[y0 * N + x1], c = _src[y1 * N + x0], d = _src[y1 * N + x1];
+        return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+    }
+    static SampleU(_src, N, _x, _y, _c) {
+        const x = ((_x % N) + N) % N, y = ((_y % N) + N) % N, x0 = Math.floor(x), y0 = Math.floor(y);
+        const x1 = (x0 + 1) % N, y1 = (y0 + 1) % N, fx = x - x0, fy = y - y0;
+        const At = (_ix, _iy) => _src[(_iy * N + _ix) * 4 + _c] / 255;
+        const a = At(x0, y0), b = At(x1, y0), c = At(x0, y1), d = At(x1, y1);
+        return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+    }
+    static DownH(_src, M, N) {
+        const s = (M / N) | 0, out = new Float32Array(N * N), inv = 1 / (s * s);
+        for (let y = 0; y < N; y++)
+            for (let x = 0; x < N; x++) {
+                let a = 0;
+                const y0 = y * s, x0 = x * s;
+                for (let j = 0; j < s; j++)
+                    for (let i = 0; i < s; i++)
+                        a += _src[(y0 + j) * M + x0 + i];
+                out[y * N + x] = a * inv;
+            }
+        return out;
+    }
+    static DetailH(_key, _h, _gray, N, _depth) {
+        const p = CForgeTex.sReal.get(_key) ?? [0.7, 0.68, 0.64, 0.45, 0.42, 0.38, 0.7, 0.15, 0.12, 0, 0, 0];
+        const micro = p[8], mode = p[10];
+        const fiber = _key == CForgeTex.sThatch || _key == CForgeTex.sChoga || _key == CForgeTex.sKaya || _key == CForgeTex.sTurf;
+        const one = new Float32Array(N * N);
+        one.fill(1);
+        const lum = new Float32Array(N * N), sA = new Float32Array(N * N), flatA = new Float32Array(N * N);
+        for (let i = 0; i < N * N; i++) {
+            const u = Math.max(0, Math.min(1, (_h[i] - 0.16) / 0.34));
+            lum[i] = _gray[i * 4] / 255;
+            sA[i] = u * u * (3 - 2 * u);
+        }
+        const lS = CForgeTex.FaceBlur(lum, one, N, 8), hLow = CForgeTex.FaceBlur(_h, one, N, 3), h2 = new Float32Array(N * N);
+        for (let i = 0; i < N * N; i++) {
+            const flat = 1 - Math.min(1, Math.abs(_h[i] - hLow[i]) / 0.05);
+            flatA[i] = flat;
+            h2[i] = _h[i] + (fiber ? 0 : (lum[i] - lS[i]) * micro * (0.45 + 1.2 * flat));
+        }
+        const M = CForgeTex.sRealSize, hH = new Float32Array(M * M), bal = Math.min(2.2, 6 / Math.max(0.8, _depth));
+        let seed = 1;
+        for (let i = 0; i < _key.length; i++)
+            seed = (Math.imul(seed, 33) + _key.charCodeAt(i)) >>> 0;
+        const px = fiber ? [44, 108, 232] : [36, 84, 188], py = fiber ? [11, 24, 46] : px, amp = fiber ? [0.2, 0.11, 0.05] : [0.42, 0.2, 0.09];
+        for (let y = 0; y < M; y++)
+            for (let x = 0; x < M; x++) {
+                const lx = (x + 0.5) * N / M - 0.5, ly = (y + 0.5) * N / M - 0.5, o = y * M + x;
+                const h = CForgeTex.Sample(h2, N, lx, ly), s = CForgeTex.Sample(sA, N, lx, ly), flat = CForgeTex.Sample(flatA, N, lx, ly);
+                let strand = 0;
+                if (_key == CForgeTex.sChoga) {
+                    const u = (x + 0.5) / M, v = (y + 0.5) / M;
+                    const bend = (CForgeTex.TNoise2(u * 2, v * 3, 2, 3, 41) - 0.5) * 10;
+                    const sx = (((u * N + bend) % N) + N) % N / N;
+                    const fa = CForgeTex.TNoise2(sx * 31, v * 2, 31, 2, 71);
+                    const fb = CForgeTex.TNoise2(sx * 17, v * 3, 17, 3, 79);
+                    const fc = CForgeTex.TNoise2(sx * 53, v * 5, 53, 5, 83);
+                    const fg = CForgeTex.TNoise2(sx * 7, v * 2, 7, 2, 91);
+                    const fl = (fa - 0.5) * 0.26 + (fb - 0.5) * 0.16 + (fc - 0.5) * 0.1 + (fg - 0.5) * 0.12;
+                    const ropeW = Math.max(0, Math.min(1, (h - 0.478) / 0.025));
+                    strand = Math.max(-0.14, Math.min(0.14, fl * 0.75)) * (1 - ropeW);
+                }
+                let g = 0;
+                for (let k = 0; k < 3; k++)
+                    g += (CForgeTex.TNoise2(x / M * px[k], y / M * py[k], px[k], py[k], seed + k * 19) - 0.5) * amp[k];
+                const gain = (mode == 1 ? 0.22 : mode == 2 ? 0.4 + 0.6 * s : 1) * (0.42 + 0.58 * Math.max(0, Math.min(1, flat)));
+                hH[o] = h + strand + g * gain * bal;
+            }
+        return hH;
+    }
+    static BakeReal(_key, _h, _gray, N, _depth, _hi) {
+        const p = CForgeTex.sReal.get(_key) ?? [0.7, 0.68, 0.64, 0.45, 0.42, 0.38, 0.7, 0.15, 0.12, 0, 0, 0];
+        const body = p.slice(0, 3), joint = p.slice(3, 6), rough = p[6], gap = p[7], micro = p[8], moss = p[9], mode = p[10], metalHi = p[11];
+        const mossC = [0.30, 0.38, 0.20];
+        const Clamp = (_v) => Math.max(0, Math.min(1, _v));
+        const Y = (_r, _g, _b) => _r * 0.3 + _g * 0.59 + _b * 0.11;
+        const lum = new Float32Array(N * N), sA = new Float32Array(N * N), one = new Float32Array(N * N);
+        one.fill(1);
+        for (let y = 0; y < N; y++)
+            for (let x = 0; x < N; x++) {
+                const o = y * N + x, u = Math.max(0, Math.min(1, (_h[o] - 0.16) / 0.34));
+                lum[o] = _gray[o * 4] / 255;
+                sA[o] = u * u * (3 - 2 * u);
+            }
+        const hS = CForgeTex.FaceBlur(_h, one, N, 8), lS = CForgeTex.FaceBlur(lum, one, N, 8);
+        let meanH = 0, meanL = 0;
+        for (let i = 0; i < N * N; i++) {
+            meanH += hS[i];
+            meanL += lS[i];
+        }
+        meanH /= N * N;
+        meanL /= N * N;
+        let varH = 0, cov = 0;
+        for (let i = 0; i < N * N; i++) {
+            const dh = hS[i] - meanH, dl = lS[i] - meanL;
+            varH += dh * dh;
+            cov += dh * dl;
+        }
+        const slope = varH > 1e-4 ? cov / varH : 0, bUse = Math.max(0, Math.min(0.4, slope));
+        const pat = new Float32Array(N * N), hfA = new Float32Array(N * N);
+        let sumPat = 0, fs = 0, fw = 0, js = 0, jw = 0;
+        for (let i = 0; i < N * N; i++) {
+            pat[i] = lum[i] - bUse * (hS[i] - meanH);
+            hfA[i] = lum[i] - lS[i];
+            sumPat += pat[i];
+            const s = sA[i], wf = s * s, wj = (1 - s) * (1 - s);
+            fs += pat[i] * wf;
+            fw += wf;
+            js += pat[i] * wj;
+            jw += wj;
+        }
+        const meanPat = sumPat / (N * N);
+        const faceMean = fw > 1e-4 ? fs / fw : meanPat, jointMean = jw > 1e-4 ? js / jw : meanPat;
+        const fiber = _key == CForgeTex.sThatch || _key == CForgeTex.sChoga || _key == CForgeTex.sKaya || _key == CForgeTex.sTurf;
+        const hLow = CForgeTex.FaceBlur(_h, one, N, 3), h2 = new Float32Array(N * N);
+        for (let i = 0; i < N * N; i++) {
+            const flat = 1 - Math.min(1, Math.abs(_h[i] - hLow[i]) / 0.05);
+            h2[i] = _h[i] + (fiber ? 0 : hfA[i] * micro * (0.45 + 1.2 * flat));
+        }
+        const aoA = new Float32Array(N * N);
+        const Rb = 4, Hh = (_x, _y) => _h[((_y + N) % N) * N + ((_x + N) % N)];
+        const pb = CForgeTex.sPBR.get(_key), aoStr = (pb != null ? pb[2] : 0.8) * 0.7;
+        for (let y = 0; y < N; y++)
+            for (let x = 0; x < N; x++) {
+                let acc = 0, n = 0;
+                for (let k = -Rb; k <= Rb; k += 2)
+                    for (let m = -Rb; m <= Rb; m += 2) {
+                        acc += Hh(x + m, y + k);
+                        n++;
+                    }
+                aoA[y * N + x] = Math.max(0.62, Math.min(1, 1 - Math.max(0, acc / n - Hh(x, y)) * aoStr));
+            }
+        const alb = new Uint8Array(N * N * 4);
+        let sr = 0, sg = 0, sb = 0;
+        for (let i = 0; i < N * N; i++) {
+            const s = sA[i], faceN = pat[i] / Math.max(0.05, faceMean), jointN = pat[i] / Math.max(0.05, jointMean);
+            let k = mode == 0 ? jointN + (faceN - jointN) * s : pat[i] / Math.max(0.05, meanPat);
+            k = Math.max(0.45, Math.min(1.55, k));
+            let r = (joint[0] + (body[0] - joint[0]) * s) * k, g = (joint[1] + (body[1] - joint[1]) * s) * k, b = (joint[2] + (body[2] - joint[2]) * s) * k;
+            if (_key == CForgeTex.sChoga) {
+                const rope = _h[i] > 0.47, t = rope ? k : 1 + (k - 1) * 0.5, u = Clamp((t - 0.5) / 0.85);
+                const hi = [body[0] + 0.14, body[1] + 0.08, Math.max(0, body[2] - 0.06)];
+                r = joint[0] + (hi[0] - joint[0]) * u;
+                g = joint[1] + (hi[1] - joint[1]) * u;
+                b = joint[2] + (hi[2] - joint[2]) * u;
+            }
+            if (moss > 0 && mode == 0) {
+                const mk = Math.min(0.5, moss * (1 - s) * (1 - s));
+                if (mk > 0) {
+                    const y0 = Y(r, g, b);
+                    r = r * (1 - mk) + mossC[0] * mk;
+                    g = g * (1 - mk) + mossC[1] * mk;
+                    b = b * (1 - mk) + mossC[2] * mk;
+                    const y1 = Y(r, g, b);
+                    if (y1 > 1e-4) {
+                        const sc = y0 / y1;
+                        r *= sc;
+                        g *= sc;
+                        b *= sc;
+                    }
+                }
+            }
+            r = Clamp(r);
+            g = Clamp(g);
+            b = Clamp(b);
+            const o = i * 4;
+            alb[o] = r * 255;
+            alb[o + 1] = g * 255;
+            alb[o + 2] = b * 255;
+            alb[o + 3] = 255;
+            sr += r;
+            sg += g;
+            sb += b;
+        }
+        const M = CForgeTex.sRealSize, Sc = M / N, albH = new Uint8Array(M * M * 4);
+        const mat = new Uint8Array(M * M * 4), matP = new Uint8Array(M * M * 4);
+        let seed = 1;
+        for (let i = 0; i < _key.length; i++)
+            seed = (Math.imul(seed, 33) + _key.charCodeAt(i)) >>> 0;
+        const freq = Math.max(24, Math.round(36 + micro * 640));
+        const px = fiber ? Math.max(80, Math.round(120 + micro * 560)) : freq, py = fiber ? Math.max(16, Math.round(18 + micro * 120)) : freq;
+        const At = (_src, _x, _y) => CForgeTex.Sample(_src, N, _x, _y);
+        let sum = 0;
+        for (let y = 0; y < M; y++)
+            for (let x = 0; x < M; x++) {
+                const lx = (x + 0.5) * N / M - 0.5, ly = (y + 0.5) * N / M - 0.5, o = y * M + x;
+                const h = At(h2, lx, ly), s = At(sA, lx, ly), hf = At(hfA, lx, ly), ao = At(aoA, lx, ly);
+                const g1 = CForgeTex.TNoise2(x / M * px, y / M * py, px, py, seed) - 0.5;
+                const qx = Math.max(8, Math.round(px * 0.42)), qy = fiber ? Math.max(8, Math.round(py * 0.7)) : qx;
+                const g2 = CForgeTex.TNoise2(x / M * qx, y / M * qy, qx, qy, seed + 19) - 0.5;
+                const grit = g1 * 0.62 + g2 * 0.38;
+                const i = o * 4;
+                albH[i] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 0)) * 255;
+                albH[i + 1] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 1)) * 255;
+                albH[i + 2] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 2)) * 255;
+                albH[i + 3] = 255;
+                let rg = rough, met = 0;
+                if (mode == 1) {
+                    const came = Math.max(0, Math.min(1, (h - 0.55) / 0.3));
+                    met = came * metalHi;
+                    rg = Math.min(1, rough + came * gap);
+                }
+                else if (mode == 2)
+                    rg = Math.min(1, gap + s * Math.max(0, rough - gap));
+                else {
+                    const grain = Math.min(micro, Math.abs(hf) * 0.85), pore = Math.min(micro * 0.4, Math.abs(grit) * micro);
+                    rg = Math.min(1, rough + (1 - s) * gap + grain + pore);
+                }
+                const aoV = mode == 0 ? Math.max(0.62, Math.min(1, ao * (0.78 + 0.22 * s) * (hf < -0.06 ? 0.92 : 1))) : ao;
+                const rl = Math.max(rg, Math.min(1, rg + 0.25));
+                mat[i] = matP[i] = aoV * 255;
+                mat[i + 3] = matP[i + 3] = 255;
+                mat[i + 1] = rl * 255;
+                matP[i + 1] = rg * 255;
+                mat[i + 2] = 0;
+                matP[i + 2] = met * 255;
+                sum += aoV;
+            }
+        const nor = CForgeTex.Normal(_hi, M, _depth * Sc).buf;
+        for (let y = 0; y < M; y++)
+            for (let x = 0; x < M; x++) {
+                const hm = At(h2, (x + 0.5) * N / M - 0.5, (y + 0.5) * N / M - 0.5);
+                nor[(y * M + x) * 4 + 3] = (0.1 + 0.9 * Math.max(0, Math.min(1, hm))) * 255;
+            }
+        const c = N * N;
+        return { alb: albH, nor, mat, matP, ao: sum / (M * M), ref: [sr / c, sg / c, sb / c] };
     }
     static Upload(_frame, _key, _buf, N = CForgeTex.sSize) {
         const tex = new CTexture();

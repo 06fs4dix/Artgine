@@ -90,12 +90,16 @@ export class CForgeMeshBuf
     }
 
     //_nor·_mat : 노말·재질 텍스처를 붙일지(텍스처 묶음이 있는 경우만). 끈 쪽은 TexOff를 0으로 둬 셰이더가 읽지 않는다
-    Commit(_frame : CFrame, _key : string, _tex : string, _nor : boolean = false, _mat : boolean = false) : boolean
+    //_pbr : 재질 칸을 램버트 맵 대신 PBR 맵(_mp)으로. _real : 실사 알베도·노말·재질
+    Commit(_frame : CFrame, _key : string, _tex : string, _nor : boolean = false, _mat : boolean = false, _pbr : boolean = false, _real : boolean = false) : boolean
     {
         if(this.mIdx.length == 0) return false;
         const n = this.Count();
-        const surf = _nor || _mat ? CForgeTex.Surf(_tex) : null, list = [_tex];
-        const ni = surf != null && _nor ? list.push(surf.mNor) - 1 : 0, mi = surf != null && _mat ? list.push(surf.mMat) - 1 : 0;
+        const surf = _real ? CForgeTex.EnsureReal(_tex) : (_nor || _mat ? CForgeTex.Surf(_tex) : null);
+        const alb = _real && surf != null && surf.mAlbR != null ? surf.mAlbR : _tex, list = [alb];
+        const nor = surf == null ? null : (_real && surf.mNorR != null ? surf.mNorR : surf.mNor);
+        const mat = surf == null ? null : (_real ? (_pbr ? surf.mMatPBRR : surf.mMatR) : (_pbr && surf.mMatPBR != null ? surf.mMatPBR : surf.mMat));
+        const ni = surf != null && _nor && nor != null ? list.push(nor) - 1 : 0, mi = surf != null && _mat && mat != null ? list.push(mat) - 1 : 0;
         const tex = new Float32Array(n * 3);
         for(let i = 0; i < n; i++) { tex[i * 3 + 1] = ni; tex[i * 3 + 2] = mi; }
         CForgeMeshBuf.ToMesh(_frame, _key, this.mPos, this.mUV, this.mNor, tex, this.mIdx, list);

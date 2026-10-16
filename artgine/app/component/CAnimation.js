@@ -194,6 +194,19 @@ export class CClipShaderAttr extends CClip {
     }
 }
 ;
+export class CClipMorph extends CClip {
+    mName;
+    mST;
+    mED;
+    mCurve = new CCurve();
+    constructor(_time, _delay, _name = "", _st = 0, _ed = 1) {
+        super(_time, _delay);
+        this.mName = _name;
+        this.mST = _st;
+        this.mED = _ed;
+    }
+}
+;
 export class CClipForce extends CClip {
     mForce;
     constructor(_time, _force) {

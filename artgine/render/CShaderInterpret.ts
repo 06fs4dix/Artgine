@@ -385,6 +385,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		this.mKeyMap.set("UniToSam2D","float");
 		this.mKeyMap.set("screenPos", "gl_FragCoord");
 		this.mKeyMap.set("screenDepth", "gl_FragDepth");
+		this.mKeyMap.set("vertexID", "float(gl_VertexID)");
 		this.mKeyMap.set("int","int");
 		//if(CWASM.IsWASM())
 		//this.mKeyMap.set("CMat12","mat4x3");
@@ -1864,6 +1865,8 @@ export class CShaderInterpretGPU extends CShaderInterpret
 	 * DSL 이 number 로 선언하므로 f32 로 받는다(u32 그대로면 본문의 float 연산과 안 맞는다).
 	 */
 	static kInvID="artInvID";
+	/** vertexID(정점 번호)를 담는 이름. kInvID 와 같은 이유로 var<private>, DSL 이 number 라 f32 로 받는다 */
+	static kVtxID="artVtxID";
 	/**
 	 * 이번 디스패치의 스레드 수를 받는 예약 유니폼 이름.
 	 *

@@ -1,6 +1,6 @@
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createApiClient, resolveLocalBase } from './common.js';
+import { createApiClient } from './common.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = dirname(dirname(SCRIPT_DIR));
@@ -22,7 +22,7 @@ function usageAndExit() {
 
 if (!baseArg || !baseArg.startsWith('http') || !cmd) usageAndExit();
 
-const base = await resolveLocalBase(baseArg.replace(/\/$/, ''));
+const base = baseArg.replace(/\/$/, '');
 
 function printResult(r, okKey) {
     console.log(r.ok ? JSON.stringify(okKey ? (r[okKey] ?? r) : r) : `fail: ${r.msg ?? 'unknown'}`);

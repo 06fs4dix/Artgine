@@ -92,11 +92,6 @@ g_contentJBox.SetBody("<img id='ImageModalSrc' style='width:100%;height: auto;ma
     "<div id='SourceSrc'/>");
 g_contentJBox.Hide();
 g_contentJBox.Open(CModal.ePos.Center);
-var g_deleteJBox = new CModal("delete_modal");
-g_deleteJBox.SetCloseToHide(true);
-g_deleteJBox.SetBody("<div id='Delete_div'/>");
-g_deleteJBox.Hide();
-g_deleteJBox.Open(CModal.ePos.Center);
 var g_musicJBox;
 function vcsTag(fl) {
     const s = fl.Status;
@@ -113,7 +108,6 @@ function vcsTag(fl) {
 }
 let index = 0;
 var folderList = { "<>": "ul", "class": "list-group", "html": [] };
-var fileList = { "<>": "ul", "class": "list-group", "html": [] };
 const EXT_KIND = {
     png: 'image', jpg: 'image', jpeg: 'image', bmp: 'image',
     mp3: 'audio', ogg: 'audio',
@@ -434,9 +428,7 @@ function renderFileRootSelect() {
 function DirListRefresh() {
     updateFileUrlBar();
     CDOM.ID("File_div").innerHTML = "";
-    CDOM.ID("Delete_div").innerHTML = "";
     folderList = { "<>": "ul", "class": "list-group", "html": [] };
-    fileList = { "<>": "ul", "class": "list-group", "html": [] };
     if (gPath != null && gPath != "/") {
         folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-warning list-group-item-action", "html": "<i class='bi bi-folder'></i> Root Folder",
             "onclick": () => { FolderCD("/"); },
@@ -459,13 +451,8 @@ function DirListRefresh() {
         folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
             "html": `<i class='bi ${FILE_ICON[kind]}'>${fl.name}${vcsTag(fl)}`,
             ...makeLongPressHandlers(fl, kind) });
-        if (fl.file == true) {
-            fileList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": `<i class='bi bi-file'>${fl.name}${vcsTag(fl)}`, "onclick": () => Delete(fl.name) });
-        }
     }
     CDOM.ID("File_div").append(CDOM.DataToDom(folderList));
-    CDOM.ID("Delete_div").append(CDOM.DataToDom(fileList));
 }
 const FILE_ROOT_KEY = 'artgine.fileRoot';
 function loadPersistedFileRoot() {
@@ -675,32 +662,7 @@ function FolderCD(_path, _onDone) {
     });
 }
 window["FolderCD"] = FolderCD;
-var g_fun = "";
-var g_data = "";
-var g_option = "";
-function Redirection(_multi) {
-    var form = CDOM.ID("ThisPage");
-    form.setAttribute("charset", "UTF-8");
-    form.setAttribute("method", "Post");
-    form.setAttribute("action", FileApiUrl("File/Redirection"));
-    CDOM.IDValue("fun", g_fun);
-    CDOM.IDValue("data", g_data);
-    CDOM.IDValue("option", g_option);
-    CDOM.IDValue("path", gPath);
-    CDOM.IDValue("RootPath", RootPath ?? "");
-    CDOM.IDValue("redirToken", GetFileToken());
-    form.submit();
-}
-window["Redirection"] = Redirection;
 var g_menuList = { "<>": "div", "class": "d-flex align-items-center p-1", "html": [
-        { "<>": "form", "action": "FilePage.jsp", "id": "ThisPage", "name": "ThisPage", "method": "post", "accept-charset": "UTF-8", "html": [
-                { "<>": "input", "type": "hidden", "id": "fun", "name": "fun" },
-                { "<>": "input", "type": "hidden", "id": "data", "name": "data" },
-                { "<>": "input", "type": "hidden", "id": "option", "name": "option" },
-                { "<>": "input", "type": "hidden", "id": "path", "name": "path" },
-                { "<>": "input", "type": "hidden", "id": "RootPath", "name": "RootPath" },
-                { "<>": "input", "type": "hidden", "id": "redirToken", "name": "token" },
-            ] },
         { "<>": "input", "type": "file", "multiple": "multiple", "id": "uploadBtn", "name": "uploadBtn", "style": "display:none" },
         { "<>": "div", "class": "d-flex align-items-center gap-1", "html": [
                 { "<>": "button", "type": "button", "class": "btn btn-sm btn-primary", "text": "Music", "onclick": () => {
@@ -1148,12 +1110,6 @@ function renameFile(fl) {
     }, MODAL_DOM_DELAY);
 }
 window["renameFile"] = renameFile;
-function Delete(_file) {
-    g_fun = "Delete";
-    g_data = gPath + _file;
-    Redirection(false);
-}
-window["Delete"] = Delete;
 const SEARCH_EXCLUDE_DIRS = ['node_modules'];
 const isSearchExcluded = (name) => name.startsWith('.') || SEARCH_EXCLUDE_DIRS.includes(name);
 let g_srchCache = new Map();
@@ -1290,35 +1246,58 @@ CDOM.ID("uploadBtn").onchange = async (e) => {
         reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(file);
     });
-    for (let i = 0; i < fi.files.length; ++i) {
+    const CHUNK = 8 * 1024 * 1024;
+    const fileNum = fi.files.length;
+    let totalSize = 0;
+    for (let i = 0; i < fileNum; ++i)
+        totalSize += fi.files[i].size;
+    const uid = Date.now();
+    const toMB = (b) => (b / 1024 / 1024).toFixed(1);
+    const progress = new CModal();
+    progress.SetHeader("Uploading");
+    progress.SetTitle(CModal.eTitle.Text);
+    progress.SetZIndex(CModal.eSort.Top);
+    progress.SetBody(`
+        <div class="d-flex flex-column gap-2 p-2" style="min-width:260px;word-break:break-all;">
+            <div id="upl_name_${uid}" class="small"></div>
+            <div class="progress" style="height:18px;">
+                <div id="upl_bar_${uid}" class="progress-bar" role="progressbar" style="width:0%"></div>
+            </div>
+            <div id="upl_text_${uid}" class="small text-secondary"></div>
+        </div>
+    `);
+    progress.Open(CModal.ePos.Center);
+    let sent = 0;
+    const updateProgress = (idx, name) => {
+        const pct = totalSize > 0 ? Math.floor(sent / totalSize * 100) : 100;
+        document.getElementById(`upl_name_${uid}`).textContent = `(${idx + 1}/${fileNum}) ${name}`;
+        const bar = document.getElementById(`upl_bar_${uid}`);
+        bar.style.width = pct + "%";
+        bar.textContent = pct + "%";
+        document.getElementById(`upl_text_${uid}`).textContent = `${toMB(sent)} / ${toMB(totalSize)} MB`;
+    };
+    for (let i = 0; i < fileNum; ++i) {
         try {
-            const name = fi.files[i].name;
-            const data = await readAsBase64(fi.files[i]);
-            await CFecth.Exe(FileApiUrl("File/Upload"), FileParam({ data: [data], name: [name], path }));
+            const file = fi.files[i];
+            updateProgress(i, file.name);
+            for (let off = 0; off == 0 || off < file.size; off += CHUNK) {
+                const data = await readAsBase64(file.slice(off, off + CHUNK));
+                const last = off + CHUNK >= file.size;
+                await CFecth.Exe(FileApiUrl("File/Upload"), FileParam({ data: [data], name: [file.name], path, offset: off, last }));
+                sent += Math.min(CHUNK, file.size - off);
+                updateProgress(i, file.name);
+            }
         }
         catch (err) {
+            progress.Close();
             CAlert.E('Upload failed: ' + (err?.message ?? String(err)));
             return;
         }
     }
-    Redirection(true);
+    progress.Close();
+    fi.value = "";
+    FolderCD(gPath);
 };
-function SoundPlayListSave() {
-    let confirm = new CConfirm();
-    confirm.SetBody('Enter file name to save:<br><input type="text" id="soundListSave" class="form-control form-control-sm" value="basic">');
-    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-        () => {
-            g_fun = "SoundPlayListSave";
-            g_data = JSON.stringify({ fullPath: g_musicJBox.GetList() });
-            g_option = CDOM.IDValue("soundListSave");
-            Redirection(false);
-        },
-        () => {
-        },
-    ], ["Yes", "No"]);
-    confirm.Open();
-}
-window["SoundPlayListSave"] = SoundPlayListSave;
 function RefreshOpen() {
     for (let fl of gDirList) {
         if (fl.index == null)
