@@ -1,0 +1,14 @@
+Vocaloid animation clips. The glTF inside each .glb is a VRMA file.
+
+Test.glb
+  Source: https://github.com/pixiv/three-vrm
+  Path: packages/three-vrm-animation/examples/models/test.vrma
+  License: MIT. Copyright (c) 2019-2026 pixiv Inc.
+
+Idle.glb, Talk.glb, Greeting.glb, Pose.glb, Squat.glb
+  Source: https://github.com/aikeyaorg/aikeya revision 640fd29
+  Path: static/animations/idle.vrma, talking.vrma, VRMA_02.vrma, VRMA_06.vrma, VRMA_07.vrma
+  License: MIT. Copyright (c) 2026 Charles Dyas.
+
+The MIT license grants use, copy, modification, and distribution of these files.
+Keep this notice with the clips.

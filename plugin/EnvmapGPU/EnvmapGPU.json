@@ -1,0 +1,15 @@
+{
+    "dependencies": {
+		"artgine":1
+    },
+    "version":1,
+    "text":"환경맵 블러 GPU",
+    "include":true,
+    "client":["EnvmapGPU.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Artgine",
+        "Revision":"20261015",
+        "Comment":"CRenderer.BlurEnvmap 을 GPU 셰이더(PMREM 방식) 버전으로 교체"
+    }
+}

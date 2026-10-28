@@ -1,0 +1,15 @@
+{
+    "dependencies": {
+		"artgine":1
+    },
+    "version":1,
+    "text":"2D 전투/연출용 이펙트 라이브러리",
+    "include":true,
+    "client":["Effect.js"],
+    "server":[],
+    "tooltip":{
+        "Author":"Artgine",
+        "Revision":"20261018",
+        "Comment":"이펙트 매니저(CEffectMgr)와 슬래시, 파동, 투사체, 상태이상, 파티클 등 이펙트 모음"
+    }
+}
