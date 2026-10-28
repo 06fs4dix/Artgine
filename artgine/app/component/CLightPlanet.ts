@@ -169,6 +169,7 @@ export class CDayCycle extends CObject
 
 export class CLightPlanet extends CLight
 {
+    override Icon(){ return "bi bi-sun"; }
     mDCArr=new Array<CDayCycle>();
     // 등록된 라이트(가로등 등)의 시간대별 세기. emission 을 원본 색에 곱하므로 회색 계열이면 순수 세기 조절이 된다
     mPointDCArr=new Array<CDayCycle>();

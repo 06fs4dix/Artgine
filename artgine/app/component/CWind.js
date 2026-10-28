@@ -30,9 +30,7 @@ export class CWind extends CBrushComp {
     SetWave(_w) {
         this.mWaveLength = _w;
     }
-    Icon() {
-        return "bi bi-wind";
-    }
+    Icon() { return "bi bi-wind"; }
     Update(_update) {
         if (super.Update(_update))
             return;

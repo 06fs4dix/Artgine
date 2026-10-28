@@ -393,15 +393,11 @@ export class CUI extends CSubject
 		if(this.mAnchorXType>0)	pos.x+=width;
 		if(this.mAnchorYType>0)	pos.y+=height;
 
-		// // 소수점 제거하여 픽셀 정렬 (떨림 방지)
-		// pos.x = Math.round(pos.x);
-		// pos.y = Math.round(pos.y);
+		// 화면 px 단위로 정렬한다. 월드 좌표를 자르면 줌이 1이 아닐 때 카메라 이동마다 1~2px 씩 떨린다
+		pos.x = Math.round(pos.x);
+		pos.y = Math.round(pos.y);
 
 		pos=cam.ScreenToWorld2DPoint(pos.x,pos.y);
-
-		// ScreenToWorld2DPoint 후에도 소수점 제거
-		pos.x = Math.trunc(pos.x);
-		pos.y = Math.trunc(pos.y);
 
         super.SetPos(pos,true);
         this.mUpdateAnchor = false;

@@ -1,115 +1,36 @@
 import { CSurface } from "../../artgine/app/subject/CSurface.js";
 import { CClass } from "../../artgine/basic/CClass.js";
+import { CUtilObj } from "../../artgine/basic/CUtilObj.js";
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CRenderPass } from "../../artgine/render/CRenderPass.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
 import { CTexture, CTextureInfo } from "../../artgine/render/CTexture.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
-import { CRPAuto, CRPMgr } from "../../artgine/app/canvas/CRPMgr.js";
-import { CCondition } from "../../artgine/util/CCondition.js";
-import { CVec1 } from "../../artgine/geometry/CVec1.js";
-import { CVec4 } from "../../artgine/geometry/CVec4.js";
-import { SDF } from "../../artgine/z_file/SDF.js";
-export class CSurfaceDownSample extends CSurface {
-    m_srcSize;
-    m_mipLevel;
-    m_threshold;
-    m_softThreshold;
-    constructor() {
-        super();
-        this.GetRP().mShader = "Artgine/Shader/PostDownSample";
-        this.GetRP().mClearColor = false;
-        this.GetRP().mDepthWrite = false;
-        this.GetRP().mDepthTest = false;
-    }
-    SetFrame(_fw) {
-        super.SetFrame(_fw);
-        if (_fw != null) {
-            if (this.mRenderPass.mShader == "Artgine/Shader/PostDownSample") {
-                this.mRenderPass.mShader = _fw.Pal().SlPost().Key();
-                this.mRenderPass.mTag.clear();
-                this.mRenderPass.mTag.add("sample");
-                this.mRenderPass.mTag.add("down");
-            }
-            this.SetShaderAttr();
-        }
-    }
-    ResetTexture(_srcSize, _mipLevel, _threshold, _softThreshold) {
-        const texSize = new CVec2(_srcSize.x * 0.5, _srcSize.y * 0.5);
-        this.NewRT([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA32F)], texSize, true);
-        this.m_srcSize = _srcSize;
-        this.m_mipLevel = _mipLevel;
-        this.m_threshold = _threshold;
-        this.m_softThreshold = _softThreshold;
-        this.SetShaderAttr();
-    }
-    SetShaderAttr() {
-        if (this.GetRP().FindSA("mipLevel") != null) {
-            this.GetRP().DeleteSA("mipLevel");
-            this.GetRP().DeleteSA("threshold");
-            this.GetRP().DeleteSA("softThreshold");
-        }
-        this.GetRP().mShaderAttr.push(new CShaderAttr("mipLevel", this.m_mipLevel));
-        this.GetRP().mShaderAttr.push(new CShaderAttr("threshold", this.m_threshold));
-        this.GetRP().mShaderAttr.push(new CShaderAttr("softThreshold", this.m_softThreshold));
-    }
-}
-export class CSurfaceUpSample extends CSurface {
-    m_blendFactor;
-    constructor() {
-        super();
-        this.GetRP().mShader = "Artgine/Shader/PostUpSample";
-        this.GetRP().mDepthWrite = false;
-        this.GetRP().mDepthTest = false;
-        this.GetRP().mClearColor = false;
-    }
-    SetFrame(_fw) {
-        super.SetFrame(_fw);
-        if (_fw != null) {
-            if (this.mRenderPass.mShader == "Artgine/Shader/PostUpSample") {
-                this.mRenderPass.mShader = _fw.Pal().SlPost().Key();
-                this.mRenderPass.mTag.clear();
-                this.mRenderPass.mTag.add("sample");
-                this.mRenderPass.mTag.add("up");
-            }
-            this.SetShaderAttr();
-        }
-    }
-    ResetTexture(_rt, _blendFactor) {
-        this.GetRP().mRenderTarget = _rt;
-        this.m_blendFactor = _blendFactor;
-        this.SetShaderAttr();
-    }
-    SetShaderAttr() {
-        if (this.GetRP().FindSA("blendFactor") != null) {
-            this.GetRP().DeleteSA("blendFactor");
-        }
-        this.GetRP().mShaderAttr.push(new CShaderAttr("blendFactor", this.m_blendFactor));
-        this.GetRP().mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE];
-    }
-}
+import { CRPMgr } from "../../artgine/app/canvas/CRPMgr.js";
+import { CPlugin } from "../../artgine/util/CPlugin.js";
+import { CEvent } from "../../artgine/basic/CEvent.js";
+import { CMath } from "../../artgine/geometry/CMath.js";
+import { CUpdate } from "../../artgine/basic/Basic.js";
+let gBloomShader = "";
+CPlugin.PushEvent(CEvent.eType.Load, () => {
+    gBloomShader = CPlugin.FindPath("Bloom") + "BloomShader.ts";
+    CFrame.Main().Load().Exe(gBloomShader);
+});
 export class CSurfaceBloom extends CSurface {
     static ePreFilterType = {
         EnergyConserving: 0,
         Additive: 1
     };
-    m_preFilterType = CSurfaceBloom.ePreFilterType.EnergyConserving;
+    m_preFilterType = CSurfaceBloom.ePreFilterType.Additive;
     m_threshold = 0.0;
     m_softThreshold = 0.0;
     m_intensity = 0.15;
     m_lowFrequencyBoostCurvation = 0.95;
-    m_lowFrequencyBoost = 0.7;
+    m_lowFrequencyBoost = 2.0;
     m_highPassFrequency = 1.0;
-    m_mipMax = 6;
-    constructor() {
-        super();
-        this.Natural();
-        this.Init();
-        this.mSave = false;
-    }
     IsShould(_member, _type) {
         let view = [
-            "m_threshold", "m_softThreshold", "m_preFilterType", "m_intensity",
+            "m_preFilterType", "m_threshold", "m_softThreshold", "m_intensity",
             "m_lowFrequencyBoostCurvation", "m_lowFrequencyBoost", "m_highPassFrequency",
         ];
         if (view.includes(_member)) {
@@ -117,89 +38,125 @@ export class CSurfaceBloom extends CSurface {
         }
         return super.IsShould(_member, _type);
     }
-    Init() {
-        const screenSize = new CVec2(1, 1);
-        const mipSize = [screenSize];
-        const mipTex = [];
+    Start() {
+        super.Start();
+        this.GetRP().mEnable.v = false;
         this.GetRP().mClearColor = false;
+        this.GetRP().mClearDepth = false;
         this.GetRP().mDepthWrite = false;
         this.GetRP().mDepthTest = false;
-        this.mTexKey = "Bloom/Main.tex";
-        this.NewRT([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA32F)], mipSize[0], true);
-        mipTex.push(this.mRenderPass.mRenderTarget);
-        for (let i = 0; i < this.m_mipMax; i++) {
-            mipSize.push(new CVec2(mipSize[i].x * 0.5, mipSize[i].y * 0.5));
-            const downSampleSurf = this.PushChild(new CSurfaceDownSample());
-            downSampleSurf.mTexKey = "Bloom/" + "DownSample" + i + ".tex";
+        this.GetRP().mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE];
+        const mipSize = [
+            new CVec2(1 / 2, 1 / 2), new CVec2(1 / 4, 1 / 4), new CVec2(1 / 8, 1 / 8),
+            new CVec2(1 / 16, 1 / 16), new CVec2(1 / 32, 1 / 32), new CVec2(1 / 64, 1 / 64)
+        ];
+        const mipTex = [
+            `Bloom/${this.ObjHash()}/DownSample0.tex`, `Bloom/${this.ObjHash()}/DownSample1.tex`, `Bloom/${this.ObjHash()}/DownSample2.tex`,
+            `Bloom/${this.ObjHash()}/DownSample3.tex`, `Bloom/${this.ObjHash()}/DownSample4.tex`, `Bloom/${this.ObjHash()}/DownSample5.tex`
+        ];
+        const inputTex = this.GetRP().mShaderAttr.find(_sa => _sa.mType == -2 && _sa.mEach == 0)?.mKey ?? this.GetTexKey();
+        for (let i = 0; i < 6; i++) {
+            const downSampleSurf = this.PushChild(new CSurface());
             downSampleSurf.SetKey("DownSample" + i);
-            downSampleSurf.ResetTexture(mipSize[i], i, this.m_threshold, this.m_softThreshold);
-            downSampleSurf.GetRP().mRenderTarget = downSampleSurf.GetTexKey();
-            downSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
-            mipTex.push(downSampleSurf.GetTexKey());
+            downSampleSurf.mTexKey = mipTex[i];
+            downSampleSurf.NewRT([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)], mipSize[i], true);
+            downSampleSurf.GetRP().mShader = gBloomShader;
+            downSampleSurf.GetRP().mClearColor = false;
+            downSampleSurf.GetRP().mClearDepth = false;
+            downSampleSurf.GetRP().mDepthWrite = false;
+            downSampleSurf.GetRP().mDepthTest = false;
+            downSampleSurf.GetPaint().PushTag("down");
+            downSampleSurf.GetPaint().PushCShaderAttr(new CShaderAttr("mipLevel", i));
+            downSampleSurf.GetPaint().PushCShaderAttr(new CShaderAttr("threshold", this.m_threshold));
+            downSampleSurf.GetPaint().PushCShaderAttr(new CShaderAttr("softThreshold", this.m_softThreshold));
+            if (i >= 1)
+                downSampleSurf.GetPaint().PushCShaderAttr(new CShaderAttr(0, mipTex[i - 1]));
+            else
+                downSampleSurf.GetPaint().PushCShaderAttr(new CShaderAttr(0, inputTex));
+            downSampleSurf.Start();
         }
-        for (let i = this.m_mipMax; i > 1; i--) {
-            const upSampleSurf = this.PushChild(new CSurfaceUpSample());
-            upSampleSurf.SetKey("UpSample" + (this.m_mipMax - i));
-            upSampleSurf.mTexKey = "Bloom/" + "UpSample" + i + ".tex";
-            upSampleSurf.ResetTexture(mipTex[i - 1], this.GetBlendFactor(i, this.m_mipMax));
-            upSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
+        for (let i = 5; i >= 0; i--) {
+            const upSampleSurf = this.PushChild(new CSurface());
+            upSampleSurf.SetKey("UpSample" + i);
+            if (i >= 1)
+                upSampleSurf.mTexKey = mipTex[i - 1];
+            else
+                upSampleSurf.mTexKey = this.GetTexKey();
+            upSampleSurf.GetRP().mShader = gBloomShader;
+            upSampleSurf.GetRP().mClearColor = false;
+            upSampleSurf.GetRP().mClearDepth = false;
+            upSampleSurf.GetRP().mDepthWrite = false;
+            upSampleSurf.GetRP().mDepthTest = false;
+            upSampleSurf.GetRP().mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE];
+            upSampleSurf.GetPaint().PushTag("up");
+            upSampleSurf.GetPaint().PushCShaderAttr(new CShaderAttr("blendFactor", this.GetBlendFactor(i)));
+            upSampleSurf.GetPaint().PushCShaderAttr(new CShaderAttr(0, mipTex[i]));
+            upSampleSurf.Start();
         }
-        const upSampleSurf = this.PushChild(new CSurfaceUpSample());
-        upSampleSurf.SetKey("UpSample" + (this.m_mipMax - 1));
-        upSampleSurf.mTexKey = "Bloom/" + "UpSample1.tex";
-        upSampleSurf.ResetTexture(mipTex[0], this.GetBlendFactor(1, this.m_mipMax));
-        upSampleSurf.mTexCreate = false;
-        upSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[1]));
+        this.Refresh();
     }
-    GetTexKey() {
-        return this.mChild[this.mChild.length - 1].GetTexKey();
+    Destroy() {
+        const mipTex = [
+            `Bloom/${this.ObjHash()}/DownSample0.tex`, `Bloom/${this.ObjHash()}/DownSample1.tex`, `Bloom/${this.ObjHash()}/DownSample2.tex`,
+            `Bloom/${this.ObjHash()}/DownSample3.tex`, `Bloom/${this.ObjHash()}/DownSample4.tex`, `Bloom/${this.ObjHash()}/DownSample5.tex`
+        ];
+        for (let i = 0; i < 6; i++) {
+            const tex = this.GetFrame().Res().Find(mipTex[i]);
+            this.GetFrame().Ren().ReleaseTexture(tex);
+            this.GetFrame().Res().Remove(mipTex[i]);
+        }
+        super.Destroy();
     }
     GetDownSample(_index) {
         return this.FindChild("DownSample" + _index);
     }
     GetUpSample(_index) {
-        const texIndex = this.m_mipMax - _index;
         return this.FindChild("UpSample" + _index);
     }
-    GetBlendFactor(_mip, _maxMip) {
-        const clamp = (_val, _min, _max) => {
-            return Math.min(Math.max(_val, _min), _max);
-        };
-        const mipRatio = _mip / _maxMip;
-        let lf_boost = (1.0
-            - Math.pow(1.0 - mipRatio, 1.0 / (1.0 - this.m_lowFrequencyBoostCurvation))) * this.m_lowFrequencyBoost;
-        let hp_lq = 1.0
-            - clamp((mipRatio - this.m_highPassFrequency) / this.m_highPassFrequency, 0.0, 1.0);
-        lf_boost *= this.m_preFilterType == CSurfaceBloom.ePreFilterType.EnergyConserving ? 1.0 - this.m_intensity : 1.0;
-        const distanceBoost = Math.pow(mipRatio, 0.5);
-        return (this.m_intensity + lf_boost * distanceBoost) * hp_lq;
+    GetBlendFactor(_mip) {
+        const mipDepth = Math.max(1, _mip) / 6;
+        const tailCurve = 1.0 - Math.pow(1.0 - mipDepth, 1.0 / (1.0 - this.m_lowFrequencyBoostCurvation));
+        const energyScale = this.m_preFilterType == CSurfaceBloom.ePreFilterType.EnergyConserving ? 1.0 - this.m_intensity : 1.0;
+        const depthScale = Math.pow(mipDepth, 0.5);
+        const tailStrength = tailCurve * this.m_lowFrequencyBoost * energyScale * depthScale;
+        const highPassFade = 1.0 - CMath.Clamp((mipDepth - this.m_highPassFrequency) / this.m_highPassFrequency, 0.0, 1.0);
+        return (this.m_intensity + tailStrength) * highPassFade;
     }
     Natural() {
-        this.m_intensity = 0.15;
-        this.m_threshold = 0.0;
-        this.m_softThreshold = 0.0;
-        this.m_lowFrequencyBoost = 0.7;
-        this.m_lowFrequencyBoostCurvation = 0.95;
-        this.m_highPassFrequency = 1.0;
-        this.EnergyConserving();
-    }
-    OldSchool() {
-        this.m_intensity = 0.05;
-        this.m_threshold = 0.6;
-        this.m_softThreshold = 0.2;
-        this.m_lowFrequencyBoost = 0.7;
-        this.m_lowFrequencyBoostCurvation = 0.95;
-        this.m_highPassFrequency = 1.0;
-        this.Additive();
-    }
-    ScreenBlur() {
         this.m_intensity = 1.0;
         this.m_threshold = 0.0;
         this.m_softThreshold = 0.0;
-        this.m_lowFrequencyBoost = 0.0;
-        this.m_lowFrequencyBoostCurvation = 0.0;
-        this.m_highPassFrequency = 1.0 / 3.0;
+        this.m_lowFrequencyBoost = 1.1;
+        this.m_lowFrequencyBoostCurvation = 0.6;
+        this.m_highPassFrequency = 0.55;
         this.EnergyConserving();
+    }
+    OldSchool() {
+        this.m_intensity = 2.2;
+        this.m_threshold = 0.08;
+        this.m_softThreshold = 0.5;
+        this.m_lowFrequencyBoost = 0.0;
+        this.m_lowFrequencyBoostCurvation = 0.95;
+        this.m_highPassFrequency = 0.2;
+        this.Additive();
+    }
+    ScreenBlur() {
+        this.m_intensity = 0.05;
+        this.m_threshold = 0.0;
+        this.m_softThreshold = 0.0;
+        this.m_lowFrequencyBoost = 3.3;
+        this.m_lowFrequencyBoostCurvation = 0.95;
+        this.m_highPassFrequency = 0.55;
+        this.EnergyConserving();
+    }
+    Glow() {
+        this.m_intensity = 0.85;
+        this.m_threshold = 0;
+        this.m_softThreshold = 0;
+        this.m_lowFrequencyBoost = 1.5;
+        this.m_lowFrequencyBoostCurvation = 0.95;
+        this.m_highPassFrequency = 0.4;
+        this.Additive();
     }
     EnergyConserving() {
         this.m_preFilterType = CSurfaceBloom.ePreFilterType.EnergyConserving;
@@ -210,45 +167,53 @@ export class CSurfaceBloom extends CSurface {
         this.Refresh();
     }
     Refresh() {
-        if (this.mChild.length == 0) {
+        if (this.mChild.length == 0)
             return;
+        for (let i = 0; i < 6; i++) {
+            const paint = this.GetDownSample(i).GetPaint();
+            paint.PushCShaderAttr(new CShaderAttr("mipLevel", i));
+            paint.PushCShaderAttr(new CShaderAttr("threshold", this.m_threshold));
+            paint.PushCShaderAttr(new CShaderAttr("softThreshold", this.m_softThreshold));
+            this.GetUpSample(i).GetPaint().PushCShaderAttr(new CShaderAttr("blendFactor", this.GetBlendFactor(i)));
         }
-        let mipTex = [];
-        mipTex.push(this.mRenderPass.mRenderTarget);
-        let pri = this.mRenderPass.mPriority;
-        pri++;
-        for (let i = 0; i < this.m_mipMax; i++) {
-            const downSample = this.GetDownSample(i);
-            downSample.m_threshold = this.m_threshold;
-            downSample.m_softThreshold = this.m_softThreshold;
-            downSample.GetRP().mShaderAttr.length = 0;
-            downSample.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
-            downSample.SetShaderAttr();
-            downSample.GetRP().mPriority = pri;
-            pri++;
-            mipTex.push(downSample.GetTexKey());
+    }
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
+        if (_pointer.member != "m_preFilterType" || _input == null)
+            return;
+        _body.append(CUtilObj.Select(_pointer, _input, ["EnergyConserving", "Additive"], [CSurfaceBloom.ePreFilterType.EnergyConserving, CSurfaceBloom.ePreFilterType.Additive], true));
+        const presets = [
+            ["Natural", () => this.Natural()], ["OldSchool", () => this.OldSchool()],
+            ["ScreenBlur", () => this.ScreenBlur()], ["Glow", () => this.Glow()],
+        ];
+        const row = document.createElement("div");
+        row.className = "mt-1";
+        for (const [name, apply] of presets) {
+            const btn = document.createElement("button");
+            btn.className = "btn btn-sm btn-outline-secondary me-1";
+            btn.innerText = name;
+            btn.onclick = () => {
+                apply();
+                this.EditRefresh();
+                this.EditChange(_pointer, false);
+            };
+            row.append(btn);
         }
-        for (let i = 0; i < this.m_mipMax; i++) {
-            const upSample = this.GetUpSample(i);
-            upSample.GetRP().mPriority = pri;
-            pri++;
-            upSample.m_blendFactor = this.GetBlendFactor(this.m_mipMax - i, this.m_mipMax);
-            upSample.SetShaderAttr();
-        }
-        this.mChild[this.mChild.length - 1].GetPaint().SetTexture(mipTex[1]);
-        this.mChild[this.mChild.length - 1].GetRP().mRenderTarget = mipTex[0];
+        _body.append(row);
     }
     EditChange(_pointer, _child) {
         super.EditChange(_pointer, _child);
         if (_child == true)
             return;
         this.Refresh();
-        let msg = this.NewOutMsg("ClearBatch");
+        const msg = this.NewOutMsg("ClearBatch");
         msg.mInter = "canvas";
     }
     Export(_copy, _resetKey) {
         const watch = super.Export(_copy, _resetKey);
-        watch.Refresh();
+        for (const child of watch.mChild)
+            child.Destroy();
+        watch.mChild.length = 0;
         return watch;
     }
     ImportCJSON(_json) {
@@ -258,73 +223,29 @@ export class CSurfaceBloom extends CSurface {
     }
 }
 export class CRPMgrBloom extends CRPMgr {
-    static Tag(_pt, _mask = 1, _tag = "bloom") {
-        _pt.PushTag(_tag);
-        _pt.PushCShaderAttr(new CShaderAttr("mask", new CVec1(_mask)));
-    }
-    static Append(_rpm, _opt = {}) {
-        const pal = CFrame.Main().Pal();
-        const emissiveKey = CRPMgrBloom.PushEmissive(_opt.emissiveTo ?? _rpm, _opt);
-        const bloom = CRPMgrBloom.PushBloom(_rpm, emissiveKey, _opt);
-        const last = _rpm.PushSuf(new CSurface());
-        const lrp = last.GetRP();
-        lrp.mRenderTarget = pal.GetDefaultFrameBuffer();
-        CRPMgrBloom.SetBlend(lrp, pal.GetMainFrameTex(), bloom.GetTexKey());
-        return bloom;
-    }
     constructor(_opt = {}) {
         super();
         if (CFrame.Main() == null)
             return;
         const pal = CFrame.Main().Pal();
-        const emissiveKey = CRPMgrBloom.PushEmissive(this, _opt);
-        const basicTex = new CTexture();
-        basicTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
-        const basicKey = this.PushTex("Bloom/basicTex.tex", basicTex);
-        const rp = this.PushRP(new CRPAuto());
-        for (const cls of _opt.classes ?? ["CPaint2D"])
-            rp.PushOr(new CCondition("class", "==", cls));
-        rp.mShader = pal.Sl2DKey();
-        rp.mCullFace = CRenderPass.eCull.None;
-        rp.mRenderTarget = basicKey;
-        rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.SingleShadowRead, pal.GetShadowReadTex()));
-        const bloom = CRPMgrBloom.PushBloom(this, emissiveKey, _opt);
-        const last = this.PushSuf(new CSurface());
-        last.SetUseRT(false);
-        CRPMgrBloom.SetBlend(last.GetRP(), basicKey, bloom.GetTexKey());
-    }
-    static PushEmissive(_rpm, _opt) {
-        const emissiveTex = new CTexture();
-        emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
-        const emissiveKey = _rpm.PushTex("Bloom/emissiveTex.tex", emissiveTex);
-        const rp = _rpm.PushRP(new CRPAuto());
-        for (const cls of _opt.classes ?? ["CPaint2D"])
-            rp.PushOr(new CCondition("class", "==", cls));
-        rp.PushAnd(new CCondition("mTag[" + (_opt.tag ?? "bloom") + "]"));
-        rp.mShader = CFrame.Main().Pal().Sl2DKey();
-        rp.mCullFace = CRenderPass.eCull.None;
-        rp.mRenderTarget = emissiveKey;
-        rp.mTag.add("mask");
-        return emissiveKey;
-    }
-    static PushBloom(_rpm, _emissiveKey, _opt) {
-        const bloom = _rpm.PushSuf(new CSurfaceBloom());
+        const outKey = _opt.output ?? pal.GetMainFrameTex();
+        const bloom = this.PushSuf(new CSurfaceBloom());
+        bloom.mTexKey = outKey;
+        bloom.mTexInfo = [new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)];
         const brp = bloom.GetRP();
-        brp.mShader = CFrame.Main().Pal().Sl2DKey();
+        brp.mRenderTarget = outKey;
+        brp.mShader = pal.Sl2DKey();
         brp.mTag.add("blit");
-        brp.mShaderAttr.push(new CShaderAttr(0, _emissiveKey));
+        brp.mShaderAttr.push(new CShaderAttr(0, _opt.input ?? pal.GetEmissionTex()));
         const preset = _opt.preset ?? "Glow";
         if (preset == "OldSchool")
             bloom.OldSchool();
         else if (preset == "ScreenBlur")
             bloom.ScreenBlur();
-        else if (preset == "Glow") {
-            bloom.OldSchool();
-            bloom.m_threshold = 0;
-            bloom.m_softThreshold = 0;
-            bloom.m_intensity = 0.2;
-            bloom.m_lowFrequencyBoost = 1.6;
-        }
+        else if (preset == "Natural")
+            bloom.Natural();
+        else if (preset == "Glow")
+            bloom.Glow();
         if (_opt.intensity != null)
             bloom.m_intensity = _opt.intensity;
         if (_opt.threshold != null)
@@ -338,19 +259,21 @@ export class CRPMgrBloom extends CRPMgr {
         if (_opt.highPassFrequency != null)
             bloom.m_highPassFrequency = _opt.highPassFrequency;
         bloom.Refresh();
-        return bloom;
     }
-    static SetBlend(_rp, _baseKey, _bloomKey) {
-        _rp.mShader = CFrame.Main().Pal().SlPostKey();
-        _rp.mTag.add("blend");
-        _rp.mShaderAttr.push(new CShaderAttr(0, _baseKey));
-        _rp.mShaderAttr.push(new CShaderAttr(1, _bloomKey));
-        _rp.mShaderAttr.push(new CShaderAttr("BlendColor0", new CVec4(SDF.eBlend.Texture, 0)));
-        _rp.mShaderAttr.push(new CShaderAttr("BlendColor1", new CVec4(SDF.eBlend.Texture, 1)));
-        _rp.mShaderAttr.push(new CShaderAttr("BlendColor2", new CVec4(SDF.eBlend.LinearDodge, 0, 1, 1)));
+    GetBloom() {
+        return this.mSufArr.find(_suf => _suf instanceof CSurfaceBloom);
+    }
+    SetInput(_key) {
+        const attr = this.GetBloom().GetRP().mShaderAttr.find(_sa => _sa.mType == -2 && _sa.mEach == 0);
+        attr.mKey = _key;
+        this.mUpdate = CUpdate.eType.Updated;
+    }
+    SetOutput(_key) {
+        const bloom = this.GetBloom();
+        bloom.mTexKey = _key;
+        bloom.GetRP().mRenderTarget = _key;
+        this.mUpdate = CUpdate.eType.Updated;
     }
 }
-CClass.Push(CSurfaceDownSample);
-CClass.Push(CSurfaceUpSample);
 CClass.Push(CSurfaceBloom);
 CClass.Push(CRPMgrBloom);

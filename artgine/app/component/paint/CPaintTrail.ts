@@ -520,7 +520,7 @@ import { CPaint } from "./CPaint.js";
 // 		this.mBW.mRadian=0;
 // 		this.mBound.Reset();
 // 		this.mBound.SetType(CBound.eType.Box);
-// 		this.mUpdateLMat=true;
+// 		this.mUpdateReq=true;
 
 // 		if(this.mStaticPos)
 // 		{
@@ -737,6 +737,7 @@ import { CPaint } from "./CPaint.js";
 // }
 export class CPaintTrail extends CPaint
 {
+    override Icon(){ return "bi bi-bezier"; }
 	public mOut : CFloat32Mgr=new CFloat32Mgr();
 	public mPosListCount=new CVec1();
 	public mCurrentTargetSize: number = 0;
@@ -770,7 +771,7 @@ export class CPaintTrail extends CPaint
 		this.mBW.mRadian = 0;
 		this.mBound.Reset();
 		this.mBound.SetType(CBound.eType.Box);
-		this.mUpdateLMat = true;
+		this.mUpdateReq=true;
 
 		// 1. 현재 입력된 포지션 개수에 필요한 타겟 사이즈 계산 (4의 제곱수)
 		let neededSize = 4;
@@ -833,30 +834,8 @@ export class CPaintTrail extends CPaint
 		this.mBound.mMax.y *= 2;
 		this.mBound.mMax.z *= 2;
 	}
-	override Render(_vf : CShader)
-	{
-		if (this.mCurrentTargetSize === 0) return;
-
-		var barr=this.RenderBatch(_vf,1);
-
-		if(barr==null)	return;
-
-		this.mOwner.GetFrame().BMgr().BatchOn();
-		super.Common(_vf);
-
-		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi",this.mTexCodi));
-		//this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("trailWidth",100));
-		//this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("posListCount",this.mPosListCount));
-		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("trailPos",4,this.mOut.GetArray()));
-		if(this.mLastHide)
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide",new CVec1(1.0)));
-		else
-			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide",new CVec1(0.0)));
-		
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
-		var dm=this.GetDrawMesh("CPaintTrail",_vf);
-        this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
-		
-		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
-	}
+	override Render(_vf : CShader)	{}
 }
+
+import CPaintTrail_imple from "../../../app_imple/component/paint/CPaintTrail.js";
+CPaintTrail_imple();

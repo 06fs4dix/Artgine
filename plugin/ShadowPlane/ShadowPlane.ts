@@ -535,7 +535,7 @@ export class CShadowPlane extends CPaint2D
             points.forEach(p => CMath.V3SubV3(p, this.GetOwner().GetPos(), p));
 
             this.SetPosList(points);
-            this.mUpdateLMat = true;
+            this.mUpdateReq=true;
 
             this.CaptureShadow();
 

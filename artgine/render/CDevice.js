@@ -427,8 +427,8 @@ export class CDeviceGPU extends CDevice {
         super(_pf, _handle);
         this.mHandle = _handle;
         g_property.set(CDevice.eProperty.Sam2DMax, 11);
-        g_property.set(CDevice.eProperty.Sam2DArrMax, 3);
-        g_property.set(CDevice.eProperty.SamCubeMax, 2);
+        g_property.set(CDevice.eProperty.Sam2DArrMax, 4);
+        g_property.set(CDevice.eProperty.SamCubeMax, 1);
         g_property.set(CDevice.eProperty.Sam2dArrLayerMax, 256);
         g_property.set(CDevice.eProperty.VertexUniform, 1024);
         g_property.set(CDevice.eProperty.PixelUniform, 1024);

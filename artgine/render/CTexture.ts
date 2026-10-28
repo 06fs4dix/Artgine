@@ -214,6 +214,13 @@ export class CTexture extends CObject
 			//break;
 		}
 		
+		// float32인 경우 버퍼에 uint들어있으면 에러생겨서 삭제시킴
+		for(let info of this.mInfo) {
+			if(info.mFormat == CTexture.eFormat.RGBA32F) {
+				this.mBuffer.length = 0;
+				break;
+			}
+		}
 		
 		_div.prepend(CDOM.DataToDom(
 			{"tag":"div","class":"row","html":[

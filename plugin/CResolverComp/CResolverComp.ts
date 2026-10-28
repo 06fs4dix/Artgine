@@ -78,7 +78,7 @@ class CResolverComp extends CComponent
         if(tree == null) return;
         if(!this.IsReady(this.m_p3d)) return;
         this.Resolve(tree, _delay);
-        this.m_p3d.UpdateLMat();
+        this.m_p3d.UpdateFMat();
     }
     protected Resolve(_tree : CTree<CMeshCopyNode>, _delay : any) {
         this.m_sourceBone = _tree.Find(this.m_bone);

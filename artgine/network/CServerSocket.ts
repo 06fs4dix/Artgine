@@ -35,16 +35,25 @@ export class CServerSocker extends CServer
                 
                 const url = new URL(req.url, `http://${req.headers.host}`);
                 //CConsol.Log("접속 요청 경로: " + url.pathname, "yellow");
-                if (url.pathname === path) 
+                if (url.pathname === path)
                 {
+                    socket["__claimed"] = true;
                     this.mWSS.handleUpgrade(req, socket, head, (ws) => {
                         this.mWSS.emit('connection', ws, req);
                     });
                 }
-                else 
+                else
                 {
-                    CConsol.Log("경로 불일치. 연결 거부됨", "red");
-                    socket.destroy();
+                    // 같은 서버의 다른 upgrade 리스너(CTerminalRouter 등)는 경로가 맞으면 await 전에 동기적으로
+                    // __claimed를 표시한다. 즉시 destroy하면 그 리스너가 await(쿠키 인증) 중인 소켓을 끊으므로,
+                    // 모든 리스너의 동기 구간이 끝난 뒤에도 아무도 표시하지 않은 소켓만 정리한다.
+                    setImmediate(() => {
+                        if (!socket["__claimed"] && !socket.destroyed)
+                        {
+                            CConsol.Log("경로 불일치. 연결 거부됨", "red");
+                            socket.destroy();
+                        }
+                    });
                 }
             });
         }

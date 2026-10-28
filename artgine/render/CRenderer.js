@@ -57,9 +57,11 @@ export class CRenderer {
     BlitColor(_read, _draw = null) { }
     Begin(_tex = null, _surface = false, _rtUse = null, _rtLevel = 0) { return false; }
     End(_tex = null, _rtUse = null, _rtLevel = 0) { }
-    BlurEnvmap(_texKey, _updatedLayers) {
+    BlurEnvmap(_texKey, _updatedLayers, _cube = null) {
         const tex = this.mRes.Find(_texKey);
         if (this.mDev.GL() == null || tex == null || tex.GetGBuf().length == 0 || _updatedLayers.size == 0)
+            return;
+        if (_cube != null && _cube.GetBuf().length < 6)
             return;
         const info = tex.GetInfo()[0];
         const isFloat = info.mFormat == CTexture.eFormat.RGBA32F;
@@ -72,6 +74,40 @@ export class CRenderer {
         const fb = this.mDev.GL().createFramebuffer();
         this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, fb);
         this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D_ARRAY, gTex);
+        if (_cube != null) {
+            const layers = Array.from(_updatedLayers).sort((a, b) => a - b);
+            for (let face = 0; face < 6; face++) {
+                const img = CImgPro.SqurEnlargedReduced(_cube.GetWidth(), _cube.GetHeight(), _cube.GetBuf()[face == 2 ? 3 : face == 3 ? 2 : face], size / _cube.GetWidth(), size / _cube.GetHeight(), 4);
+                const src = img.GetBuf()[0];
+                const buf = new Uint8Array(src.length);
+                const w = img.GetWidth(), h = img.GetHeight();
+                const side = face != 2 && face != 3;
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const sx = side ? w - 1 - x : x;
+                        let sy = side ? h - 1 - y : y;
+                        if (!_cube.GetYFlip())
+                            sy = h - 1 - sy;
+                        buf.set(src.subarray((sy * w + sx) * 4, (sy * w + sx) * 4 + 4), (y * w + x) * 4);
+                    }
+                }
+                this.mDev.GL().texSubImage3D(this.mDev.GL().TEXTURE_2D_ARRAY, 0, 0, 0, layers[face], w, h, 1, this.mDev.GL().RGBA, this.mDev.GL().UNSIGNED_BYTE, buf);
+            }
+            const drawFb = this.mDev.GL().createFramebuffer();
+            for (let lod = 1; lod < lodCount; lod++) {
+                const s = size >> lod;
+                const ps = size >> (lod - 1);
+                for (let face = 0; face < 6; face++) {
+                    this.mDev.GL().bindFramebuffer(this.mDev.GL().READ_FRAMEBUFFER, fb);
+                    this.mDev.GL().framebufferTextureLayer(this.mDev.GL().READ_FRAMEBUFFER, this.mDev.GL().COLOR_ATTACHMENT0, gTex, lod - 1, layers[face]);
+                    this.mDev.GL().bindFramebuffer(this.mDev.GL().DRAW_FRAMEBUFFER, drawFb);
+                    this.mDev.GL().framebufferTextureLayer(this.mDev.GL().DRAW_FRAMEBUFFER, this.mDev.GL().COLOR_ATTACHMENT0, gTex, lod, layers[face]);
+                    this.mDev.GL().blitFramebuffer(0, 0, ps, ps, 0, 0, s, s, this.mDev.GL().COLOR_BUFFER_BIT, this.mDev.GL().LINEAR);
+                }
+            }
+            this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, fb);
+            this.mDev.GL().deleteFramebuffer(drawFb);
+        }
         const mips = [];
         const cubeLayers = [];
         for (let layer = 0; layer + 6 <= info.mCount; layer += 6) {
@@ -426,7 +462,11 @@ export class CRendererGPU extends CRenderer {
     mRTMipSet = new Set();
     mEnvBlurBusy = false;
     mEnvBlurAgain = false;
+    mEnvBlurKey = null;
+    mEnvBlurSerial = 0;
     BlurEnvmap(_texKey, _updatedLayers) {
+    }
+    BlurEnvmapRun(_texKey) {
     }
     async BlurEnvmapAsync(_tex) {
     }

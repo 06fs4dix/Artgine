@@ -1,7 +1,7 @@
 import { CUpdate } from "../../basic/Basic.js";
 import { CVec2 } from "../../geometry/CVec2.js";
 import { CSubject } from "../subject/CSubject.js";
-import { CCanvasPlugin } from "./CCanvas.js";
+import { CCanvas, CCanvasPlugin } from "./CCanvas.js";
 import { CRPMgr } from "./CRPMgr.js";
 
 export class CCanvasPluginRPMgr extends CCanvasPlugin
@@ -13,6 +13,11 @@ export class CCanvasPluginRPMgr extends CCanvasPlugin
 	{
 		super();
 		this.SetRPMgr(_RPMgr);
+	}
+	override SetCanvas(_canvas: CCanvas): void {
+		super.SetCanvas(_canvas);
+		if(this.mRPMgr!=null) this.mRPMgr.mUpdate = CUpdate.eType.Updated;
+		if(this.mChangeRPMgr!=null) this.mChangeRPMgr.mUpdate = CUpdate.eType.Updated;
 	}
 	SetRPMgr(_rpMgr : CRPMgr = null)
 	{

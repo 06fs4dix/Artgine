@@ -496,7 +496,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 		for(let plugin of this.mPlugin)
 		{
-			plugin.mCanvas=this;
+			plugin.SetCanvas(this);
 		}
 		
 		return this;
@@ -533,6 +533,11 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 			each0.Destroy();
 		}
 		this.ClearBatch();
+
+		for (var plugin of this.mPlugin)
+		{
+			plugin.SetCanvas(this);
+		}
 	}
 	Detach(_key)
 	{

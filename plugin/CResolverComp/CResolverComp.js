@@ -60,7 +60,7 @@ class CResolverComp extends CComponent {
         if (!this.IsReady(this.m_p3d))
             return;
         this.Resolve(tree, _delay);
-        this.m_p3d.UpdateLMat();
+        this.m_p3d.UpdateFMat();
     }
     Resolve(_tree, _delay) {
         this.m_sourceBone = _tree.Find(this.m_bone);

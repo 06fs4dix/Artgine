@@ -1,11 +1,11 @@
-import { CForgeScene, ForgeV2, IForgeBridge, IForgeBuilding, IForgeChurch, IForgeDock, IForgeFence, IForgeMonument, IForgePath, IForgeStair, IForgeTower, IForgeWall } from "./CForgeScene.js";
+import { CForgeScene, ForgeV2, IForgeBridge, IForgeBuilding, IForgeInterior, IForgeChurch, IForgeDock, IForgeFence, IForgeMonument, IForgePath, IForgeStair, IForgeTower, IForgeWall } from "./CForgeScene.js";
 import { CForgeTheme } from "./CForgeTheme.js";
 import { CForgeTempleGen } from "./CForgeTempleGen.js";
 import { CForgePoly } from "./CForgePoly.js";
 import { CForgeCurve, CForgeSpline } from "./CForgeSpline.js";
 
 export interface IForgeGate { s : number; w : number; }
-export interface IForgeOptR { theme? : string; style? : number; wall? : number; roofKind? : number; over? : Record<string, any>; }
+export interface IForgeOptR { theme? : string; style? : number; wall? : number; roofKind? : number; over? : Record<string, any>; interior? : IForgeInterior; }
 //curve : 생성기가 그대로 쓰는 샘플 곡선 [x, z, 높이]. out : 바깥쪽이 왼쪽 법선이면 1, 오른쪽이면 -1
 //lands : 계단 층계참이 닿는 구간(벽 위 안쪽 턱을 비운다)
 export interface IForgeWallR extends IForgeOptR { id : number; seed : number; pts : number[][]; closed : boolean; thick : number; style : number; endTower : number[]; curve : number[][]; gates : IForgeGate[]; out : number; lands : IForgeGate[]; }
@@ -325,7 +325,7 @@ export class CForgeAdjust
             world.forEach((_a, _k) => { const b = world[(_k + 1) % world.length], l = Math.hypot(b[0] - _a[0], b[1] - _a[1]); if(l > lmax) { lmax = l; door = { edge : _k, t : 0.5 }; } });
         }
         return { id : _e.id, seed : _e.seed, poly : world, height, roof : _e.roof, roofH : pitch * wid * 0.5,
-            floors : Math.max(1, Math.round(height / 2.8)), pitch, o : c0, u, local, rects, door, others, leanWall : wallLine != null };
+            floors : Math.max(1, Math.round(height / 2.8)), pitch, o : c0, u, local, rects, door, others, leanWall : wallLine != null, interior : _e.interior };
     }
 
     static Line(_e : IForgePath | IForgeFence | IForgeBridge, _width : number) : IForgeLineR

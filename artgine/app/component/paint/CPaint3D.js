@@ -1,7 +1,5 @@
-import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import { CArray } from "../../../basic/CArray.js";
-import { CHash } from "../../../basic/CHash.js";
 import { CString } from "../../../basic/CString.js";
 import { CTree } from "../../../basic/CTree.js";
 import { CBound } from "../../../geometry/CBound.js";
@@ -26,12 +24,11 @@ import { SDF } from "../../../z_file/SDF.js";
 import { CPaint } from "./CPaint.js";
 import { CPaintMerge } from "./CPaintMerge.js";
 export class CPaint3D extends CPaint {
+    Icon() { return "bi bi-badge-3d"; }
     mTree;
     mMesh;
     mMeshRes;
     mWeightMat;
-    mCenterPos = false;
-    mTargetScale = 0;
     mTreeNode = new CArray();
     mSkinType = SDF.eSkin.None;
     mCamCompSet = new Set();
@@ -45,10 +42,8 @@ export class CPaint3D extends CPaint {
     mMorphSAOff = null;
     mBrushCompArr = [];
     mTexLoad = false;
-    constructor(_mesh = "Artgine/box.mesh", _centerPos = false, _targetScale = 0) {
+    constructor(_mesh = "Artgine/box.mesh") {
         super();
-        this.mCenterPos = _centerPos;
-        this.mTargetScale = _targetScale;
         this.mTree = null;
         this.mMesh = _mesh;
         this.mWeightMat = new Float32Array(0);
@@ -84,7 +79,6 @@ export class CPaint3D extends CPaint {
     }
     IsShould(_member, _type) {
         if (_member == "mWeightMat" || _member == "mTreeNode" || _member == "mTree" || _member == "mMeshRes" ||
-            _member == "mCenterPos" || _member == "mTargetScale" ||
             _member == "mMorph" || _member == "mMorphSA" || _member == "mMorphSAOff" || _member == "mMorphWeight" || _member == "mMorphReady" || _member == "mMorphTexW")
             return false;
         return super.IsShould(_member, _type);
@@ -106,70 +100,6 @@ export class CPaint3D extends CPaint {
             return false;
         this.mMorphWeight[off] = _weight;
         return true;
-    }
-    MorphTexUpdate() {
-        if (this.mMorph == null || this.mMorphReady)
-            return;
-        let frame = this.mOwner.GetFrame();
-        let key = this.mMorph.GetTexKey(this.mMesh);
-        let tex = frame.Res().Find(key);
-        if (tex == null) {
-            if (frame.Load().IsLoad(key))
-                return;
-            tex = CUtilRender.MorphTexBake(this.mMorph);
-            if (tex == null) {
-                this.mMorph = null;
-                return;
-            }
-            frame.Load().LoadSet().add(key);
-            frame.Ren().BuildTexture(tex).then(() => {
-                frame.Res().Push(key, tex);
-                frame.Load().LoadSet().delete(key);
-            });
-            return;
-        }
-        this.mMorphTexW = tex.GetWidth();
-        this.PushCShaderAttr(new CShaderAttr(8, key));
-        this.PushTag("morph");
-        this.mMorphReady = true;
-        this.ClearBatch();
-    }
-    MorphWeightUpdate() {
-        if (this.mMorphSA == null)
-            return;
-        let w = this.mMorphWeight;
-        let act = new Array();
-        for (let i = 0; i < w.length; ++i)
-            if (Math.abs(w[i]) > 0.0001)
-                act.push(i);
-        act.sort((a, b) => Math.abs(w[b]) - Math.abs(w[a]));
-        for (let k = 0; k < 8; ++k) {
-            let on = k < act.length;
-            this.mMorphSA[1 + (k >> 2)].mData.mF32A[k & 3] = on ? act[k] : -1;
-            this.mMorphSA[3 + (k >> 2)].mData.mF32A[k & 3] = on ? w[act[k]] : 0;
-        }
-    }
-    MorphBatch(_on) {
-        let bm = this.mOwner.GetFrame().BMgr();
-        if (this.mMorphSA == null) {
-            this.mMorphSA = [
-                new CShaderAttr("morphInfo", new CVec4(this.mMorph.GetVertexCount(), this.mMorphTexW, 0, 0)),
-                new CShaderAttr("morphIdx0", new CVec4(-1, -1, -1, -1)),
-                new CShaderAttr("morphIdx1", new CVec4(-1, -1, -1, -1)),
-                new CShaderAttr("morphW0", new CVec4(0, 0, 0, 0)),
-                new CShaderAttr("morphW1", new CVec4(0, 0, 0, 0)),
-            ];
-            this.mMorphSAOff = [
-                new CShaderAttr("morphInfo", new CVec4(0, this.mMorphTexW, 0, 0)),
-                new CShaderAttr("morphIdx0", new CVec4(-1, -1, -1, -1)),
-                new CShaderAttr("morphIdx1", new CVec4(-1, -1, -1, -1)),
-                new CShaderAttr("morphW0", new CVec4(0, 0, 0, 0)),
-                new CShaderAttr("morphW1", new CVec4(0, 0, 0, 0)),
-            ];
-            this.MorphWeightUpdate();
-        }
-        for (let sa of (_on ? this.mMorphSA : this.mMorphSAOff))
-            bm.SetBatchSA(sa);
     }
     SetWeightMat(_off, _tar) {
         for (var x = 0; x < 16; ++x) {
@@ -254,7 +184,7 @@ export class CPaint3D extends CPaint {
         this.mTree = new CTree();
         this.mTree.mData = new CMeshCopyNode();
         CMeshTreeUpdate.TreeCopy(this.mMeshRes.meshTree, this.mTree, new CMat(), this.mBound);
-        this.UpdateLMat();
+        this.UpdateFMat();
         this.mBound.mType = CBound.eType.Box;
         this.mTreeNode.Clear();
         var node = this.mTreeNode;
@@ -268,148 +198,18 @@ export class CPaint3D extends CPaint {
                 node.Push(new CMeshPaint(nodemp.md.mChild, nodemp.mpi.mChild, null));
             }
         }
-        this.ExeLocalMat(this.mCenterPos, this.mTargetScale);
         this.ClearBatch();
         this.mUpdateFMat = true;
         this.mBW.mRadian = 0;
-        this.mBound.MatCoordi(this.mLMat);
         return true;
     }
-    Update(_update) {
-        super.Update(_update);
-        this.MorphTexUpdate();
-        this.MorphWeightUpdate();
-        if (this.mUpdateFMat == false)
-            return;
-        const node = this.mTreeNode;
-        const nSize = node.Size();
-        for (let nodeOff = 0; nodeOff < nSize; nodeOff++) {
-            const nodemp = node.mArray[nodeOff];
-            const mpiData = nodemp.mpi.mData;
-            if (mpiData.updateMat !== CUpdate.eType.Not || mpiData.FMatAtt === false) {
-                if (this.mSkinType != SDF.eSkin.None && nodemp.md.mData.ci != null) {
-                    nodemp.sum.Import(this.GetFMat());
-                }
-                else if (this.mSkinType == SDF.eSkin.Bake) {
-                }
-                else if (mpiData.FMatAtt == false && mpiData.pst.IsUnit()) {
-                    mpiData.FMatAtt = true;
-                    nodemp.sumSA.mData = this.GetFMat();
-                    nodemp.sumSA.mTag = null;
-                }
-                else if (mpiData.FMatAtt == true) {
-                    if (mpiData.pst.IsUnit() == false) {
-                        nodemp.sumSA.mData = nodemp.sum;
-                        mpiData.FMatAtt = false;
-                        nodemp.sumSA.mTag = null;
-                        CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum, true);
-                    }
-                    else if (this.GetFMat() != nodemp.sumSA.mData) {
-                        nodemp.sumSA.mData = this.GetFMat();
-                    }
-                }
-                else {
-                    CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum, true);
-                }
-                if (mpiData.updateMat == CUpdate.eType.Updated)
-                    mpiData.updateMat = CUpdate.eType.Already;
-                else if (mpiData.updateMat == CUpdate.eType.Already)
-                    mpiData.updateMat = CUpdate.eType.Not;
-            }
-            if (this.mSkinType == SDF.eSkin.Bone) {
-                for (var i = 0; i < this.mMeshRes.skin.length; ++i) {
-                    if (nodemp.md.mData.IsSkinKey(this.mMeshRes.skin[i].key)) {
-                        var all = new CMat();
-                        all = CMath.MatMul(this.mMeshRes.skin[i].mat, mpiData.pst);
-                        this.SetWeightMat(i, all);
-                    }
-                }
-            }
-        }
-    }
-    Render(_vf) {
-        var barr = this.RenderBatch(_vf, this.mTreeNode.Size());
-        if (barr == null)
-            return;
-        if (this.mTree == null) {
-            this.ClearBatch();
-            return;
-        }
-        this.mOwner.GetFrame().BMgr().BatchGlobalOn();
-        if (this.mSkinType == SDF.eSkin.Bone) {
-            if (this.mWeightMat.length == 0) {
-                this.mWeightMat = new Float32Array(4 * 4);
-                for (var i = 0; i < 4 * 4; ++i) {
-                    if (i % 16 == 0 || i % 16 == 5 || i % 16 == 10 || i % 16 == 15)
-                        this.mWeightMat[i] = 1;
-                    else
-                        this.mWeightMat[i] = 0;
-                }
-            }
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("weightArrMat", 16, this.mWeightMat));
-        }
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("skin", this.mSkinType));
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
-        this.Common(_vf);
-        this.mOwner.GetFrame().BMgr().BatchGlobalOff();
-        var node = this.mTreeNode;
-        const nSize = node.Size();
-        for (let nodeOff = 0; nodeOff < nSize; nodeOff++) {
-            let nodemp = node.Find(nodeOff);
-            this.RenderMesh(_vf, nodemp, barr, nodeOff);
-        }
-        this.mOwner.GetFrame().BMgr().BatchGlobalClear();
-    }
-    RenderMesh(_vf, _node, _barr, _off) {
-        if (_node.md.mData != null && _node.md.mData.ci != null && _node.md.mData.textureOff.length > 0) {
-            this.mOwner.GetFrame().BMgr().BatchOn();
-            switch (this.mWorldMatType) {
-                case CMat.eType.PRS:
-                    _node.sumSA.mKey = "worldMat";
-                    break;
-                case CMat.eType.Short3D:
-                    _node.sumSA.mKey = "worldMatShort";
-                    break;
-            }
-            _node.sumSA.mType = this.mWorldMatType;
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType", new CVec1(this.mWorldMatType)));
-            this.mOwner.GetFrame().BMgr().SetBatchSA(_node.sumSA);
-            if (_node.mpi.mData.color != null) {
-                this.PushTag("CAModel");
-                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("colorModel", _node.mpi.mData.color));
-                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("alphaModel", _node.mpi.mData.alpha));
-            }
-            this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey, _node.mpi.mData.textureOff);
-            if (this.mMorphReady)
-                this.MorphBatch(_node.md.mData.morph == this.mMorph);
-            if (_vf.mUniform.get("material") != null)
-                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
-            if (_vf.mUniform.get("part") != null)
-                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("part", CHash.HashCode(_node.md.mKey)));
-            var dm = this.GetDrawMesh("Artgine/DM/" + this.mMesh + _node.md.mKey, _vf, _node.md.mData.ci);
-            this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
-            _barr[_off] = this.mOwner.GetFrame().BMgr().BatchOff();
-        }
-        else {
-            _barr[_off] = null;
-        }
-    }
+    Update(_update) { }
+    Render(_vf) { }
     GetMesh() { return this.mMesh; }
     GetTree() { return this.mTree; }
-    ExeLocalMat(_centerPos = false, _targetScale = 0) {
-        if (this.mTargetScale != 0) {
-            let size = this.mBound.GetSize();
-            let maxSize = CMath.Max(CMath.Max(size.x, size.y), size.z);
-            this.mLMat.mF32A[0] = this.mTargetScale / maxSize;
-            this.mLMat.mF32A[5] = this.mTargetScale / maxSize;
-            this.mLMat.mF32A[10] = this.mTargetScale / maxSize;
-        }
-        if (this.mCenterPos)
-            this.mLMat.SetV3(3, CMath.V3MulV3(this.mBound.GetCenter(), new CVec3(-this.mLMat.mF32A[0], -this.mLMat.mF32A[5], -this.mLMat.mF32A[10])));
-        this.mLMat.UnitCheck();
-    }
 }
 export class CPaintCube extends CPaint3D {
+    Icon() { return "bi bi-box"; }
     constructor(_cubeTex) {
         super();
         this.mTextureKey[0] = _cubeTex;
@@ -433,6 +233,7 @@ export class CPaintCube extends CPaint3D {
     }
 }
 export class CPaint3DMerge extends CPaintMerge {
+    Icon() { return "bi bi-boxes"; }
     constructor(_meshList = [], _matList = [], _centerPos = false, _targetScale = 0) {
         super();
         this.mMeshList = _meshList;
@@ -442,10 +243,10 @@ export class CPaint3DMerge extends CPaintMerge {
     }
     mMeshList;
     mMatList;
-    mWeightMat;
-    mWeightMatArr = [];
     mCenterPos = false;
     mTargetScale = 0;
+    mWeightMat;
+    mWeightMatArr = [];
     mWindInfluence = new CVec1(0.0);
     mSkinMatCache = new Map();
     mTexOverride = null;
@@ -1110,3 +911,5 @@ export class CPaint3DMerge extends CPaintMerge {
             this.Merge(LPMat, _tMesh, _tNode.mChild, _oCI, _bound, _skinMatList);
     }
 }
+import CPaint3D_imple from "../../../app_imple/component/paint/CPaint3D.js";
+CPaint3D_imple();

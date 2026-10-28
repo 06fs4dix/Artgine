@@ -137,7 +137,7 @@ node ai/tool/remote.js <HomeURL> cmd dir
 → {"ok":true,"stdout":"...","stderr":""}
 
 node ai/tool/remote.js <HomeURL> screenshot
-→ Screenshot saved to <아티젠 디렉토리>/temp/screenshot.png
+→ Screenshot saved to <도구 실행 cwd>/temp/screenshot.png
 
 node ai/tool/remote.js <HomeURL> exec mouse.setPosition '[{"x":400,"y":300}]'
 ```

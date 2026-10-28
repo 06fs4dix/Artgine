@@ -14,6 +14,7 @@ import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
 import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
 import { CShaderAttr } from "../../render/CShaderAttr.js";
 import { CSampler } from "../../util/CSampler.js";
+import { CLOD } from "../component/CLOD.js";
 import { CCIndex } from "../canvas/CCIndex.js";
 import { CCollider } from "../component/CCollider.js";
 import { CComponent } from "../component/CComponent.js";
@@ -26,38 +27,7 @@ import { CSubject } from "./CSubject.js";
 import { CSubjectMap } from "./CSubjectMap.js";
 import { CTerrainMap } from "./CTerrainMap.js";
 
-// AddLODLevel에 넘기는 값. 리터럴로 넘겨도 되고, 안에서 CLODInfo로 바꿔 담는다.
-export interface ILODInfo
-{
-    mRes?: string;
-    mAmount?: number;
-    mDistance?: number;
-    mHysteresis?: number;
-    mPaintTag?: string[];
-    mPaintShaderAttr?: CShaderAttr[];
-    //이 레벨만의 바람 세기. 생략(-1)하면 CDensityInfo.mWind. 3D 메시와 2D 빌보드는 같은 값에도 흔들림 크기가 달라 따로 준다
-    mWind?: number;
-}
-// CObject여야 CDensityInfo.mLODInfo가 JSON 저장·로드에 포함된다(아니면 배열이 비어서 저장된다).
-export class CLODInfo extends CObject implements ILODInfo
-{
-    mRes?: string;
-    mAmount?: number;
-    mDistance?: number;
-    mHysteresis?: number;
-    mPaintTag?=new Array<string>();
-    mPaintShaderAttr?=new Array<CShaderAttr>();
-    mWind?=-1;
-    constructor(_res:string=null,_amount:number=1,_dist:number=0,_hysteresis:number=0,_paintTag:string[]=[],_paintShaderAttr:CShaderAttr[]=[]) {
-        super();
-        this.mRes=_res;
-        this.mAmount=_amount;
-        this.mDistance=_dist;
-        this.mHysteresis=_hysteresis;
-        this.mPaintTag=_paintTag;
-        this.mPaintShaderAttr=_paintShaderAttr;
-    }
-}
+export { CLOD } from "../component/CLOD.js";
 export class CDensityColliderInfo extends CObject
 {
     mLayer : string="";
@@ -91,9 +61,9 @@ export class CDensityInfo extends CObject implements IMapLabel
     mCollider=new Array<CDensityColliderInfo>();
 
     // LOD 정보
-    mLODInfo: CLODInfo[] = [];
+    mLODInfo: CLOD[] = [];
 
-    constructor(_color : number,_size : CVec3,_lodInfo : ILODInfo[]=null)
+    constructor(_color : number,_size : CVec3,_lodInfo : CLOD[]=null)
     {
         super();
         this.mColor = CDensityInfo.ResolveColor(_color);
@@ -117,42 +87,19 @@ export class CDensityInfo extends CObject implements IMapLabel
     Size(): CVec3 { return this.mSize; }
 
     /** 단일 LOD 레벨을 개별로 추가 */
-    AddLODLevel(_res : string, _distance? : number, _hysteresis?: number, _amount?:number);
+    AddLODLevel(_res : string, _distance? : number, _hysteresis?: number, _amount?:number, _paintTag?:string[], _paintShaderAttr?:string[]);
     /** 여러 LOD 레벨을 한번에 추가 */
-    AddLODLevel(_lodInfo : ILODInfo[]);
+    AddLODLevel(_lodInfo : CLOD[]);
     AddLODLevel(
-        _resOrList : string|ILODInfo[],
+        _resOrList : string|CLOD[],
         _distance = 0,
         _hysteresis = 0,
-        _amount = 1
+        _amount = 1,
+        _paintTag = [],
+        _paintShaderAttr = []
     ): void
     {
-        if(Array.isArray(_resOrList))
-        {
-            for(const info of _resOrList)
-            {
-                const lod = new CLODInfo(
-                    info.mRes ?? null,
-                    info.mAmount ?? 1,
-                    info.mDistance ?? 0,
-                    info.mHysteresis ?? 0,
-                    info.mPaintTag ?? [],
-                    info.mPaintShaderAttr ?? []
-                );
-                lod.mWind = info.mWind ?? -1;
-                this.InsertLODInfo(lod);
-            }
-            return;
-        }
-        this.InsertLODInfo(new CLODInfo(_resOrList as string, _amount as number, Math.abs(_distance as number), _hysteresis as number));
-    }
-
-    // Distance 오름차순으로 정렬된 위치에 삽입
-    private InsertLODInfo(_info : CLODInfo)
-    {
-        const insertIndex = this.mLODInfo.findIndex(existing => _info.mDistance < existing.mDistance);
-        const index = insertIndex === -1 ? this.mLODInfo.length : insertIndex;
-        this.mLODInfo.splice(index, 0, _info);
+        CLOD.Add(this.mLODInfo, _resOrList, _distance, _hysteresis, _amount, _paintTag, _paintShaderAttr);
     }
 }
 
@@ -218,22 +165,7 @@ export class CChunk
     }
     private UpdateGroupLOD(_group: CLODGroup, _dist: number): void
     {
-        const lodInfo = _group.mDensity.mLODInfo;
-        let level = 0;
-        for (let i = lodInfo.length - 1; i >= 0; i--)
-        {
-            let edge = lodInfo[i].mDistance;
-            // 현재 레벨이면 히스테리시스만큼 경계를 당겨서 플리커링 방지
-            if (i <= _group.mCurLODLevel)
-            {
-                edge = Math.max(0, edge - lodInfo[i].mHysteresis);
-            }
-            if (_dist >= edge)
-            {
-                level = i;
-                break;
-            }
-        }
+        const level = CLOD.Select(_group.mDensity.mLODInfo, _dist, _group.mCurLODLevel);
 
         // Enable이 false로 바뀌면 다음 프레임에 랜더링이 꺼지는데
         // Enable이 true로 바뀌면 2프레임 뒤에 랜더링이 되어서 1프레임 지연해서 끔
@@ -263,7 +195,6 @@ export class CChunk
             if (curMerge.IsEnable() == false) curMerge.SetEnable(true);
         }
     }
-
     // group - lod paints
     Build()
     {
@@ -312,7 +243,7 @@ export class CChunk
         return group;
     }
 
-    private BuildLevelMerge(_density : CDensityInfo, _info : CLODInfo, _matArr : CMat[], _codiArr : CVec4[]) : CPaint2DMerge | CPaint3DMerge
+    private BuildLevelMerge(_density : CDensityInfo, _info : CLOD, _matArr : CMat[], _codiArr : CVec4[]) : CPaint2DMerge | CPaint3DMerge
     {
         if(_info.mRes == null) return null;
 
@@ -628,7 +559,6 @@ export class CDensityMap extends CSubjectMap implements IMapSchema
     RecvGetCamera(_cam : CCamera) {
         this.mCamera=_cam;
     }
-
     override IsShould(_member: string, _type: CObject.eShould): boolean {
 
         if(_member=="mUpdate"||_member=="mCamera"||_member=="mChunkArr"||
@@ -1018,7 +948,7 @@ export class CDensityMap extends CSubjectMap implements IMapSchema
         else
         {
             const pt3D = _pt as CPaint3D;
-            key = "3D|" + key + "|" + pt3D.mMesh + "|" + pt3D.mCenterPos + "|" + pt3D.mTargetScale + "|" + pt3D.mWindInfluence.x;
+            key = "3D|" + key + "|" + pt3D.mMesh + "|" + "|" + pt3D.mWindInfluence.x;
         }
         return key;
     }
@@ -1036,7 +966,7 @@ export class CDensityMap extends CSubjectMap implements IMapSchema
         else
         {
             const pt3D = _pt as CPaint3D;
-            const m3D = new CPaint3DMerge([], [], pt3D.mCenterPos, pt3D.mTargetScale);
+            const m3D = new CPaint3DMerge([], []);
             if(pt3D.mWindInfluence.x > 0) m3D.Wind(pt3D.mWindInfluence.x);
             if(pt3D.GetTexture().length > 0) m3D.mTexOverride = [...pt3D.GetTexture()];
             merge = m3D;

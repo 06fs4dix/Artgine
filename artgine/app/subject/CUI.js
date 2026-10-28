@@ -245,9 +245,9 @@ export class CUI extends CSubject {
             pos.x += width;
         if (this.mAnchorYType > 0)
             pos.y += height;
+        pos.x = Math.round(pos.x);
+        pos.y = Math.round(pos.y);
         pos = cam.ScreenToWorld2DPoint(pos.x, pos.y);
-        pos.x = Math.trunc(pos.x);
-        pos.y = Math.trunc(pos.y);
         super.SetPos(pos, true);
         this.mUpdateAnchor = false;
     }

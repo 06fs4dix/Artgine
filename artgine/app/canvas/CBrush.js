@@ -119,6 +119,7 @@ export class CBrush extends CObject {
     mUpdateShadow = CUpdate.eType.Updated;
     mUpdateLight = CUpdate.eType.Updated;
     mUpdateEnv = CUpdate.eType.Updated;
+    mEnvmapRebuild = CUpdate.eType.Not;
     mUpdateLUT = false;
     mLUT = [new Float32Array(32 * 32), new Float32Array(32 * 32), new Float32Array(32 * 32),
         new Float32Array(32 * 32), new Float32Array(32 * 32), new Float32Array(32 * 32)];
@@ -189,6 +190,7 @@ export class CBrush extends CObject {
                 new CCondition("class", "==", "CPaintTrail", "Paint_OR_Group")
             ]);
             rp2D.PushAnd(new CCondition("mRenderPass.length", "==", 0));
+            rp2D.PushAnd(new CCondition("mTag[shadowOnly]", "!=", true));
             rp2D.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.SingleShadowRead, pal.GetShadowReadTex()));
             const rp3D = this.PushAutoRP("Forward_3D", new CRPAuto(pal.Sl3DKey()));
             rp3D.SetKey("Forward_3D");
@@ -230,6 +232,7 @@ export class CBrush extends CObject {
             ]);
             rpShadow_3D.PushAnd(new CCondition("mRenderPass.length", "==", 0));
             rpShadow_3D.PushAnd(new CCondition("mTag[shadow]"));
+            rpShadow_3D.PushAnd(new CCondition("mTag[shadowOnly]", "!=", true));
             rpShadow_3D.mShaderAttr.push(new CShaderAttr("shadowOn", 1));
             rpShadow_3D.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.SingleShadowRead, pal.GetShadowReadTex()));
             rpShadow_3D.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, pal.GetEnvMapTex()));
@@ -254,57 +257,144 @@ export class CBrush extends CObject {
             rpShadow_Terrain.mShaderAttr.push(new CShaderAttr("shadowOn", 1));
             rpShadow_Terrain.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.SingleShadowRead, pal.GetShadowReadTex()));
             rpShadow_Terrain.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrEnvmap, pal.GetEnvMapTex()));
-            {
-                const rpCube = this.PushAutoRP("Forward_Cube", new CRPAuto(pal.SlCubeKey()));
-                rpCube.SetKey("Forward_Cube");
-                rpCube.mPriority = CRenderPass.ePriority.BackGround - 100;
-                rpCube.mCullFace = CRenderPass.eCull.None;
-                rpCube.mCullFrustum = false;
-                rpCube.PushOr([
-                    new CCondition("class", "==", "CPaintCube", "Paint_OR_Group")
-                ]);
-                rpCube.PushAnd(new CCondition("mRenderPass.length", "==", 0));
-            }
-            {
-                const rpShadowRead3D = this.PushAutoRP("ShadowRead_3D", new CRPAuto(pal.Sl3DKey()));
-                rpShadowRead3D.SetKey("ShadowRead_3D");
-                rpShadowRead3D.mRenderTarget = pal.GetShadowReadTex();
-                rpShadowRead3D.mAlpha = false;
-                rpShadowRead3D.mTag.add("shadowRead");
-                rpShadowRead3D.mPriority = CRenderPass.ePriority.BackGround;
-                rpShadowRead3D.PushOr([
-                    new CCondition("class", "==", "CPaint3D", "Paint_OR_Group"),
-                    new CCondition("class", "==", "CPaint3DMerge", "Paint_OR_Group")
-                ]);
-                rpShadowRead3D.PushAnd(new CCondition("mRenderPass.length", "==", 1));
-                rpShadowRead3D.PushAnd(new CCondition("mTag[shadow]"));
-                rpShadowRead3D.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, pal.GetShadowWriteTex()));
-                const rpShadowReadVoxel = this.PushAutoRP("ShadowRead_Voxel", new CRPAuto(pal.SlVoxelKey()));
-                rpShadowReadVoxel.SetKey("ShadowRead_Voxel");
-                rpShadowReadVoxel.mRenderTarget = pal.GetShadowReadTex();
-                rpShadowReadVoxel.mAlpha = false;
-                rpShadowReadVoxel.mTag.add("shadowRead");
-                rpShadowReadVoxel.mPriority = CRenderPass.ePriority.BackGround;
-                rpShadowReadVoxel.PushOr([
-                    new CCondition("class", "==", "CPaintVoxel", "Paint_OR_Group")
-                ]);
-                rpShadowReadVoxel.PushAnd(new CCondition("FindCShaderAttr(voxelCount).mData.z", "!=", 1));
-                rpShadowReadVoxel.PushAnd(new CCondition("mRenderPass.length", "==", 1));
-                rpShadowReadVoxel.PushAnd(new CCondition("mTag[shadow]"));
-                rpShadowReadVoxel.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, pal.GetShadowWriteTex()));
-                const rpShadowReadTerrain = this.PushAutoRP("ShadowRead_Terrain", new CRPAuto(pal.SlTerrainKey()));
-                rpShadowReadTerrain.SetKey("ShadowRead_Terrain");
-                rpShadowReadTerrain.mRenderTarget = pal.GetShadowReadTex();
-                rpShadowReadTerrain.mAlpha = false;
-                rpShadowReadTerrain.mTag.add("shadowRead");
-                rpShadowReadTerrain.mPriority = CRenderPass.ePriority.BackGround + 10;
-                rpShadowReadTerrain.PushOr([
-                    new CCondition("class", "==", "CPaintTerrain", "Paint_OR_Group")
-                ]);
-                rpShadowReadTerrain.PushAnd(new CCondition("mRenderPass.length", "==", 1));
-                rpShadowReadTerrain.PushAnd(new CCondition("mTag[shadow]"));
-                rpShadowReadTerrain.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, pal.GetShadowWriteTex()));
-            }
+            const rpCube = this.PushAutoRP("Forward_Cube", new CRPAuto(pal.SlCubeKey()));
+            rpCube.SetKey("Forward_Cube");
+            rpCube.mPriority = CRenderPass.ePriority.BackGround - 100;
+            rpCube.mCullFace = CRenderPass.eCull.None;
+            rpCube.mCullFrustum = false;
+            rpCube.PushOr([
+                new CCondition("class", "==", "CPaintCube", "Paint_OR_Group")
+            ]);
+            rpCube.PushAnd(new CCondition("mRenderPass.length", "==", 0));
+            const rpShadowRead3D = this.PushAutoRP("ShadowRead_3D", new CRPAuto(pal.Sl3DKey()));
+            rpShadowRead3D.SetKey("ShadowRead_3D");
+            rpShadowRead3D.mRenderTarget = pal.GetShadowReadTex();
+            rpShadowRead3D.mAlpha = false;
+            rpShadowRead3D.mTag.add("shadowRead");
+            rpShadowRead3D.mPriority = CRenderPass.ePriority.BackGround;
+            rpShadowRead3D.PushOr([
+                new CCondition("class", "==", "CPaint3D", "Paint_OR_Group"),
+                new CCondition("class", "==", "CPaint3DMerge", "Paint_OR_Group")
+            ]);
+            rpShadowRead3D.PushAnd(new CCondition("mRenderPass.length", "==", 1));
+            rpShadowRead3D.PushAnd(new CCondition("mTag[shadow]"));
+            rpShadowRead3D.PushAnd(new CCondition("mTag[shadowOnly]", "!=", true));
+            rpShadowRead3D.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, pal.GetShadowWriteTex()));
+            const rpShadowReadVoxel = this.PushAutoRP("ShadowRead_Voxel", new CRPAuto(pal.SlVoxelKey()));
+            rpShadowReadVoxel.SetKey("ShadowRead_Voxel");
+            rpShadowReadVoxel.mRenderTarget = pal.GetShadowReadTex();
+            rpShadowReadVoxel.mAlpha = false;
+            rpShadowReadVoxel.mTag.add("shadowRead");
+            rpShadowReadVoxel.mPriority = CRenderPass.ePriority.BackGround;
+            rpShadowReadVoxel.PushOr([
+                new CCondition("class", "==", "CPaintVoxel", "Paint_OR_Group")
+            ]);
+            rpShadowReadVoxel.PushAnd(new CCondition("FindCShaderAttr(voxelCount).mData.z", "!=", 1));
+            rpShadowReadVoxel.PushAnd(new CCondition("mRenderPass.length", "==", 1));
+            rpShadowReadVoxel.PushAnd(new CCondition("mTag[shadow]"));
+            rpShadowReadVoxel.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, pal.GetShadowWriteTex()));
+            const rpShadowReadTerrain = this.PushAutoRP("ShadowRead_Terrain", new CRPAuto(pal.SlTerrainKey()));
+            rpShadowReadTerrain.SetKey("ShadowRead_Terrain");
+            rpShadowReadTerrain.mRenderTarget = pal.GetShadowReadTex();
+            rpShadowReadTerrain.mAlpha = false;
+            rpShadowReadTerrain.mTag.add("shadowRead");
+            rpShadowReadTerrain.mPriority = CRenderPass.ePriority.BackGround + 10;
+            rpShadowReadTerrain.PushOr([
+                new CCondition("class", "==", "CPaintTerrain", "Paint_OR_Group")
+            ]);
+            rpShadowReadTerrain.PushAnd(new CCondition("mRenderPass.length", "==", 1));
+            rpShadowReadTerrain.PushAnd(new CCondition("mTag[shadow]"));
+            rpShadowReadTerrain.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, pal.GetShadowWriteTex()));
+            const rpEmission_3D = this.PushAutoRP("Forward_Emission_3D", new CRPAuto(pal.Sl3DKey()));
+            rpEmission_3D.SetKey("Forward_Emission_3D");
+            rpEmission_3D.PushOr([
+                new CCondition("class", "==", "CPaint3D", "Paint_OR_Group"),
+                new CCondition("class", "==", "CPaint3DMerge", "Paint_OR_Group")
+            ]);
+            rpEmission_3D.mRenderTarget = pal.GetEmissionTex();
+            rpEmission_3D.mBlitType = 1;
+            rpEmission_3D.mBlitRead = pal.GetMainFrameTex();
+            rpEmission_3D.mPriority = CRenderPass.ePriority.Normal + 10;
+            rpEmission_3D.PushAnd(new CCondition("mShaderAttrMap[emission]", "!=", 0));
+            rpEmission_3D.PushOr(new CCondition("mRenderPass.length", "==", 1, "renderPassCount"));
+            rpEmission_3D.PushOr(new CCondition("mRenderPass.length", "==", 2, "renderPassCount"));
+            rpEmission_3D.mShaderAttr.push(new CShaderAttr("ligStep0", SDF.eLightStep0.None));
+            rpEmission_3D.mShaderAttr.push(new CShaderAttr("ligStep1", SDF.eLightStep1.None));
+            rpEmission_3D.mShaderAttr.push(new CShaderAttr("ligStep2", SDF.eLightStep2.Emissive));
+            rpEmission_3D.mShaderAttr.push(new CShaderAttr("ligStep3", SDF.eLightStep3.None));
+            rpEmission_3D.mShaderAttr.push(new CShaderAttr("envmapOn", 0.0));
+            rpEmission_3D.mShaderAttr.push(new CShaderAttr("emissiveIntensity", 1.0));
+            const rpEmission_Voxel = this.PushAutoRP("Forward_Emission_Voxel", new CRPAuto(pal.SlVoxelKey()));
+            rpEmission_Voxel.SetKey("Forward_Emission_Voxel");
+            rpEmission_Voxel.PushOr([
+                new CCondition("class", "==", "CPaintVoxel", "Paint_OR_Group")
+            ]);
+            rpEmission_Voxel.mRenderTarget = pal.GetEmissionTex();
+            rpEmission_Voxel.mBlitType = 1;
+            rpEmission_Voxel.mBlitRead = pal.GetMainFrameTex();
+            rpEmission_Voxel.mPriority = CRenderPass.ePriority.Normal + 10;
+            rpEmission_Voxel.PushAnd(new CCondition("mShaderAttrMap[emission]", "!=", 0));
+            rpEmission_Voxel.PushOr(new CCondition("mRenderPass.length", "==", 1, "renderPassCount"));
+            rpEmission_Voxel.PushOr(new CCondition("mRenderPass.length", "==", 2, "renderPassCount"));
+            rpEmission_Voxel.mShaderAttr.push(new CShaderAttr("ligStep0", SDF.eLightStep0.None));
+            rpEmission_Voxel.mShaderAttr.push(new CShaderAttr("ligStep1", SDF.eLightStep1.None));
+            rpEmission_Voxel.mShaderAttr.push(new CShaderAttr("ligStep2", SDF.eLightStep2.Emissive));
+            rpEmission_Voxel.mShaderAttr.push(new CShaderAttr("ligStep3", SDF.eLightStep3.None));
+            rpEmission_Voxel.mShaderAttr.push(new CShaderAttr("envmapOn", 0.0));
+            rpEmission_Voxel.mShaderAttr.push(new CShaderAttr("emissiveIntensity", 1.0));
+            const rpEmission_Terrain = this.PushAutoRP("Forward_Emission_Terrain", new CRPAuto(pal.SlTerrainKey()));
+            rpEmission_Terrain.SetKey("Forward_Emission_Terrain");
+            rpEmission_Terrain.PushOr([
+                new CCondition("class", "==", "CPaintTerrain", "Paint_OR_Group")
+            ]);
+            rpEmission_Terrain.mRenderTarget = pal.GetEmissionTex();
+            rpEmission_Terrain.mBlitType = 1;
+            rpEmission_Terrain.mBlitRead = pal.GetMainFrameTex();
+            rpEmission_Terrain.mPriority = CRenderPass.ePriority.Normal + 10;
+            rpEmission_Terrain.PushAnd(new CCondition("mShaderAttrMap[emission]", "!=", 0));
+            rpEmission_Terrain.PushOr(new CCondition("mRenderPass.length", "==", 1, "renderPassCount"));
+            rpEmission_Terrain.PushOr(new CCondition("mRenderPass.length", "==", 2, "renderPassCount"));
+            rpEmission_Terrain.PushAnd(new CCondition("FindCShaderAttr(voxelCount).mData.z", "!=", 1));
+            rpEmission_Terrain.mShaderAttr.push(new CShaderAttr("ligStep0", SDF.eLightStep0.None));
+            rpEmission_Terrain.mShaderAttr.push(new CShaderAttr("ligStep1", SDF.eLightStep1.None));
+            rpEmission_Terrain.mShaderAttr.push(new CShaderAttr("ligStep2", SDF.eLightStep2.Emissive));
+            rpEmission_Terrain.mShaderAttr.push(new CShaderAttr("ligStep3", SDF.eLightStep3.None));
+            rpEmission_Terrain.mShaderAttr.push(new CShaderAttr("envmapOn", 0.0));
+            rpEmission_Terrain.mShaderAttr.push(new CShaderAttr("emissiveIntensity", 1.0));
+            const rpEmission_Cube = this.PushAutoRP("Forward_Emission_Cube", new CRPAuto(pal.SlCubeKey()));
+            rpEmission_Cube.SetKey("Forward_Emission_Cube");
+            rpEmission_Cube.PushOr([
+                new CCondition("class", "==", "CPaintCube", "Paint_OR_Group")
+            ]);
+            rpEmission_Cube.mRenderTarget = pal.GetEmissionTex();
+            rpEmission_Cube.mBlitType = 1;
+            rpEmission_Cube.mBlitRead = pal.GetMainFrameTex();
+            rpEmission_Cube.mPriority = CRenderPass.ePriority.Normal + 11;
+            rpEmission_Cube.mCullFace = CRenderPass.eCull.None;
+            rpEmission_Cube.mCullFrustum = false;
+            rpEmission_Cube.PushAnd(new CCondition("mTag[sky]"));
+            rpEmission_Cube.PushOr(new CCondition("mRenderPass.length", "==", 1, "renderPassCount"));
+            rpEmission_Cube.PushOr(new CCondition("mRenderPass.length", "==", 2, "renderPassCount"));
+            rpEmission_Cube.mTag.add("skyEmission");
+            rpEmission_Cube.mShaderAttr.push(new CShaderAttr("skyEmission", 1.0));
+            rpEmission_Cube.mShaderAttr.push(new CShaderAttr("emissiveIntensity", 1.0));
+            const rpEmission_2D = this.PushAutoRP("Forward_Emission_2D", new CRPAuto(pal.Sl2DKey()));
+            rpEmission_2D.SetKey("Forward_Emission_2D");
+            rpEmission_2D.PushOr([
+                new CCondition("class", "==", "CPaint2D", "Paint_OR_Group")
+            ]);
+            rpEmission_2D.mCullFace = CRenderPass.eCull.None;
+            rpEmission_2D.mRenderTarget = pal.GetEmissionTex();
+            rpEmission_2D.mPriority = CRenderPass.ePriority.Normal + 10;
+            rpEmission_2D.PushAnd(new CCondition("mShaderAttrMap[emission]", "!=", 0));
+            rpEmission_2D.PushAnd(new CCondition("mRenderPass.length", "==", 1));
+            rpEmission_2D.mTag.add("light");
+            rpEmission_2D.mShaderAttr.push(new CShaderAttr("ligStep0", SDF.eLightStep0.None));
+            rpEmission_2D.mShaderAttr.push(new CShaderAttr("ligStep1", SDF.eLightStep1.None));
+            rpEmission_2D.mShaderAttr.push(new CShaderAttr("ligStep2", SDF.eLightStep2.Emissive));
+            rpEmission_2D.mShaderAttr.push(new CShaderAttr("ligStep3", SDF.eLightStep3.None));
+            rpEmission_2D.mShaderAttr.push(new CShaderAttr("envmapOn", 0.0));
+            rpEmission_2D.mShaderAttr.push(new CShaderAttr("emissiveIntensity", 1.0));
         }
     }
     GetCamera(_key) {
@@ -357,6 +447,10 @@ export class CBrush extends CObject {
                 this.mAutoRPUpdate = CUpdate.eType.Already;
             else if (this.mAutoRPUpdate == CUpdate.eType.Already)
                 this.mAutoRPUpdate = CUpdate.eType.Not;
+            if (this.mEnvmapRebuild == CUpdate.eType.Updated)
+                this.mEnvmapRebuild = CUpdate.eType.Already;
+            else if (this.mEnvmapRebuild == CUpdate.eType.Already)
+                this.mEnvmapRebuild = CUpdate.eType.Not;
             this.mLightCount = 0;
             this.mShadowCount = 0;
             this.mShadowTexOff = 0;

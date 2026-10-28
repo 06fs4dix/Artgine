@@ -296,7 +296,7 @@ export class CForgeAdobeGen
         const pick = (_arr : number[][], _salt : number) => _arr[CForgeRand.Hash(_b.seed, _salt) % _arr.length];
         const parts : IForgePart[] = [
             { buf : B.stone, rgb : T.mStone, tex : CForgeTex.sStone }, { buf : B.body, rgb : pick(T.mPlankWall, 1), tex : CForgeTex.sShitami },
-            { buf : B.trim, rgb : [0.92, 0.9, 0.84], tex : CForgeTex.sWood }, { buf : B.glass, rgb : [0.85, 0.85, 0.82], tex : CForgeTex.sSash }, { buf : B.dark, rgb : T.mDark },
+            { buf : B.trim, rgb : [0.92, 0.9, 0.84], tex : CForgeTex.sWood }, { buf : B.glass, rgb : [0.85, 0.85, 0.82], tex : CForgeTex.sSash, glow : true }, { buf : B.dark, rgb : T.mDark },
             { buf : B.roof, rgb : pick(T.mRoof, 3), tex : CForgeTex.sTile }, { buf : B.under, rgb : T.mWood.map(_v => Math.min(1, _v * 1.6)), tex : CForgeTex.sPlank },
             { buf : B.wood, rgb : T.mWood, tex : CForgeTex.sWood }, { buf : B.door, rgb : T.mWood.map(_v => _v * 1.1), tex : CForgeTex.sPlank },
         ];

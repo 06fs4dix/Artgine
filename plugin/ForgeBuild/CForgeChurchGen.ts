@@ -211,7 +211,7 @@ export class CForgeChurchGen
             { buf : body, rgb : T.mTowerBody, tex : CForgeTex.sStone }, { buf : trim, rgb : T.mWallStone, tex : CForgeTex.sStone },
             { buf : roof, rgb : rc, tex : CForgeTex.sTile },
         ];
-        parts.push({ buf : dark, rgb : T.mDark }, { buf : metal, rgb : T.mMetal }, { buf : glass, rgb : CForgeChurchGen.sGlass, tex : CForgeTex.sGlass },
+        parts.push({ buf : dark, rgb : T.mDark }, { buf : metal, rgb : T.mMetal }, { buf : glass, rgb : CForgeChurchGen.sGlass, tex : CForgeTex.sGlass, glow : true },
             { buf : door, rgb : T.mWood.map(_v => Math.min(1, _v * 1.15)), tex : CForgeTex.sPlank }, { buf : cop, rgb : CForgeChurchGen.sCopper, tex : CForgeTex.sPlank });
         return parts.filter(_p => _p.buf.mIdx.length > 0);
     }
@@ -327,7 +327,7 @@ export class CForgeChurchGen
         const parts : IForgePart[] = [
             { buf : body, rgb : T.mTowerBody, tex : CForgeTex.sStone }, { buf : trim, rgb : T.mWallStone, tex : CForgeTex.sStone },
             { buf : roof, rgb : T.mRoof[_r.seed % T.mRoof.length], tex : CForgeTex.sGiwa }, { buf : dark, rgb : T.mDark }, { buf : metal, rgb : T.mMetal },
-            { buf : glass, rgb : CForgeChurchGen.sGlass, tex : CForgeTex.sGlass }, { buf : door, rgb : T.mWood.map(_v => Math.min(1, _v * 1.15)), tex : CForgeTex.sPlank },
+            { buf : glass, rgb : CForgeChurchGen.sGlass, tex : CForgeTex.sGlass, glow : true }, { buf : door, rgb : T.mWood.map(_v => Math.min(1, _v * 1.15)), tex : CForgeTex.sPlank },
         ];
         return parts.filter(_p => _p.buf.mIdx.length > 0);
     }
@@ -395,7 +395,7 @@ export class CForgeChurchGen
         const parts : IForgePart[] = [
             { buf : body, rgb : T.mTowerBody, tex : T.mChurchMat == 0 ? CForgeTex.sPlaster : CForgeTex.sStone }, { buf : trim, rgb : T.mStone, tex : CForgeTex.sStone },
             { buf : roof, rgb : T.mRoof[_r.seed % T.mRoof.length], tex : CForgeTex.sTile }, { buf : dark, rgb : T.mDark }, { buf : metal, rgb : T.mMetal },
-            { buf : glass, rgb : CForgeChurchGen.sGlass, tex : CForgeTex.sGlass }, { buf : door, rgb : T.mWood.map(_v => Math.min(1, _v * 1.15)), tex : CForgeTex.sPlank },
+            { buf : glass, rgb : CForgeChurchGen.sGlass, tex : CForgeTex.sGlass, glow : true }, { buf : door, rgb : T.mWood.map(_v => Math.min(1, _v * 1.15)), tex : CForgeTex.sPlank },
         ];
         return parts.filter(_p => _p.buf.mIdx.length > 0);
     }

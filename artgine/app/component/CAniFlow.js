@@ -19,7 +19,7 @@ export class CAniFlow extends CComponent {
         this.mPaintOff = 0;
         this.SetAni(_ani);
     }
-    Icon() { return "bi bi-recycle"; }
+    Icon() { return "bi bi-play-circle"; }
     SetInter(_max) {
         this.mInterMax = _max;
         this.mInterTime = 0;
@@ -45,7 +45,7 @@ export class CAniFlow extends CComponent {
         if (this.mAni != null)
             _state.push("/aniFlow/" + this.mAni.Key() + (this.IsEnd() ? "Stop" : "Play"));
     }
-    SetAni(_ani = null, _key = null) {
+    SetAni(_ani = null, _key = null, _reset = false) {
         if (_key != null) {
             if (_key != this.IsKey() || this.Key() != _key)
                 return;
@@ -59,7 +59,7 @@ export class CAniFlow extends CComponent {
             this.mAni = null;
         }
         else if (_ani != null) {
-            if (this.mAni == _ani)
+            if (this.mAni == _ani && !_reset)
                 return;
             this.mAni = _ani;
         }

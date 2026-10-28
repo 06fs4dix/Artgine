@@ -7,7 +7,6 @@ import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
 import { CRenderPass } from "../../../render/CRenderPass.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CTexture } from "../../../render/CTexture.js";
-import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
 import { CDOM } from "../../../basic/CDOM.js";
@@ -15,7 +14,6 @@ import { CHash } from "../../../basic/CHash.js";
 import { CObject } from "../../../basic/CObject.js";
 import { CUniqueID } from "../../../basic/CUniqueID.js";
 import { CUtilObj } from "../../../basic/CUtilObj.js";
-import { CUtilMath } from "../../../geometry/CUtilMath.js";
 import { CLoaderOption } from "../../../util/CLoader.js";
 import { SDF } from "../../../z_file/SDF.js";
 import { CComponent } from "../CComponent.js";
@@ -39,15 +37,18 @@ export class CRenPaint {
     mAlpha = null;
 }
 var gBoundDummy = new CBound();
-var gPosDummy = new CVec3();
+const gIdentMat = new CMat();
+export var gPosDummy = new CVec3();
 gPosDummy.NewWASM();
 export class CPaint extends CComponent {
     static eTag = {
         Light: "light",
         ShadowReadOnly: "shadowReadOnly",
         Shadow: "shadow",
+        ShadowOnly: "shadowOnly",
         Wind: "wind",
         Parallax: "parallax",
+        Env: "env"
     };
     static eCullMask = {
         Default: 0b100000000000000,
@@ -69,7 +70,6 @@ export class CPaint extends CComponent {
     };
     mBW = new CBoundWorldPaint();
     mFMat;
-    mLMat;
     mShaderAttrMap = new Map();
     mColorModel;
     mAlphaModel;
@@ -80,9 +80,11 @@ export class CPaint extends CComponent {
     mRenderPass = new Array();
     mRenPT = new Array();
     mTextureKey = new Array();
-    mMaterial = new CVec4(1, -1, -1, 1);
+    mMaterial = new CVec4(1, -1, -1, 0);
+    mEmission;
     mCullMask;
-    mUpdateLMat = true;
+    mUpdateReq = true;
+    mFMatOwn = false;
     mUpdateFMat = true;
     mDefaultAttr = new Set();
     mTag = new Set();
@@ -106,8 +108,6 @@ export class CPaint extends CComponent {
         this.mVFX = null;
         this.mFMat = new CMat(null);
         this.mFMat.NewWASM();
-        this.mLMat = new CMat(null);
-        this.mLMat.NewWASM();
         this.mBW.mPos.NewWASM();
         this.mBound = new CBound();
         this.mBound.NewWASM();
@@ -163,14 +163,13 @@ export class CPaint extends CComponent {
         super.Destroy();
         this.mBW.mPos.ReleaseWASM();
         this.mFMat.ReleaseWASM();
-        this.mLMat.ReleaseWASM();
         this.mBound.DeleteWASM();
         this.ClearBatch(false);
     }
     Reset() {
         super.Reset();
         this.mFMat.Unit();
-        this.mLMat.Unit();
+        this.mFMatOwn = false;
         this.ClearBatch(false);
         this.mTextureKey.length = 0;
         this.mBound.Reset();
@@ -188,7 +187,7 @@ export class CPaint extends CComponent {
             if (_member == "mColorModel" || _member == "mAlphaModel" || _member == "mVFX" || _member == "mBound")
                 return true;
         }
-        if (_member == "mFMat" || _member == "mUpdateLMat" || _member == "mUpdateFMat" ||
+        if (_member == "mFMat" || _member == "mUpdateReq" || _member == "mFMatOwn" || _member == "mUpdateFMat" ||
             _member == "mRenPT" || _member == "mTagKey" ||
             _member == "mDefaultAttr" || _member == "mBatchMap" || _member == "mBatchLastArr" || _member == "mBatchLastVF" ||
             _member == "mBoundFMat" || _member == "mBoundFMatC" || _member == "mBoundFMatR" || _member == "mBound" ||
@@ -221,7 +220,8 @@ export class CPaint extends CComponent {
         this.mAutoRPUpdate = true;
     }
     IsUpdateFMat() { return this.mUpdateFMat; }
-    UpdateLMat() { this.mUpdateLMat = true; }
+    UpdateFMat() { this.mUpdateReq = true; }
+    GetMat() { return gIdentMat; }
     EditHTMLInit(_div, _pointer) {
         super.EditHTMLInit(_div, _pointer);
         var button = CDOM.TagToDom("button");
@@ -336,11 +336,20 @@ export class CPaint extends CComponent {
         this.ClearBatch();
         this.SetTexture(this.mTextureKey);
     }
-    SetMaterial(roughness = -1, metalric = -1, emissive = 1, ambientOcclusion = 1) {
+    SetMaterial(roughness = -1, metalric = -1, emissive = 0, ambientOcclusion = 1) {
         this.mMaterial.x = ambientOcclusion;
         this.mMaterial.y = roughness;
         this.mMaterial.z = metalric;
         this.mMaterial.w = emissive;
+    }
+    SetEmission(_color) {
+        if (!this.FindCShaderAttr("emission")) {
+            this.mShaderAttrMap.set("emission", new CShaderAttr("emission", new CColor(1, 1, 1, SDF.eColorModel.RGBMul)));
+        }
+        if (!this.mEmission) {
+            this.mEmission = this.mShaderAttrMap.get("emission").mData;
+        }
+        this.mEmission.Import(_color);
     }
     SetCullMask(_cullmask) {
         this.mCullMask.x = _cullmask;
@@ -350,32 +359,7 @@ export class CPaint extends CComponent {
             return true;
         return false;
     }
-    UpdateRenPt() {
-        for (let i = 0; i < this.mRenPT.length; ++i) {
-            let ren = this.mRenPT[i];
-            if (ren.mDistance == null || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
-                let cam = ren.mCam;
-                let plane = ren.mCam.GetPlane();
-                if (this.mRenderPass[i].mPaintSort != CRenderPass.ePaintSort.None) {
-                    let eye = ren.mCam.GetEye();
-                    let view = ren.mCam.GetView();
-                    gPosDummy.x = this.mBW.mPos.x - eye.x;
-                    gPosDummy.y = this.mBW.mPos.y - eye.y;
-                    gPosDummy.z = this.mBW.mPos.z - eye.z;
-                    ren.mDistance = CMath.V3Dot(gPosDummy, view);
-                    ren.mDistance = Math.trunc(ren.mDistance * 128) << 9;
-                }
-                else
-                    ren.mDistance = 0;
-                if (CUtilMath.PlaneSphereInside(plane, this.mBW.mPos, this.mBW.mRadian, null) || this.mRenderPass[i].mCullFrustum == false)
-                    ren.mShow = 0;
-                else {
-                    ren.mShow = 1;
-                    ren.mDistance = 0x7FFFFE00;
-                }
-            }
-        }
-    }
+    UpdateRenPt() { }
     Refresh() {
         if (this.mShaderAttrMap.get("texCodi") == null)
             this.mShaderAttrMap.set("texCodi", new CShaderAttr("texCodi", this.mTexCodi));
@@ -622,19 +606,7 @@ export class CPaint extends CComponent {
     }
     SetMat(_mat) {
     }
-    GetMat() { return this.mLMat; }
-    ;
-    SetLMat(_mat) { this.mLMat.Import(_mat); this.mUpdateLMat = true; }
-    FMatUpdate() {
-        CMath.MatMul(this.mLMat, this.mOwner.GetMat(), this.mFMat, true);
-        if (this.GetOwner().mUpdateRS != CUpdate.eType.Not || this.mBW.mRadian == 0) {
-            if (this.mTag.has("tail"))
-                this.mBW.Init(this.mBound, null);
-            else
-                this.mBW.Init(this.mBound, this.mOwner.GetMat());
-        }
-        this.mBW.UpdateMat(this.mOwner.GetMat());
-    }
+    FMatUpdate() { }
     Prefab(_owner) {
         if (this.mAutoLoad != null) {
             for (let texKey of this.mTextureKey) {
@@ -655,20 +627,13 @@ export class CPaint extends CComponent {
         }
         return false;
     }
-    Update(_update) {
-        if (this.mUpdateFMat)
-            this.mUpdateFMat = false;
-        if (this.mUpdateLMat || this.mOwner.mUpdateMat != 0) {
-            this.FMatUpdate();
-            this.mUpdateFMat = true;
-            this.mUpdateLMat = false;
-        }
-        this.UpdateRenPt();
-    }
+    Update(_update) { }
     SetFMat(_fmat) {
+        this.mFMatOwn = true;
         this.mFMat.Import(_fmat);
+        this.mUpdateReq = true;
     }
-    GetFMat() { return this.mFMat; }
+    GetFMat() { return this.mFMatOwn || this.mOwner == null ? this.mFMat : this.mOwner.GetMat(); }
     SetToolCPaint(_input, _type) {
     }
     Common(_vf) {
@@ -696,30 +661,8 @@ export class CPaint extends CComponent {
         return gBoundDummy;
     }
     Render(_shader) { }
-    RenderBatch(_shader, _count = 1) {
-        let bcm = this.mOwner.GetFrame().BMgr().IsBatchMap();
-        let barr = this.mBatchMap.get(_shader);
-        if (barr == null) {
-            barr = new Array(_count);
-            this.mBatchMap.set(_shader, barr);
-            barr.length = _count;
-        }
-        else if (bcm == false) { }
-        else if (barr.length > 0) {
-            return this.mOwner.GetFrame().BMgr().BatchPushArr(barr);
-        }
-        return barr;
-    }
-    BatchKeySet(_nodeOff, _key = null) {
-        for (let batchArr of this.mBatchMap.values()) {
-            if (batchArr == null)
-                continue;
-            if (_key == null)
-                batchArr[_nodeOff].CreateKey();
-            else
-                batchArr[_nodeOff].mKey = _key;
-        }
-    }
+    RenderBatch(_shader, _count = 1) { return null; }
+    BatchKeySet(_nodeOff, _key = null) { }
     SetTexture(_a, _b = null, _c = null, _d = null, _e = null) {
         let change = false;
         if (_a instanceof Array) {
@@ -772,7 +715,7 @@ export class CPaint extends CComponent {
                 if (this.mOwner.GetFrame().Load().LoadSet().has(texKey) == true) {
                     CChecker.Exe(async () => {
                         if (this.mOwner.GetFrame().Load().LoadSet().has(texKey) == false) {
-                            this.UpdateLMat();
+                            this.UpdateFMat();
                             return false;
                         }
                         return true;
@@ -780,7 +723,7 @@ export class CPaint extends CComponent {
                 }
                 else if (this.mOwner.GetFrame().Load().IsLoad(texKey) == false) {
                     this.mOwner.GetFrame().Load().Exe(texKey, this.mAutoLoad).then(() => {
-                        this.UpdateLMat();
+                        this.UpdateFMat();
                     });
                 }
             }
@@ -934,3 +877,5 @@ export class CPaint extends CComponent {
         }
     }
 }
+import CPaint_imple from "../../../app_imple/component/paint/CPaint.js";
+CPaint_imple();

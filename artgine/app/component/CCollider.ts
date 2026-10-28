@@ -61,13 +61,18 @@ export class CCollider extends CGeometryComp
 	//mStatic=false;
 
 
-	public mPickRay = new Set<string>();
+	//값이 없는 콜라이더가 Set을 하나씩 갖지 않게 공유하는 빈 Set이다. 읽기 전용이라 직접 add하지 말고 쓰는 쪽은 새 Set으로 바꾼 뒤 넣는다
+	static readonly EmptySet=new Set<string>();
+	public mPickRay : Set<string> = CCollider.EmptySet;
 	public mCameraOut : string= null;
 	public mCameraOutLast=false;
 
-	public mCollision = new Set<string>();
-	public mPushVec=new CVec3();
-	
+	public mCollision : Set<string> = CCollider.EmptySet;
+	//정적 콜라이더는 대부분 아래 지연 멤버를 한 번도 안 써서 처음 읽을 때 만든다. 만들었는지만 볼 때는 _ 필드를 직접 본다
+	_pushVec : CVec3=null;
+	get mPushVec() : CVec3	{	return this._pushVec ??= new CVec3();	}
+	set mPushVec(_v : CVec3)	{	this._pushVec=_v;	}
+
 	
 	//public mElevator=false;//엘리베이터인지
 	public mStairs=false;//계단인지
@@ -77,23 +82,35 @@ export class CCollider extends CGeometryComp
 	//점프해서 한쪽 방향에서 올라가는용. 2D게임에서 사용
 	//특정 방향으로 설정시 그방향이랑 동일한 값일시 밀어내기 무시
 	//캐릭터 오른쪽르고 갈때 방향도 오른쪽 설정시 동일 방향시 무시
-	public mOneWayDir : CVec3=new CVec3();
+	public mOneWayDir : CVec3=null;
 	public mOneWayArc : number=-1;
 
-	public mGJK : CGJK_EPA= new CGJK_EPA();
+	_gjk : CGJK_EPA=null;
+	get mGJK() : CGJK_EPA	{	return this._gjk ??= new CGJK_EPA();	}
+	set mGJK(_v : CGJK_EPA)	{	this._gjk=_v;	}
 	mBW=new CBoundWorldCollider();
 
 	public m2D : boolean;
 	public mUpdateMat=CUpdate.eType.Updated;
-	mColTarget =new CArray<CCollider>();
-	mColPush =new CArray<CVec3>();
-	mColPair=new Map<CCollider,CVec3>();
+	_colTarget : CArray<CCollider>=null;
+	get mColTarget() : CArray<CCollider>	{	return this._colTarget ??= new CArray<CCollider>();	}
+	set mColTarget(_v : CArray<CCollider>)	{	this._colTarget=_v;	}
+	_colPush : CArray<CVec3>=null;
+	get mColPush() : CArray<CVec3>	{	return this._colPush ??= new CArray<CVec3>();	}
+	set mColPush(_v : CArray<CVec3>)	{	this._colPush=_v;	}
+	_colPair : Map<CCollider,CVec3>=null;
+	get mColPair() : Map<CCollider,CVec3>	{	return this._colPair ??= new Map<CCollider,CVec3>();	}
+	set mColPair(_v : Map<CCollider,CVec3>)	{	this._colPair=_v;	}
 
 	//초 단위. 0이면 매 스텝 동작. 0보다 크면 주기가 된 스텝에만 옥트리 조회와 등록을 한다(CRenderPass.mCycle과 같은 규칙).
 	//쉬는 스텝에는 옥트리에 없으므로 다른 콜라이더에게도 잡히지 않는다. 스태틱 이벤트에는 적용하지 않는다.
-	public mSleep=new CSleep();
+	public mSleep : CSleep=null;
 	public mCycleSkip=false;
-	GetSleep()	{	return this.mSleep;	}
+	GetSleep()	{	return this.mSleep ??= new CSleep();	}
+
+	//복셀맵처럼 정적 콜라이더를 하나씩 바꾸는 소유자가 켠다. 바뀐 것만 정적 옥트리에 넣고 빼며, 정적 재빌드와 전체 깨우기를 요청하지 않는다
+	public mStaticInc=false;
+	public mIncPend=true;
 
 	constructor();
 	constructor(_paint : CBound);
@@ -145,7 +162,10 @@ export class CCollider extends CGeometryComp
 	override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
 		if(_pointer.member=="mCollision" || _pointer.member=="mGI" )
+		{
+			if(this.mCollision===CCollider.EmptySet)	this.mCollision=new Set<string>();
 			CUtilObj.ArrayAddSelectList(_pointer,_body,_input,[""]);
+		}
 		else if(_pointer.member=="mCameraOut")
 			CUtilObj.NullEdit(_pointer,_body,_input,"");
 
@@ -185,7 +205,9 @@ export class CCollider extends CGeometryComp
 			
 			_member=="mColTarget" || _member=="mColPush" || _member=="mColPair" || 
 			_member=="mOneWayMap" || _member=="mRB" || _member=="mCameraOutLast" ||
-			_member=="mCycleSkip")
+			_member=="mCycleSkip" || _member=="mStaticInc" || _member=="mIncPend" ||
+			_member=="_gjk" || _member=="_pushVec" || _member=="_colTarget" || _member=="_colPush" ||
+			_member=="_colPair" || _member=="_oneWayMap")
 			return false;
 			
 			
@@ -255,7 +277,11 @@ export class CCollider extends CGeometryComp
 		//Init은 mBound(로컬 회전 AABB)만 다시 만들고 mMat, mWBound는 손대지 않는다.
 		//정작 충돌이 쓰는 건 그 둘이라 UpdateMat을 짝으로 불러야 한다.
 		//안 부르면 움직이거나 회전시켜도 충돌이 예전 자리에 남는다.
-		if(this.mEvent==CCollider.eEvent.Static && (this.GetOwner().mUpdateMat!=CUpdate.eType.Not || this.mUpdateMat!=CUpdate.eType.Not))
+		if(this.mEvent==CCollider.eEvent.Static && this.mStaticInc)
+		{
+			if(this.mIncPend && this.mGI!=null)	this.IncApply();
+		}
+		else if(this.mEvent==CCollider.eEvent.Static && (this.GetOwner().mUpdateMat!=CUpdate.eType.Not || this.mUpdateMat!=CUpdate.eType.Not))
 		{
 			if(this.mGI.mOctree.mStaticBuild==false)
 			{
@@ -274,6 +300,29 @@ export class CCollider extends CGeometryComp
 			this.mBW.Init(this.mBound,this.mOwner.GetMat());
 			this.mBW.UpdateMat(this.mOwner.GetMat());
 		}
+	}
+	//정적 재빌드가 예약됐거나 진행 중이면 그 재빌드가 이 콜라이더를 넣으므로 여기서는 건드리지 않는다
+	private IncApply()
+	{
+		this.mIncPend=false;
+		const oc=this.mGI.mOctree;
+		if(oc.mStaticUpdate || oc.mStaticBuild)	return;
+		this.mBW.Init(this.mBound,this.mOwner.GetMat());
+		this.mBW.UpdateMat(this.mOwner.GetMat());
+		this.mUpdateMat=CUpdate.eType.Not;
+		if(this.IsEnable() && this.mLayer!="" && this.GetOwner().IsEnable())
+			oc.StaticInsert(this.mBW.mPos,this.mBW.mSize,this,this.mBW.mWBound.mMin,this.mBW.mWBound.mMax);
+		else
+			oc.StaticRemove(this);
+	}
+	//mStaticInc 콜라이더를 끄고 정적 옥트리에서 바로 뺀다
+	IncOff()
+	{
+		this.mLayer="";
+		this.mIncPend=false;
+		this.mUpdateMat=CUpdate.eType.Not;
+		this.SetEnable(false);
+		if(this.mGI!=null)	this.mGI.mOctree.StaticRemove(this);
 	}
 	override BuildGI()
 	{
@@ -390,9 +439,15 @@ export class CCollider extends CGeometryComp
 		
 	}
 	
-	SetLayer(_key : string)	
+	SetLayer(_key : string)
 	{
-		this.mLayer=_key;	
+		if(this.mStaticInc)
+		{
+			if(this.mLayer!=_key)	this.mIncPend=true;
+			this.mLayer=_key;
+			return;
+		}
+		this.mLayer=_key;
 		this.mUpdateMat=CUpdate.eType.Updated;
 	}
 	GetLayer()	: string	{	return this.mLayer;	}
@@ -419,8 +474,9 @@ export class CCollider extends CGeometryComp
 	
 	PushCollisionLayer(_val : string|string[]) :void
 	{
+		if(this.mCollision===CCollider.EmptySet)	this.mCollision=new Set<string>();
 		if(typeof _val=="string")
-			this.mCollision.add(_val);	
+			this.mCollision.add(_val);
 		else
 		{
 			for(let lay of _val)
@@ -434,10 +490,11 @@ export class CCollider extends CGeometryComp
 	{
 		this.mCollision=new Set();
 	}
-	SetPickMouse(_val : boolean) { this.mPickRay.add(""); }	
+	SetPickMouse(_val : boolean) { this.PushPickRay(""); }
 	SetCameraOut(_val : boolean) { this.mCameraOut=""; }
 	PushPickRay(_val)
 	{
+		if(this.mPickRay===CCollider.EmptySet)	this.mPickRay=new Set<string>();
 		this.mPickRay.add(_val);
 	}
 
@@ -612,8 +669,10 @@ export class CCollider extends CGeometryComp
 	mBounce = CPhysics.SurfaceBounce;
 
 	mRB : CRigidBody=null;
-	mOneWayMap=new Map<any,number>();
-	
+	_oneWayMap : Map<any,number>=null;
+	get mOneWayMap() : Map<any,number>	{	return this._oneWayMap ??= new Map<any,number>();	}
+	set mOneWayMap(_v : Map<any,number>)	{	this._oneWayMap=_v;	}
+
 	SetPushRate(_rate:number=0.5) {this.mPushRate = _rate;}
 	GetPushRate(){return this.mPushRate;}
 	//리지드바디 지연 탐색. 없는 콜라이더는 계속 null이라 매번 재탐색되니 호출 위치에 주의.

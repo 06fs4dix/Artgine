@@ -37,6 +37,8 @@ export class CParser
 	public mBufferSize=0;
 	public mFileName="";
 	public mResult : any=null;
+	public mCenterPos=false;
+	public mTargetScale=0;
 	constructor()
 	{
 

@@ -97,7 +97,7 @@ function checkMemoryGrow(): void
     // 게터를 아예 건드리지 않고 빠져나간다 — 평범한 프로퍼티 읽기 한 번이면 된다.
     //
     // ⚠ 전제: gMemory가 non-shared여야 한다(shared면 grow해도 detach되지 않는다).
-    //   현재 생성부는 new WebAssembly.Memory({initial:512, maximum:2048})로 shared가
+    //   현재 생성부는 new WebAssembly.Memory({initial:512, maximum:8192})로 shared가
     //   아니다. 만약 나중에 shared:true로 바꾸면 이 최적화는 반드시 되돌려야 한다.
     if(gLastBuffer!=null && gLastBuffer.byteLength!==0)  return;
 
@@ -561,7 +561,7 @@ function buildImportObject(): WebAssembly.Imports {
 }
 
 async function instantiate(fileName: string, bytes?: ArrayBuffer | Uint8Array): Promise<WebAssembly.Instance> {
-    gMemory = new WebAssembly.Memory({ initial: 512, maximum: 2048 });
+    gMemory = new WebAssembly.Memory({ initial: 512, maximum: 8192 });
     gLastBuffer = gMemory.buffer;
     gLastBufferLen = gLastBuffer.byteLength;
     const wasmBytes = bytes ?? await CWASM.LoadArtgineBytes("artgine/wasm/" + fileName);
@@ -722,8 +722,8 @@ function liftDecodeString(pointer: number): string {
     return String.fromCharCode(...memoryU16.subarray(start, end));
 }
 
-const RES_TAG_A: string = "2204757308_4051816024";
-const RES_TAG_B: string = "2529968786_3530583902";
+const RES_TAG_A: string = "2439553405_3595388337";
+const RES_TAG_B: string = "3784495169_940147285";
 
 const gArtgineBytesCache = new Map<string, ArrayBuffer | Uint8Array>();
 
@@ -1083,7 +1083,8 @@ export class CWASM
     // AS 쪽 Octree_InsertBatch가 _removeOne으로 보낸다(ASMOctree.ts 참고).
     // 전용 fn id를 새로 파지 않은 이유: fn id는 ASM_MAIN.ts의 스크램블 테이블/디코이 슬롯과
     // 맞물려 있어 한 칸 늘리는 비용이 크고, 제거는 Build 직전 배치 플러시에만 반영되면 된다.
-    static COctreeMgr_RemoveQueue(_mgr: any, _dataId: number): void
+    //_mode: 2=장부에서만 지움, 4=정적 트리에서도 지움
+    static COctreeMgr_RemoveQueue(_mgr: any, _dataId: number,_mode=2): void
     {
         const count=_mgr["_insCount"]||0;
         octInsertBufEnsure(_mgr, count+1);
@@ -1091,11 +1092,20 @@ export class CWASM
         const o=count*OCT_INSERT_STRIDE;
         for(let i=0;i<OCT_INSERT_STRIDE;++i)  buf[o+i]=0;
         buf[o+0]=_dataId;
-        buf[o+14]=2;
+        buf[o+14]=_mode;
         _mgr["_insCount"]=count+1;
     }
-    static COctreeMgr_Build(_handle: number, _mgr: any, _forceStaticUpdate: boolean): void
+    //방금 쌓은 Insert 레코드의 모드를 바꾼다. 3=이미 만든 정적 트리에 바로 넣는다
+    static COctreeMgr_SetLastMode(_mgr: any, _mode: number): void
     {
+        const count=_mgr["_insCount"]||0;
+        if(count<=0)    return;
+        (_mgr["_insBuf"] as Float32Array)[(count-1)*OCT_INSERT_STRIDE+14]=_mode;
+    }
+    //정적 증분 삽입이 루트 범위 밖이라 실패했으면 true를 돌려준다. 호출한 쪽이 정적 재빌드를 예약해야 한다
+    static COctreeMgr_Build(_handle: number, _mgr: any, _forceStaticUpdate: boolean): boolean
+    {
+        let fallback=false;
         const octN=gInstance.exports.ASM_LINK_OCT_N as (fn:number,
             n0:number,n1:number,n2:number,n3:number,n4:number,n5:number,n6:number,n7:number,
             n8:number,n9:number,n10:number,n11:number,n12:number,n13:number,n14:number,n15:number)=>void;
@@ -1104,10 +1114,15 @@ export class CWASM
         {
             octN(CWASM.FN_Octree_InsertBatch,
                 _handle,(_mgr["_insBuf"] as Float32Array)["ptr"],count,0,0,0,0,0,0,0,0,0,0,0,0,0);
+            checkMemoryGrow();
+            const buf=_mgr["_insBuf"] as Float32Array;
+            for(let i=0;i<count;++i)
+                if(buf[i*OCT_INSERT_STRIDE+14]===-1)  { fallback=true; break; }
             _mgr["_insCount"]=0;
         }
         octN(CWASM.FN_Octree_Build,_handle,_forceStaticUpdate?1:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
         checkMemoryGrow();
+        return fallback;
     }
     static COctreeMgr_InsideRay(_handle: number, _ox: number,_oy: number,_oz: number,
         _dx: number,_dy: number,_dz: number, _rayLength: number,_boundary: number): Array<number>

@@ -86,6 +86,8 @@ function applyFileAuthIndicator(authed) {
 installFileAuthIndicatorStyle();
 var g_contentJBox = new CModal("content_modal");
 g_contentJBox.SetCloseToHide(true);
+g_contentJBox.SetLimitPush(true);
+g_contentJBox.mBodyStyle = "card-body p-0 overflow-auto";
 g_contentJBox.SetBody("<img id='ImageModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' onclick='NextPhoto()'/>" +
     "<video id='VideoModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' controls onended='NextPhoto()'></video>" +
     "<a id='FileModalSrc' download >Download</a>" +
@@ -109,7 +111,7 @@ function vcsTag(fl) {
 let index = 0;
 var folderList = { "<>": "ul", "class": "list-group", "html": [] };
 const EXT_KIND = {
-    png: 'image', jpg: 'image', jpeg: 'image', bmp: 'image',
+    png: 'image', jpg: 'image', jpeg: 'image', bmp: 'image', webp: 'image', gif: 'image',
     mp3: 'audio', ogg: 'audio',
     mp4: 'video', mov: 'video', avi: 'video',
     soundlist: 'soundlist',
@@ -1316,13 +1318,13 @@ function NextPhoto() {
         if (fl.open == false) {
             CDOM.ID("fl" + fl.index).className = "list-group-item list-group-item-action list-group-item-secondary";
             fl.open = true;
-            if (fl.ext == "png" || fl.ext == "jpg" || fl.ext == "jpeg" || fl.ext == "bmp") {
+            if (EXT_KIND[fl.ext] == "image") {
                 CDOM.ID("ImageModalSrc").hidden = false;
                 CDOM.ID("ImageModalSrc").src = gDown + encodeUrlPath(gPath + fl.name);
                 CDOM.ID("VideoModalSrc").hidden = true;
                 CDOM.ID("FileModalSrc").hidden = true;
             }
-            else if (fl.ext == "mp4" || fl.ext == "mov" || fl.ext == "avi") {
+            else if (EXT_KIND[fl.ext] == "video") {
                 CDOM.ID("ImageModalSrc").hidden = true;
                 CDOM.ID("VideoModalSrc").src = gDown + encodeUrlPath(gPath + fl.name);
                 CDOM.ID("VideoModalSrc").hidden = false;

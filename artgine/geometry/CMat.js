@@ -218,11 +218,6 @@ export class CMat extends CFloat32 {
         super.Import(_target);
         this.mUnit = _target["mUnit"];
     }
-    NewWASM() {
-        super.NewWASM();
-        this.mUnit = false;
-        this.Unit();
-    }
     F32A() {
         return this.mF32A;
     }

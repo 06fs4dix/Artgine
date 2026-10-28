@@ -114,9 +114,16 @@ export class CImgPro
 		return boundList; 
 	}
     /** _updatedLayers : 갱신된 배열 레이어 번호. 6레이어 큐브 중 하나라도 포함된 큐브만 처리하며 결과는 그 큐브들만 순서대로 담긴다. _mips는 큐브 번호(레이어/6)를 인덱스로 하는 희소 배열 */
-    static SphericalGaussianBlur(_tex:CTexture,_updatedLayers:Set<number>,_mips:(Uint8Array|Float32Array)[][]=null):CTexture[]
+    static SphericalGaussianBlur(_tex:CTexture,_updatedLayers:Set<number>=null,_mips:(Uint8Array|Float32Array)[][]=null):CTexture[]
     {
         const v3 = CPoolGeo.ProductV3();
+        
+        if(_updatedLayers == null) {
+            _updatedLayers = new Set();
+            for(let i = 0; i < _tex.GetInfo()[0].mCount * 6; i++) {
+                _updatedLayers.add(i);
+            }
+        }
 
         const maxSamples = 128;
         const LOD_MAX = Math.floor( Math.log2( _tex.GetWidth() ) );

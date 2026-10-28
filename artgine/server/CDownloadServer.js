@@ -15,6 +15,7 @@ import { URLPatterns } from '../network/CServerMain.js';
 import { CServerRouter } from '../network/CServerRouter.js';
 import { CFile } from '../system/CFile.js';
 import { CConsol } from '../basic/CConsol.js';
+import { CCMDMgr } from '../system/CCMDMgr.js';
 import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
 import { CPath } from '../basic/CPath.js';
 import { isAuthedReq, isValidToken } from './CAuthServer.js';
@@ -100,6 +101,7 @@ async function ensureFfmpeg() {
         CConsol.Log('[Download] ffmpeg ZIP 다운로드 실패');
         return false;
     }
+    await CCMDMgr.NPMInstall(["adm-zip"]);
     const AdmZip = require('adm-zip');
     const zip = new AdmZip(Buffer.from(data));
     const entry = zip.getEntries().find((e) => /\/bin\/ffmpeg\.exe$/i.test(e.entryName));

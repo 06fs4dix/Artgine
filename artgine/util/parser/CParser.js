@@ -27,6 +27,8 @@ export class CParser {
     mBufferSize = 0;
     mFileName = "";
     mResult = null;
+    mCenterPos = false;
+    mTargetScale = 0;
     constructor() {
     }
     async Load(pa_fileName) { }

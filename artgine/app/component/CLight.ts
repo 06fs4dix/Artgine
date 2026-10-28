@@ -162,7 +162,11 @@ export class CLight extends CBrushComp
 		}
 
 		const frustumCull = (this.mShadowCullFrustum || this.mLightCullFrustum) && this.IsPointLight() && this.IsFrustumCull();
-		this.mLightCull = this.mLightCullFrustum && frustumCull;
+		const lightCull = this.mLightCullFrustum && frustumCull;
+		if(lightCull != this.mLightCull) {
+			this.mBrush.mUpdateLight=CUpdate.eType.Updated;
+			this.mLightCull = lightCull;
+		}
 
 		// 2. 그림자 업데이트 (shadowOff가 false일 때만 실행)
 		if (this.mTexKey!=null)
@@ -305,8 +309,6 @@ export class CLight extends CBrushComp
 							srp = rp.Export();
 							srp.mPriority -= i + this.mBrush.mShadowTexOff;
 							srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(SDF.eShadow.Near + i, this.mBrush.mShadowCount, 1)));
-							srp.mTag.add("PointLightShadowV");
-							srp.mTag.add("PointLightShadowF");
 							srp.PushAnd(new CCondition("mCullMask.x", "&", this.mCullMask.x));
 							this.mBrush.PushAutoRP(srpKey, srp);
 						}
@@ -491,7 +493,8 @@ export class CLight extends CBrushComp
 			// ---------------------------------------------------------------------
 			// 2) GPU 버퍼 입력: ShadowView & ShadowInfo 일괄 작성
 			// ---------------------------------------------------------------------
-			const eye = cam3D.GetEye();
+			// camPos(CCanvas)와 반드시 같은 값이어야 한다. GetEye()는 Init 직후 바로 바뀌어 렌더 시점의 camPos와 프레임이 어긋나 그림자가 뒤처진다
+			const eye = cam3D.GetViewEye();
 			const PVMat: CMat = CPoolGeo.ProductMat();
 			for (let i = 0; i < activeCascades.length; ++i) {
 				const { slot, scam, zOffset } = activeCascades[i];

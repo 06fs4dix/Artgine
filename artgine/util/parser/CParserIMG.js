@@ -25,20 +25,25 @@ export class CParserIMG extends CParser {
             }
             const img = new Image();
             img.crossOrigin = "Anonymous";
-            img.onload = (_event) => {
+            img.onload = async (_event) => {
                 const tex = new CTexture();
                 const image = _event.currentTarget;
                 tex.SetSize(image.width, image.height);
                 tex.SetBuf(image);
                 this.mResult = tex;
-                CH5Canvas.Init(image.width, image.height);
-                CH5Canvas.Draw(CH5Canvas.DrawImage(image, 0, 0, image.width, image.height));
-                const imgData = CH5Canvas.GetContext().getImageData(0, 0, image.width, image.height);
                 const w = image.width;
                 const h = image.height;
-                const src = imgData.data;
-                const buf = new Uint8Array(src.length);
-                buf.set(src);
+                let buf = null;
+                if (!this.mAlphaBleed) {
+                    buf = await DecodeStraightRGBA(image.src, w, h);
+                }
+                if (buf == null) {
+                    CH5Canvas.Init(image.width, image.height);
+                    CH5Canvas.Draw(CH5Canvas.DrawImage(image, 0, 0, image.width, image.height));
+                    const imgData = CH5Canvas.GetContext().getImageData(0, 0, image.width, image.height);
+                    buf = new Uint8Array(imgData.data.length);
+                    buf.set(imgData.data);
+                }
                 let hasOpaque = false;
                 let hasZeroAlpha = false;
                 for (let i = 3; i < buf.length; i += 4) {
@@ -85,6 +90,38 @@ export class CParserIMG extends CParser {
             };
             img.src = url;
         });
+    }
+}
+async function DecodeStraightRGBA(_src, _w, _h) {
+    let bm = null;
+    try {
+        const blob = await (await fetch(_src)).blob();
+        bm = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+        const canvas = document.createElement("canvas");
+        canvas.width = _w;
+        canvas.height = _h;
+        const gl = canvas.getContext("webgl2");
+        if (gl == null || bm.width != _w || bm.height != _h || _w > gl.getParameter(gl.MAX_TEXTURE_SIZE) || _h > gl.getParameter(gl.MAX_TEXTURE_SIZE))
+            return null;
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bm);
+        const fb = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+        const out = new Uint8Array(_w * _h * 4);
+        gl.readPixels(0, 0, _w, _h, gl.RGBA, gl.UNSIGNED_BYTE, out);
+        gl.getExtension("WEBGL_lose_context")?.loseContext();
+        return out;
+    }
+    catch (e) {
+        return null;
+    }
+    finally {
+        bm?.close();
     }
 }
 const _alphaBleedNeighbors8Dx = [-1, 1, 0, 0, -1, 1, -1, 1];

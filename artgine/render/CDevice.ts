@@ -630,10 +630,11 @@ export class CDeviceGPU extends CDevice
 		this.mHandle=_handle;
 
 		//셰이더 백엔드가 이 값으로 바인딩 번호를 만든다(CShaderInterpretGPU.TexBinding).
-		//기본 한도가 스테이지당 샘플드 텍스처 16개라 2D 11 + 배열 3 + 큐브 2 로 맞춘다
+		//기본 한도가 스테이지당 샘플드 텍스처 16개라 2D 11 + 배열 4 + 큐브 1 로 맞춘다(GL 과 같은 구성).
+		//배열은 SDF.eTexSlot.ArrEnvmap 이 3번 슬롯이라 최소 4개가 있어야 환경맵이 바인딩된다
 		g_property.set(CDevice.eProperty.Sam2DMax,11);
-		g_property.set(CDevice.eProperty.Sam2DArrMax,3);
-		g_property.set(CDevice.eProperty.SamCubeMax,2);
+		g_property.set(CDevice.eProperty.Sam2DArrMax,4);
+		g_property.set(CDevice.eProperty.SamCubeMax,1);
 		g_property.set(CDevice.eProperty.Sam2dArrLayerMax,256);
 		g_property.set(CDevice.eProperty.VertexUniform,1024);
 		g_property.set(CDevice.eProperty.PixelUniform,1024);

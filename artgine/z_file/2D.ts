@@ -33,7 +33,12 @@ import {
 	ligCol, ligDir, ligCount,
 	LightCac2D,
     ligMask,
-    cullMask
+    cullMask,
+	material,
+	emission,
+	ligStep2,
+	GetMaterial,
+	emissiveIntensity
 } from "./Light";
 import { shadowOn, shadowRate, shadowWrite } from "./Shadow";
 import { 
@@ -342,7 +347,7 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 	BranchDefault();
 	to_uv.xy=V2Abs(f2_uv);
 	BranchEnd();
-	to_uv.z=1.0;
+	to_uv.z=f3_sca.z;
 
     // codi 적용된 상태로 메시를 새로 만든 페인트를 위해 음수이면 0으로 변환
 	uv = new CVec2(f2_uv.x < 0.0 ? 0.0 : 1.0, f2_uv.y < 0.0 ? 0.0 : 1.0);
@@ -357,37 +362,25 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 	wMat=worldMat;
 	BranchEnd();
 	
-    var isMerge : number;
     var isVertexBot : number;
     var isVertexLeft : number;
 	var size : CVec3;
-    BranchBegin("merge","MG",[]);
-    isMerge = 1.0;
     isVertexLeft = f3_sca.x < 0.0 ? 1.0 : 0.0;
     isVertexBot = f3_sca.y < 0.0 ? 1.0 : 0.0;
-    size = V3Abs(f3_sca);
-    BranchDefault();
-    isMerge = 0.0;
-    isVertexLeft = f3_sca.x < 0.0 ? 1.0 : 0.0;
-    isVertexBot = f3_ver.y < 0.0 ? 1.0 : 0.0;
-    size = new CVec3(V3Len(wMat[0].xyz)*1.0,V3Len(wMat[1].xyz)*1.0,V3Len(wMat[2].xyz)*1.0);
-    BranchEnd();
+    size = V3MulV3(V3Abs(f3_sca), new CVec3(V3Len(wMat[0].xyz),V3Len(wMat[1].xyz),V3Len(wMat[2].xyz)));
 
     var origin: CVec3;
+    var bcen : CVec4;
 	BranchBegin("billboard","B",[billboard,billboardMat]);
 	if(billboard>0.5)
 	{
-        if(isMerge > 0.5) {
-            origin = new CVec3(isVertexLeft > 0.5 ? -0.5 : 0.5, isVertexBot > 0.5 ? -0.5 : 0.5, 0.0);
-            P = new CVec4(origin, 1.0);
-        }
+        origin = new CVec3(isVertexLeft > 0.5 ? -0.5 : 0.5, isVertexBot > 0.5 ? -0.5 : 0.5, 0.0);
+        P = new CVec4(origin, 1.0);
         P.xyz = V3MulV3(P.xyz, size);
 		P = V4MulMatCoordi(P, billboardMat);
 
-        if(isMerge > 0.5)
-            P.xyz = V3AddV3(P.xyz, V3SubV3(f3_ver, V3MulV3(origin, size)));
-        else
-            P.xyz = V3AddV3(P.xyz, wMat[3].xyz);
+        bcen = V4MulMatCoordi(new CVec4(V3SubV3(f3_ver, V3MulV3(origin, V3Abs(f3_sca))), 1.0), wMat);
+        P.xyz = V3AddV3(P.xyz, bcen.xyz);
 	}
 	else
 		P = V4MulMatCoordi(P, wMat);
@@ -396,9 +389,8 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 	BranchEnd();
 
 	// 바람/그림자로 P가 흔들리기 전에 이 스프라이트의 바닥 y(YSort 기준)를 기록해 둔다.
-	// 머지는 정점이 이미 월드라 부호 있는 scale로, 비머지는 월드행렬의 이동+높이로 구한다.
 	BranchBegin("cutout","CO",[cutoutPos]);
-	to_cutout.x = isMerge > 0.5 ? (isVertexBot > 0.5 ? P.y : P.y - size.y) : (wMat[3].y - size.y * 0.5);
+	to_cutout.x = isVertexBot > 0.5 ? P.y : P.y - size.y;
 	to_cutout.y = size.y;
 	BranchEnd();
 
@@ -528,23 +520,37 @@ function ps_main()
     if ( L_cor.a <= 0.01 ) discard;
     BranchEnd();
 
+	var texOffset : number = 1.0;
+
 	var normal : CVec3=new CVec3(0.0,0.0,0.0);
-	BranchBegin("normalMap","N",[sam2DCount]);
+	BranchBegin("normalMap","NM",[sam2DCount]);
 	if(sam2DCount>1.0)
 	{
-		normal=Sam2DToColor(1.0,to_uv.xy).xyz;
+		normal=Sam2DToColor(texOffset,to_uv.xy).xyz;
 		normal=MappingTexToV3(normal);
+		texOffset += 1.0;
 	}
 	BranchEnd();
 
+	var lmaterial : CVec4 = new CVec4(-9999.0,0.0,0.0,0.0);
+	BranchBegin("materialMap","MM",[sam2DCount,material]);
+	if(sam2DCount>1.0)
+	{
+		lmaterial=GetMaterial(material,Sam2DToColor(texOffset,to_uv.xy),sam2DCount);
+		texOffset += 1.0;
+	}
+	BranchEnd();
+	
     var gamma : number = 1.0;
 	var DSE : CMat3=new CMat3(0);
-	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,cullMask,ambientColor]);
+	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,cullMask,ambientColor,material,emission,emissiveIntensity,ligStep2]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
 
-	DSE =LightCac2D(to_worldPos,L_cor,normal,shadow,cullMask.x);
-	L_cor.rgb=DSE[0];
+	if(lmaterial.x < -9990.0) lmaterial = material;
+
+	DSE =LightCac2D(to_worldPos,L_cor,normal,shadow,cullMask.x,lmaterial.w);
+	L_cor.rgb=V3AddV3(V3AddV3(DSE[0],DSE[1]),DSE[2]);
     BranchDefault();
     if(shadow.r > -0.5) {
 		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);

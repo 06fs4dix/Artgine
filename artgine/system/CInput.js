@@ -1,6 +1,7 @@
 import { CMouse } from "../system/CMouse.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CBound } from "../geometry/CBound.js";
+import { CConsol } from "../basic/CConsol.js";
 export class CInput {
     static eKey = {
         Num0: 0x30,
@@ -156,6 +157,38 @@ export class CInput {
         bound.InitBound(new CVec3(this.mDragMouse.x, this.mDragMouse.y));
         bound.InitBound(new CVec3(this.Mouse().x, this.Mouse().y));
         return bound;
+    }
+    mLogEvent = null;
+    IsLog() { return this.mLogEvent != null; }
+    SetLog(_enable) {
+        if (_enable == this.IsLog())
+            return;
+        if (!_enable) {
+            for (const [type, fn] of this.mLogEvent)
+                window.removeEventListener(type, fn, true);
+            this.mLogEvent = null;
+            return;
+        }
+        const tag = (e) => {
+            const t = e.target;
+            if (t == null || t.tagName == null)
+                return "";
+            return " <" + t.tagName.toLowerCase() + (t.id ? "#" + t.id : "") + ">";
+        };
+        const btn = ["L", "M", "R"];
+        this.mLogEvent = [];
+        const add = (type, fn) => {
+            const h = (e) => { CConsol.Log("[Input] " + type + " " + fn(e) + tag(e), "#00aaff"); };
+            this.mLogEvent.push([type, h]);
+            window.addEventListener(type, h, true);
+        };
+        add("keydown", (e) => e.repeat ? "" : e.key + " (" + e.code + "," + e.keyCode + ")");
+        add("keyup", (e) => e.key + " (" + e.code + "," + e.keyCode + ")");
+        add("mousedown", (e) => (btn[e.button] ?? e.button) + " x=" + e.clientX + " y=" + e.clientY);
+        add("mouseup", (e) => (btn[e.button] ?? e.button) + " x=" + e.clientX + " y=" + e.clientY);
+        add("wheel", (e) => "deltaY=" + e.deltaY + " x=" + e.clientX + " y=" + e.clientY);
+        add("touchstart", (e) => Array.from(e.changedTouches).map(t => "x=" + t.clientX + " y=" + t.clientY).join(" | "));
+        add("touchend", (e) => Array.from(e.changedTouches).map(t => "x=" + t.clientX + " y=" + t.clientY).join(" | "));
     }
     SetFocus(_focus) {
         if (this.mFocus != _focus)

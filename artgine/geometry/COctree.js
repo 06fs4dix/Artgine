@@ -88,6 +88,7 @@ export class COctreeMgr {
     mStatic;
     mStaticUpdate = true;
     mStaticBuild = false;
+    mStaticDepth = 1;
     mOCDMap = new Map();
     mOCSMap = new Map();
     mDBound;
@@ -140,6 +141,10 @@ export class COctreeMgr {
     Insert(_center, _size, _data, _min = null, _max = null, _static = false) {
     }
     Remove(_data) {
+    }
+    StaticInsert(_center, _size, _data, _min = null, _max = null) {
+    }
+    StaticRemove(_data) {
     }
     InsideRay(_ray, _RayLength, _boundary, results) {
     }

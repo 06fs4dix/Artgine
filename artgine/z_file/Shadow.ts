@@ -228,6 +228,20 @@ function CubeToUV(_cubeUVW : CVec3, _texelSize : CVec2, _texOff : number) : CVec
     _cubeUVW.z += _texOff - SDF.eShadow.Near;
     return _cubeUVW;
 }
+//큐브 면 카메라가 쓴 뷰 공간 위치의 z는 그 면 축 방향 깊이다. 부호는 RH/LH에 따라 달라 크기만 쓴다
+function Sam2DCompareCube(_uv: CVec3, _compare: number): number
+{
+    var sp0 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, _uv);
+    return sp0.w < 1.0 ? 0.0 : step(_compare, -abs(sp0.z));
+}
+//_dir이 고르는 큐브 면(CubeToUV와 같은 우선순위)의 축 방향으로 _pos가 빛에서 떨어진 깊이
+function CubeAxisDepth(_dir : CVec3, _pos : CVec3) : number
+{
+    var a : CVec3 = V3Abs(_dir);
+    if(a.x >= a.y && a.x >= a.z) return abs(_pos.x);
+    if(a.y >= a.z) return abs(_pos.y);
+    return abs(_pos.z);
+}
 function CalcShadowPoint(_index : number, _world : CVec4, _normal : CVec3, _ligDir : CVec4, _camPos: CVec3, _row0: CVec4) : number
 {
     var texOff: number = _row0.y;
@@ -246,13 +260,10 @@ function CalcShadowPoint(_index : number, _world : CVec4, _normal : CVec3, _ligD
 
     if(ligToPosLength <= far)
     {
-        var depth : number = -ligToPosLength / far;
-
         var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
         var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
-        var depthBias : number = slopedDepthBias * texScale.x;
-        depth += depthBias;
+        var depthBias : number = slopedDepthBias * texScale.x * far;
 
         var viewDistance : number = V3Len(V3SubV3(_world.xyz, _camPos));
         var diskRadius : number = (1.0 + viewDistance / far) * 0.8;    // 디스크 크기가 카메라의 거리와 비례
@@ -262,8 +273,14 @@ function CalcShadowPoint(_index : number, _world : CVec4, _normal : CVec3, _ligD
         var sVal : number = 0.0;
         for(var i = 0; i < FloatToInt(samples); i++)
         {
-            var uvw : CVec3 = CubeToUV(V3AddV3(ligToPos, V3MulFloat(GridSamplingDisk(IntToFloat(i)), diskRadius)), texScale, texOff);
-            sVal += Sam2DCompare(SDF.eTexSlot.ArrShadowWrite, uvw, depth);
+            var sampleDir : CVec3 = V3AddV3(ligToPos, V3MulFloat(GridSamplingDisk(IntToFloat(i)), diskRadius));
+            var uvw : CVec3 = CubeToUV(sampleDir, texScale, texOff);
+            //PCF 샘플은 중심에서 벗어난 방향을 읽으므로 수신 깊이도 그 방향이 수신면과 만나는 점으로 구한다. 중심 깊이를 쓰면 기울어진 지형이 측면 큐브 면에서 자기 그림자에 걸린다
+            var sampleU : CVec3 = V3Nor(sampleDir);
+            var planeDot : number = V3Dot(_normal, sampleU);
+            var rayLen : number = abs(planeDot) > 0.05 ? V3Dot(_normal, ligToPos) / planeDot : ligToPosLength;
+            rayLen = clamp(rayLen, ligToPosLength * 0.5, ligToPosLength * 2.0);
+            sVal += Sam2DCompareCube(uvw, -CubeAxisDepth(sampleDir, V3MulFloat(sampleU, rayLen)) + depthBias);
         }
         return 1.0 - sVal / samples;
     }
@@ -290,14 +307,15 @@ export function CalcParallaxShadow(_shadowIndex: number, _world: CVec4, _uv: CVe
         var outRadius : number = row0.z;
         lDir.xyz = V3SubV3(lDir.xyz, _world.xyz);
         var dist : number = V3Len(lDir.xyz);
-        if(dist > outRadius) return shadowRate;
+        //범위 밖·표면 뒤 점광원은 빛을 주지 않는다. shadowRate를 주면 4번째 채널에 여러 광원이 평균될 때 CalcShadowPoint(범위 밖 1.0)와 어긋나 멀리 있는 광원이 이 표면을 어둡게 만든다
+        if(dist > outRadius) return 1.0;
     }
     lDir.xyz = V3Nor(lDir.xyz);
     
     // ligDir을 탄젠트 공간으로 이동
     var TBN : CMat3 = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
     lDir.xyz = V3MulMat3Normal(lDir.xyz, TBN);
-    if (lDir.z <= 0.0) return shadowRate; // 아랫쪽에서 오는 빛은 전체 그림자 처리
+    if (lDir.z <= 0.0) return isPointLight > 0.5 ? 1.0 : shadowRate; // 아랫쪽에서 오는 방향광은 전체 그림자 처리
 
     var minLayers : number = 4.0;
     var maxLayers : number = 16.0;

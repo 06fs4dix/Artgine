@@ -4,11 +4,13 @@ import { CForgeAdjust } from "./CForgeAdjust.js";
 import { CForgeWallGen } from "./CForgeWallGen.js";
 import { CForgeTowerGen } from "./CForgeTowerGen.js";
 import { CForgeHouseGen } from "./CForgeHouseGen.js";
+import { CForgeInteriorGen } from "./CForgeInteriorGen.js";
+import { CForgeCollide } from "./CForgeCollide.js";
 import { CForgePropGen } from "./CForgePropGen.js";
 import { CForgeRand } from "./CForgeRand.js";
 import { CForgePoly } from "./CForgePoly.js";
 import { CForgeSpline } from "./CForgeSpline.js";
-import { CForgeMeshBuf } from "./CForgeMeshBuf.js";
+import { CForgeMeshBuf, IForgePart } from "./CForgeMeshBuf.js";
 import { CForgeShape } from "./CForgeShape.js";
 import { CForgeTheme } from "./CForgeTheme.js";
 import { CForgeChurchGen } from "./CForgeChurchGen.js";
@@ -35,6 +37,52 @@ export class CForgeGeoTest
     }
 
     static sFail : any[] = [];
+
+    //_from번째 이후 부품이 낀, 같은 방향을 보며 _tol(엔진 단위, 1 = 1cm) 이내 같은 평면에서 겹치는 삼각형 쌍 수. 깊이 정밀도가 모자라면 깜빡이는(z파이팅) 면이다
+    static Overlaps(_parts : IForgePart[], _from : number, _tol : number = 0.6, _out : string[] = null) : number
+    {
+        interface ITri { pi : number; v : number[][]; n : number[]; d : number; }
+        const tris : ITri[] = [], groups = new Map<string, ITri[]>();
+        _parts.forEach((_p, _pi) =>
+        {
+            const pos = _p.buf.mPos, idx = _p.buf.mIdx;
+            for(let i = 0; i + 2 < idx.length; i += 3)
+            {
+                const v = [0, 1, 2].map(_k => [pos[idx[i + _k] * 3], pos[idx[i + _k] * 3 + 1], pos[idx[i + _k] * 3 + 2]]);
+                const u = [v[1][0] - v[0][0], v[1][1] - v[0][1], v[1][2] - v[0][2]], w = [v[2][0] - v[0][0], v[2][1] - v[0][1], v[2][2] - v[0][2]];
+                let n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+                const l = Math.hypot(n[0], n[1], n[2]);
+                if(l < 1e-6) continue;
+                n = n.map(_x => _x / l);
+                const t = { pi : _pi, v, n, d : n[0] * v[0][0] + n[1] * v[0][1] + n[2] * v[0][2] };
+                tris.push(t);
+                const key = n.map(_x => Math.round(_x * 100)).join(",");
+                if(!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(t);
+            }
+        });
+        const inTri = (_p : number[], _t : ITri) =>
+        {
+            const N = _t.n, ax = Math.abs(N[0]) > Math.abs(N[1]) && Math.abs(N[0]) > Math.abs(N[2]) ? 0 : Math.abs(N[1]) > Math.abs(N[2]) ? 1 : 2, i = ax == 0 ? 1 : 0, j = ax == 2 ? 1 : 2;
+            const s = (_a : number[], _b : number[]) => (_p[i] - _b[i]) * (_a[j] - _b[j]) - (_a[i] - _b[i]) * (_p[j] - _b[j]);
+            const d = [s(_t.v[0], _t.v[1]), s(_t.v[1], _t.v[2]), s(_t.v[2], _t.v[0])];
+            return !(d.some(_x => _x < -1e-6) && d.some(_x => _x > 1e-6));
+        };
+        const pts = (_t : ITri) => [0, 1, 2, 3].map(_k => _k == 3 ? [0, 1, 2].map(_a => (_t.v[0][_a] + _t.v[1][_a] + _t.v[2][_a]) / 3) : [0, 1, 2].map(_a => (_t.v[_k][_a] * 2 + _t.v[(_k + 1) % 3][_a] + _t.v[(_k + 2) % 3][_a]) / 4));
+        let count = 0;
+        for(const arr of groups.values())
+        {
+            arr.sort((_a, _b) => _a.d - _b.d);
+            for(let i = 0; i < arr.length; i++)
+                for(let j = i + 1; j < arr.length && arr[j].d - arr[i].d <= _tol; j++)
+                {
+                    const s = arr[i], t = arr[j];
+                    if(Math.max(s.pi, t.pi) < _from) continue;
+                    if(pts(s).some(_p => inTri(_p, t)) || pts(t).some(_p => inTri(_p, s))) { count++; _out?.push(`${(_parts[s.pi].tex ?? "-").replace(/forge_|.tex/g, "")}${_parts[s.pi].rgb.map(_x => _x.toFixed(1))}-${(_parts[t.pi].tex ?? "-").replace(/forge_|.tex/g, "")}${_parts[t.pi].rgb.map(_x => _x.toFixed(1))} dd=${(t.d - s.d).toFixed(2)} n=${s.n.map(_x => _x.toFixed(1))} y=${(s.v[0][1] / 100).toFixed(2)} xz=${(s.v[0][0] / 100).toFixed(1)},${(s.v[0][2] / 100).toFixed(1)} S=${JSON.stringify(s.v.map(_q => _q.map(_x => +(_x / 100).toFixed(2))))} T=${JSON.stringify(t.v.map(_q => _q.map(_x => +(_x / 100).toFixed(2))))}`); }
+                }
+        }
+        return count;
+    }
 
     static Run(_seed : number = 1, _count : number = 300) : string
     {
@@ -254,6 +302,65 @@ export class CForgeGeoTest
                 }
             }
             Report("건물 생성기 메시 무결성", fail, _count, ` · 사각형 분해 지붕 ${rectRoof}개 · 평균 정점 ${Math.round(verts / _count)}`);
+        }
+        {
+            //실내: 직각 집에 실내를 켜고 메시·충돌·방 배치가 깨지지 않는지, 주방·화장실·2층 계단이 옵션대로 나오는지 센다
+            const anims : Record<string, number> = {};
+            let fail = 0, enabled = 0, verts = 0, kitchen = 0, bath = 0, stair = 0, multi = 0, furn = 0, colBoxes = 0, m3 = 0, f3 = 0, pathBad = 0, wallBad = 0;
+            const ground = (_x : number, _z : number) => Math.sin(_x * 0.3) * 0.5 + Math.cos(_z * 0.2) * 0.4;
+            const concepts = ["modern", "hanok", "machiya", "medieval"], Bad = (_n : number) => !Number.isFinite(_n);
+            for(let k = 0; k < _count; k++)
+            {
+                const sc = new CForgeScene(k + 11), h = new CForgeHistory(sc), a = R.Range(0, Math.PI), w = R.Range(4, 16), d = R.Range(4, 14);
+                const cs = Math.cos(a), sn = Math.sin(a), T = (_x : number, _z : number) => [_x * cs - _z * sn, _x * sn + _z * cs] as ForgeV2;
+                const poly : ForgeV2[] = R.Chance(0.4) ? [T(0, 0), T(w, 0), T(w, d * 0.5), T(w * 0.6, d * 0.5), T(w * 0.6, d), T(0, d)] : [T(0, 0), T(w, 0), T(w, d), T(0, d)];
+                const kt = R.Pick<boolean | "auto">([true, false, "auto"]), bt = R.Pick<boolean | "auto">([true, false, "auto"]);
+                h.Push<IForgePath>(CForgeScene.eKind.Path, { id : 0, seed : 0, pts : [T(-6, R.Range(0, d)), T(w + 6, R.Range(0, d))], width : 2 });
+                const b = h.Push<IForgeBuilding>(CForgeScene.eKind.Building, { id : 0, seed : 0, poly, height : R.Range(2.8, 14), roof : R.Pick([0, 1, 2]), roofH : R.Range(0, 3), glue : [],
+                    interior : { enable : true, concept : concepts[k % 4], kitchen : kt, bath : bt, density : R.Range(0, 1) } });
+                const r = CForgeAdjust.Building(b, sc);
+                r.wall = 0;
+                r.theme = CForgeGeoTest.sThemes[k % CForgeGeoTest.sThemes.length];
+                let bad = false, why = "";
+                const built = CForgeHouseGen.Build(r, ground, 0);
+                for(const part of built)
+                {
+                    const v = part.buf.Validate();
+                    verts += part.buf.Count();
+                    if(v.nan > 0 || v.badIdx > 0) { bad = true; why += "mesh "; }
+                }
+                if(CForgeInteriorGen.On(r, 0))
+                {
+                    enabled++;
+                    const P = CForgeInteriorGen.Plan(r, ground);
+                    const stat = built.filter(_q => _q.anim == null), zd : string[] = [], zf = CForgeGeoTest.Overlaps(stat, stat.length - CForgeInteriorGen.Parts(P, r, []).filter(_q => _q.anim == null).length, 0.6, zd);
+                    if(zf > 0) { bad = true; why += `zfight(${zf}) ${zd.slice(0, 4).join(" ; ")} PLAN y=${P.y} ceil=${P.ceil} slab=${P.slab} floors=${r.floors} h=${r.height.toFixed(2)} `; }
+const pv = CForgeInteriorGen.Verify(P);                    if(pv > 0) { bad = true; why += `path(${pv}) `; pathBad++; }                    if(CForgeInteriorGen.EntryWalled(P)) { bad = true; why += "entrywall "; wallBad++; }
+                    const keys = new Set<string>();
+                    for(const q of built) if(q.anim != null)
+                    {
+                        const an = q.anim;
+                        keys.add(an.key);
+                        if(an.pivot.some(Bad) || an.slide.some(Bad) || Bad(an.angle) || (an.hull != null && (an.hull.length % 3 != 0 || an.hull.some(_h => _h.some(Bad)))) || q.buf.mIdx.length == 0) { bad = true; why += "anim "; }
+                    }
+                    if(!keys.has("door")) { bad = true; why += "nodoor "; }
+                    for(const k of keys) { const t = k.split(":")[0]; anims[t] = (anims[t] ?? 0) + 1; }
+                    if(P.rooms.length == 0 || P.levels < 1) { bad = true; why += "rooms "; }
+                    for(const p of P.parts) if(Bad(p.pos) || p.door < p.a0 || p.door > p.a1) { bad = true; why += "partdoor "; }
+                    for(const f of P.furn) if(!P.rooms.some(_m => f.c[0] >= _m.r[0] - 0.01 && f.c[0] <= _m.r[2] + 0.01 && f.c[1] >= _m.r[1] - 0.01 && f.c[1] <= _m.r[3] + 0.01)) { bad = true; why += "furnOut "; }
+                    if(P.rooms.some(_m => _m.kind == "kitchen") || P.furn.some(_f => _f.kind == "counter")) kitchen++;
+                    if(P.rooms.some(_m => _m.kind == "bath")) bath++;
+                    if(r.floors >= 2) { multi++; if(P.levels >= r.floors) stair++; }
+                    if(r.floors >= 3) { m3++; if(P.levels >= r.floors) f3++; }
+                    furn += P.furn.length;
+                    const col = CForgeCollide.Build(CForgeScene.eKind.Building, r, ground);
+                    colBoxes += col.length;
+                    for(const hull of col) if(hull.length % 3 != 0 || hull.some(_q => _q.some(Bad))) { bad = true; why += "hull "; }
+                    for(const bx of P.boxes) if([bx.c[0], bx.c[1], bx.hl, bx.hw, bx.y0, bx.y1].some(Bad) || bx.y1 <= bx.y0 || bx.hl <= 0 || bx.hw <= 0) { bad = true; why += `box(${[bx.hl, bx.hw, bx.y0, bx.y1].map(_n => _n.toFixed(2))}) `; }
+                }
+                if(bad) { fail++; CForgeGeoTest.sFail.push({ test : "interior", poly, k, why }); }
+            }
+            Report("건물 실내 생성 무결성", fail, _count, ` · 실내 ${enabled}채 · 주방 ${kitchen} · 화장실 ${bath} · 다층 ${multi}채 중 전층 ${stair} · 3층↑ ${m3}채 중 전층 ${f3} · 동선 단절 ${pathBad} · 입구 벽 ${wallBad} · 움직이는 부품 ${JSON.stringify(anims)} · 가구 평균 ${Math.round(furn / Math.max(1, enabled))} · 충돌체 평균 ${Math.round(colBoxes / Math.max(1, enabled))} · 평균 정점 ${Math.round(verts / _count)}`);
         }
         {
             //교회·사찰·조형물·다리: 타입마다 돌려 형식 분기(스타브·로마네스크·돔·사찰·탑·개선문·다리)를 모두 거친다

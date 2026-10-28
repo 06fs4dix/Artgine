@@ -136,6 +136,16 @@ const gConsolCmdTable : IConsolCmd[]=
 		handler:()=>{ new CModalFrameView(); }
 	},
 	{
+		keys:["capture"],
+		desc:"Toggle input capture (key/mouse/touch/wheel log)",
+		handler:()=>
+		{
+			const input=CFrame.Main().Input();
+			input.SetLog(!input.IsLog());
+			gConsolChat.ChatAdd("input log : "+(input.IsLog()?"on":"off"),"#00cc00");
+		}
+	},
+	{
 		keys:["win size","window size"],
 		desc:"Print window (browser) size",
 		handler:()=>{ gConsolChat.ChatAdd("win width : " + window.innerWidth + " height : " + window.innerHeight,"#00cc00"); }

@@ -2,12 +2,13 @@ import { readFileSync, existsSync, writeFileSync, renameSync, unlinkSync, openSy
 import { join, dirname, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 import { CHash } from '../../artgine/basic/CHash.js';
+import { CPath } from '../../artgine/basic/CPath.js';
 
 const TOOL_DIR = dirname(fileURLToPath(import.meta.url));
 
-// 도구가 만드는 임시 파일(스크린샷·buffer JSON·다운로드)은 cwd가 아니라 아티젠 루트 temp/에 모은다.
-// cwd 기준으로 두면 도구를 실행한 위치(대개 루트나 프로젝트 폴더)에 결과물이 흩어진다.
-export const TEMP_DIR = join(TOOL_DIR, '..', '..', 'temp');
+// 도구가 만드는 임시 파일(스크린샷·buffer JSON·다운로드)은 서버(CServerMain)가 시작 때 비우고 만드는
+// 워킹 폴더 temp/에 모은다. 아티젠 폴더 기준으로 두면 서버가 만든 temp/와 다른 폴더에 쌓인다.
+export const TEMP_DIR = join(CPath.WorkingPath(), 'temp');
 
 export function tempPath(p) {
     if (isAbsolute(p)) return p;

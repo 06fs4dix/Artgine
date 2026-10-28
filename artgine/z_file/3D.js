@@ -1,7 +1,7 @@
-import { Build, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, MatTypeToMat, Sam2DToColor, Sam2DGradToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrNearestToMat, clamp, floor, min, abs, max, dFdy, dFdx, length, SaturateFloat, smoothstep, V2SubV2, V2MulFloat, V2DivV2, V2AddV2, V2Len, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V3Len, V3Mix, V3SubV3, SaturateV3, V3Cross, V3Sqrt, V3MulV3, V4MulMatCoordi, V4Min, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, Sam2DArrNearestToV4, sqrt, sin, Sam2DToV4, vertexID, } from "./Shader";
+import { Build, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, MatTypeToMat, Sam2DToColor, Sam2DGradToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrNearestToMat, clamp, floor, min, abs, max, dFdy, dFdx, length, SaturateFloat, smoothstep, V2SubV2, V2MulFloat, V2DivV2, V2AddV2, V2Len, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V3Len, V3Mix, V3SubV3, SaturateV3, V3Cross, V3Sqrt, V3MulV3, V4MulMatCoordi, V4Min, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, sqrt, sin, Sam2DToV4, vertexID, } from "./Shader";
 import { SDF } from "./SDF";
 import { VFXDown2, GetTexCodiedUV, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, ColorModalFun, AlphaModalFun, vfxMat0, vfxMat1 } from "./ColorFun";
-import { ambientColor, envCount, envPos, EnvNearest, GetMaterial, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, material, cullMask, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envCount, envPos, EnvNearest, GetMaterial, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, material, cullMask, sam2DCount, samCubeCount, emission, envmapOn, emissiveIntensity } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { bias, normalBias, PCF, shadowCount, shadowOn, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow, shadowRate, shadowWrite, texture16f, shadowZOffset, jitter, CalcShadow, CalcParallaxShadow, shadowInfoList, PCFStep } from "./Shadow";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
@@ -424,7 +424,7 @@ function ps_main() {
     var sunCol = new CVec3(1.0, 1.0, 1.0);
     var waterLit = new CVec3(1.0, 1.0, 1.0);
     var gamma = 1.0;
-    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, cullMask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envCount, envPos, sam2DCount, samCubeCount]);
+    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, emission, emissiveIntensity, cullMask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envmapOn, envCount, envPos, sam2DCount, samCubeCount]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
     lmaterial = GetMaterial(material, Sam2DGradToColor(to_ref.z, uv, uvDx, uvDy), sam2DCount);
@@ -432,8 +432,8 @@ function ps_main() {
     sunDir = dseMat[0];
     sunCol = dseMat[1];
     waterLit = SaturateV3(V3AddV3(ambientColor, sunCol));
-    dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
-    L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
+    dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, lmaterial.w, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
+    L_cor.rgb = V3AddV3(V3AddV3(dseMat[0], dseMat[1]), dseMat[2]);
     BranchDefault();
     if (shadow.a > -0.5) {
         L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);
@@ -546,11 +546,7 @@ function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv, f3_ref) {
     BranchEnd();
     var viewPos = V4MulMatCoordi(P, viewMat);
     out_position = V4MulMatCoordi(viewPos, projectMat);
-    BranchBegin("PointLightShadowV", "PLSV", []);
-    to_viewPos = P;
-    BranchDefault();
     to_viewPos = viewPos;
-    BranchEnd();
     out_position.z = min(out_position.z, out_position.w);
 }
 function ps_main_shadow_write() {
@@ -565,18 +561,9 @@ function ps_main_shadow_write() {
     if (L_cor.a <= 0.01)
         discard;
     BranchEnd();
-    var row0;
-    var lDir;
-    BranchBegin("PointLightShadowF", "PLSF", [ligDir]);
-    row0 = Sam2DArrNearestToV4(shadowInfoList, shadowWrite.y * 4.0);
-    lDir = Sam2DArrNearestToV4(ligDir, row0.x);
-    out_color.b = -V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) / row0.z;
-    out_color.a = 1.0;
-    BranchDefault();
     out_color = to_viewPos;
     out_color.z += shadowZOffset;
     out_color.a = 1.0;
-    BranchEnd();
 }
 function vs_main_shadow_read(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_ref) {
     BranchBegin("codi", "C", [texCodi]);
@@ -644,10 +631,10 @@ function ps_main_shadow_read() {
         for (var i = 0; i < SDF.TexSizeMax; ++i) {
             if (i >= FloatToInt(shadowCount))
                 break;
-            pShadow[FloatToInt(outputIndex)] += CalcParallaxShadow(IntToFloat(i), world, uv, to_ref, parallaxNormal, to_tangent, to_binormal, to_normal);
+            var psv = CalcParallaxShadow(IntToFloat(i), world, uv, to_ref, parallaxNormal, to_tangent, to_binormal, to_normal);
+            pShadow[FloatToInt(outputIndex)] = i > 3 ? min(pShadow.a, psv) : psv;
             outputIndex = min(outputIndex + 1.0, 3.0);
         }
-        pShadow.a /= max(shadowCount - 3.0, 1.0);
     }
     BranchEnd();
     var L_cor;
@@ -669,6 +656,7 @@ function ps_main_shadow_read() {
     if (L_cor.a <= 0.01)
         discard;
     BranchEnd();
+    var dsv;
     var dShadow = new CVec4(1.0, 1.0, 1.0, 1.0);
     BranchBegin("shadowMulti", "SDM", []);
     outputIndex = 0.0;
@@ -676,10 +664,10 @@ function ps_main_shadow_read() {
     for (var i = 0; i < SDF.TexSizeMax; ++i) {
         if (i >= FloatToInt(shadowCount))
             break;
-        dShadow[FloatToInt(outputIndex)] += CalcShadow(IntToFloat(i), to_normal, world, camPos, to_viewPos.xyz);
+        dsv = CalcShadow(IntToFloat(i), to_normal, world, camPos, to_viewPos.xyz);
+        dShadow[FloatToInt(outputIndex)] = i > 3 ? min(dShadow.a, dsv) : dsv;
         outputIndex = min(outputIndex + 1.0, 3.0);
     }
-    dShadow.a /= max(shadowCount - 3.0, 1.0);
     BranchDefault();
     dShadow.r = CalcShadow(0.0, to_normal, world, camPos, to_viewPos.xyz);
     dShadow.rgb = new CVec3(dShadow.r, dShadow.r, dShadow.r);

@@ -11,19 +11,24 @@ import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
 import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
 import { SDF } from "../../artgine/z_file/SDF.js";
-import { CForgeScene, ForgeV2, IForgeEntity } from "./CForgeScene.js";
+import { CForgeScene, ForgeV2, IForgeEntity, IForgeInterior } from "./CForgeScene.js";
 import { CForgePoly } from "./CForgePoly.js";
-import { CForgeAdjust } from "./CForgeAdjust.js";
+import { CLODSwitch } from "../../artgine/app/component/CLODSwitch.js";
+import { CLOD } from "../../artgine/app/component/CLOD.js";
+import { CForgeAdjust, IForgeBuildingR } from "./CForgeAdjust.js";
 import { CForgeGen } from "./CForgeGen.js";
 import { CForgeTex } from "./CForgeTex.js";
 import { CForgeGround } from "./CForgeGround.js";
 import { CForgeCollide } from "./CForgeCollide.js";
 import { ForgeGround } from "./CForgeShape.js";
-import { IForgePart } from "./CForgeMeshBuf.js";
+import { IForgePart, IForgeAnim } from "./CForgeMeshBuf.js";
+import { CForgeFire, CForgeLight, IForgeLight } from "./CForgeFire.js";
 import { CForgeHouseGen } from "./CForgeHouseGen.js";
-import { CForgeMerged, CForgeMergeOpt } from "./CForgeMerge.js";
+import { CSubjectForge } from "./CSubjectForge.js";
+//import { CForgeMerged, CForgeMergeOpt } from "./CForgeMerge.js";
 
-export { CForgeMerged, CForgeMergeOpt } from "./CForgeMerge.js";
+//export { CForgeMerged, CForgeMergeOpt } from "./CForgeMerge.js";
+export { CSubjectForge } from "./CSubjectForge.js";
 export { CForgeScene } from "./CForgeScene.js";
 export { CForgeHistory } from "./CForgeHistory.js";
 export { CForgeAdjust } from "./CForgeAdjust.js";
@@ -41,6 +46,7 @@ export class CForgeOption
     mStyle = 0;             //벽 = 1 민짜 · 2 성벽 · 3 정원담 / 탑 = 1 원뿔 · 2 평지붕 · 3 사각 원뿔 · 4 사각 평지붕 / 집 = 1 박공 · 2 모임 / 길 = 1 흙 · 2 돌 / 다리·계단·교회 = 1 돌 · 2 나무 / 조형물 = 1 낮은 탑(삼층) · 2 높은 탑(오층)
     mWall = -1;             //집 벽 재질 = -1 테마 · 0 회벽 · 1 널판 · 2 통나무 · 3 돌
     mRoof = -1;             //집 지붕 재질 = -1 테마 · 0 기와 · 1 초가 · 2 너와
+    mInterior : IForgeInterior = null;   //집 실내(null이면 안 만든다). { enable, concept : modern·hanok·machiya·medieval, kitchen·bath : true·false·"auto", density : 0~1 }. 직각 평면의 회벽·판자·통나무·돌·벽돌집만 만들고, 가까운 단계(LOD 0)에서만 보인다
     mOverride : Partial<CForgeTheme> = null;   //이 오브젝트만 테마 항목을 덮어쓴다(예: { mShutter : [[0.6, 0.2, 0.2]] }). 재질 종류(mHouseWall·mRoofKind·mWallKind·mTowerKind)도 된다
     mAngle : number = null; //조형물(가로등·상점 포함) 정면 방향 라디안(엔진 x축 기준 atan2(z, x)). 없으면 가까운 길을 향하거나 나란히 선다
     mSeed = 0;              //변화용 시드. 0이면 처음 Push 때 무작위로 정해 이 옵션에 기록한다(같은 옵션 객체를 다시 넘기면 색·창 배치가 고정된다)
@@ -55,7 +61,7 @@ export class CForgeOption
 
 interface IForgeSurfOpt { nor : boolean; mat : boolean; px : boolean; pbr : boolean; real : boolean; }
 interface IForgePushed { kind : string; ent : IForgeEntity; affect : boolean; surf : IForgeSurfOpt; }
-interface IForgeOwn { kind : string; sig : string; r : any; keys : string[]; verts : number; }
+interface IForgeOwn { kind : string; sig : string; r : any; keys : string[]; verts : number; hulls? : number[][][]; }
 
 class CForgeFactoryTick extends CComponent
 {
@@ -76,6 +82,9 @@ export class CForgeFactory
         bridge : CForgeScene.eKind.Bridge, stair : CForgeScene.eKind.Stair, church : CForgeScene.eKind.Church, dock : CForgeScene.eKind.Dock, monument : CForgeScene.eKind.Monument,
         lamp : CForgeScene.eKind.Monument, shop : CForgeScene.eKind.Monument };
     private static sCount = 0;
+    //실내가 꺼지는 건물 중심과 카메라 사이 거리(m)와 경계 떨림 방지 비율
+    static sInteriorLOD = 30;
+    static sInteriorHys = 0.2;
 
     mCanvas : CCanvas;
     mPush : IForgePushed[] = [];
@@ -137,11 +146,13 @@ export class CForgeFactory
             let sub = old.get(sig)?.pop() ?? null;
             if(sub == null)
             {
-                sub = this.mCanvas.PushSub(new CSubject());
+                sub = this.mCanvas.PushSub(new CSubjectForge());
+                (sub as CSubjectForge).mBlockEvent = this.mEvent;
                 const g = this.Ground(it.kind, it.ent);
                 const o : IForgeOwn = { kind : it.kind, sig, r, keys : [], verts : 0 };
                 this.mOwn.set(sub, o);
-                this.Attach(sub, o, CForgeGen.Build(it.kind, r, g), this.mCollider ? CForgeCollide.Build(it.kind, r, g) : [], it.surf);
+                const inter = this.Attach(sub, o, CForgeGen.Build(it.kind, r, g), this.mCollider ? CForgeCollide.Build(it.kind, r, g) : [], it.surf);
+                if(inter != null) this.InteriorLOD(sub, inter, r, it.ent);
                 built++;
             }
             if(!next.has(sig)) next.set(sig, []);
@@ -162,6 +173,14 @@ export class CForgeFactory
         return out;
     }
 
+/*
+    //움직이는 부품을 닫힌 자세(진행도 0) 그대로 월드 자리에 구운 정적 부품으로 바꾼다. 합친 메시는 부품을 따로 움직일 수 없다
+    private static Bake(_p : IForgePart) : IForgePart
+    {
+        const a = _p.anim;
+        return { buf : _p.buf.Moved(a.pivot[0], a.pivot[1], a.pivot[2]), rgb : _p.rgb, tex : _p.tex, glow : _p.glow, emit : _p.emit };
+    }
+
     //넓은 맵용: 쌓인 전체를 거리 단계 3개로 만들어 타일·청크마다 한 메시로 합친다(집은 단계마다 따로 생성, 그 밖은 같은 모양을 모든 단계에).
     //개별 서브젝트·충돌체는 만들지 않는다. 결과의 Update(카메라 수평 위치 m)를 주기적으로 불러 단계를 바꾼다
     BuildMerged(_opt : CForgeMergeOpt = new CForgeMergeOpt()) : CForgeMerged
@@ -177,7 +196,7 @@ export class CForgeFactory
             const r = CForgeAdjust.Run(it.kind, it.ent, scene);
             if(r == null) continue;
             const g = this.Ground(it.kind, it.ent);
-            const lod = it.kind == CForgeScene.eKind.Building ? [0, 1, 2].map(_l => CForgeHouseGen.Build(r, g, _l)) : null;
+            const lod = it.kind == CForgeScene.eKind.Building ? [0, 1, 2].map(_l => CForgeHouseGen.Build(r, g, _l).map(_p => _p.anim == null ? _p : CForgeFactory.Bake(_p))) : null;
             if(lod != null) CForgeHouseGen.sLod = 0;
             const parts = lod ?? [CForgeGen.Build(it.kind, r, g)];
             const bound = CForgeMerged.Bound(parts[parts.length - 1]);
@@ -190,9 +209,20 @@ export class CForgeFactory
         this.mLastMs = performance.now() - t0;
         return out;
     }
+*/
 
     //자동 조정 결과(높이·문 위치·지붕 종류 등). 편집기가 핸들 위치를 잡을 때 쓴다
     GetResolved(_sub : CSubject) : any { return this.mOwn.get(_sub)?.r ?? null; }
+
+    //충돌 볼록체(점 3개씩 삼각형 목록, m)를 모아 돌려준다. 1인칭 걷기처럼 엔진 물리와 따로 삼각형 충돌을 하는 쪽이 쓴다.
+    //움직이는 부품의 충돌체는 빠지니 CSubjectForge.GetBlockers를 함께 쓴다
+    GetHulls() : number[][][]
+    {
+        const out : number[][][] = [];
+        for(const o of this.mOwn.values()) if(o.hulls != null) out.push(...o.hulls);
+        return out;
+    }
+    GetForgeSubs() : CSubjectForge[] { return [...this.mOwn.keys()].filter(_s => _s instanceof CSubjectForge) as CSubjectForge[]; }
 
     //──────────── 내부 ────────────
 
@@ -214,7 +244,7 @@ export class CForgeFactory
             let height = _o.mSize > 0 ? _o.mSize * 2.8 + 0.6 : w < 5.5 ? 3.4 : w < 8.5 ? 5.8 : 8.2;
             if(top != null) { let s = 0; for(let i = 0; i < p.length; i++) s += Hof(i); height = s / p.length; }
             const roof = _o.mStyle == 1 ? CForgeScene.eRoof.Gable : _o.mStyle == 2 ? CForgeScene.eRoof.Hip : CForgeScene.eRoof.Auto;
-            return { ...base, poly : xz, height, roof, roofH : 0, glue : [], gy } as IForgeEntity;
+            return { ...base, poly : xz, height, roof, roofH : 0, glue : [], gy, interior : _o.mInterior ?? undefined } as IForgeEntity;
         }
         if(_kind == K.Wall)
         {
@@ -251,15 +281,75 @@ export class CForgeFactory
         return CForgeGround.Line(_e.pts.map((q : ForgeV2, i : number) => [q[0], q[1], _e.gy?.[i] ?? 0]));
     }
 
-    private Attach(_sub : CSubject, o : IForgeOwn, _parts : IForgePart[], _convex : number[][][], _so : IForgeSurfOpt)
+    //가로등·횃불의 점광원 세기(0이면 사실상 끈다). 라이트는 만들 때부터 항상 켜 두고 세기(색)와 범위만 바꾼다.
+    //꺼진 CLight를 나중에 켜는 길(SetEnable)은 쓰지 않는다. 이미 만든 라이트는 서브젝트 트리에서 CForgeLight를 찾아 갱신하므로 따로 기억해 둘 것이 없다
+    mPointLight = 0;
+    mPointShadow = false;
+    //점광원 그림자(큐브맵 6면을 그려 무겁다). 기본 꺼짐
+    SetPointShadow(_on : boolean)
+    {
+        this.mPointShadow = _on;
+        for(const sub of this.mOwn.keys()) for(const l of sub.FindComps(CForgeLight, true)) l.SetShadow(_on);
+    }
+    SetPointLight(_k : number)
+    {
+        this.mPointLight = _k;
+        for(const sub of this.mOwn.keys()) for(const l of sub.FindComps(CForgeLight, true)) l.SetPower(_k);
+    }
+    private PushLight(_sub : CSubject, _l : IForgeLight)
+    {
+        const U = CForgeScene.sUnit, sub = new CSubject(), lig = sub.PushComp(new CForgeLight(_l));
+        sub.SetPos(new CVec3(_l.pos[0] * U, _l.pos[1] * U, _l.pos[2] * U));
+        lig.SetPower(this.mPointLight);
+        lig.SetShadow(this.mPointShadow);
+        _sub.PushChild(sub);
+    }
+
+    //실내 부품(interior)은 자식 서브젝트 하나로 묶어 돌려준다. 실내가 없으면 null
+    private Attach(_sub : CSubject, o : IForgeOwn, _parts : IForgePart[], _convex : number[][][], _so : IForgeSurfOpt) : CSubject
     {
         const frame = this.mCanvas.GetFrame(), U = CForgeScene.sUnit, ver = ++this.mVer;
+        o.hulls = _convex;
+        let inter : CSubject = null;
+        const Under = (_p : IForgePart) : CSubject =>
+        {
+            if(_p.interior != true) return _sub;
+            if(inter == null) { inter = new CSubject(); _sub.PushChild(inter); }
+            return inter;
+        };
+        //움직이는 부품(anim)은 key마다 자식 서브젝트 하나로 묶는다. 닫힌 자세의 충돌 볼록체도 그 자식에 붙는다
+        const kids = new Map<string, CSubject>();
+        const Kid = (_a : IForgeAnim, _under : CSubject) : CSubject =>
+        {
+            let k = kids.get(_a.key);
+            if(k != null) return k;
+            k = new CSubject();
+            _under.PushChild(k);
+            const cols : CCollider[] = [];
+            if(this.mCollider && _a.hull != null && _a.hull.length >= 4)
+            {
+                const b = new CBound();
+                b.SetType(CBound.eType.GJK);
+                b.InitBound(_a.hull.map(q => new CVec3(q[0] * U, q[1] * U, q[2] * U)));
+                const col = k.PushComp(new CCollider(b));
+                col.SetLayer(this.mLayer);
+                if(this.mCollide.length > 0) col.PushCollisionLayer(this.mCollide);
+                col.SetEvent(this.mEvent);
+                cols.push(col);
+            }
+            (_sub as CSubjectForge).AddPart(_a, k, cols);
+            kids.set(_a.key, k);
+            return k;
+        };
         _parts.forEach((_p, _i) => {
+            if(_p.fire != null) { _sub.PushChild(new CForgeFire(frame, _p.fire)); return; }
+            if(_p.light != null) { this.PushLight(_sub, _p.light); return; }
             const key = `forge${this.mId}_${o.kind}_${ver}_${_i}.mesh`;
             if(!_p.buf.Commit(frame, key, _p.tex ?? frame.Pal().GetBlackTex(), _p.tex != null && _so.nor, _p.tex != null && _so.mat, _so.pbr, _p.tex != null && _so.real)) return;
             o.keys.push(key);
             o.verts += _p.buf.Count();
-            const pt = _sub.PushComp(new CPaint3D(key));
+            const under = Under(_p);
+            const pt = (_p.anim != null ? Kid(_p.anim, under) : under).PushComp(new CPaint3D(key));
             const rgb = _p.tex != null && _so.real ? CForgeTex.Scale(_p.tex, _p.rgb) : _p.rgb;
             if(_p.tex == null) pt.SetColorModel(new CColor(_p.rgb[0], _p.rgb[1], _p.rgb[2], CColor.eModel.RGBAdd));
             else
@@ -267,7 +357,7 @@ export class CForgeFactory
                 pt.SetColorModel(new CColor(rgb[0], rgb[1], rgb[2], CColor.eModel.RGBMul));
                 pt.SetTexCodi(new CVec4(1 / CForgeTex.sMeter, 1 / CForgeTex.sMeter, CForgeTex.sUVOff, CForgeTex.sUVOff));
                 const surf = _so.nor || _so.mat ? CForgeTex.Surf(_p.tex) : null;
-                if(surf != null && _so.mat) pt.SetMaterial(-1, -1, 1, -1);
+                if(surf != null && _so.mat) { pt.SetMaterial(-1, -1, 1, -1); pt.PushTag("forgeMat"); }
                 if(surf != null && _so.nor)
                 {
                     //기본 HalfLambert는 노말맵 음영을 거의 지워 Lambert로 바꾼다
@@ -275,8 +365,12 @@ export class CForgeFactory
                     if(_so.px && surf.mParallax > 0) pt.ParallaxNormal(surf.mParallax, CForgeTex.sParallaxNear, CForgeTex.sParallaxFar, 0);
                 }
             }
+            if(_p.glow) pt.PushTag("forgeGlow");
+            if(_p.emit != null) { pt.SetEmission(new CColor(_p.emit[0], _p.emit[1], _p.emit[2], SDF.eColorModel.RGBMul)); pt.PushTag("forgeEmit"); }
             pt.PushTag(CPaint.eTag.Light);
             pt.PushTag(CPaint.eTag.Shadow);
+            pt.PushTag("shadowMulti");
+            if(_p.noShadow) pt.PushTag(CPaint.eTag.ShadowReadOnly);
         });
         this.mVerts += o.verts;
         for(const pts of _convex)
@@ -289,6 +383,27 @@ export class CForgeFactory
             if(this.mCollide.length > 0) col.PushCollisionLayer(this.mCollide);
             col.SetEvent(this.mEvent);
         }
+        return inter;
+    }
+
+    //실내는 멀면 끈다. 건물 서브젝트는 원점에 있고 메시가 월드 좌표라서, 거리는 건물 중심에 둔 앵커 서브젝트로 잰다.
+    //스위치를 실내 서브젝트 밖에 둬야 실내가 꺼져도 돈다. 처음에는 꺼 두고 스위치가 가까울 때 켠다
+    private InteriorLOD(_sub : CSubject, _inter : CSubject, _r : IForgeBuildingR, _e : any)
+    {
+        const U = CForgeScene.sUnit, n = _r.poly.length, gy : number[] = _e.gy ?? [];
+        let cx = 0, cz = 0, cy = 0;
+        for(const q of _r.poly) { cx += q[0]; cz += q[1]; }
+        for(const y of gy) cy += y;
+        cx /= n; cz /= n; cy = (gy.length > 0 ? cy / gy.length : 0) + _r.height * 0.5;
+        const anchor = new CSubject();
+        anchor.SetPos(new CVec3(cx * U, cy * U, cz * U));
+        _sub.PushChild(anchor);
+        _inter.SetEnable(false);
+        const R = CForgeFactory.sInteriorLOD * U;
+        anchor.PushComp(new CLODSwitch()).AddLODLevel([
+            new CLOD(null, 1, 0, 0, [], [], -1, _inter),
+            new CLOD(null, 1, R, R * CForgeFactory.sInteriorHys),
+        ]);
     }
 
     //페인트·콜라이더를 떼고 메시는 두 틱 뒤 GPU에서 내린다(같은 프레임에 아직 그려질 수 있다)

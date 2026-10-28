@@ -441,6 +441,7 @@ export class CForgeTex
     private static sBaseR = new Map<string, Uint8Array>();
     private static sReal = new Map<string, number[]>();
     private static sKeep = new Map<string, { h : Float32Array, g : Uint8Array, depth : number, detail : Float32Array }>();
+/*
     //재질맵 AO(R)의 평균. 멀리서 재질맵을 빼고 그릴 때 색에 곱해 밝기를 맞춘다. _pbr이면 하늘 기울기가 없는 맵의 평균
     static MeanAO(_key : string, _pbr = false, _real = false) : number
     {
@@ -459,7 +460,9 @@ export class CForgeTex
         tab.set(_key, v);
         return v;
     }
+*/
     private static sMatBuf = new Map<string, Uint8Array>();
+/*
     //기본 텍스처(밝기 무늬)에 부위 색을 곱한 사본. 여러 집을 한 메시로 합칠 때 색을 페인트 대신 텍스처로 나눈다
     static Tint(_key : string, _rgb : number[], _real = false) : string
     {
@@ -483,6 +486,7 @@ export class CForgeTex
         CForgeTex.Upload(CForgeTex.sFrame, key, out, Math.round(Math.sqrt(out.length / 4)));
         return key;
     }
+*/
     //비실사는 흰 밝기 무늬에 테마 색을 곱한다. 실사 알베도는 이미 색이 있어서 그대로 곱하면 두 번 어두워진다.
     //평균이 비실사(밝기 평균 × 테마 색)와 같게 나눠, 얼룩·줄눈 색은 남기고 양식 색만 맞춘다
     static Scale(_key : string, _rgb : number[]) : number[]
@@ -747,10 +751,11 @@ export class CForgeTex
                     nor.buf[(y * N + x) * 4 + 3] = (0.1 + 0.9 * s / 9) * 255;
                 }
             CForgeTex.Upload(_frame, nk, nor.buf);
-            const mat = CForgeTex.Material(hgt, nor.ny, N, _rough, _roughVar, _aoStr);
+            const em = _key == CForgeTex.sGlass || _key == CForgeTex.sSash;
+            const mat = CForgeTex.Material(hgt, nor.ny, N, _rough, _roughVar, _aoStr, em);
             CForgeTex.sMatBuf.set(_key, mat);
             CForgeTex.Upload(_frame, mk, mat);
-            const pb = CForgeTex.sPBR.get(_key) ?? [_rough, _roughVar * 0.5, _aoStr * 0.4, 0], pbr = CForgeTex.MaterialPBR(hgt, N, pb[0], pb[1], pb[2], pb[3]);
+            const pb = CForgeTex.sPBR.get(_key) ?? [_rough, _roughVar * 0.5, _aoStr * 0.4, 0], pbr = CForgeTex.MaterialPBR(hgt, N, pb[0], pb[1], pb[2], pb[3], em);
             CForgeTex.sAOP.set(_key, pbr.ao);
             CForgeTex.Upload(_frame, pk, pbr.buf);
             const surf = new CForgeTexSurf(nk, mk, _parallax, pk);
@@ -819,7 +824,9 @@ export class CForgeTex
     }
     //재질 R = AO, G = 거칠기(낮은 곳일수록 거칠게), B = 금속 0.
     //엔진 환경광은 노말을 보지 않아 그늘에서는 노말맵이 사라진다. 위를 보는 면은 하늘빛을 더 받는다고 보고 노말 y로 AO를 기울여 그늘에서도 굴곡이 보이게 한다
-    private static Material(_h : Float32Array, _ny : Float32Array, N : number, _rough : number, _roughVar : number, _aoStr : number) : Uint8Array
+    //재질맵 w(발광 마스크): 창살·납선(높은 곳)은 0, 유리(낮은 곳)는 255. 페인트 재질 w를 음수로 주면 셰이더가 이 값에 비례해 Emission을 준다
+    private static EmitMask(_h : number) : number { return Math.round(255 * (1 - Math.max(0, Math.min(1, (_h - 0.45) / 0.2)))); }
+    private static Material(_h : Float32Array, _ny : Float32Array, N : number, _rough : number, _roughVar : number, _aoStr : number, _emit : boolean = false) : Uint8Array
     {
         const R = 4, H = (_x : number, _y : number) => _h[((_y + N) % N) * N + ((_x + N) % N)], out = new Uint8Array(N * N * 4);
         for(let y = 0; y < N; y++)
@@ -832,7 +839,7 @@ export class CForgeTex
                 out[i] = ao * 255;
                 out[i + 1] = Math.max(0.05, Math.min(1, _rough + (0.5 - h) * _roughVar)) * 255;
                 out[i + 2] = 0;
-                out[i + 3] = 255;
+                out[i + 3] = _emit ? CForgeTex.EmitMask(h) : 255;
             }
         return out;
     }
@@ -878,7 +885,7 @@ export class CForgeTex
         M(T.sHiero, 0.55, 0.12, 0.95);
     }
     //IBL이 AO를 한 번 더 곱한다. 램버트 맵처럼 노말 y로 하늘을 넣으면 음영이 두 번 깔린다. 금속은 납선(높이)만
-    private static MaterialPBR(_h : Float32Array, N : number, _rough : number, _roughVar : number, _aoStr : number, _metalHi : number) : { buf : Uint8Array, ao : number }
+    private static MaterialPBR(_h : Float32Array, N : number, _rough : number, _roughVar : number, _aoStr : number, _metalHi : number, _emit : boolean = false) : { buf : Uint8Array, ao : number }
     {
         const R = 4, H = (_x : number, _y : number) => _h[((_y + N) % N) * N + ((_x + N) % N)], out = new Uint8Array(N * N * 4);
         let sum = 0;
@@ -891,7 +898,7 @@ export class CForgeTex
                 const ao = Math.max(0.45, Math.min(1, cav));
                 const rough = Math.max(0.04, Math.min(1, _rough + (0.5 - h) * _roughVar));
                 const metal = _metalHi > 0 ? Math.max(0, Math.min(1, (h - 0.55) / 0.3)) * _metalHi : 0;
-                out[i] = ao * 255; out[i + 1] = rough * 255; out[i + 2] = metal * 255; out[i + 3] = 255;
+                out[i] = ao * 255; out[i + 1] = rough * 255; out[i + 2] = metal * 255; out[i + 3] = _emit ? CForgeTex.EmitMask(h) : 255;
                 sum += ao;
             }
         return { buf : out, ao : sum / (N * N) };
@@ -1163,13 +1170,14 @@ export class CForgeTex
                 albH[i + 1] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 1)) * 255;
                 albH[i + 2] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 2)) * 255;
                 albH[i + 3] = 255;
-                let rg = rough, met = 0;
+                let rg = rough, met = 0, em = 1;
                 if(mode == 1)
                 {
                     const came = Math.max(0, Math.min(1, (h - 0.55) / 0.3));
                     met = came * metalHi; rg = Math.min(1, rough + came * gap);
+                    em = 1 - came;
                 }
-                else if(mode == 2) rg = Math.min(1, gap + s * Math.max(0, rough - gap));
+                else if(mode == 2) { rg = Math.min(1, gap + s * Math.max(0, rough - gap)); em = 1 - s; }
                 else
                 {
                     const grain = Math.min(micro, Math.abs(hf) * 0.85), pore = Math.min(micro * 0.4, Math.abs(grit) * micro);
@@ -1177,7 +1185,7 @@ export class CForgeTex
                 }
                 const aoV = mode == 0 ? Math.max(0.62, Math.min(1, ao * (0.78 + 0.22 * s) * (hf < -0.06 ? 0.92 : 1))) : ao;
                 const rl = Math.max(rg, Math.min(1, rg + 0.25));
-                mat[i] = matP[i] = aoV * 255; mat[i + 3] = matP[i + 3] = 255;
+                mat[i] = matP[i] = aoV * 255; mat[i + 3] = matP[i + 3] = em * 255;
                 mat[i + 1] = rl * 255; matP[i + 1] = rg * 255; mat[i + 2] = 0; matP[i + 2] = met * 255;
                 sum += aoV;
             }

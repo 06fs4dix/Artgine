@@ -64,40 +64,39 @@ export class CSurface extends CSubject
 		
 		return false;
 	}
-    override SetFrame(_fw: CFrame): void {
-        super.SetFrame(_fw);
-		if(_fw!=null)
-		{
-			if(this.mRenderPass.mShader=="") {
-				this.mRenderPass.mShader=_fw.Pal().Sl2D().Key();
-                this.mRenderPass.mTag.add("blit");
-            }
-			if(this.mTexCreate && this.mRenderPass.mRenderTarget!="")
-			{
-				this.mTexCreate=false;
-				if(this.GetFrame().Res().Find(this.mRenderPass.mRenderTarget)==null)
-				{
-					this.mRenderPass.mRenderTarget=this.GetFrame().Ren().
-						BuildRenderTarget(this.mTexInfo,this.mTexSize,this.mRenderPass.mRenderTarget);
-					if(this.mTexLinear)
-					{
-						let tex =this.GetFrame().Res().Find(this.GetTexKey()) as CTexture;
-						tex.SetFilter(CTexture.eFilter.Linear);
-					}
-				}
-					
-
-				
-					
-			}
-			
-			this.mPaint.PushRenderPass(this.mRenderPass,false);
+    override Start(): void {
+		super.Start();
+		if(this.mRenderPass.mShader=="") {
+			this.mRenderPass.mShader=this.GetFrame().Pal().Sl2D().Key();
+			this.mRenderPass.mTag.add("blit");
 		}
-        
 		if(this.mRTUse==false)
 			this.mRenderPass.mRenderTarget="";
+		else
+			this.CreateRT();
+		this.mPaint.PushRenderPass(this.mRenderPass,false);
+	}
+	private CreateRT()
+	{
+		if(this.mTexCreate==false || this.mRTUse==false || this.GetFrame()==null)
+			return;
+		if(this.mTexKey!=null)
+			this.mRenderPass.mRenderTarget=this.mTexKey;
+		if(this.mRenderPass.mRenderTarget=="")
+			return;
 
-    }
+		this.mTexCreate=false;
+		if(this.GetFrame().Res().Find(this.mRenderPass.mRenderTarget)==null)
+		{
+			this.mRenderPass.mRenderTarget=this.GetFrame().Ren().
+				BuildRenderTarget(this.mTexInfo,this.mTexSize,this.mRenderPass.mRenderTarget);
+			if(this.mTexLinear)
+			{
+				let tex =this.GetFrame().Res().Find(this.GetTexKey()) as CTexture;
+				tex.SetFilter(CTexture.eFilter.Linear);
+			}
+		}
+	}
 	static NewPriority()	{	gSurfaceOff++;return CRenderPass.ePriority.Surface+gSurfaceOff;}
 
 
@@ -128,23 +127,14 @@ export class CSurface extends CSubject
 		else
 			this.mRenderPass.mRenderTarget=this.mTexKey;
 
-		if(this.GetFrame()==null)
+		this.mTexInfo=_texInfo;
+		this.mTexSize=_texSize;
+		this.mTexCreate=true;
+		this.mTexLinear=_texLinear;
+		if(this.GetFrame()!=null)
 		{
-			this.mTexInfo=_texInfo;
-			this.mTexSize=_texSize;
-			this.mTexCreate=true;
-			this.mTexLinear=_texLinear;
-		}
-		else
-		{
-            //this.GetFrame().Ren().TMgr().RenderTarget(_texInfo,_texSize,this.m_texKey);
-            this.GetFrame().Ren().BuildRenderTarget(this.mTexInfo,this.mTexSize,this.mRenderPass.mRenderTarget);
-			let tex =this.GetFrame().Res().Find(this.GetTexKey()) as CTexture;
-            tex.SetFilter(CTexture.eFilter.Linear);
-			//this.GetFrame().Ren().TMgr().RenderTarget(_texInfo,_texSize,this.m_texKey);
-			//this.GetFrame().Ren().TMgr().ChangeFilter(this.RTKey(), CTexture.eFilter.Linear);
+			this.CreateRT();
 			this.mRenderPass.Reset();
-			
 		}
 		
 			

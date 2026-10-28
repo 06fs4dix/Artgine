@@ -134,6 +134,7 @@ export class CDayCycle extends CObject {
     }
 }
 export class CLightPlanet extends CLight {
+    Icon() { return "bi bi-sun"; }
     mDCArr = new Array();
     mPointDCArr = new Array();
     mTempColor = new CColor();

@@ -2,6 +2,7 @@ import { CRoleMgr } from "../../util/CRole.js";
 import { CComponent } from "./CComponent.js";
 import { CSampCountDown } from "../../util/CSampler.js";
 export class CRoleComp extends CComponent {
+    Icon() { return "bi bi-person-badge"; }
     mRoleMgr = new CRoleMgr();
     mCountDownList = new Array();
     Update(_update) {

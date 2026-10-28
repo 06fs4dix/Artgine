@@ -17,6 +17,7 @@ import { CSampCountDown } from "../../util/CSampler.js";
 
 export class CRoleComp extends CComponent
 {
+    override Icon(){ return "bi bi-person-badge"; }
     mRoleMgr = new CRoleMgr();
     private mCountDownList = new Array<CSampCountDown<string>>();
 

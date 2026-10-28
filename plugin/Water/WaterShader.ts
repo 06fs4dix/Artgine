@@ -1,5 +1,5 @@
 import {  AlphaModalFun, ColorModalFun, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
-import { ambientColor, envCount, GetMaterial, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, cullMask, sam2DCount, samCubeCount, envPos } from "../../artgine/z_file/Light";
+import { ambientColor, envCount, GetMaterial, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, cullMask, sam2DCount, samCubeCount, envPos, emission, envmapOn, emissiveIntensity } from "../../artgine/z_file/Light";
 import { NoiseGet, NoiseNormalGet } from "../../artgine/z_file/Noise";
 import { SDF } from "../../artgine/z_file/SDF";
 
@@ -326,7 +326,7 @@ function ps_main_water()
     var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
     // 물색·거품에 곱할 밝기(감마 공간). 굴절 패스(3D.ts·Terrain.ts WaterProcessing)와 같은 식
     var waterLit : CVec3 = new CVec3(1.0, 1.0, 1.0);
-    BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,cullMask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envCount,envPos,sam2DCount,samCubeCount]);
+    BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,emission,emissiveIntensity,cullMask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,envCount,envPos,sam2DCount,samCubeCount]);
     dseMat = GetSunInfo();
     waterLit = V3Sqrt(SaturateV3(V3AddV3(ambientColor, dseMat[1])));
     if(bodyColor > 0.5) {
@@ -336,7 +336,7 @@ function ps_main_water()
             L_cor.rgb = V3Mix(V3MulV3(refractColor.rgb, waterLit), reflectColor.rgb, fresnel);
     }
     lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
-    dseMat = LightCac3D(to_worldPos, reflectColor, normalWS, shadow, cullMask.x, camPos, lmaterial.y, lmaterial.x, lmaterial.z, -1.0);
+    dseMat = LightCac3D(to_worldPos, reflectColor, normalWS, shadow, cullMask.x, lmaterial.w, camPos, lmaterial.y, lmaterial.x, lmaterial.z, -1.0);
     L_cor.rgb = V3AddV3(L_cor.rgb, dseMat[1]);
     if(shadow.a > -0.5) {
         L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.a);

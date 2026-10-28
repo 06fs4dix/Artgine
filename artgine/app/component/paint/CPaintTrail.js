@@ -2,10 +2,10 @@ import { CBound } from "../../../geometry/CBound.js";
 import { CFloat32Mgr } from "../../../geometry/CFloat32Mgr.js";
 import { CVec1 } from "../../../geometry/CVec1.js";
 import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
-import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CUtilRender } from "../../../render/CUtilRender.js";
 import { CPaint } from "./CPaint.js";
 export class CPaintTrail extends CPaint {
+    Icon() { return "bi bi-bezier"; }
     mOut = new CFloat32Mgr();
     mPosListCount = new CVec1();
     mCurrentTargetSize = 0;
@@ -30,7 +30,7 @@ export class CPaintTrail extends CPaint {
         this.mBW.mRadian = 0;
         this.mBound.Reset();
         this.mBound.SetType(CBound.eType.Box);
-        this.mUpdateLMat = true;
+        this.mUpdateReq = true;
         let neededSize = 4;
         while (neededSize < _upPos.length) {
             neededSize *= 4;
@@ -66,23 +66,7 @@ export class CPaintTrail extends CPaint {
         this.mBound.mMax.y *= 2;
         this.mBound.mMax.z *= 2;
     }
-    Render(_vf) {
-        if (this.mCurrentTargetSize === 0)
-            return;
-        var barr = this.RenderBatch(_vf, 1);
-        if (barr == null)
-            return;
-        this.mOwner.GetFrame().BMgr().BatchOn();
-        super.Common(_vf);
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi", this.mTexCodi));
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("trailPos", 4, this.mOut.GetArray()));
-        if (this.mLastHide)
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide", new CVec1(1.0)));
-        else
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide", new CVec1(0.0)));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
-        var dm = this.GetDrawMesh("CPaintTrail", _vf);
-        this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
-        barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
-    }
+    Render(_vf) { }
 }
+import CPaintTrail_imple from "../../../app_imple/component/paint/CPaintTrail.js";
+CPaintTrail_imple();

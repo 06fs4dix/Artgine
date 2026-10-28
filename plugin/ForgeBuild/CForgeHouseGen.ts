@@ -13,6 +13,7 @@ import { CForgeChineseHouseGen } from "./CForgeChineseHouseGen.js";
 import { CForgeAdobeGen } from "./CForgeAdobeGen.js";
 import { CForgeHutGen } from "./CForgeHutGen.js";
 import { CForgeIncaGen } from "./CForgeIncaGen.js";
+import { CForgeInteriorGen, IForgeWin, IForgeHole } from "./CForgeInteriorGen.js";
 
 //건물 생성기. 바닥은 가장 높은 모서리 기준으로 평평하게 두고 내리막 쪽은 돌 기단이 드러난다.
 //지붕은 사각형마다 같은 경사로 올려(박공/모임) 서로 만나는 곳에 골이 생기게 한다
@@ -35,6 +36,10 @@ export class CForgeHouseGen
     static sLod = 0;
     //지금 만드는 집의 타입(지붕·창·문 보조 함수가 형식 플래그를 읽는다)
     static sTheme : CForgeTheme = null;
+    //실내를 만드는 중이면 창 위치를 모으는 목록(안쪽 벽에 같은 구멍을 뚫는다). 아니면 null
+    static sRec : IForgeWin[] = null;
+    //창짝을 따로 움직이게 만드는 중이면 true(정적 유리를 빼고 외벽에 창 구멍을 낸다)
+    static sWinAnim = false;
 
     //지붕 판 두께·용마루 크기(지붕 재질에 따라 Build가 정한다)
     static sCurT = 0.16;
@@ -124,8 +129,24 @@ export class CForgeHouseGen
         //각뿔 지붕(자유 외곽선)은 변마다 경사가 달라 무게중심에서 먼 변은 지붕이 더 낮으므로 처마 밑면 높이까지 내린다
         const sink = _b.rects == null ? e * k : CForgeHouseGen.sWallSink;
         //1층 돌벽 집은 1층을 돌로, 그 위를 회벽으로 쌓고 이음매는 층 띠(나무)가 덮는다
-        if(stoneGround) CForgeShape.Extrude(B.stone, poly, floor + 0.25, floor + fh);
-        CForgeShape.Extrude(B.body, poly, stoneGround ? floor + fh : floor + 0.25, top - sink);
+        const IN = L == 0 && CForgeInteriorGen.On(_b, wall), dc = IN ? CForgeInteriorGen.DoorCut(_b, floor) : null;
+        CForgeHouseGen.sRec = IN ? [] : null;
+        CForgeHouseGen.sWinAnim = IN && _b.interior.anim?.window !== false;
+        //실내가 있으면 외벽 몸체는 창 위치를 안 뒤에 구멍(문·창)과 함께 만든다
+        const late : (() => void)[] = [];
+        const Ex = (_buf : CForgeMeshBuf, _y0 : number, _y1 : number) =>
+        {
+            if(!IN) { CForgeShape.Extrude(_buf, poly, _y0, _y1); return; }
+            late.push(() =>
+            {
+                const m : IForgeHole[][] = poly.map(() => []);
+                m[dc.edge].push(...dc.holes);
+                if(CForgeHouseGen.sWinAnim) for(const w of CForgeHouseGen.sRec) m[w.edge].push({ s0 : w.s - w.w * 0.5, s1 : w.s + w.w * 0.5, y0 : w.y0, y1 : w.y1 });
+                CForgeInteriorGen.ExtrudeMap(_buf, poly, _y0, _y1, m, false);
+            });
+        };
+        if(stoneGround) Ex(B.stone, floor + 0.25, floor + fh);
+        Ex(B.body, stoneGround ? floor + fh : floor + 0.25, top - sink);
         for(let k = 1; k < _b.floors && L < 2; k++)
         {
             const y = floor + _b.height * k / _b.floors;
@@ -145,6 +166,7 @@ export class CForgeHouseGen
             else if(TH.mTimber) CForgeShape.Box(B.wood, p[0], p[1], 0.26, 0.26, floor + 0.3, py1, ang);
         }
         CForgeHouseGen.Openings(B, _b, floor, R);
+        for(const f of late) f();
         //고전식 처마 코니스: 벽 윗선 아래 두 단 돌 띠
         if(TH.mClassical && L < 2 && _b.rects != null)
         {
@@ -198,14 +220,18 @@ export class CForgeHouseGen
         //오르내리창 집은 창틀·층 띠를 흰 칠로
         const wood = TH.mSash ? { rgb : [0.92, 0.91, 0.87], tex : CForgeTex.sPlaster } : { rgb : TH.mWood, tex : CForgeTex.sWood };
         const parts : IForgePart[] = [
-            !TH.mGlazed ? { buf : B.glass, rgb : TH.mWood.map(_v => _v * 0.85), tex : CForgeTex.sPlank } : { buf : B.glass, rgb : TH.mSash ? [0.9, 0.92, 0.95] : [0.82, 0.78, 0.7], tex : TH.mSash ? CForgeTex.sSash : CForgeTex.sGlass }, { buf : B.door, rgb : TH.mWood.map(_v => Math.min(1, _v * 1.15)), tex : CForgeTex.sPlank },
+            !TH.mGlazed ? { buf : B.glass, rgb : TH.mWood.map(_v => _v * 0.85), tex : CForgeTex.sPlank } : { buf : B.glass, rgb : TH.mSash ? [0.9, 0.92, 0.95] : [0.82, 0.78, 0.7], tex : TH.mSash ? CForgeTex.sSash : CForgeTex.sGlass, glow : true }, { buf : B.door, rgb : TH.mWood.map(_v => Math.min(1, _v * 1.15)), tex : CForgeTex.sPlank },
             { buf : B.body, rgb : body.rgb, tex : body.tex }, { buf : B.stone, rgb : TH.mStone, tex : CForgeTex.sStone }, { buf : B.wood, rgb : wood.rgb, tex : wood.tex },
             { buf : B.dark, rgb : TH.mDark }, { buf : B.shutter, rgb : pick(TH.mShutter, 2).map(_v => _v * 0.85 + 0.05), tex : CForgeTex.sPlank }, roof, ridge,
             { buf : B.brick, rgb : TH.mBrick, tex : CForgeTex.sBrickWall }, { buf : B.iron, rgb : TH.mIron },
             { buf : B.green, rgb : TH.mGreen }, { buf : B.flower, rgb : pick(TH.mFlower, 4) },
             { buf : B.ivy, rgb : TH.mGreen.map(_v => _v * 0.72) }, { buf : B.lamp, rgb : [1.0, 0.82, 0.45] },
         ];
-        return parts.filter(_p => _p.buf.mIdx.length > 0);
+        const out = parts.filter(_p => _p.buf.mIdx.length > 0);
+        if(IN) out.push(...CForgeInteriorGen.Parts(CForgeInteriorGen.Plan(_b, _g), _b, CForgeHouseGen.sRec, parts[0]));
+        CForgeHouseGen.sRec = null;
+        CForgeHouseGen.sWinAnim = false;
+        return out;
     }
 
     //a: 용마루 방향, b: 가로 방향. 경사면은 벽 윗선(b0/b1, top)과 용마루를 지나는 평면이고 처마는 같은 평면으로 _e만큼 더 나간다
@@ -435,6 +461,17 @@ export class CForgeHouseGen
     static sFrameD = 0.12;
     static ShutterW(_w : number) : number { return _w * 0.5 + CForgeHouseGen.sFrameW; }
 
+    //정문 중심의 문 변 위 거리. Openings가 고르는 문 칸과 같은 값이어야 외벽 구멍·실내 입구와 어긋나지 않는다
+    static DoorPos(_b : IForgeBuildingR) : number
+    {
+        const n = _b.poly.length, a = _b.poly[_b.door.edge], c = _b.poly[(_b.door.edge + 1) % n], l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        const S = CForgeHouseGen.StyleOf(_b), side = CForgeHouseGen.sFrameW + (S.shutters ? CForgeHouseGen.ShutterW(S.w) + 0.03 : 0);
+        const bays = CForgeHouseGen.Bays(l, S.w + side * 2, S.w * 0.9, l < 5.5 ? 2 : 7, true), ds = _b.door.t * l;
+        let best = -1;
+        bays.forEach((_s, _j) => { if(best < 0 || Math.abs(_s - ds) < Math.abs(bays[best] - ds)) best = _j; });
+        return best >= 0 ? bays[best] : l * 0.5;
+    }
+
     //창 칸 위치(벽 시작점부터의 거리). 창 사이·모서리 여백은 창 폭의 0.8~2배로 맞추고 가운데 대칭으로 고르게 놓는다.
     //여백이 창 폭과 거의 같으면 어색하므로 한 칸 줄여 피한다. _odd면 가운데 칸이 생기게 홀수를 고른다(정면은 현관이 축)
     static Bays(_len : number, _w : number, _minGap : number, _max : number, _odd : boolean) : number[]
@@ -473,7 +510,7 @@ export class CForgeHouseGen
         const fw = CForgeHouseGen.sFrameW, fd = CForgeHouseGen.sFrameD;
         const Bm = (_buf : CForgeMeshBuf, _u : number, _v : number, _hor : boolean, _len : number, _bw : number, _off : number, _d : number, _sides = true) =>
             CForgeHouseGen.Beam(_buf, _x + _tx * _u, _y + _v, _z + _tz * _u, _tx, _tz, _nx, _nz, _hor ? 1 : 0, _hor ? 0 : 1, _len, _bw, _off, _d, _sides);
-        Bm(B.glass, 0, 0, false, _h, _w, 0, 0.02, false);
+        if(!CForgeHouseGen.sWinAnim) Bm(B.glass, 0, 0, false, _h, _w, 0, 0.02, false);
         //중거리는 유리 뒤 틀 판 한 장, 원거리는 유리만
         if(CForgeHouseGen.sLod > 0)
         {
@@ -506,10 +543,13 @@ export class CForgeHouseGen
         const Arc = (_k : number, _r : number) => { const a = Math.PI * _k / seg; return [Math.cos(a) * _r, spring + Math.sin(a) * _r]; };
         const panel = [P([-r, 0], 0.03), P([r, 0], 0.03)];
         for(let k = 0; k <= seg; k++) panel.push(P(Arc(k, r), 0.03));
-        B.door.Poly(panel, [_nx, 0, _nz]);
+        if(CForgeHouseGen.sRec == null) B.door.Poly(panel, [_nx, 0, _nz]);
         if(CForgeHouseGen.sLod > 0) return;
-        for(const v of [0.25, 0.62]) Bm(B.dark, -_w * 0.1, _h * v, true, _w * 0.75, 0.05, 0.03, 0.008, false);
-        Bm(B.dark, _w * 0.32, 1.0, false, 0.12, 0.04, 0.03, 0.05);
+        if(CForgeHouseGen.sRec == null)
+        {
+            for(const v of [0.25, 0.62]) Bm(B.dark, -_w * 0.1, _h * v, true, _w * 0.75, 0.05, 0.03, 0.008, false);
+            Bm(B.dark, _w * 0.32, 1.0, false, 0.12, 0.04, 0.03, 0.05);
+        }
         for(const sg of [-1, 1]) Bm(B.stone, sg * (r + jw * 0.5), spring * 0.5, false, spring, jw, 0, fd);
         for(let k = 0; k < seg; k++)
         {
@@ -547,7 +587,7 @@ export class CForgeHouseGen
     private static DoorClassic(B : Record<string, CForgeMeshBuf>, _x : number, _y0 : number, _z : number, _tx : number, _tz : number, _nx : number, _nz : number, _w : number, _h : number, _ang : number)
     {
         const hw = _w * 0.5, hd = _h - hw * 0.9, P = (_u : number, _y : number, _o : number) => [_x + _tx * _u + _nx * _o, _y, _z + _tz * _u + _nz * _o];
-        B.door.Quad([P(-hw, _y0, 0.03), P(hw, _y0, 0.03), P(hw, _y0 + hd, 0.03), P(-hw, _y0 + hd, 0.03)], null, [_nx, 0, _nz]);
+        if(CForgeHouseGen.sRec == null) B.door.Quad([P(-hw, _y0, 0.03), P(hw, _y0, 0.03), P(hw, _y0 + hd, 0.03), P(-hw, _y0 + hd, 0.03)], null, [_nx, 0, _nz]);
         if(CForgeHouseGen.sLod > 0) return;
         const fan = [P(-hw, _y0 + hd, 0.03)];
         for(let k = 0; k <= 8; k++) { const a = Math.PI * (1 - k / 8); fan.push(P(Math.cos(a) * hw, _y0 + hd + Math.sin(a) * hw * 0.9, 0.03)); }
@@ -598,6 +638,7 @@ export class CForgeHouseGen
                     const wide = front && S.wideCenter && f > 0 && nb % 2 == 1 && Math.abs(j - mid) < 0.1;
                     const ww = wide ? S.w * 1.6 : top ? S.w * 0.8 : S.w, wh = top ? S.h * 0.65 : S.h, wy = top ? y + S.h * 0.15 : y;
                     CForgeHouseGen.Window(B, x, wy, z, tx, tz, nx, nz, ww, wh, wide);
+                    CForgeHouseGen.sRec?.push({ edge : i, s, w : ww, y0 : wy - wh * 0.5, y1 : wy + wh * 0.5 });
                     const TC = CForgeHouseGen.sTheme;
                     //르네상스 아치 창: 창 위 반원 유리 + 돌 아치 테
                     if(TC?.mArchWin && L < 2 && wy + wh * 0.5 + ww * 0.5 + 0.45 < _floor + _b.height - 0.5)
@@ -607,7 +648,7 @@ export class CForgeHouseGen
                         const Arc = (_k : number, _r : number, _o : number) => { const t = Math.PI * _k / seg; return P(Math.cos(t) * _r, yh + Math.sin(t) * _r, _o); };
                         const fan = [P(-r, yh, 0.02)];
                         for(let q = 0; q <= seg; q++) fan.push(Arc(q, r, 0.02));
-                        B.glass.Poly(fan, [nx, 0, nz]);
+                        if(!CForgeHouseGen.sWinAnim) B.glass.Poly(fan, [nx, 0, nz]);
                         for(let q = 0; q < seg; q++) B.stone.Quad([Arc(q, r, 0.07), Arc(q, r + jw, 0.07), Arc(q + 1, r + jw, 0.07), Arc(q + 1, r, 0.07)], null, [nx, 0, nz]);
                     }
                     //고전식 창 머리: 돌 상인방, 2층(주층)은 세모 박공 머리

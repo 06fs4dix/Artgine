@@ -125,7 +125,7 @@ export class CDynamicMap extends CSubjectMap
 		}
 	}
 
-	//하위 클래스(CPaintHTML, CShadowPlane 등)는 자기 방식으로 그리므로 일반 컴포넌트로 둔다
+	//하위 클래스(CPaintHTML 등)는 자기 방식으로 그리므로 일반 컴포넌트로 둔다
 	private IsItemPaint(_com : CComponent)
 	{
 		if(_com.constructor!==CPaint2D && _com.constructor!==CPaint3D)	return false;
@@ -219,7 +219,7 @@ export class CDynamicMap extends CSubjectMap
 		else
 		{
 			const pt3D=_pt as CPaint3D;
-			const m3D=new CPaint3DMerge([],[],pt3D.mCenterPos,pt3D.mTargetScale);
+			const m3D=new CPaint3DMerge([],[]);
 			if(pt3D.GetTag().has("wind"))	m3D.Wind(pt3D.mWindInfluence.x);
 			if(pt3D.GetTexture().length>0)	m3D.mTexOverride=[...pt3D.GetTexture()];
 			merge=m3D;
@@ -242,7 +242,7 @@ export class CDynamicMap extends CSubjectMap
 		else
 		{
 			const pt3D=_pt as CPaint3D;
-			key="3D|"+key+"|"+pt3D.mMesh+"|"+pt3D.mCenterPos+"|"+pt3D.mTargetScale+"|"+pt3D.mWindInfluence.x;
+			key="3D|"+key+"|"+pt3D.mMesh+"|"+pt3D.mWindInfluence.x;
 		}
 		return key;
 	}

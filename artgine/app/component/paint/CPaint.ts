@@ -65,6 +65,7 @@ export class CRenPaint
 -texOff.x 디퓨즈 오프셋
 -texOff.y 노말
 -texOff.z 특수
+-texOff.w 이미션
 
 =노말 정보
 RGB : XYZ
@@ -76,7 +77,7 @@ G : 매끄러움->거칠음(roughness
 B : 비금속->금속 (metallic
 A : emisive
 [Material]
-AO(1),roughness(-1),metalric(-1),emisive(1)
+AO(1),roughness(-1),metalric(-1),emisive(0)
 
 -1 : 텍스쳐 사용(기본값은 1로 세팅됌)
 0~1 :  직접 사용
@@ -85,7 +86,9 @@ AO(1),roughness(-1),metalric(-1),emisive(1)
 
 */
 var gBoundDummy=new CBound();
-var gPosDummy=new CVec3();
+//로컬 행렬이 없는 Paint의 GetMat()이 돌려주는 읽기 전용 단위행렬. 값을 쓰면 안 된다
+const gIdentMat=new CMat();
+export var gPosDummy=new CVec3();
 gPosDummy.NewWASM();
 export class CPaint extends CComponent implements IMat
 {
@@ -96,9 +99,11 @@ export class CPaint extends CComponent implements IMat
 		//ShadowWrite:"ShadowWrite",
 		ShadowReadOnly:"shadowReadOnly",
 		Shadow:"shadow",
+		//Shadow와 같이 쓴다. 그림자 맵에만 그려지고 화면 패스(Forward_2D/Forward_Shadow_3D/ShadowRead_3D)에서는 빠진다
+		ShadowOnly:"shadowOnly",
 		Wind:"wind",
 		Parallax:"parallax",
-		
+		Env:"env"
 
 	};
 
@@ -124,7 +129,6 @@ export class CPaint extends CComponent implements IMat
 
 	mBW=new CBoundWorldPaint();
 	protected mFMat : CMat;//= new CMat();
-	protected mLMat : CMat;//= new CMat();
 
 	protected mShaderAttrMap=new Map<string,CShaderAttr>();
 	protected mColorModel  : CColor;
@@ -144,10 +148,13 @@ export class CPaint extends CComponent implements IMat
 	mRenPT=new Array<CRenPaint>();
 
 	protected mTextureKey=new Array<string>();
-	public mMaterial=new CVec4(1,-1,-1,1);
+	public mMaterial=new CVec4(1,-1,-1,0);
+	protected mEmission : CColor;
     public mCullMask:CVec4;
 	
-	protected mUpdateLMat=true;
+	protected mUpdateReq=true;
+	//true면 mFMat을 직접 계산해 쓰고, false면 GetFMat이 오너 행렬을 그대로 돌려준다(곱셈/복사 없음)
+	protected mFMatOwn=false;
 	protected mUpdateFMat=true;
 	private mDefaultAttr=new Set<string>();
 	public mTag=new Set<string>();
@@ -184,8 +191,6 @@ export class CPaint extends CComponent implements IMat
 		//this.mBoundFMatC.NewWASM();
 		this.mFMat=new CMat(null);
 		this.mFMat.NewWASM();
-		this.mLMat=new CMat(null);
-		this.mLMat.NewWASM();
 		this.mBW.mPos.NewWASM();
 		
 		// this.mBoundFMat=new CBound();
@@ -273,7 +278,6 @@ export class CPaint extends CComponent implements IMat
 		//this.mBoundFMatC.ReleaseWASM();
 		this.mBW.mPos.ReleaseWASM();
 		this.mFMat.ReleaseWASM();
-		this.mLMat.ReleaseWASM();
 		//this.mBoundFMat.DeleteWASM();
 		this.mBound.DeleteWASM();
 		this.ClearBatch(false);
@@ -283,7 +287,7 @@ export class CPaint extends CComponent implements IMat
 	{
 		super.Reset();
 		this.mFMat.Unit();
-		this.mLMat.Unit();
+		this.mFMatOwn=false;
 		this.ClearBatch(false);
 		this.mTextureKey.length=0;
 		//this.mBoundFMat.Reset();
@@ -314,7 +318,7 @@ export class CPaint extends CComponent implements IMat
 	
 
 		
-		if(_member=="mFMat" ||  _member=="mUpdateLMat" || _member=="mUpdateFMat" ||
+		if(_member=="mFMat" || _member=="mUpdateReq" || _member=="mFMatOwn" || _member=="mUpdateFMat" ||
 			 _member=="mRenPT"  || _member=="mTagKey" ||
 			_member=="mDefaultAttr" || _member=="mBatchMap" || _member=="mBatchLastArr" || _member=="mBatchLastVF" || 
 			_member=="mBoundFMat" || _member=="mBoundFMatC" || _member=="mBoundFMatR" || _member=="mBound" ||
@@ -373,7 +377,8 @@ export class CPaint extends CComponent implements IMat
 		//this.mBatchLastVF=null;
 	}
 	IsUpdateFMat()	{	return this.mUpdateFMat;}
-	UpdateLMat()	{	this.mUpdateLMat=true;	}
+	UpdateFMat()	{	this.mUpdateReq=true;	}
+	GetMat() : CMat	{	return gIdentMat;	}
 	
 	override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
 		super.EditHTMLInit(_div,_pointer);
@@ -518,12 +523,22 @@ export class CPaint extends CComponent implements IMat
 		this.SetTexture(this.mTextureKey);
 	}
 	//public m_material=new CVec4(1,0,0,0);
-	SetMaterial(roughness=-1, metalric=-1,emissive=1,ambientOcclusion=1)
+	SetMaterial(roughness=-1, metalric=-1,emissive=0,ambientOcclusion=1)
 	{
 		this.mMaterial.x=ambientOcclusion;
 		this.mMaterial.y=roughness;
 		this.mMaterial.z=metalric;
 		this.mMaterial.w=emissive;
+	}
+	SetEmission(_color : CColor)
+	{
+		if(!this.FindCShaderAttr("emission")) {
+			this.mShaderAttrMap.set("emission",new CShaderAttr("emission",new CColor(1,1,1,SDF.eColorModel.RGBMul)));
+		}
+		if(!this.mEmission) {
+			this.mEmission=this.mShaderAttrMap.get("emission").mData;
+		}
+		this.mEmission.Import(_color);
 	}
     SetCullMask(_cullmask:number)
     {
@@ -536,54 +551,7 @@ export class CPaint extends CComponent implements IMat
 		return false;
 	}
 	
-	UpdateRenPt()
-	{
-		//let pos=gPosDummy;
-
-		for(let i=0;i<this.mRenPT.length;++i)
-		{
-			let ren=this.mRenPT[i];
-			
-			//중간 배치 삭제하면 컬링 갱신안되는 버그가 있다
-			//카메라를 움직이면 정산이됌
-			if(ren.mDistance==null || ren.mCam.mUpdateMat!=0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize())
-			{
-				let cam=ren.mCam;
-				let plane=ren.mCam.GetPlane();
-	
-				if(this.mRenderPass[i].mPaintSort!=CRenderPass.ePaintSort.None)
-				{
-				
-					let eye = ren.mCam.GetEye();
-					let view=ren.mCam.GetView();
-					gPosDummy.x = this.mBW.mPos.x - eye.x;
-					gPosDummy.y = this.mBW.mPos.y - eye.y;
-					gPosDummy.z = this.mBW.mPos.z - eye.z;
-					ren.mDistance = CMath.V3Dot(gPosDummy, view);
-					ren.mDistance=Math.trunc(ren.mDistance*128)<<9;
-					
-				}
-				else
-					ren.mDistance=0;
-				
-				
-				
-				
-			
-				//let camOff=_cam.Offset();
-				//강제로 모든 오브젝트는 컬링을 처리하게 함
-				if(CUtilMath.PlaneSphereInside(plane,this.mBW.mPos,this.mBW.mRadian,null) || this.mRenderPass[i].mCullFrustum==false)
-					ren.mShow=0;
-				else
-				{
-					ren.mShow=1;
-					ren.mDistance=0x7FFFFE00;
-				}
-					
-			}
-		}
-		//CPoolGeo.RecycleV3(pos);
-	}
+	UpdateRenPt()	{}
 	
 	//이 함수에 목적을 모르겟음.....
 	Refresh()
@@ -1001,22 +969,8 @@ export class CPaint extends CComponent implements IMat
 	SetMat(_mat: CMat) {
 		
 	}
-	GetMat() {	return this.mLMat;	};
-	SetLMat(_mat : CMat)	{	this.mLMat.Import(_mat);	this.mUpdateLMat=true;}
 	
-	FMatUpdate()
-	{
-		CMath.MatMul(this.mLMat,this.mOwner.GetMat(),this.mFMat,true);
-		if(this.GetOwner().mUpdateRS!=CUpdate.eType.Not || this.mBW.mRadian==0)
-		{
-			if(this.mTag.has("tail"))
-				this.mBW.Init(this.mBound,null);
-			else
-				this.mBW.Init(this.mBound,this.mOwner.GetMat());
-		}
-
-		this.mBW.UpdateMat(this.mOwner.GetMat());
-	}
+	FMatUpdate()	{}
 
 	override Prefab(_owner : CSubject)
 	{
@@ -1054,26 +1008,14 @@ export class CPaint extends CComponent implements IMat
 		return false;
 			
 	}
-	override Update(_update : CUpdate)
-	{
-		
-		
-		if(this.mUpdateFMat)	this.mUpdateFMat=false;
-		if(this.mUpdateLMat || this.mOwner.mUpdateMat!=0)// || this.mBoundFMatR==0)
-		{
-			this.FMatUpdate();
-			this.mUpdateFMat=true;
-			this.mUpdateLMat=false;
-		}
-		this.UpdateRenPt();
-
-		
-	}
+	override Update(_update : CUpdate)	{}
 	SetFMat(_fmat)
 	{
+		this.mFMatOwn=true;
 		this.mFMat.Import(_fmat);
+		this.mUpdateReq=true;
 	}
-	GetFMat()	{	return this.mFMat;	}
+	GetFMat()	{	return this.mFMatOwn||this.mOwner==null ? this.mFMat : this.mOwner.GetMat();	}
 	SetToolCPaint(_input,_type)
 	{
 		
@@ -1124,37 +1066,8 @@ export class CPaint extends CComponent implements IMat
 	// 	this.mBoundFMatR=0;
 	// }
 	Render(_shader : CShader)	{} 
-	RenderBatch(_shader : CShader,_count=1)
-	{
-		let bcm=this.mOwner.GetFrame().BMgr().IsBatchMap();
-	
-		let barr=this.mBatchMap.get(_shader);
-		if(barr==null)
-		{
-			barr=new Array<CBatch>(_count);
-			this.mBatchMap.set(_shader,barr);
-			barr.length=_count;
-			
-		}
-		else if(bcm==false){}
-		else if(barr.length>0)
-		{
-			return this.mOwner.GetFrame().BMgr().BatchPushArr(barr);
-		}
-		return barr;
-	} 
-	BatchKeySet(_nodeOff : number,_key=null)
-	{
-		for(let batchArr of this.mBatchMap.values())
-		{
-			if(batchArr==null)	continue;
-			if(_key==null)
-				batchArr[_nodeOff].CreateKey();
-			else
-				batchArr[_nodeOff].mKey=_key;
-		}
-		
-	}
+	RenderBatch(_shader : CShader,_count=1) : Array<CBatch>	{	return null;	}
+	BatchKeySet(_nodeOff : number,_key=null)	{}
 	
 	SetTexture(_a : Array<string>);
 	SetTexture(_a : string);
@@ -1240,7 +1153,7 @@ export class CPaint extends CComponent implements IMat
 						if(this.mOwner.GetFrame().Load().LoadSet().has(texKey)==false)
 						{
 							//this.mUpdateFMat=true;
-							this.UpdateLMat();
+							this.UpdateFMat();
 							//this.ClearBatch();
 							return false;
 						}
@@ -1253,7 +1166,7 @@ export class CPaint extends CComponent implements IMat
 				{
 					
 					this.mOwner.GetFrame().Load().Exe(texKey,this.mAutoLoad).then(()=>{
-						this.UpdateLMat();
+						this.UpdateFMat();
 						// this.ClearBatch();
 					});
 				}
@@ -1492,3 +1405,6 @@ export class CPaint extends CComponent implements IMat
 	}
 }
 
+
+import CPaint_imple from "../../../app_imple/component/paint/CPaint.js";
+CPaint_imple();

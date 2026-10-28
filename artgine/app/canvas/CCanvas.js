@@ -344,7 +344,7 @@ export class CCanvas extends CObject {
             this.mResMap.set(key, CObject.ProxyTree(value));
         }
         for (let plugin of this.mPlugin) {
-            plugin.mCanvas = this;
+            plugin.SetCanvas(this);
         }
         return this;
     }
@@ -370,6 +370,9 @@ export class CCanvas extends CObject {
             each0.Destroy();
         }
         this.ClearBatch();
+        for (var plugin of this.mPlugin) {
+            plugin.SetCanvas(this);
+        }
     }
     Detach(_key) {
         if (this.mSubMap.get(_key) == null)

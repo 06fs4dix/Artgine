@@ -75,7 +75,7 @@ export class CRigidBody extends CGeometryComp
 	mStartPos : CVec3 = null;
 	mLastDir =CVec3.eDir.Null;
 
-	override Icon(){		return "bi bi-person-walking";	}
+	override Icon(){ return "bi bi-speedometer2"; }
 	SetGravity(_scale : number) {this.mGravity = _scale;}
 	GetGravity(){return this.mGravity;}
 	// SetRestitution(_restitution:number=0.5) {this.mRestitution = _restitution;}

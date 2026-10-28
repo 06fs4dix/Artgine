@@ -132,8 +132,15 @@ export class CCMDMgr {
         const pkg = path.join(CPath.WorkingPath(), 'node_modules', _name, 'package.json');
         try {
             if (fs.existsSync(pkg)) {
-                const v = JSON.parse(fs.readFileSync(pkg, 'utf8'))?.version;
-                return typeof v === 'string' ? v : '';
+                const json = JSON.parse(fs.readFileSync(pkg, 'utf8'));
+                if (typeof json?.main === 'string' && json.main !== '') {
+                    const base = path.join(path.dirname(pkg), json.main);
+                    const ok = [base, base + '.js', base + '.cjs', base + '.mjs', path.join(base, 'index.js')]
+                        .some(p => fs.existsSync(p) && fs.statSync(p).isFile());
+                    if (!ok)
+                        return null;
+                }
+                return typeof json?.version === 'string' ? json.version : '';
             }
         }
         catch { }

@@ -196,7 +196,7 @@ export class CPalette
 
 		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetPlane(new CVec4(0,0,1,CUtilRender.Mesh2DSize / 2.0)),this.GetBlackTex());
 		_fw.Res().Push(this.GetPlaneMesh(), mesh);
-		this.mMCI2D=mesh.meshTree.mData.ci;
+		this.mMCI2D=CUtilRender.GetPlane2D(CUtilRender.Mesh2DSize / 2.0);
 		CUtilRender.MeshBoundUpdate(mesh);
 		
 		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(0.5),this.GetBlackTex());
@@ -231,6 +231,7 @@ export class CPalette
 
 		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)],new CVec2(1, 1),this.GetShadowReadTex());
 
+		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)],new CVec2(1, 1),this.GetEmissionTex());
 		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA8,1)],new CVec2(128, 128),this.GetEnvMapTex());
 		let etex=_fw.Res().Find(this.GetEnvMapTex()) as CTexture;
 		etex.SetAutoResize(false);
@@ -393,6 +394,10 @@ export class CPalette
 	GetEnvMapTex()
 	{
 		return "Artgine/envmap.tex";
+	}
+	GetEmissionTex()
+	{
+		return "Artgine/emission.tex";
 	}
 
     GetMainFrameTex()

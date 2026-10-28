@@ -183,7 +183,7 @@ export class CDynamicMap extends CSubjectMap {
         }
         else {
             const pt3D = _pt;
-            const m3D = new CPaint3DMerge([], [], pt3D.mCenterPos, pt3D.mTargetScale);
+            const m3D = new CPaint3DMerge([], []);
             if (pt3D.GetTag().has("wind"))
                 m3D.Wind(pt3D.mWindInfluence.x);
             if (pt3D.GetTexture().length > 0)
@@ -210,7 +210,7 @@ export class CDynamicMap extends CSubjectMap {
             key = "2D|" + key + "|" + _pt.mYSort + "|" + _pt.mWindInfluence.x;
         else {
             const pt3D = _pt;
-            key = "3D|" + key + "|" + pt3D.mMesh + "|" + pt3D.mCenterPos + "|" + pt3D.mTargetScale + "|" + pt3D.mWindInfluence.x;
+            key = "3D|" + key + "|" + pt3D.mMesh + "|" + pt3D.mWindInfluence.x;
         }
         return key;
     }

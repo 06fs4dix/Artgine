@@ -76,7 +76,7 @@
 <script src='../../artgine/external/legacy/diff2html/diff2html-ui-slim.min.js'></script>
 <link rel='manifest' href='./Control.webmanifest'/>
 <script>
-let SERVER_BASE='http://localhost:8050/Artgine/proj/Control/Control.html';
+let SERVER_BASE='http://localhost:7000/Artgine/proj/Control/Control.html';
 const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
 if (location.protocol == 'file:' && isElectron==false){
 	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
@@ -132,6 +132,13 @@ body.tmux-split-wide .container{max-width:100% !important;margin-left:0 !importa
 #app-sidebar-right.sidebar-docked{width:300px !important;border-left:1px solid var(--bs-border-color);}
 #app-sidebar.sidebar-docked .offcanvas-header,
 #app-sidebar-right.sidebar-docked .offcanvas-header{display:none;}
+/* VS Code 확장 임베드 모드(?vscode=left|right): 한쪽 사이드바만 전체 폭으로 보여주고 나머지는 숨긴다. */
+body.vscode-left .container, body.vscode-left #app-sidebar-right,
+body.vscode-right .container, body.vscode-right #app-sidebar{display:none !important;}
+body.vscode-left #app-sidebar.sidebar-docked, body.vscode-right #app-sidebar-right.sidebar-docked{width:100% !important;border:0;}
+body.vscode-panel #app-sidebar, body.vscode-panel #app-sidebar-right, body.vscode-panel #myTab{display:none !important;}
+body.vscode-panel .container{max-width:100% !important;}
+body.vscode-left #sidebarToggleBtnWrap, body.vscode-right #sidebarToggleBtnWrapRight{display:none !important;}
 /* Multiplexer 드롭다운의 "오른쪽/왼쪽 사이드 끄기": 해당 사이드바를 강제로 숨기고(도킹/오버레이 무관)
    컨테이너가 남은 폭 전부를 쓰게 한다. 그 사이드바를 다시 여는 순간(F4·햄버거 버튼 등)
    'show.bs.offcanvas'에서 이 클래스를 지워 원래대로 되돌린다(Control.ts). */

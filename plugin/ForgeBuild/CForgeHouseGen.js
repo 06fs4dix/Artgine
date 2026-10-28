@@ -10,6 +10,7 @@ import { CForgeChineseHouseGen } from "./CForgeChineseHouseGen.js";
 import { CForgeAdobeGen } from "./CForgeAdobeGen.js";
 import { CForgeHutGen } from "./CForgeHutGen.js";
 import { CForgeIncaGen } from "./CForgeIncaGen.js";
+import { CForgeInteriorGen } from "./CForgeInteriorGen.js";
 export class CForgeHouseGen {
     static sEave = 0.4;
     static sRoofT = 0.16;
@@ -25,6 +26,8 @@ export class CForgeHouseGen {
     static sFlower = [[0.92, 0.42, 0.55], [0.95, 0.78, 0.3], [0.85, 0.3, 0.3], [0.7, 0.5, 0.9]];
     static sLod = 0;
     static sTheme = null;
+    static sRec = null;
+    static sWinAnim = false;
     static sCurT = 0.16;
     static sRidgeW = 0.26;
     static sRidgeH = 0.16;
@@ -131,9 +134,27 @@ export class CForgeHouseGen {
         if (L < 2)
             CForgeShape.Cap(B.stone, CForgePoly.Offset(poly, 0.08), floor + 0.3);
         const sink = _b.rects == null ? e * k : CForgeHouseGen.sWallSink;
+        const IN = L == 0 && CForgeInteriorGen.On(_b, wall), dc = IN ? CForgeInteriorGen.DoorCut(_b, floor) : null;
+        CForgeHouseGen.sRec = IN ? [] : null;
+        CForgeHouseGen.sWinAnim = IN && _b.interior.anim?.window !== false;
+        const late = [];
+        const Ex = (_buf, _y0, _y1) => {
+            if (!IN) {
+                CForgeShape.Extrude(_buf, poly, _y0, _y1);
+                return;
+            }
+            late.push(() => {
+                const m = poly.map(() => []);
+                m[dc.edge].push(...dc.holes);
+                if (CForgeHouseGen.sWinAnim)
+                    for (const w of CForgeHouseGen.sRec)
+                        m[w.edge].push({ s0: w.s - w.w * 0.5, s1: w.s + w.w * 0.5, y0: w.y0, y1: w.y1 });
+                CForgeInteriorGen.ExtrudeMap(_buf, poly, _y0, _y1, m, false);
+            });
+        };
         if (stoneGround)
-            CForgeShape.Extrude(B.stone, poly, floor + 0.25, floor + fh);
-        CForgeShape.Extrude(B.body, poly, stoneGround ? floor + fh : floor + 0.25, top - sink);
+            Ex(B.stone, floor + 0.25, floor + fh);
+        Ex(B.body, stoneGround ? floor + fh : floor + 0.25, top - sink);
         for (let k = 1; k < _b.floors && L < 2; k++) {
             const y = floor + _b.height * k / _b.floors;
             if (TH.mTimber || TH.mClassical)
@@ -155,6 +176,8 @@ export class CForgeHouseGen {
                 CForgeShape.Box(B.wood, p[0], p[1], 0.26, 0.26, floor + 0.3, py1, ang);
         }
         CForgeHouseGen.Openings(B, _b, floor, R);
+        for (const f of late)
+            f();
         if (TH.mClassical && L < 2 && _b.rects != null) {
             CForgeShape.Extrude(B.stone, CForgePoly.Offset(poly, 0.08), top - 0.42, top - 0.3);
             CForgeShape.Extrude(B.stone, CForgePoly.Offset(poly, 0.16), top - 0.3, top - CForgeHouseGen.sWallSink - 0.02);
@@ -198,14 +221,19 @@ export class CForgeHouseGen {
             : rk == 3 ? { buf: B.ridge, rgb: TH.mWood, tex: CForgeTex.sWood } : rk == 4 ? { buf: B.ridge, rgb: rc.map(_v => _v * 0.85), tex: CForgeTex.sGiwa } : { buf: B.ridge, rgb: rc.map(_v => _v * 0.8) };
         const wood = TH.mSash ? { rgb: [0.92, 0.91, 0.87], tex: CForgeTex.sPlaster } : { rgb: TH.mWood, tex: CForgeTex.sWood };
         const parts = [
-            !TH.mGlazed ? { buf: B.glass, rgb: TH.mWood.map(_v => _v * 0.85), tex: CForgeTex.sPlank } : { buf: B.glass, rgb: TH.mSash ? [0.9, 0.92, 0.95] : [0.82, 0.78, 0.7], tex: TH.mSash ? CForgeTex.sSash : CForgeTex.sGlass }, { buf: B.door, rgb: TH.mWood.map(_v => Math.min(1, _v * 1.15)), tex: CForgeTex.sPlank },
+            !TH.mGlazed ? { buf: B.glass, rgb: TH.mWood.map(_v => _v * 0.85), tex: CForgeTex.sPlank } : { buf: B.glass, rgb: TH.mSash ? [0.9, 0.92, 0.95] : [0.82, 0.78, 0.7], tex: TH.mSash ? CForgeTex.sSash : CForgeTex.sGlass, glow: true }, { buf: B.door, rgb: TH.mWood.map(_v => Math.min(1, _v * 1.15)), tex: CForgeTex.sPlank },
             { buf: B.body, rgb: body.rgb, tex: body.tex }, { buf: B.stone, rgb: TH.mStone, tex: CForgeTex.sStone }, { buf: B.wood, rgb: wood.rgb, tex: wood.tex },
             { buf: B.dark, rgb: TH.mDark }, { buf: B.shutter, rgb: pick(TH.mShutter, 2).map(_v => _v * 0.85 + 0.05), tex: CForgeTex.sPlank }, roof, ridge,
             { buf: B.brick, rgb: TH.mBrick, tex: CForgeTex.sBrickWall }, { buf: B.iron, rgb: TH.mIron },
             { buf: B.green, rgb: TH.mGreen }, { buf: B.flower, rgb: pick(TH.mFlower, 4) },
             { buf: B.ivy, rgb: TH.mGreen.map(_v => _v * 0.72) }, { buf: B.lamp, rgb: [1.0, 0.82, 0.45] },
         ];
-        return parts.filter(_p => _p.buf.mIdx.length > 0);
+        const out = parts.filter(_p => _p.buf.mIdx.length > 0);
+        if (IN)
+            out.push(...CForgeInteriorGen.Parts(CForgeInteriorGen.Plan(_b, _g), _b, CForgeHouseGen.sRec, parts[0]));
+        CForgeHouseGen.sRec = null;
+        CForgeHouseGen.sWinAnim = false;
+        return out;
     }
     static Roof(B, W, a0, a1, b0, b1, top, k, e, hip, _seed, _dormer, _poly) {
         const hw = (b1 - b0) * 0.5, bc = (b0 + b1) * 0.5, ry = top + hw * k, ey = top - e * k, T = CForgeHouseGen.sCurT, RW = CForgeHouseGen.sRidgeW, RH = CForgeHouseGen.sRidgeH, far = CForgeHouseGen.sLod >= 2;
@@ -433,6 +461,15 @@ export class CForgeHouseGen {
     static sFrameW = 0.1;
     static sFrameD = 0.12;
     static ShutterW(_w) { return _w * 0.5 + CForgeHouseGen.sFrameW; }
+    static DoorPos(_b) {
+        const n = _b.poly.length, a = _b.poly[_b.door.edge], c = _b.poly[(_b.door.edge + 1) % n], l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        const S = CForgeHouseGen.StyleOf(_b), side = CForgeHouseGen.sFrameW + (S.shutters ? CForgeHouseGen.ShutterW(S.w) + 0.03 : 0);
+        const bays = CForgeHouseGen.Bays(l, S.w + side * 2, S.w * 0.9, l < 5.5 ? 2 : 7, true), ds = _b.door.t * l;
+        let best = -1;
+        bays.forEach((_s, _j) => { if (best < 0 || Math.abs(_s - ds) < Math.abs(bays[best] - ds))
+            best = _j; });
+        return best >= 0 ? bays[best] : l * 0.5;
+    }
     static Bays(_len, _w, _minGap, _max, _odd) {
         const Gap = (_k) => (_len - _k * _w) / (_k + 1), maxGap = _w * 2.2;
         let n = 0;
@@ -466,7 +503,8 @@ export class CForgeHouseGen {
     static Window(B, _x, _y, _z, _tx, _tz, _nx, _nz, _w, _h, _split) {
         const fw = CForgeHouseGen.sFrameW, fd = CForgeHouseGen.sFrameD;
         const Bm = (_buf, _u, _v, _hor, _len, _bw, _off, _d, _sides = true) => CForgeHouseGen.Beam(_buf, _x + _tx * _u, _y + _v, _z + _tz * _u, _tx, _tz, _nx, _nz, _hor ? 1 : 0, _hor ? 0 : 1, _len, _bw, _off, _d, _sides);
-        Bm(B.glass, 0, 0, false, _h, _w, 0, 0.02, false);
+        if (!CForgeHouseGen.sWinAnim)
+            Bm(B.glass, 0, 0, false, _h, _w, 0, 0.02, false);
         if (CForgeHouseGen.sLod > 0) {
             if (CForgeHouseGen.sLod == 1)
                 Bm(B.wood, 0, 0, false, _h + fw * 2, _w + fw * 2, 0, 0.01, false);
@@ -499,12 +537,15 @@ export class CForgeHouseGen {
         const panel = [P([-r, 0], 0.03), P([r, 0], 0.03)];
         for (let k = 0; k <= seg; k++)
             panel.push(P(Arc(k, r), 0.03));
-        B.door.Poly(panel, [_nx, 0, _nz]);
+        if (CForgeHouseGen.sRec == null)
+            B.door.Poly(panel, [_nx, 0, _nz]);
         if (CForgeHouseGen.sLod > 0)
             return;
-        for (const v of [0.25, 0.62])
-            Bm(B.dark, -_w * 0.1, _h * v, true, _w * 0.75, 0.05, 0.03, 0.008, false);
-        Bm(B.dark, _w * 0.32, 1.0, false, 0.12, 0.04, 0.03, 0.05);
+        if (CForgeHouseGen.sRec == null) {
+            for (const v of [0.25, 0.62])
+                Bm(B.dark, -_w * 0.1, _h * v, true, _w * 0.75, 0.05, 0.03, 0.008, false);
+            Bm(B.dark, _w * 0.32, 1.0, false, 0.12, 0.04, 0.03, 0.05);
+        }
         for (const sg of [-1, 1])
             Bm(B.stone, sg * (r + jw * 0.5), spring * 0.5, false, spring, jw, 0, fd);
         for (let k = 0; k < seg; k++) {
@@ -537,7 +578,8 @@ export class CForgeHouseGen {
     }
     static DoorClassic(B, _x, _y0, _z, _tx, _tz, _nx, _nz, _w, _h, _ang) {
         const hw = _w * 0.5, hd = _h - hw * 0.9, P = (_u, _y, _o) => [_x + _tx * _u + _nx * _o, _y, _z + _tz * _u + _nz * _o];
-        B.door.Quad([P(-hw, _y0, 0.03), P(hw, _y0, 0.03), P(hw, _y0 + hd, 0.03), P(-hw, _y0 + hd, 0.03)], null, [_nx, 0, _nz]);
+        if (CForgeHouseGen.sRec == null)
+            B.door.Quad([P(-hw, _y0, 0.03), P(hw, _y0, 0.03), P(hw, _y0 + hd, 0.03), P(-hw, _y0 + hd, 0.03)], null, [_nx, 0, _nz]);
         if (CForgeHouseGen.sLod > 0)
             return;
         const fan = [P(-hw, _y0 + hd, 0.03)];
@@ -590,6 +632,7 @@ export class CForgeHouseGen {
                     const wide = front && S.wideCenter && f > 0 && nb % 2 == 1 && Math.abs(j - mid) < 0.1;
                     const ww = wide ? S.w * 1.6 : top ? S.w * 0.8 : S.w, wh = top ? S.h * 0.65 : S.h, wy = top ? y + S.h * 0.15 : y;
                     CForgeHouseGen.Window(B, x, wy, z, tx, tz, nx, nz, ww, wh, wide);
+                    CForgeHouseGen.sRec?.push({ edge: i, s, w: ww, y0: wy - wh * 0.5, y1: wy + wh * 0.5 });
                     const TC = CForgeHouseGen.sTheme;
                     if (TC?.mArchWin && L < 2 && wy + wh * 0.5 + ww * 0.5 + 0.45 < _floor + _b.height - 0.5) {
                         const yh = wy + wh * 0.5 + CForgeHouseGen.sFrameW, r = ww * 0.5 + CForgeHouseGen.sFrameW, seg = 8, jw = 0.16;
@@ -598,7 +641,8 @@ export class CForgeHouseGen {
                         const fan = [P(-r, yh, 0.02)];
                         for (let q = 0; q <= seg; q++)
                             fan.push(Arc(q, r, 0.02));
-                        B.glass.Poly(fan, [nx, 0, nz]);
+                        if (!CForgeHouseGen.sWinAnim)
+                            B.glass.Poly(fan, [nx, 0, nz]);
                         for (let q = 0; q < seg; q++)
                             B.stone.Quad([Arc(q, r, 0.07), Arc(q, r + jw, 0.07), Arc(q + 1, r + jw, 0.07), Arc(q + 1, r, 0.07)], null, [nx, 0, nz]);
                     }

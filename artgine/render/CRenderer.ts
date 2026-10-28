@@ -109,10 +109,12 @@ export class CRenderer
 	End(_tex : CTexture=null,_rtUse :Set<number>=null,_rtLevel=0){}
 
 	/** _updatedLayers : 갱신된 배열 레이어 번호. 큐브(6레이어) 단위로 하나라도 포함되면 그 큐브만 다시 블러한다 */
-	BlurEnvmap(_texKey : string,_updatedLayers : Set<number>)
+	BlurEnvmap(_texKey : string,_updatedLayers : Set<number>,_cube : CTexture=null)
 	{
 		const tex = this.mRes.Find(_texKey) as CTexture;
 		if(this.mDev.GL() == null || tex == null || tex.GetGBuf().length == 0 || _updatedLayers.size == 0)
+			return;
+		if(_cube != null && _cube.GetBuf().length < 6)
 			return;
 
 		const info = tex.GetInfo()[0];
@@ -127,6 +129,47 @@ export class CRenderer
 		const fb = this.mDev.GL().createFramebuffer();
 		this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, fb);
 		this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D_ARRAY, gTex);
+
+		if(_cube != null)
+		{
+			const layers = Array.from(_updatedLayers).sort((a,b)=>a-b);
+			for(let face = 0; face < 6; face++)
+			{
+				const img = CImgPro.SqurEnlargedReduced(_cube.GetWidth(), _cube.GetHeight(), _cube.GetBuf()[face == 2 ? 3 : face == 3 ? 2 : face], size / _cube.GetWidth(), size / _cube.GetHeight(), 4);
+				const src = img.GetBuf()[0] as Uint8Array;
+				const buf = new Uint8Array(src.length);
+				const w = img.GetWidth(), h = img.GetHeight();
+				const side = face != 2 && face != 3;
+				for(let y = 0; y < h; y++)
+				{
+					for(let x = 0; x < w; x++)
+					{
+						const sx = side ? w - 1 - x : x;
+						let sy = side ? h - 1 - y : y;
+						if(!_cube.GetYFlip()) sy = h - 1 - sy;
+						buf.set(src.subarray((sy * w + sx) * 4, (sy * w + sx) * 4 + 4), (y * w + x) * 4);
+					}
+				}
+				this.mDev.GL().texSubImage3D(this.mDev.GL().TEXTURE_2D_ARRAY, 0, 0, 0, layers[face], w, h, 1, this.mDev.GL().RGBA, this.mDev.GL().UNSIGNED_BYTE, buf);
+			}
+
+			const drawFb = this.mDev.GL().createFramebuffer();
+			for(let lod = 1; lod < lodCount; lod++)
+			{
+				const s = size >> lod;
+				const ps = size >> (lod - 1);
+				for(let face = 0; face < 6; face++)
+				{
+					this.mDev.GL().bindFramebuffer(this.mDev.GL().READ_FRAMEBUFFER, fb);
+					this.mDev.GL().framebufferTextureLayer(this.mDev.GL().READ_FRAMEBUFFER, this.mDev.GL().COLOR_ATTACHMENT0, gTex, lod - 1, layers[face]);
+					this.mDev.GL().bindFramebuffer(this.mDev.GL().DRAW_FRAMEBUFFER, drawFb);
+					this.mDev.GL().framebufferTextureLayer(this.mDev.GL().DRAW_FRAMEBUFFER, this.mDev.GL().COLOR_ATTACHMENT0, gTex, lod, layers[face]);
+					this.mDev.GL().blitFramebuffer(0, 0, ps, ps, 0, 0, s, s, this.mDev.GL().COLOR_BUFFER_BIT, this.mDev.GL().LINEAR);
+				}
+			}
+			this.mDev.GL().bindFramebuffer(this.mDev.GL().FRAMEBUFFER, fb);
+			this.mDev.GL().deleteFramebuffer(drawFb);
+		}
 
 		const mips : (Uint8Array|Float32Array)[][] = [];
 		const cubeLayers : number[] = [];
@@ -783,7 +826,14 @@ export class CRendererGPU extends CRenderer
 	mRTMipSet=new Set<CTexture>();
 	mEnvBlurBusy=false;
 	mEnvBlurAgain=false;
+	//프레임 제출 전에 읽으면 이번 프레임에 그린 환경맵이 아직 반영되지 않아서, 요청만 받아두고 End 에서 제출 뒤에 돌린다
+	mEnvBlurKey : string=null;
+	//읽는 동안 환경맵이 다시 그려지면 이미 읽은 옛 내용으로 만든 블러가 새 내용을 덮어쓰지 않도록 세대를 센다
+	mEnvBlurSerial=0;
 	override BlurEnvmap(_texKey : string,_updatedLayers : Set<number>)
+	{
+	}
+	BlurEnvmapRun(_texKey : string)
 	{
 	}
 	async BlurEnvmapAsync(_tex : CTexture)

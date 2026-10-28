@@ -83,24 +83,25 @@ export class CPaint3DDecalMesh extends CPaint {
         CMath.V3MulFloat(xAxis, _size.x, xAxis);
         CMath.V3MulFloat(yAxis, _size.y, yAxis);
         CMath.V3MulFloat(zAxis, _size.z, zAxis);
-        this.mLMat.mF32A[0] = xAxis.x;
-        this.mLMat.mF32A[1] = xAxis.y;
-        this.mLMat.mF32A[2] = xAxis.z;
-        this.mLMat.mF32A[3] = 0;
-        this.mLMat.mF32A[4] = yAxis.x;
-        this.mLMat.mF32A[5] = yAxis.y;
-        this.mLMat.mF32A[6] = yAxis.z;
-        this.mLMat.mF32A[7] = 0;
-        this.mLMat.mF32A[8] = zAxis.x;
-        this.mLMat.mF32A[9] = zAxis.y;
-        this.mLMat.mF32A[10] = zAxis.z;
-        this.mLMat.mF32A[11] = 0;
-        this.mLMat.mF32A[12] = _pos.x;
-        this.mLMat.mF32A[13] = _pos.y;
-        this.mLMat.mF32A[14] = _pos.z;
-        this.mLMat.mF32A[15] = 1.0;
-        this.mLMat.UnitCheck();
-        this.mUpdateLMat = true;
+        const lmat = new CMat();
+        lmat.mF32A[0] = xAxis.x;
+        lmat.mF32A[1] = xAxis.y;
+        lmat.mF32A[2] = xAxis.z;
+        lmat.mF32A[3] = 0;
+        lmat.mF32A[4] = yAxis.x;
+        lmat.mF32A[5] = yAxis.y;
+        lmat.mF32A[6] = yAxis.z;
+        lmat.mF32A[7] = 0;
+        lmat.mF32A[8] = zAxis.x;
+        lmat.mF32A[9] = zAxis.y;
+        lmat.mF32A[10] = zAxis.z;
+        lmat.mF32A[11] = 0;
+        lmat.mF32A[12] = _pos.x;
+        lmat.mF32A[13] = _pos.y;
+        lmat.mF32A[14] = _pos.z;
+        lmat.mF32A[15] = 1.0;
+        lmat.UnitCheck();
+        this.SetFMat(lmat);
     }
     RefreshMesh(_vertex, _vMat) {
         this.mVertex = _vertex;
@@ -156,7 +157,7 @@ export class CPaint3DDecalMesh extends CPaint {
         for (let i = 0; i < this.mMCI.vertexCount; i++) {
             this.mBound.InitBound(vertices.bufF.V3(i));
         }
-        this.mBound.MatCoordi(this.mLMat);
+        this.mBound.MatCoordi(this.mFMat);
         this.mIndex = gDecalIndex++;
         this.ClearBatch();
         function ClipGeometry(_vertices, _mat) {

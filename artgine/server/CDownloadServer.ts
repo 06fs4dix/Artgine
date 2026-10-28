@@ -10,6 +10,7 @@ import { CServerRouter } from '../network/CServerRouter.js';
 import { CJSON } from '../basic/CJSON.js';
 import { CFile } from '../system/CFile.js';
 import { CConsol } from '../basic/CConsol.js';
+import { CCMDMgr } from '../system/CCMDMgr.js';
 import { Request, Response } from 'express';
 import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
 import { CPath } from '../basic/CPath.js';
@@ -94,6 +95,7 @@ async function ensureFfmpeg(): Promise<boolean> {
     const data = await CFile.Load(FFMPEG_ZIP_URL);
     if (!data) { CConsol.Log('[Download] ffmpeg ZIP 다운로드 실패'); return false; }
 
+    await CCMDMgr.NPMInstall(["adm-zip"]);
     const AdmZip: any = require('adm-zip');
     const zip = new AdmZip(Buffer.from(data as ArrayBuffer));
     const entry = zip.getEntries().find((e: any) => /\/bin\/ffmpeg\.exe$/i.test(e.entryName));

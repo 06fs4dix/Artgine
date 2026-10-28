@@ -26,13 +26,18 @@ export class CServerSocker extends CServer {
             this.mMainServer.GetServer().on('upgrade', (req, socket, head) => {
                 const url = new URL(req.url, `http://${req.headers.host}`);
                 if (url.pathname === path) {
+                    socket["__claimed"] = true;
                     this.mWSS.handleUpgrade(req, socket, head, (ws) => {
                         this.mWSS.emit('connection', ws, req);
                     });
                 }
                 else {
-                    CConsol.Log("경로 불일치. 연결 거부됨", "red");
-                    socket.destroy();
+                    setImmediate(() => {
+                        if (!socket["__claimed"] && !socket.destroyed) {
+                            CConsol.Log("경로 불일치. 연결 거부됨", "red");
+                            socket.destroy();
+                        }
+                    });
                 }
             });
         }

@@ -7,6 +7,7 @@ import { CForgeTowerGen } from "./CForgeTowerGen.js";
 import { CForgePoly } from "./CForgePoly.js";
 import { ForgeV2 } from "./CForgeScene.js";
 import { IForgeMonumentR } from "./CForgeAdjust.js";
+import { IForgeFire, IForgeLight } from "./CForgeFire.js";
 
 //거리 시설: 가로등(CForgeTheme.eMonument.Lamp)과 상점 매대(Shop). 정면(+u)이 가까운 길을 향한다. 모양은 테마의 양식·시대가, 변형은 시드가 정한다.
 //가로등 크기 _r.size(s) → 높이, 상점 크기 → 매대 폭
@@ -33,8 +34,24 @@ export class CForgeStreetGen
     static LampSpec(_r : IForgeMonumentR, T : CForgeTheme)
     {
         const R = new CForgeRand(CForgeRand.Hash(_r.seed, 932)), L = CForgeStreetGen.eLamp, st = CForgeStreetGen.LampStyle(_r, T), s = _r.size;
-        const base = st == L.Stone ? 1.3 + s * 0.45 : st == L.Brass ? 2.0 + s * 0.6 : st == L.Torch ? 2.3 + s * 0.5 : st == L.Gas ? (T.mEra == CForgeTheme.eEra.Modern ? 3.2 : 2.6) + s * 0.8 : 2.2 + s * 0.9;
+        const base = st == L.Stone ? 1.9 + s * 0.5 : st == L.Brass ? 2.6 + s * 0.6 : st == L.Torch ? 2.3 + s * 0.5 : st == L.Gas ? (T.mEra == CForgeTheme.eEra.Modern ? 3.2 : 2.6) + s * 0.8 : 2.2 + s * 0.9;
         return { st, H : base * R.Range(0.93, 1.07), twin : R.Chance(0.35), round : R.Chance(0.5) };
+    }
+
+    //가로등 불빛 색(불꽃·유리 발광·점광원이 같이 쓴다). 레퍼런스 사진의 광원 종류별: 횃불·화톳불 = 주황 불, 기름 등롱·촛불 = 따뜻한 황색, 가스등 = 노르스름한 백색,
+    //중국 홍등 = 붉은 주황, 일본 초롱 = 연한 황색, 석등 = 어두운 주황, 아랍 놋등 = 호박색
+    static LampRgb(_st : number, T : CForgeTheme) : number[]
+    {
+        const C = CForgeTheme.eCulture, L = CForgeStreetGen.eLamp, c = T.mCulture;
+        if(_st == L.Gas) return [1.0, 0.86, 0.58];
+        if(_st == L.Hanging) return [1.0, 0.7, 0.32];
+        if(_st == L.Brazier) return [1.0, 0.46, 0.12];
+        if(_st == L.Torch) return [1.0, 0.52, 0.16];
+        if(_st == L.Stone) return [1.0, 0.62, 0.24];
+        if(_st == L.Brass) return [1.0, 0.68, 0.28];
+        if(c == C.China) return [1.0, 0.38, 0.14];
+        if(c == C.Japan) return [1.0, 0.7, 0.34];
+        return [1.0, 0.62, 0.26];
     }
 
     //상점 형식: 한국 = 맞배 지붕 노점, 중국 = 사모지붕 가게, 일본 = 포렴 단 야타이, 그 밖(근대 포함) = 차양 매대
@@ -105,137 +122,235 @@ export class CForgeStreetGen
     private static Lamp(_r : IForgeMonumentR, T : CForgeTheme, _g : number) : IForgePart[]
     {
         const C = CForgeTheme.eCulture, L = CForgeStreetGen.eLamp, F = CForgeStreetGen.LampSpec(_r, T), H = F.H, [cx, cz] = _r.c, ang = _r.ang, ux = Math.cos(ang), uz = Math.sin(ang);
-        const wood = new CForgeMeshBuf(), stone = new CForgeMeshBuf(), iron = new CForgeMeshBuf(), glow = new CForgeMeshBuf(), paper = new CForgeMeshBuf(), gold = new CForgeMeshBuf(), dark = new CForgeMeshBuf();
+        const wood = new CForgeMeshBuf(), lamp = new CForgeMeshBuf(), stone = new CForgeMeshBuf(), iron = new CForgeMeshBuf(), glow = new CForgeMeshBuf(), paper = new CForgeMeshBuf(), gold = new CForgeMeshBuf(), dark = new CForgeMeshBuf(), blue = new CForgeMeshBuf();
         const P = (_a : number, _b : number) : ForgeV2 => [cx + ux * _a - uz * _b, cz + uz * _a + ux * _b];
         const V = (_a : number, _b : number, _y : number) => { const q = P(_a, _b); return [q[0], _y, q[1]]; };
-        const y0 = _g, c = T.mCulture;
+        const y0 = _g, c = T.mCulture, Lathe = CForgeTowerGen.Lathe, Strut = CForgeTowerGen.Strut;
         let stoneTex = CForgeTex.sStone, paperRgb = T.mPaper;
+        const fires : IForgeFire[] = [], lights : IForgeLight[] = [], rgb = CForgeStreetGen.LampRgb(F.st, T);
+        const Fire = (_a : number, _b : number, _y : number, _r : number, _h : number) => { const q = P(_a, _b); fires.push({ pos : [q[0], _y, q[1]], r : _r, h : _h, rgb }); };
+        //블룸 색 = Emission 색 × 알베도다. 점광원도 같은 색이어야 해서, 빛나는 메시의 알베도를 곱해 가장 큰 채널을 1로 맞춘다(예: 붉은 종이 등 = 붉은 빛)
+        const Mix = (_c : number[], _alb : number[]) => { const m = _c.map((_v, _i) => _v * _alb[_i]), k = Math.max(...m, 1e-3); return m.map(_v => _v / k); };
+        const glowAlb = rgb.map(_v => _v + (1 - _v) * 0.5);
+        const Light = (_a : number, _b : number, _y : number, _r : number, _c : number[] = Mix(rgb, glowAlb)) => { const q = P(_a, _b); lights.push({ pos : [q[0], _y, q[1]], r : _r, rgb : _c }); };
 
-        //유리 등: 쇠 틀 네 기둥 + 가운데 불빛 + 모자 + 받침
-        const Lantern = (_a : number, _b : number, _yTop : number, _w : number) =>
+        //육각 모서리 기둥. Lathe(seg 6)의 꼭짓점 각도와 같아서 면 모서리에 정확히 붙는다
+        const Hex = (_buf : CForgeMeshBuf, _q : ForgeV2, _r0 : number, _y0 : number, _r1 : number, _y1 : number, _w : number) =>
+        {
+            for(let k = 0; k < 6; k++)
+            {
+                const a = k / 6 * Math.PI * 2, co = Math.cos(a), si = Math.sin(a);
+                Strut(_buf, [_q[0] + co * _r0, _y0, _q[1] + si * _r0], [_q[0] + co * _r1, _y1, _q[1] + si * _r1], _w);
+            }
+        };
+        //유리 등롱: 받침 접시 + 위로 벌어진 육각 유리 + 모서리 쇠기둥 + 테두리 + 갓 + 꼭지. _horn = 이탈리아식 휜 뿔. 꼭대기 높이를 돌려준다
+        const Lantern = (_a : number, _b : number, _yb : number, _w : number, _horn : boolean = false) : number =>
         {
             const q = P(_a, _b);
-            CForgeShape.Frustum(iron, q[0], q[1], _w * 1.5, _w * 1.5, _w * 0.3, _w * 0.3, _yTop - _w * 0.5, _yTop, ang);
-            CForgeShape.Box(glow, q[0], q[1], _w * 0.8, _w * 0.8, _yTop - _w * 1.6, _yTop - _w * 0.5, ang);
-            for(const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]])
-            {
-                const k = P(_a + a * _w * 0.45, _b + b * _w * 0.45);
-                CForgeShape.Box(iron, k[0], k[1], _w * 0.1, _w * 0.1, _yTop - _w * 1.65, _yTop - _w * 0.5, ang);
-            }
-            CForgeShape.Box(iron, q[0], q[1], _w * 1.0, _w * 1.0, _yTop - _w * 1.75, _yTop - _w * 1.6, ang);
+            Lathe(lamp, q[0], q[1], [[0, _yb], [_w * 0.5, _yb], [_w * 0.62, _yb + _w * 0.12], [_w * 0.56, _yb + _w * 0.22]], 6);
+            Lathe(glow, q[0], q[1], [[0, _yb + _w * 0.22], [_w * 0.54, _yb + _w * 0.22], [_w * 0.84, _yb + _w * 1.5], [0, _yb + _w * 1.5]], 6);
+            Hex(lamp, q, _w * 0.58, _yb + _w * 0.2, _w * 0.9, _yb + _w * 1.52, _w * 0.09);
+            Lathe(lamp, q[0], q[1], [[_w * 0.86, _yb + _w * 1.48], [_w * 1.0, _yb + _w * 1.5], [_w * 1.0, _yb + _w * 1.58], [_w * 0.8, _yb + _w * 1.7], [_w * 0.45, _yb + _w * 2.15], [_w * 0.2, _yb + _w * 2.3], [_w * 0.2, _yb + _w * 2.4]], 6);
+            Lathe(lamp, q[0], q[1], [[_w * 0.14, _yb + _w * 2.38], [_w * 0.18, _yb + _w * 2.5], [_w * 0.08, _yb + _w * 2.7], [0, _yb + _w * 2.85]], 6);
+            if(_horn)
+                for(let k = 0; k < 6; k++)
+                {
+                    const a = (k + 0.5) / 6 * Math.PI * 2, co = Math.cos(a), si = Math.sin(a);
+                    Strut(lamp, [q[0] + co * _w * 0.3, _yb + _w * 2.0, q[1] + si * _w * 0.3], [q[0] + co * _w * 0.9, _yb + _w * 3.0, q[1] + si * _w * 0.9], _w * 0.07);
+                    Strut(lamp, [q[0] + co * _w * 0.9, _yb + _w * 3.0, q[1] + si * _w * 0.9], [q[0] + co * _w * 1.5, _yb + _w * 3.5, q[1] + si * _w * 1.5], _w * 0.05);
+                }
+            Light(_a, _b, _yb + _w * 0.9, 6);
+            return _yb + _w * 2.85;
         };
 
         if(F.st == L.Hanging)
         {
-            CForgeShape.Frustum(stone, cx, cz, 0.5, 0.5, 0.34, 0.34, y0 - 0.4, y0 + 0.45, ang);
-            CForgeShape.Box(wood, cx, cz, 0.2, 0.2, y0 + 0.4, y0 + H, ang);
+            const top = y0 + H, w = 0.22, horn = T.mRegion == "italy";
+            CForgeShape.Frustum(stone, cx, cz, 0.56, 0.56, 0.4, 0.4, y0 - 0.4, y0 + 0.35, ang);
+            CForgeShape.Frustum(stone, cx, cz, 0.44, 0.44, 0.44, 0.44, y0 + 0.35, y0 + 0.43, ang);
+            CForgeShape.Box(wood, cx, cz, 0.2, 0.2, y0 + 0.43, top, ang);
+            CForgeShape.Box(iron, cx, cz, 0.24, 0.24, y0 + 0.75, y0 + 0.82, ang);
+            CForgeShape.Box(iron, cx, cz, 0.24, 0.24, top - 0.62, top - 0.55, ang);
+            CForgeShape.Box(wood, cx, cz, 0.3, 0.3, top, top + 0.08, ang);
             for(const s of F.twin ? [1, -1] : [1])
             {
-                CForgeTowerGen.Strut(wood, V(0, 0, y0 + H - 0.12), V(0.85 * s, 0, y0 + H - 0.12), 0.1);
-                CForgeTowerGen.Strut(wood, V(0, 0, y0 + H - 0.75), V(0.7 * s, 0, y0 + H - 0.14), 0.07);
-                CForgeTowerGen.Strut(iron, V(0.85 * s, 0, y0 + H - 0.12), V(0.85 * s, 0, y0 + H - 0.3), 0.025);
-                Lantern(0.85 * s, 0, y0 + H - 0.3, 0.26);
+                const yb = top - 0.12 - 0.32 - w * 2.85;
+                Strut(wood, V(0, 0, top - 0.1), V(0.9 * s, 0, top - 0.1), 0.1);
+                Strut(wood, V(0, 0, top - 0.8), V(0.72 * s, 0, top - 0.12), 0.07);
+                Strut(iron, V(0.2 * s, 0, top - 0.1), V(0.2 * s, 0, top + 0.12), 0.03);
+                Strut(iron, V(0.2 * s, 0, top + 0.12), V(0.9 * s, 0, top + 0.12), 0.03);
+                Strut(iron, V(0.9 * s, 0, top + 0.12), V(0.9 * s, 0, top - 0.1), 0.03);
+                Strut(iron, V(0.9 * s, 0, top - 0.1), V(0.9 * s, 0, yb + w * 2.85), 0.02);
+                Lantern(0.9 * s, 0, yb, w, horn);
             }
         }
         else if(F.st == L.Brazier)
         {
-            const stonePillar = c == C.Egypt || c == C.Andes, yb = y0 + (stonePillar ? H * 0.8 : H);
+            const stonePillar = c == C.Egypt || c == C.Andes, yb = y0 + (stonePillar ? H * 0.8 : H), rim = yb + 0.36, bot = yb + 0.04;
             if(c == C.Andes) stoneTex = CForgeTex.sInca;
             if(stonePillar)
             {
-                CForgeShape.Frustum(stone, cx, cz, 0.62, 0.62, 0.4, 0.4, y0 - 0.4, yb - 0.15, ang);
-                CForgeShape.Frustum(stone, cx, cz, 0.5, 0.5, 0.64, 0.64, yb - 0.15, yb, ang);
+                CForgeShape.Frustum(stone, cx, cz, 0.78, 0.78, 0.58, 0.58, y0 - 0.4, y0 + 0.3, ang);
+                CForgeShape.Frustum(stone, cx, cz, 0.62, 0.62, 0.4, 0.4, y0 + 0.3, yb - 0.15, ang);
+                CForgeShape.Frustum(stone, cx, cz, 0.5, 0.5, 0.7, 0.7, yb - 0.15, yb, ang);
             }
             else
             {
-                CForgeShape.Box(wood, cx, cz, 0.18, 0.18, y0 - 0.3, yb, ang);
-                for(const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) CForgeTowerGen.Strut(wood, V(a * 0.45, b * 0.45, yb - 0.1), V(0, 0, yb - 0.55), 0.07);
+                CForgeShape.Frustum(stone, cx, cz, 0.6, 0.6, 0.4, 0.4, y0 - 0.3, y0 + 0.2, ang);
+                CForgeShape.Box(wood, cx, cz, 0.18, 0.18, y0 + 0.2, yb - 0.1, ang);
+                CForgeShape.Box(iron, cx, cz, 0.22, 0.22, y0 + H * 0.45, y0 + H * 0.45 + 0.06, ang);
+                for(const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) Strut(wood, V(a * 0.45, b * 0.45, yb - 0.05), V(0, 0, yb - 0.55), 0.07);
             }
-            CForgeTowerGen.Lathe(iron, cx, cz, [[0.1, yb], [0.3, yb + 0.12], [0.37, yb + 0.3], [0.33, yb + 0.3], [0.26, yb + 0.2], [0, yb + 0.16]], 12);
-            CForgeTowerGen.Lathe(glow, cx, cz, [[0.24, yb + 0.2], [0.2, yb + 0.38], [0.1, yb + 0.62], [0, yb + 0.88]], 8);
+            CForgeTowerGen.Ring(iron, cx, cz, 0.34, 0.42, rim - 0.05, rim, 12);
+            CForgeTowerGen.Ring(iron, cx, cz, 0.23, 0.28, yb + 0.16, yb + 0.2, 12);
+            Lathe(iron, cx, cz, [[0, bot - 0.02], [0.16, bot - 0.02], [0.16, bot + 0.04], [0, bot + 0.06]], 10);
+            for(let k = 0; k < 8; k++)
+            {
+                const a = k / 8 * Math.PI * 2, co = Math.cos(a), si = Math.sin(a);
+                Strut(iron, [cx + co * 0.38, rim, cz + si * 0.38], [cx + co * 0.14, bot, cz + si * 0.14], 0.035);
+            }
+            for(let k = 0; k < 3; k++) CForgeShape.Box(dark, cx, cz, 0.46, 0.1, yb + 0.1 + k * 0.07, yb + 0.2 + k * 0.07, ang + k * Math.PI / 3 + (_r.seed % 5) * 0.1);
+            Fire(0, 0, yb + 0.32, 0.24, 0.95);
+            Light(0, 0, yb + 0.7, 9, rgb);
         }
         else if(F.st == L.Torch)
         {
             const stonePillar = c == C.Egypt || c == C.Andes, yb = y0 + (stonePillar ? H * 0.62 : H - 1.0);
             if(c == C.Andes) stoneTex = CForgeTex.sInca;
-            if(stonePillar) CForgeShape.Frustum(stone, cx, cz, 0.6, 0.6, 0.38, 0.38, y0 - 0.4, yb, ang);
-            else CForgeShape.Box(wood, cx, cz, 0.16, 0.16, y0 - 0.3, yb - 0.1, ang);
-            CForgeTowerGen.Lathe(iron, cx, cz, [[0.06, yb - 0.12], [0.14, yb], [0.2, yb + 0.2], [0.17, yb + 0.2], [0.11, yb + 0.05]], 8);
-            CForgeShape.Box(wood, cx, cz, 0.07, 0.07, yb - 0.1, yb + 0.12, ang);
-            CForgeTowerGen.Lathe(dark, cx, cz, [[0.05, yb + 0.1], [0.1, yb + 0.22], [0.12, yb + 0.42], [0.07, yb + 0.56]], 8);
-            CForgeTowerGen.Lathe(glow, cx, cz, [[0.1, yb + 0.5], [0.12, yb + 0.65], [0.07, yb + 0.92], [0, yb + 1.2]], 8);
+            if(stonePillar)
+            {
+                CForgeShape.Frustum(stone, cx, cz, 0.74, 0.74, 0.56, 0.56, y0 - 0.4, y0 + 0.3, ang);
+                CForgeShape.Frustum(stone, cx, cz, 0.58, 0.58, 0.38, 0.38, y0 + 0.3, yb, ang);
+            }
+            else
+            {
+                CForgeShape.Frustum(wood, cx, cz, 0.2, 0.2, 0.13, 0.13, y0 - 0.3, yb - 0.1, ang);
+                for(let k = 0; k < 5; k++)
+                {
+                    const a = k / 5 * Math.PI * 2 + (_r.seed % 7) * 0.2, co = Math.cos(a), si = Math.sin(a);
+                    CForgeShape.Box(stone, cx + co * 0.3, cz + si * 0.3, 0.3, 0.24, y0 - 0.1, y0 + 0.14 + (k % 2) * 0.08, a);
+                }
+                CForgeShape.Box(iron, cx, cz, 0.16, 0.16, y0 + 0.5, y0 + 0.56, ang);
+            }
+            Lathe(iron, cx, cz, [[0.06, yb - 0.2], [0.12, yb - 0.06], [0.2, yb + 0.14], [0.22, yb + 0.16], [0.2, yb + 0.18], [0.14, yb + 0.06], [0.06, yb - 0.06]], 8);
+            CForgeShape.Box(wood, cx, cz, 0.07, 0.07, yb - 0.1, yb + 0.14, ang);
+            Lathe(dark, cx, cz, [[0.05, yb + 0.1], [0.12, yb + 0.2], [0.15, yb + 0.38], [0.11, yb + 0.56], [0.06, yb + 0.62]], 8);
+            Fire(0, 0, yb + 0.55, 0.12, 0.6);
+            Light(0, 0, yb + 0.8, 7, rgb);
         }
         else if(F.st == L.Gas)
         {
-            const modern = T.mEra == CForgeTheme.eEra.Modern, top = y0 + H;
-            CForgeTowerGen.Lathe(iron, cx, cz, [[0.22, y0 - 0.2], [0.2, y0 + 0.3], [0.12, y0 + 0.42], [0.07, y0 + 0.75], [0.06, top - 0.75], [0.1, top - 0.6], [0.06, top - 0.5], [0.06, top]], 12);
+            const top = y0 + H;
+            Lathe(iron, cx, cz, [[0.36, y0 - 0.3], [0.36, y0 + 0.08], [0.3, y0 + 0.14], [0.27, y0 + 0.2], [0.27, y0 + 0.5], [0.2, y0 + 0.62], [0.2, y0 + 0.7], [0.13, y0 + 0.82], [0.12, y0 + 1.1],
+                [0.16, y0 + 1.16], [0.16, y0 + 1.22], [0.1, y0 + 1.3], [0.075, y0 + 1.45], [0.07, top - 0.9], [0.1, top - 0.82], [0.1, top - 0.76], [0.07, top - 0.7], [0.065, top - 0.4],
+                [0.1, top - 0.34], [0.1, top - 0.26], [0.065, top - 0.2], [0.05, top - 0.1]], 8);
+            Strut(iron, V(0, -0.3, top - 0.95), V(0, 0.3, top - 0.95), 0.04);
+            for(const s of [1, -1]) CForgeShape.Box(iron, ...P(0, 0.3 * s), 0.07, 0.07, top - 0.99, top - 0.91, ang);
             if(F.twin)
             {
                 for(const s of [1, -1])
                 {
-                    CForgeTowerGen.Strut(iron, V(0, 0, top - 0.55), V(0, 0.38 * s, top - 0.38), 0.05);
-                    CForgeTowerGen.Strut(iron, V(0, 0.38 * s, top - 0.38), V(0, 0.65 * s, top - 0.3), 0.045);
-                    Lantern(0, 0.65 * s, top + 0.2, 0.3);
+                    Strut(iron, V(0, 0, top - 0.55), V(0, 0.28 * s, top - 0.3), 0.05);
+                    Strut(iron, V(0, 0.28 * s, top - 0.3), V(0, 0.62 * s, top - 0.2), 0.045);
+                    Strut(iron, V(0, 0.62 * s, top - 0.2), V(0, 0.66 * s, top - 0.1), 0.04);
+                    Lantern(0, 0.66 * s, top - 0.1, 0.2);
                 }
+                Lathe(iron, cx, cz, [[0.05, top - 0.1], [0.07, top + 0.04], [0.04, top + 0.24], [0, top + 0.36]], 8);
             }
             else
             {
-                CForgeTowerGen.Strut(iron, V(0, -0.26, top - 0.95), V(0, 0.26, top - 0.95), 0.05);
-                Lantern(0, 0, top + 0.6, 0.34);
-                CForgeTowerGen.Lathe(iron, cx, cz, [[0.05, y0 + H + 0.6], [0.03, y0 + H + 0.75], [0, y0 + H + 0.82]], 6);
+                for(const s of [1, -1])
+                {
+                    Strut(iron, V(0, 0.07 * s, top - 0.3), V(0, 0.2 * s, top - 0.15), 0.035);
+                    Strut(iron, V(0, 0.2 * s, top - 0.15), V(0, 0.15 * s, top - 0.02), 0.035);
+                }
+                Lantern(0, 0, top - 0.05, 0.25);
             }
         }
         else if(F.st == L.Paper)
         {
-            const red = c == C.China;
-            if(red) paperRgb = [0.82, 0.13, 0.08]; else if(c == C.Japan) paperRgb = [0.95, 0.93, 0.86];
-            CForgeShape.Frustum(stone, cx, cz, 0.44, 0.44, 0.3, 0.3, y0 - 0.4, y0 + 0.3, ang);
-            CForgeShape.Box(wood, cx, cz, 0.18, 0.18, y0 + 0.25, y0 + H, ang);
-            CForgeTowerGen.Strut(wood, V(0, 0, y0 + H - 0.1), V(0.9, 0, y0 + H - 0.1), 0.09);
-            CForgeTowerGen.Strut(wood, V(0, 0, y0 + H - 0.7), V(0.75, 0, y0 + H - 0.12), 0.07);
-            const q = P(0.9, 0), yt = y0 + H - 0.3, tall = c == C.Japan ? 1.25 : 1;
-            CForgeTowerGen.Strut(iron, V(0.9, 0, y0 + H - 0.1), V(0.9, 0, yt), 0.025);
-            CForgeTowerGen.Lathe(paper, q[0], q[1], [[0.05, yt - 0.55 * tall], [0.2, yt - 0.47 * tall], [0.27, yt - 0.28 * tall], [0.2, yt - 0.09 * tall], [0.05, yt]], 14);
-            CForgeShape.Box(dark, q[0], q[1], 0.16, 0.16, yt - 0.58 * tall, yt - 0.55 * tall, ang);
-            CForgeShape.Box(dark, q[0], q[1], 0.16, 0.16, yt, yt + 0.04, ang);
-            if(red) CForgeTowerGen.Strut(gold, [q[0], yt - 0.58, q[1]], [q[0], yt - 0.9, q[1]], 0.03);
+            const kr = c == C.Korea, red = c == C.China, top = y0 + H, tall = c == C.Japan ? 1.25 : 1;
+            if(red) paperRgb = [0.82, 0.13, 0.08]; else if(c == C.Japan) paperRgb = [0.95, 0.93, 0.86]; else paperRgb = [0.78, 0.1, 0.1];
+            CForgeShape.Frustum(stone, cx, cz, 0.56, 0.56, 0.38, 0.38, y0 - 0.4, y0 + 0.3, ang);
+            CForgeShape.Box(wood, cx, cz, 0.18, 0.18, y0 + 0.3, top, ang);
+            CForgeShape.Box(dark, cx, cz, 0.24, 0.24, top - 0.06, top + 0.04, ang);
+            for(const s of F.twin ? [1, -1] : [1])
+            {
+                const q = P(0.9 * s, 0), yt = top - 0.34;
+                Strut(wood, V(0, 0, top - 0.1), V(0.9 * s, 0, top - 0.1), 0.09);
+                Strut(wood, V(0, 0, top - 0.7), V(0.75 * s, 0, top - 0.12), 0.07);
+                Strut(iron, V(0.9 * s, 0, top - 0.1), V(0.9 * s, 0, yt), 0.025);
+                Light(0.9 * s, 0, yt - 0.35, 5, Mix(rgb, paperRgb));
+                if(kr)
+                {
+                    CForgeShape.Box(lamp, q[0], q[1], 0.32, 0.32, yt - 0.04, yt, ang);
+                    CForgeShape.Box(paper, q[0], q[1], 0.26, 0.26, yt - 0.42, yt - 0.04, ang);
+                    CForgeShape.Box(blue, q[0], q[1], 0.26, 0.26, yt - 0.8, yt - 0.42, ang);
+                    CForgeShape.Box(gold, q[0], q[1], 0.285, 0.285, yt - 0.45, yt - 0.39, ang);
+                    CForgeShape.Box(gold, q[0], q[1], 0.285, 0.285, yt - 0.82, yt - 0.78, ang);
+                    CForgeShape.Box(lamp, q[0], q[1], 0.3, 0.3, yt - 0.86, yt - 0.82, ang);
+                    Strut(paper, [q[0], yt - 0.86, q[1]], [q[0], yt - 1.15, q[1]], 0.05);
+                    continue;
+                }
+                const h = 0.62 * tall, yb = yt - h;
+                Lathe(paper, q[0], q[1], [[0.1, yb], [0.19, yb + h * 0.12], [0.25, yb + h * 0.3], [0.27, yb + h * 0.5], [0.25, yb + h * 0.7], [0.19, yb + h * 0.88], [0.1, yt]], 14);
+                for(const [f, r] of [[0.3, 0.25], [0.5, 0.27], [0.7, 0.25]]) Lathe(red ? gold : dark, q[0], q[1], [[r + 0.008, yb + h * f - 0.012], [r + 0.008, yb + h * f + 0.012]], 14);
+                Lathe(lamp, q[0], q[1], [[0, yb - 0.05], [0.12, yb - 0.05], [0.12, yb + 0.01]], 12);
+                Lathe(lamp, q[0], q[1], [[0.12, yt - 0.01], [0.12, yt + 0.05], [0, yt + 0.05]], 12);
+                if(red)
+                {
+                    Strut(gold, [q[0], yb - 0.05, q[1]], [q[0], yb - 0.16, q[1]], 0.03);
+                    Lathe(gold, q[0], q[1], [[0.03, yb - 0.18], [0.045, yb - 0.14], [0.03, yb - 0.1]], 8);
+                    Lathe(paper, q[0], q[1], [[0.02, yb - 0.55], [0.06, yb - 0.45], [0.04, yb - 0.16]], 8);
+                }
+            }
         }
         else if(F.st == L.Stone)
         {
-            const kr = c == C.Korea, seg = kr ? 8 : 6, y1 = y0 + H * 0.45, y2 = y1 + H * 0.22, rw = kr ? 0.9 : 1.05;
-            CForgeTowerGen.Lathe(stone, cx, cz, [[0.4, y0 - 0.4], [0.36, y0 + 0.1], [0.2, y0 + 0.18], [0.0, y0 + 0.18]], seg);
-            CForgeTowerGen.Lathe(stone, cx, cz, [[0.11, y0 + 0.18], [0.11, y1 - 0.15], [0.19, y1 - 0.1], [0.19, y1]], seg);
-            CForgeShape.Frustum(stone, cx, cz, 0.62, 0.62, 0.5, 0.5, y1, y1 + 0.06, ang);
-            CForgeShape.Box(glow, cx, cz, 0.38, 0.38, y1 + 0.06, y2 - 0.04, ang);
+            const kr = c == C.Korea, seg = kr ? 8 : 6, y1 = y0 + H * 0.5, y2 = y1 + H * 0.2, rw = kr ? 0.58 : 0.66, rh = H * 0.18, ys = y0 + 0.34, sp = y1 - 0.22 - ys;
+            Lathe(stone, cx, cz, [[0.46, y0 - 0.4], [0.46, y0 + 0.06], [0.4, y0 + 0.12], [0.4, y0 + 0.2], [0.3, y0 + 0.26], [0.2, y0 + 0.3], [0.12, ys]], seg);
+            if(kr)
+                Lathe(stone, cx, cz, [[0.12, ys], [0.12, ys + sp * 0.2], [0.24, ys + sp * 0.35], [0.26, ys + sp * 0.5], [0.24, ys + sp * 0.65], [0.12, ys + sp * 0.8], [0.12, ys + sp]], seg);
+            else
+                Lathe(stone, cx, cz, [[0.12, ys], [0.12, ys + sp * 0.45], [0.15, ys + sp * 0.5], [0.15, ys + sp * 0.58], [0.12, ys + sp * 0.63], [0.12, ys + sp]], seg);
+            Lathe(stone, cx, cz, [[0.12, y1 - 0.22], [0.2, y1 - 0.18], [0.34, y1 - 0.12], [0.38, y1 - 0.06], [0.38, y1], [0, y1]], seg);
+            CForgeShape.Box(glow, cx, cz, 0.36, 0.36, y1, y2, ang);
+            Light(0, 0, (y1 + y2) * 0.5, 4.5);
             for(const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]])
             {
                 const k = P(a * 0.2, b * 0.2);
-                CForgeShape.Box(stone, k[0], k[1], 0.1, 0.1, y1 + 0.06, y2, ang);
+                CForgeShape.Box(stone, k[0], k[1], 0.11, 0.11, y1, y2, ang);
             }
-            CForgeShape.Frustum(stone, cx, cz, rw, rw, 0.16, 0.16, y2, y2 + H * 0.2, ang);
-            CForgeTowerGen.Lathe(stone, cx, cz, [[0.09, y2 + H * 0.2], [0.07, y2 + H * 0.2 + 0.1], [0.0, y2 + H * 0.2 + 0.24]], seg);
+            Lathe(stone, cx, cz, [[0, y2], [rw * 0.98, y2], [rw, y2 + 0.03], [rw * 0.9, y2 + 0.07], [rw * 0.7, y2 + rh * 0.35], [rw * 0.45, y2 + rh * 0.65], [rw * 0.25, y2 + rh * 0.9], [rw * 0.2, y2 + rh]], seg);
+            Lathe(stone, cx, cz, [[0.12, y2 + rh], [0.15, y2 + rh + 0.05], [0.12, y2 + rh + 0.1], [0.14, y2 + rh + 0.15], [0.07, y2 + rh + 0.25], [0, y2 + rh + 0.32]], seg);
         }
         else
         {
-            const top = y0 + H;
-            CForgeShape.Frustum(stone, cx, cz, 0.5, 0.5, 0.34, 0.34, y0 - 0.4, y0 + 0.4, ang);
-            CForgeShape.Box(stone, cx, cz, 0.28, 0.28, y0 + 0.4, y0 + H * 0.72, ang);
-            CForgeShape.Frustum(stone, cx, cz, 0.28, 0.28, 0.42, 0.42, y0 + H * 0.72, y0 + H * 0.72 + 0.12, ang);
-            CForgeTowerGen.Strut(iron, V(0, 0, y0 + H * 0.72 + 0.1), V(0.22, 0, top - 0.12), 0.05);
-            CForgeTowerGen.Strut(iron, V(0.22, 0, top - 0.12), V(0.7, 0, top - 0.1), 0.045);
-            const q = P(0.7, 0), yt = top - 0.2;
-            CForgeTowerGen.Strut(iron, V(0.7, 0, top - 0.1), V(0.7, 0, yt), 0.02);
-            CForgeTowerGen.Lathe(gold, q[0], q[1], [[0.02, yt - 0.58], [0.11, yt - 0.5], [0.12, yt - 0.46]], 8);
-            CForgeTowerGen.Lathe(glow, q[0], q[1], [[0.0, yt - 0.47], [0.13, yt - 0.4], [0.17, yt - 0.26], [0.12, yt - 0.12], [0.0, yt - 0.08]], 8);
-            CForgeTowerGen.Lathe(gold, q[0], q[1], [[0.12, yt - 0.1], [0.09, yt - 0.06], [0.04, yt - 0.02], [0.0, yt + 0.1]], 8);
-            CForgeTowerGen.Lathe(gold, q[0], q[1], [[0.17, yt - 0.28], [0.18, yt - 0.26], [0.17, yt - 0.24]], 8);
+            const top = y0 + H, yc = y0 + H * 0.72, dy = top - yc, yb = top - 1.4, q = P(0.72, 0);
+            CForgeShape.Frustum(stone, cx, cz, 0.6, 0.6, 0.5, 0.5, y0 - 0.4, y0 + 0.3, ang);
+            Lathe(stone, cx, cz, [[0.24, y0 + 0.3], [0.2, y0 + 0.42], [0.17, y0 + 0.55], [0.15, y0 + 0.7], [0.15, yc - 0.15], [0.2, yc - 0.1], [0.26, yc - 0.04], [0.26, yc + 0.04], [0, yc + 0.04]], 8);
+            Strut(iron, V(0, 0, yc + 0.04), V(0.06, 0, yc + dy * 0.55), 0.06);
+            Strut(iron, V(0.06, 0, yc + dy * 0.55), V(0.35, 0, top - 0.04), 0.05);
+            Strut(iron, V(0.35, 0, top - 0.04), V(0.72, 0, top + 0.04), 0.045);
+            Strut(iron, V(0.72, 0, top + 0.04), V(0.72, 0, yb + 1.14), 0.02);
+            Lathe(gold, q[0], q[1], [[0, yb - 0.12], [0.035, yb - 0.06], [0.05, yb], [0.09, yb + 0.06], [0.2, yb + 0.2]], 6);
+            Lathe(glow, q[0], q[1], [[0, yb + 0.2], [0.2, yb + 0.2], [0.2, yb + 0.62], [0, yb + 0.62]], 6);
+            Light(0.72, 0, yb + 0.4, 5);
+            Hex(gold, q, 0.21, yb + 0.2, 0.21, yb + 0.62, 0.035);
+            Lathe(gold, q[0], q[1], [[0.2, yb + 0.19], [0.235, yb + 0.2], [0.235, yb + 0.25], [0.2, yb + 0.25]], 6);
+            Lathe(gold, q[0], q[1], [[0.2, yb + 0.57], [0.235, yb + 0.57], [0.235, yb + 0.62], [0.2, yb + 0.63]], 6);
+            Lathe(gold, q[0], q[1], [[0.235, yb + 0.62], [0.24, yb + 0.66], [0.17, yb + 0.72], [0.18, yb + 0.76], [0.1, yb + 0.88], [0.12, yb + 0.9], [0.08, yb + 0.96], [0.035, yb + 1.05], [0, yb + 1.14]], 6);
         }
 
         const parts : IForgePart[] = [
             { buf : stone, rgb : T.mStone, tex : stoneTex }, { buf : wood, rgb : T.mWood, tex : CForgeTex.sWood }, { buf : iron, rgb : T.mIron },
-            { buf : glow, rgb : [1.0, 0.82, 0.45] }, { buf : paper, rgb : paperRgb }, { buf : gold, rgb : T.mGold }, { buf : dark, rgb : T.mDark },
+            //등 안에 있는 점광원의 그림자를 가리지 않게, 불빛을 감싼 부품은 그림자를 드리우지 않는다(받기만 한다)
+            { buf : lamp, rgb : T.mIron, noShadow : true }, { buf : glow, rgb : glowAlb, glow : true, emit : rgb, noShadow : true }, { buf : paper, rgb : paperRgb, glow : true, emit : rgb, noShadow : true },
+            { buf : gold, rgb : T.mGold, noShadow : true }, { buf : dark, rgb : T.mDark }, { buf : blue, rgb : [0.1, 0.24, 0.6], noShadow : true },
         ];
-        return parts.filter(_p => _p.buf.mIdx.length > 0);
+        for(const l of lights) parts.push({ buf : new CForgeMeshBuf(), rgb : [1, 1, 1], light : l });
+        for(const f of fires) parts.push({ buf : new CForgeMeshBuf(), rgb : [1, 1, 1], fire : f });
+        return parts.filter(_p => _p.buf.mIdx.length > 0 || _p.fire != null || _p.light != null);
     }
 
     private static Stock(_R : CForgeRand, _P : (_a : number, _b : number) => ForgeV2, _y : number, _a : number, _b0 : number, _b1 : number, _n : number, _sack : CForgeMeshBuf, _pot : CForgeMeshBuf, _wood : CForgeMeshBuf)
@@ -762,7 +877,7 @@ export class CForgeStreetGen
             { buf : wood, rgb : woodRgb, tex : CForgeTex.sWood }, { buf : deck, rgb : st == S.Norse ? [0.63, 0.36, 0.17] : T.mFenceWood, tex : CForgeTex.sPlank },
             { buf : plaster, rgb : plasterRgb, tex : CForgeTex.sPlaster }, { buf : stone, rgb : stoneRgb, tex : stoneTex }, { buf : brick, rgb : T.mBrick, tex : CForgeTex.sBrickWall },
             { buf : roof, rgb : roofRgb, tex : roofTex }, { buf : turf, rgb : T.mTurf[0], tex : CForgeTex.sTurf }, { buf : lat, rgb : [0.2, 0.15, 0.12], tex : CForgeTex.sWood },
-            { buf : reed, rgb : reedRgb, tex : CForgeTex.sThatch }, { buf : glass, rgb : [0.5, 0.58, 0.72], tex : CForgeTex.sGlass },
+            { buf : reed, rgb : reedRgb, tex : CForgeTex.sThatch }, { buf : glass, rgb : [0.5, 0.58, 0.72], tex : CForgeTex.sGlass, glow : true },
             { buf : iron, rgb : T.mIron }, { buf : gold, rgb : T.mGold }, { buf : dark, rgb : T.mDark }, { buf : paint, rgb : st == S.Front ? [0.12, 0.3, 0.32] : paintRgb },
             { buf : trim, rgb : st == S.Souk ? [0.62, 0.55, 0.42] : [0.92, 0.9, 0.85] }, { buf : sack, rgb : [0.72, 0.62, 0.45] }, { buf : pot, rgb : [0.62, 0.38, 0.26] },
             ...t.map((_b, _i) => ({ buf : _b, rgb : pal[_i] })),

@@ -31,12 +31,13 @@ export class CGeometryInfo {
                 this.mOctree.mStaticUpdate = false;
             this.mOctree.Build();
             if (i < count - 1)
-                this.mOctree.mStaticUpdate = su;
+                this.mOctree.mStaticUpdate = su || this.mOctree.mStaticUpdate;
         }
         this.mFixedComp.Clear();
     }
 }
 export class CGeometryComp extends CComponent {
+    Icon() { return "bi bi-bounding-box"; }
     constructor() {
         super();
         this.mSysc = CComponent.eSysn.CamComp;

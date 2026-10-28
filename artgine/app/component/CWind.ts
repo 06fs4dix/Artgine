@@ -49,10 +49,7 @@ export class CWind extends CBrushComp
         this.mWaveLength=_w;
     }
 
-    Icon()
-    {
-        return "bi bi-wind";
-    }
+    override Icon(){ return "bi bi-wind"; }
 
     override Update(_update : CUpdate) : boolean
 	{

@@ -32,7 +32,7 @@ export class CAniFlow extends CComponent
 		this.mPaintOff=0;
 		this.SetAni(_ani);
 	}
-	override Icon(){		return "bi bi-recycle";	}
+	override Icon(){ return "bi bi-play-circle"; }
 	SetInter(_max)
 	{
 		this.mInterMax=_max;
@@ -65,11 +65,11 @@ export class CAniFlow extends CComponent
 			_state.push("/aniFlow/"+this.mAni.Key()+(this.IsEnd()?"Stop":"Play"));
 	}
 	SetAni();
-	SetAni(_ani : string);
-	SetAni(_ani : CBlackBoardRef<CAnimation>);
-	SetAni(_ani : CAnimation);
-	SetAni(_ani : string|CAnimation);
-	SetAni(_ani=null,_key=null)
+	SetAni(_ani : string,_key? : string,_reset? : boolean);
+	SetAni(_ani : CBlackBoardRef<CAnimation>,_key? : string,_reset? : boolean);
+	SetAni(_ani : CAnimation,_key? : string,_reset? : boolean);
+	SetAni(_ani : string|CAnimation,_key? : string,_reset? : boolean);
+	SetAni(_ani=null,_key=null,_reset=false)
 	{
 		if(_key!=null)
 		{
@@ -87,7 +87,7 @@ export class CAniFlow extends CComponent
 		}
 		else if(_ani!=null)
 		{
-			if(this.mAni==_ani)	return;
+			if(this.mAni==_ani && !_reset)	return;
 			this.mAni=_ani;
 		}
 		

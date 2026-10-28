@@ -46,6 +46,10 @@ export class CCamera extends CObject
 {
 	//public m_offset : number;
 	public mEye : CVec3;
+	// Init()은 mEye를 즉시 바꾸지만 mViewMat/mFrustum은 다음 Update의 Reset에서야 갱신된다.
+	// 그림자 상수항(CLight)과 camPos(CCanvas)가 GetEye()를 서로 다른 시점에 읽으면 프레임 하나만큼 어긋나 빠른 카메라 이동에서 그림자가 뒤처진다.
+	// 그래서 행렬을 실제로 만든 시점의 eye를 따로 보관하고 두 곳이 이 값을 쓴다
+	public mViewEye : CVec3;
 	public mLook : CVec3;
 	public mUp : CVec3;
 	public mView : CVec3;
@@ -95,6 +99,7 @@ export class CCamera extends CObject
 
 		this.mEye=new CVec3(0,0,0);
 		this.mEye.NewWASM();
+		this.mViewEye=new CVec3(0,0,0);
 		this.mLook=new CVec3();
 		this.mUp=new CVec3(0,1,0);
 		this.mView=new CVec3();
@@ -124,7 +129,7 @@ export class CCamera extends CObject
 			"mViewMat", "mProjMat", "mPF",
 			"mPlane", "mUpdateMat", "mViewMatComp", "mReset","mBillboardMat",
 			"mShakeMagnitude", "mShakeDuration", "mShakeDamping", "mShakeDistance",
-			"mRCS","mShadow","mFrustum"
+			"mRCS","mShadow","mFrustum","mViewEye"
 		];
 		if(should.indexOf(_member) != -1) 
 			return false;
@@ -170,6 +175,7 @@ export class CCamera extends CObject
 		return this.mViewPort;	
 	}
 	GetEye()	{	return this.mEye;	}
+	GetViewEye()	{	return this.mViewEye;	}
 	GetLook()	{	return this.mLook;	}
 	GetUp()	{	return this.mUp;	}
 	GetView()	: CVec3 {	return this.mView;	}
@@ -282,6 +288,7 @@ export class CCamera extends CObject
 		this.mOrthographic=false;
         CMath.MatMul(this.mViewMat, this.mProjMat, this.mVPMat);
 		this.ViewAndCrossVector3Set();
+		this.mViewEye.Import(this.mEye);
 		this.BillboardSet();
 		this.PlaneSet();
 		this.mReset=false;
@@ -365,6 +372,7 @@ export class CCamera extends CObject
 		this.mOrthographic=true;
         CMath.MatMul(this.mViewMat, this.mProjMat, this.mVPMat);
 		this.ViewAndCrossVector3Set();
+		this.mViewEye.Import(this.mEye);
 		this.BillboardSet();
 		this.PlaneSet();
 		this.mReset=true;

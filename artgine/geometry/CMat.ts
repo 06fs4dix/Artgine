@@ -3,7 +3,6 @@ import {CObject} from "../basic/CObject.js";
 import {CVec3} from "../geometry/CVec3.js"
 import {CVec4} from "../geometry/CVec4.js"
 import {CFloat32} from "./CFloat32.js";
-
 export interface IMat
 {
 	GetMat()	: CMat;
@@ -169,11 +168,6 @@ export class CMat extends CFloat32
 		this.mUnit=_target["mUnit"];
 	}
 
-	override NewWASM(): void {
-		super.NewWASM();
-		this.mUnit=false;
-		this.Unit();
-	}
 	override F32A()	: Float32Array
 	{
 

@@ -124,7 +124,11 @@ export class CLight extends CBrushComp {
             this.PushRPAuto(srp);
         }
         const frustumCull = (this.mShadowCullFrustum || this.mLightCullFrustum) && this.IsPointLight() && this.IsFrustumCull();
-        this.mLightCull = this.mLightCullFrustum && frustumCull;
+        const lightCull = this.mLightCullFrustum && frustumCull;
+        if (lightCull != this.mLightCull) {
+            this.mBrush.mUpdateLight = CUpdate.eType.Updated;
+            this.mLightCull = lightCull;
+        }
         if (this.mTexKey != null) {
             this.mShadowOff = this.mColor.IsZero();
             if (!this.mShadowOff) {
@@ -223,8 +227,6 @@ export class CLight extends CBrushComp {
                             srp = rp.Export();
                             srp.mPriority -= i + this.mBrush.mShadowTexOff;
                             srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(SDF.eShadow.Near + i, this.mBrush.mShadowCount, 1)));
-                            srp.mTag.add("PointLightShadowV");
-                            srp.mTag.add("PointLightShadowF");
                             srp.PushAnd(new CCondition("mCullMask.x", "&", this.mCullMask.x));
                             this.mBrush.PushAutoRP(srpKey, srp);
                         }
@@ -378,7 +380,7 @@ export class CLight extends CBrushComp {
                 cascadeNear = cascadeFar;
                 casIdx++;
             }
-            const eye = cam3D.GetEye();
+            const eye = cam3D.GetViewEye();
             const PVMat = CPoolGeo.ProductMat();
             for (let i = 0; i < activeCascades.length; ++i) {
                 const { slot, scam, zOffset } = activeCascades[i];

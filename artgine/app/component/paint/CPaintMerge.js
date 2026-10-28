@@ -4,6 +4,7 @@ import { CMeshDataNode } from "../../../render/CMeshDataNode.js";
 import { CVertexFormat } from "../../../render/CShader.js";
 import { CPaint } from "./CPaint.js";
 export class CPaintMerge extends CPaint {
+    Icon() { return "bi bi-collection"; }
     static sRangeGap = 64;
     static sRangeMax = 16;
     mMeshDataNode = new CMeshDataNode();
@@ -215,6 +216,17 @@ export class CPaintMerge extends CPaint {
         this.mUseCount++;
         return slot;
     }
+    ReserveSlot(_key, _count) {
+        const v = this.SlotVertex(_key);
+        const need = this.mVtxEnd + v * _count;
+        if (need <= this.mVtxCap)
+            return;
+        this.mPatKey = _key;
+        this.mPatV = v;
+        this.ReserveVertex(need);
+        this.Prefill();
+        this.Restructure();
+    }
     SetSlotMat(_slot, _mat) {
         this.mSlotMat.set(_mat.mF32A, _slot * 16);
     }
@@ -273,7 +285,7 @@ export class CPaintMerge extends CPaint {
         }
         if (change) {
             this.mBW.mRadian = 0;
-            this.UpdateLMat();
+            this.UpdateFMat();
         }
     }
     AddPos(_vs, _vc, _dx, _dy, _dz) {
@@ -304,42 +316,7 @@ export class CPaintMerge extends CPaint {
             b[o + 2] = (nx * ty - ny * tx) * tw;
         }
     }
-    Render(_vf) {
-        var barr = this.RenderBatch(_vf, 1);
-        if (barr == null)
-            return;
-        this.mBatchValid = true;
-        if (this.mSlotReady == false || this.mUseCount == 0)
-            return;
-        if (this.mPrefillDirty)
-            this.Prefill();
-        if (this.mPendCount > 0)
-            this.Seal();
-        const frame = this.mOwner.GetFrame();
-        frame.BMgr().BatchOn();
-        this.Common(_vf);
-        this.RenderAttr(_vf);
-        frame.BMgr().SetBatchTex(this.mTextureKey);
-        const key = this.DrawMeshKey();
-        const resKey = key + _vf.ObjHash();
-        let dm = frame.Res().Find(resKey);
-        if (dm == null) {
-            this.mMeshDataNode.ci.bound.Import(this.mBound);
-            dm = this.GetDrawMesh(key, _vf, this.mMeshDataNode.ci);
-            this.mDMKey.add(resKey);
-        }
-        else {
-            const gen = this.mShaderGen.get(_vf);
-            if (gen == null || gen < this.mGen - 1)
-                frame.Ren().BuildMeshDrawNode(dm, this.mMeshDataNode.ci, _vf);
-            else if (gen == this.mGen - 1)
-                this.Upload(dm, _vf);
-        }
-        this.mShaderGen.set(_vf, this.mGen);
-        dm.iNum = this.mIdxEnd;
-        frame.BMgr().SetBatchMesh(dm);
-        barr[0] = frame.BMgr().BatchOff();
-    }
+    Render(_vf) { }
     Destroy() {
         this.ReleaseDrawMesh();
         super.Destroy();
@@ -533,3 +510,5 @@ export class CPaintMerge extends CPaint {
         this.mPrefillDirty = false;
     }
 }
+import CPaintMerge_imple from "../../../app_imple/component/paint/CPaintMerge.js";
+CPaintMerge_imple();

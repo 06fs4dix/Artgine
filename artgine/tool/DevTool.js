@@ -13,6 +13,7 @@ import { CWebView } from "../system/CWebView.js";
 import { CBase64File } from "../util/CBase64File.js";
 import { CLoaderOption } from "../util/CLoader.js";
 import { CMesh } from "../render/CMesh.js";
+import { CUtilRender } from "../render/CUtilRender.js";
 import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../util/CCamCon.js";
 import { CTexture } from "../render/CTexture.js";
 import { CMeshDrawNode } from "../render/CMeshDrawNode.js";
@@ -823,7 +824,8 @@ function DevToolDrop(_drop) {
         }
         else if (_drop.mObject instanceof CMesh) {
             newSub = new CSubject();
-            newSub.PushComp(new CPaint3D(_drop.mObject.Key(), true, 100));
+            CUtilRender.MeshNormalize(_drop.mObject, true, 100);
+            newSub.PushComp(new CPaint3D(_drop.mObject.Key()));
         }
         else if (_drop.mObject instanceof CTexture) {
             newSub = new CSubject();
@@ -1875,6 +1877,16 @@ function LeftSelect(_obj) {
 function LeftNewItem(_obj) {
     gLeftItem.set(_obj.ObjHash(), _obj);
     const collapseId = `${_obj.ObjHash()}_collapse`;
+    let compIcon = "";
+    if (_obj instanceof CSubject) {
+        const compMap = new Map();
+        for (const comp of _obj.mComArr) {
+            if (!compMap.has(comp.constructor) && comp.Icon() != "")
+                compMap.set(comp.constructor, comp.Icon());
+        }
+        for (const [type, icon] of compMap)
+            compIcon += `<i class="bi ${icon} ms-1 text-secondary" title="${type.name}"></i>`;
+    }
     let str = `<li id='${_obj.ObjHash()}_li'>
         <div class="card p-0">
             <div class="card-body p-0 d-flex overflow-hidden white-space-nowrap cursor-pointer">
@@ -1884,6 +1896,7 @@ function LeftNewItem(_obj) {
                 <div class="d-flex align-items-center">
                 <i class="bi ${_obj.Icon()} me-1"></i>
                 <div>${_obj.Key()}</div>
+                ${compIcon}
                 <div class="ms-1" id='${_obj.ObjHash()}_count'></div>
                 </div>
             </div>

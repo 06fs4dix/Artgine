@@ -35,25 +35,38 @@ export class CCollider extends CGeometryComp {
     mPaintLoad = null;
     mBound = new CBound;
     mLayer = "";
-    mPickRay = new Set();
+    static EmptySet = new Set();
+    mPickRay = CCollider.EmptySet;
     mCameraOut = null;
     mCameraOutLast = false;
-    mCollision = new Set();
-    mPushVec = new CVec3();
+    mCollision = CCollider.EmptySet;
+    _pushVec = null;
+    get mPushVec() { return this._pushVec ??= new CVec3(); }
+    set mPushVec(_v) { this._pushVec = _v; }
     mStairs = false;
     mEvent = CCollider.eEvent.Collision;
-    mOneWayDir = new CVec3();
+    mOneWayDir = null;
     mOneWayArc = -1;
-    mGJK = new CGJK_EPA();
+    _gjk = null;
+    get mGJK() { return this._gjk ??= new CGJK_EPA(); }
+    set mGJK(_v) { this._gjk = _v; }
     mBW = new CBoundWorldCollider();
     m2D;
     mUpdateMat = CUpdate.eType.Updated;
-    mColTarget = new CArray();
-    mColPush = new CArray();
-    mColPair = new Map();
-    mSleep = new CSleep();
+    _colTarget = null;
+    get mColTarget() { return this._colTarget ??= new CArray(); }
+    set mColTarget(_v) { this._colTarget = _v; }
+    _colPush = null;
+    get mColPush() { return this._colPush ??= new CArray(); }
+    set mColPush(_v) { this._colPush = _v; }
+    _colPair = null;
+    get mColPair() { return this._colPair ??= new Map(); }
+    set mColPair(_v) { this._colPair = _v; }
+    mSleep = null;
     mCycleSkip = false;
-    GetSleep() { return this.mSleep; }
+    GetSleep() { return this.mSleep ??= new CSleep(); }
+    mStaticInc = false;
+    mIncPend = true;
     constructor(_paint = null, _rb = null, _2d = false) {
         super();
         this.mRB = _rb;
@@ -73,8 +86,11 @@ export class CCollider extends CGeometryComp {
     RegistHeap(_F32A) {
     }
     EditForm(_pointer, _body, _input) {
-        if (_pointer.member == "mCollision" || _pointer.member == "mGI")
+        if (_pointer.member == "mCollision" || _pointer.member == "mGI") {
+            if (this.mCollision === CCollider.EmptySet)
+                this.mCollision = new Set();
             CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [""]);
+        }
         else if (_pointer.member == "mCameraOut")
             CUtilObj.NullEdit(_pointer, _body, _input, "");
     }
@@ -102,7 +118,9 @@ export class CCollider extends CGeometryComp {
             _member == "mPushVec" || _member == "mGI" || _member == "mBW" ||
             _member == "mColTarget" || _member == "mColPush" || _member == "mColPair" ||
             _member == "mOneWayMap" || _member == "mRB" || _member == "mCameraOutLast" ||
-            _member == "mCycleSkip")
+            _member == "mCycleSkip" || _member == "mStaticInc" || _member == "mIncPend" ||
+            _member == "_gjk" || _member == "_pushVec" || _member == "_colTarget" || _member == "_colPush" ||
+            _member == "_colPair" || _member == "_oneWayMap")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -145,7 +163,11 @@ export class CCollider extends CGeometryComp {
                 this.mGI.mFixedComp.Push(this);
             }
         }
-        if (this.mEvent == CCollider.eEvent.Static && (this.GetOwner().mUpdateMat != CUpdate.eType.Not || this.mUpdateMat != CUpdate.eType.Not)) {
+        if (this.mEvent == CCollider.eEvent.Static && this.mStaticInc) {
+            if (this.mIncPend && this.mGI != null)
+                this.IncApply();
+        }
+        else if (this.mEvent == CCollider.eEvent.Static && (this.GetOwner().mUpdateMat != CUpdate.eType.Not || this.mUpdateMat != CUpdate.eType.Not)) {
             if (this.mGI.mOctree.mStaticBuild == false) {
                 this.mGI.mOctree.mStaticUpdate = true;
                 this.mBW.Init(this.mBound, this.mOwner.GetMat());
@@ -156,6 +178,27 @@ export class CCollider extends CGeometryComp {
             this.mBW.Init(this.mBound, this.mOwner.GetMat());
             this.mBW.UpdateMat(this.mOwner.GetMat());
         }
+    }
+    IncApply() {
+        this.mIncPend = false;
+        const oc = this.mGI.mOctree;
+        if (oc.mStaticUpdate || oc.mStaticBuild)
+            return;
+        this.mBW.Init(this.mBound, this.mOwner.GetMat());
+        this.mBW.UpdateMat(this.mOwner.GetMat());
+        this.mUpdateMat = CUpdate.eType.Not;
+        if (this.IsEnable() && this.mLayer != "" && this.GetOwner().IsEnable())
+            oc.StaticInsert(this.mBW.mPos, this.mBW.mSize, this, this.mBW.mWBound.mMin, this.mBW.mWBound.mMax);
+        else
+            oc.StaticRemove(this);
+    }
+    IncOff() {
+        this.mLayer = "";
+        this.mIncPend = false;
+        this.mUpdateMat = CUpdate.eType.Not;
+        this.SetEnable(false);
+        if (this.mGI != null)
+            this.mGI.mOctree.StaticRemove(this);
     }
     BuildGI() {
         this.UpdateMat();
@@ -228,6 +271,12 @@ export class CCollider extends CGeometryComp {
         this.mEvent = _event;
     }
     SetLayer(_key) {
+        if (this.mStaticInc) {
+            if (this.mLayer != _key)
+                this.mIncPend = true;
+            this.mLayer = _key;
+            return;
+        }
         this.mLayer = _key;
         this.mUpdateMat = CUpdate.eType.Updated;
     }
@@ -241,6 +290,8 @@ export class CCollider extends CGeometryComp {
         this.mBW.mBound.SetType(_type);
     }
     PushCollisionLayer(_val) {
+        if (this.mCollision === CCollider.EmptySet)
+            this.mCollision = new Set();
         if (typeof _val == "string")
             this.mCollision.add(_val);
         else {
@@ -252,9 +303,11 @@ export class CCollider extends CGeometryComp {
     ClearCollisionLayer() {
         this.mCollision = new Set();
     }
-    SetPickMouse(_val) { this.mPickRay.add(""); }
+    SetPickMouse(_val) { this.PushPickRay(""); }
     SetCameraOut(_val) { this.mCameraOut = ""; }
     PushPickRay(_val) {
+        if (this.mPickRay === CCollider.EmptySet)
+            this.mPickRay = new Set();
         this.mPickRay.add(_val);
     }
     UpdateMat() {
@@ -373,7 +426,9 @@ export class CCollider extends CGeometryComp {
     mFriction = CPhysics.SurfaceFriction;
     mBounce = CPhysics.SurfaceBounce;
     mRB = null;
-    mOneWayMap = new Map();
+    _oneWayMap = null;
+    get mOneWayMap() { return this._oneWayMap ??= new Map(); }
+    set mOneWayMap(_v) { this._oneWayMap = _v; }
     SetPushRate(_rate = 0.5) { this.mPushRate = _rate; }
     GetPushRate() { return this.mPushRate; }
     GetRB() {

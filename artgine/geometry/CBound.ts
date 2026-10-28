@@ -28,8 +28,7 @@ export class CBound extends CObject
 	NewWASM()
 	{
 		this.mMin.NewWASM();
-		this.mMax.NewWASM();
-	}
+		this.mMax.NewWASM();	}
 	DeleteWASM()
 	{
 		this.mMin.ReleaseWASM();

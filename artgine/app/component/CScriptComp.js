@@ -12,5 +12,5 @@ export class CScriptComp extends CComponent {
         this.mScript.mGitHub = this.GetOwner().GetFrame().PF().mGitHub;
         this.mScript.Exe(this.GetOwner());
     }
-    Icon() { return "bi bi-pc"; }
+    Icon() { return "bi bi-code-slash"; }
 }

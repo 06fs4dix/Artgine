@@ -1,8 +1,8 @@
 import { AlphaModalFun, ColorModalFun, UnpackRGToGray } from "./ColorFun";
-import { ambientColor, envCount, envPos, EnvNearest, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, cullMask, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envCount, envPos, EnvNearest, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, cullMask, sam2DCount, samCubeCount, emission, envmapOn, emissiveIntensity } from "./Light";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
 import { SDF } from "./SDF";
-import { Build, CVec2, CVec3, CVec4, Sam2DToColor, V4MulMatCoordi, Sam2DSize, Sam2DArrNearestToV4, Sam2DArrTileToColor, Sam2DArrTileToNormal, Null, CMat3, screenPos, FloatToInt, IntToFloat, SaturateFloat, MappingTexToV3, max, mix, step, smoothstep, floor, sqrt, clamp, V2MulV2, V2DivV2, V2SubV2, V2AddV2, V2MulFloat, V2Abs, V2Floor, V3AddV3, V3Dot, V3Nor, V3SubV3, V3Mix, V3MulFloat, V3MulV3, V4Mix, BranchBegin, BranchEnd, BranchDefault, discard, V2Len, Attribute, SaturateV3, abs, V3Len, min, V2Mix, V2Fract, V4AddV4, V4MulFloat, V3Sqrt, sin, } from "./Shader";
+import { Build, CVec2, CVec3, CVec4, Sam2DToColor, V4MulMatCoordi, Sam2DSize, Sam2DArrTileToColor, Sam2DArrTileToNormal, Null, CMat3, screenPos, FloatToInt, IntToFloat, SaturateFloat, MappingTexToV3, max, mix, step, smoothstep, floor, sqrt, clamp, V2MulV2, V2DivV2, V2SubV2, V2AddV2, V2MulFloat, V2Abs, V2Floor, V3AddV3, V3Dot, V3Nor, V3SubV3, V3Mix, V3MulFloat, V3MulV3, V4Mix, BranchBegin, BranchEnd, BranchDefault, discard, V2Len, Attribute, SaturateV3, abs, V3Len, min, V2Mix, V2Fract, V4AddV4, V4MulFloat, V3Sqrt, sin, } from "./Shader";
 import { bias, CalcShadow, jitter, normalBias, PCF, shadowCount, shadowOn, shadowRate, shadowWrite, texture16f, shadowZOffset, shadowCas0VPMatWithZRow, shadowCas1VPMatWithZRow, shadowCas2VPMatWithZRow, shadowCas3VPMatWithZRow, shadowCas4VPMatWithZRow, shadowCas5VPMatWithZRow, shadowInfoList, PCFStep } from "./Shadow";
 import { exposure, Tonemap, tonemappingType } from "./ToneMapping";
 var worldMat = Null();
@@ -331,7 +331,7 @@ function ps_main() {
     BranchDefault();
     lmaterial = SplatMaterialConst(splatBlend);
     BranchEnd();
-    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, cullMask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envCount, envPos, sam2DCount, samCubeCount]);
+    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, emission, emissiveIntensity, cullMask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, , envmapOn, envCount, envPos, sam2DCount, samCubeCount]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
     normal = MappingTexToV3(V3Nor(SampleSplatmapNormal(splatBlend, to_uv, 8.0).xyz));
@@ -340,7 +340,7 @@ function ps_main() {
     sunDir = dseMat[0];
     sunCol = dseMat[1];
     waterLit = V3Sqrt(SaturateV3(V3AddV3(ambientColor, sunCol)));
-    dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
+    dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, lmaterial.w, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
     L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
     BranchDefault();
     if (shadow.r > -0.5) {
@@ -395,26 +395,13 @@ function vs_main_shadow_write(f3_ver) {
     worldPos.z = clamp(worldPos.z, terrainMin.z, terrainMax.z);
     var viewPos = V4MulMatCoordi(worldPos, viewMat);
     out_position = V4MulMatCoordi(viewPos, projectMat);
-    BranchBegin("PointLightShadowV", "PLSV", []);
-    to_viewPos = worldPos;
-    BranchDefault();
     to_viewPos = viewPos;
-    BranchEnd();
     out_position.z = min(out_position.z, out_position.w);
 }
 function ps_main_shadow_write() {
-    var shadowInfo;
-    var lDir;
-    BranchBegin("PointLightShadowF", "PLSF", [ligDir]);
-    shadowInfo = Sam2DArrNearestToV4(shadowInfoList, shadowWrite.y * 4.0);
-    lDir = Sam2DArrNearestToV4(ligDir, shadowInfo.x);
-    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowInfo.z) / (shadowInfo.w - shadowInfo.z);
-    out_color.a = 1.0;
-    BranchDefault();
     out_color = to_viewPos;
     out_color.z += shadowZOffset;
     out_color.a = 1.0;
-    BranchEnd();
 }
 function vs_main_shadow_read(f3_ver) {
     var heightmapSize = Sam2DSize(heightSampler2D);
@@ -454,6 +441,7 @@ function vs_main_shadow_read(f3_ver) {
     out_position = V4MulMatCoordi(to_viewPos, projectMat);
 }
 function ps_main_shadow_read() {
+    var sv;
     var outputIndex;
     var all = new CVec4(1.0, 1.0, 1.0, 1.0);
     BranchBegin("shadowMulti", "SDM", []);
@@ -462,10 +450,10 @@ function ps_main_shadow_read() {
     for (var i = 0; i < SDF.TexSizeMax; ++i) {
         if (i >= FloatToInt(shadowCount))
             break;
-        all[FloatToInt(outputIndex)] += CalcShadow(IntToFloat(i), to_normal, to_worldPos, camPos, to_viewPos.xyz);
+        sv = CalcShadow(IntToFloat(i), to_normal, to_worldPos, camPos, to_viewPos.xyz);
+        all[FloatToInt(outputIndex)] = i > 3 ? min(all.a, sv) : sv;
         outputIndex = min(outputIndex + 1.0, 3.0);
     }
-    all.a /= max(shadowCount - 3.0, 1.0);
     BranchDefault();
     all.r = CalcShadow(0.0, to_normal, to_worldPos, camPos, to_viewPos.xyz);
     all.rgb = new CVec3(all.r, all.r, all.r);

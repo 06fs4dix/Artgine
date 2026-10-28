@@ -7,8 +7,8 @@
 - ./
 
 ### ⚠️ 두 디렉토리가 다를 수 있음 (필독)
-값이 다를 수 있다 (예: 작업 디렉토리가 Artgine과 무관한 별도 리포인 경우). `ai/tool/`의 모든 도구(`tsc_check.js`/`c_cpp_check.js`/`asc_check.js`/`browser.js`/`work.js` 등)는 **작업 디렉토리가 아니라 항상 "아티젠 디렉토리" 절대경로에만 있는 공용 도구**이며, 어떤 프로젝트 파일을 검사하든 동일하게 사용한다.
-**자주 하는 실수**: 작업 디렉토리에 `ai/`가 없다고 "이 프로젝트엔 빌드 체크 도구가 없다"고 단정하지 말 것 — 아티젠 디렉토리 쪽을 확인한다. 아래 빌드 체크 명령은 항상 아티젠 디렉토리로 `cd`한 뒤 대상 파일을 절대경로로 지정해 실행한다(cwd = 아티젠 디렉토리라고 가정 금지).
+값이 다를 수 있다 (예: 작업 디렉토리가 Artgine과 무관한 별도 리포인 경우). `ai/tool/`의 모든 도구(`tsc_check.js`/`c_cpp_check.js`/`asc_check.js`/`browser.js`/`work.js` 등)는 공용 도구이며, 어떤 프로젝트 파일을 검사하든 동일하게 사용한다. 작업 디렉토리와 아티젠 디렉토리 **둘 다 `ai/` 폴더가 있을 수 있다.**
+**실행 위치 규칙**: 작업 디렉토리에 `ai/tool/`이 있으면 `cd` 없이 작업 디렉토리에서 그대로 실행한다. **작업 디렉토리에 `ai/tool/`이 없을 때만** 아티젠 디렉토리로 `cd`한 뒤 실행한다. 비밀번호 등 `settings.json`은 cwd 기준으로 먼저 읽히므로, 서버가 쓰는 `settings.json`이 있는 작업 디렉토리에서 실행하는 것이 우선이다. 작업 디렉토리에 `ai/`가 없다고 "도구가 없다"고 단정하지 말고 아티젠 디렉토리 쪽을 확인한다. 대상 파일은 절대경로로 지정한다.
 
 ## 메모리 저장 규칙 (Memory Storage Rules)
 - 메모리 정보 저장 전 사용자 승인 필수.
@@ -19,17 +19,17 @@
 ## TS 타입 체크 규칙 - 필수 (TS Type Check Rules - Required)
 `.ts` 수정 후 완료 보고 전 반드시 실행한다.
 ```bash
-cd "<아티젠 디렉토리 절대경로>" && node ai/tool/tsc_check.js <파일A> <파일B>
+node ai/tool/tsc_check.js <파일A> <파일B>
 ```
 
 ## C/C++ 빌드 체크 규칙 - 필수 (C/C++ Build Check Rules - Required)
 `.c`/`.cpp` 수정 후 완료 보고 전 반드시 실행한다.
 ```bash
-cd "<아티젠 디렉토리 절대경로>" && node ai/tool/c_cpp_check.js [web|window|linux|mac] <파일A> <파일B>
+node ai/tool/c_cpp_check.js [web|window|linux|mac] <파일A> <파일B>
 ```
 - **`.vcproj`/`.vcxproj` 프로젝트에 속한 파일은 `--proj`로 지정해서 체크한다** (include 경로/매크로 반영, window 타깃 전용). `--proj`도 절대경로로 지정.
 ```bash
-cd "<아티젠 디렉토리 절대경로>" && node ai/tool/c_cpp_check.js window --proj=<프로젝트>.vcproj|.vcxproj [--config=<Configuration명>] <파일A> <파일B>
+node ai/tool/c_cpp_check.js window --proj=<프로젝트>.vcproj|.vcxproj [--config=<Configuration명>] <파일A> <파일B>
 ```
   - `--config` 생략 시 `Release|Win32` → `Debug|Win32` → 첫 Configuration 순 자동 선택
   - vcproj/vcxproj 버전에 맞는 VS 툴체인을 자동 매칭(VS2002~2022). 해당 버전 미설치 시 에러로 안내.
@@ -38,7 +38,7 @@ cd "<아티젠 디렉토리 절대경로>" && node ai/tool/c_cpp_check.js window
 ## AssemblyScript(asc) 빌드 체크 규칙 - 필수 (AssemblyScript Build Check Rules - Required)
 `.ts` 수정 후 완료 보고 전 반드시 실행한다.
 ```bash
-cd "<아티젠 디렉토리 절대경로>" && node ai/tool/asc_check.js <파일A> <파일B>
+node ai/tool/asc_check.js <파일A> <파일B>
 ```
 - 실제 빌드 엔트리(`ASM.ts`, `ASM_SIMD.ts`) 기준으로 `--noEmit` 전체 재컴파일 후, 지정한 파일 관련 진단만 필터링해서 보여준다.
 
@@ -46,7 +46,7 @@ cd "<아티젠 디렉토리 절대경로>" && node ai/tool/asc_check.js <파일A
 ## 제한 명령어 (Restricted Commands)
 다음 명령어는 사용자가 명시적으로 요청하거나 승인하지 않는 한 실행하지 않는다.
 
-- node 임의 실행. `ai/tool/tsc_check.js`, `ai/tool/browser.js`, `ai/tool/c_cpp_check.js`, `ai/tool/asc_check.js`, `ai/tool/work.js`, `ai/tool/log.js`는 제외
+- node 임의 실행. `ai/tool/tsc_check.js`, `ai/tool/browser.js`, `ai/tool/c_cpp_check.js`, `ai/tool/asc_check.js`, `ai/tool/work.js`, `ai/tool/log.js`, `ai/tool/download.js`는 제외
 - python / python3 실행
 - 라이브 페이지 디버깅 목적의 curl 직접 호출 (대신 `ai/tool/browser.js` 사용)
 - 서버 재시작 명령(`POST /File/Restart`, Control 프로젝트의 "Restart Server" 버튼) — 실행 시 현재 서버 프로세스가 즉시 종료되므로 **사용자 승인 없이 절대 실행 금지**
@@ -79,6 +79,9 @@ cd "<아티젠 디렉토리 절대경로>" && node ai/tool/asc_check.js <파일A
 ## 로그 가이드 (Log Guide)
 `ai/tool/log.js`로 CLI 세션 대화 로그(provider_log)를 조회할 때 **`ai/LogGuide.md`** 먼저 읽기 필수.
 
+## 다운로드 · 영상 참조 가이드 (Download Guide)
+`ai/tool/download.js`로 유튜브/영상/파일 URL을 다운로드하거나, 영상에서 스크린샷을 추출해 참조할 때 **`ai/DownloadGuide.md`** 먼저 읽기 필수.
+
 ## 프로젝트 명명 규칙 (Project Naming Convention)
 ** ai/CodeNamingGuide.md ** 먼저 읽기 필수. 
 
@@ -99,8 +102,8 @@ cd "<아티젠 디렉토리 절대경로>" && node ai/tool/asc_check.js <파일A
 - 프로젝트 루트는 "아티젠 디렉토리" 절대경로다. `artgine/`, `desktop/`, `proj/`, `plugin/`, `ai/` 등 모든 상대 경로는 이 루트 기준으로 해석하며, `ai/tool/` 툴 실행 시 cwd 처리는 위 "⚠️ 두 디렉토리가 다를 수 있음" 항목을 따른다. 하위 프로젝트 폴더 등 다른 위치에서 상대경로를 찾지 않는다.
 
 ## 임시 파일 위치 (Temp File Location)
-- 작업 중 만드는 임시 파일(임시 스크립트, 분석 출력/로그, 스크린샷, 이미지 크롭, 다운로드, 결과 HTML 등)은 **반드시 `<아티젠 디렉토리 절대경로>/temp/`에만** 만든다. 프로젝트 루트·`proj/`·`ai/` 등 다른 위치에 만들지 않는다.
-- `temp/`는 아티젠 서버 실행 시 자동 생성된다. 없으면 직접 만들어도 된다.
+- 작업 중 만드는 임시 파일(임시 스크립트, 분석 출력/로그, 스크린샷, 이미지 크롭, 다운로드, 결과 HTML 등)은 **반드시 `<도구 실행 위치(cwd)의 절대경로>/temp/`에만** 만든다. 작업 디렉토리에 `ai/tool/`이 있으면 `<작업 디렉토리>/temp/`, 없어서 아티젠 디렉토리로 `cd`해 실행한다면 `<아티젠 디렉토리>/temp/`다(서버와 `ai/tool/` 도구가 모두 cwd 기준 `temp/`를 쓰므로 AI가 만드는 파일도 같은 폴더여야 한다). 프로젝트 루트·`proj/`·`ai/` 등 다른 위치에 만들지 않는다.
+- `temp/`는 서버 실행 시 cwd 아래에 비워진 채 자동 생성된다. 없으면 직접 만들어도 된다.
 - `temp/` 안의 파일 읽기·쓰기는 승인 없이 처리된다. 경로는 절대경로로 지정한다(`..`로 temp 밖을 가리키면 자동 승인되지 않는다).
 - `browser.js`/`remote.js`의 `screenshot`·`download`는 기본으로 `temp/`에 저장하고, `screenshot`의 `diff` 기준 이미지도 `temp/`에서 찾는다.
 
@@ -121,7 +124,7 @@ cd "<아티젠 디렉토리 절대경로>" && node ai/tool/asc_check.js <파일A
 ├── proj/      ← 사용자 프로젝트
 ├── plugin/    ← 플러그인
 ├── ai/        ← AI 가이드 및 설정 문서
-└── temp/      ← AI 임시 파일 전용 (서버 실행 시 자동 생성)
+└── temp/      ← AI 임시 파일 전용 (cwd 기준, 서버 실행 시 자동 생성. 작업 디렉토리에 ai/tool이 있으면 그쪽 temp/ 사용)
 ```
 
 ## 웹브라우저 디버깅 (Web Browser Debugging)

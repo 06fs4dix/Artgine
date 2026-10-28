@@ -3,6 +3,7 @@ import { CFile } from "../CFile.js";
 export let gContext = null;
 export let gDecodeMap = null;
 export let gCompressor = null;
+const gDecodePending = new Map();
 function InitAudio() {
     if (gContext == null) {
         gContext = new AudioContext();
@@ -101,7 +102,7 @@ export class CAudioTag extends CAudio {
         this.m_tag.currentTime = 0;
     }
     async Play() {
-        if (this.m_source != null) {
+        if (this.m_source == null) {
             this.m_source = GetAudioContext().createMediaElementSource(this.m_tag);
             this.m_source.connect(this.mGain);
         }
@@ -109,7 +110,12 @@ export class CAudioTag extends CAudio {
             this.m_state = 1;
         }
         super.Play();
-        this.m_tag.play();
+        const p = this.m_tag.play();
+        if (p != null)
+            p.catch((e) => {
+                if (e?.name != "NotAllowedError" && e?.name != "AbortError")
+                    console.error(e);
+            });
     }
     Stop() {
         this.m_tag.pause();
@@ -149,23 +155,25 @@ export class CAudioBuf extends CAudio {
         var key = this.m_keyArr[parseInt((Math.random() * this.m_keyArr.length) + "")];
         var decBuf = gDecodeMap.get(key);
         if (decBuf == null) {
-            if (this.mRes != null) {
-                let buf = this.mRes.Find(key);
-                if (buf != null) {
-                    decBuf = await GetAudioContext().decodeAudioData(buf);
-                    gDecodeMap.set(key, decBuf);
-                }
-                else {
-                    let buf = await CFile.Load(key);
-                    decBuf = await GetAudioContext().decodeAudioData(buf);
-                    gDecodeMap.set(key, decBuf);
-                }
+            let pending = gDecodePending.get(key);
+            if (pending == null) {
+                const res = this.mRes;
+                pending = (async () => {
+                    try {
+                        let buf = res != null ? res.Find(key) : null;
+                        if (buf == null)
+                            buf = await CFile.Load(key);
+                        const dec = await GetAudioContext().decodeAudioData(buf);
+                        gDecodeMap.set(key, dec);
+                        return dec;
+                    }
+                    finally {
+                        gDecodePending.delete(key);
+                    }
+                })();
+                gDecodePending.set(key, pending);
             }
-            else {
-                let buf = await CFile.Load(key);
-                decBuf = await GetAudioContext().decodeAudioData(buf);
-                gDecodeMap.set(key, decBuf);
-            }
+            decBuf = await pending;
         }
         super.Play();
         this.m_source = GetAudioContext().createBufferSource();
@@ -187,7 +195,8 @@ export class CAudioBuf extends CAudio {
         this.m_state = 2;
     }
     Volume(_val) {
-        this.mGain.gain.value = _val;
+        if (this.mGain != null)
+            this.mGain.gain.value = _val;
     }
     IsPlayReady() {
         if (this.m_state == 1)
@@ -196,8 +205,10 @@ export class CAudioBuf extends CAudio {
     }
     Destroy() {
         super.Destroy();
-        this.m_source.disconnect();
-        this.m_source = null;
+        if (this.m_source != null) {
+            this.m_source.disconnect();
+            this.m_source = null;
+        }
     }
     Export() {
         return new CAudioBuf(this.m_keyArr);

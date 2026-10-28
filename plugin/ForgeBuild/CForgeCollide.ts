@@ -20,6 +20,7 @@ import { CForgeWallGen } from "./CForgeWallGen.js";
 import { CForgeAdobeGen } from "./CForgeAdobeGen.js";
 import { CForgeHutGen } from "./CForgeHutGen.js";
 import { CForgeIncaGen } from "./CForgeIncaGen.js";
+import { CForgeInteriorGen } from "./CForgeInteriorGen.js";
 import { CForgeArabGen } from "./CForgeArabGen.js";
 import { CForgeAfricaGen } from "./CForgeAfricaGen.js";
 import { CForgeMongolGen } from "./CForgeMongolGen.js";
@@ -243,6 +244,18 @@ export class CForgeCollide
             {
                 const hw = Math.min(r[2] - r[0], r[3] - r[1]) * 0.5, q = [[r[0] - e, r[1] - e], [r[2] + e, r[1] - e], [r[2] + e, r[3] + e], [r[0] - e, r[3] + e]].map(_p => { const w = W(_p[0], _p[1], 0); return [w[0], w[2]] as ForgeV2; });
                 out.push(CForgeCollide.Prism(q, ye - 0.3, C != null ? CForgeChineseHouseGen.RidgeY(C, hw) + 0.7 : J != null ? CForgeMachiyaGen.RidgeY(J, hw) : CForgeHanokGen.RidgeY(K.top, hw, K.giwa)));
+            }
+            return out;
+        }
+        if(CForgeInteriorGen.On(_b, wk))
+        {
+            //속이 빈 집: 벽·바닥·칸막이·계단·가구를 상자로, 지붕만 기존처럼 통으로
+            const P = CForgeInteriorGen.Plan(_b, _g), out = P.boxes.map(_x => CForgeCollide.Box(_x.c[0], _x.c[1], _x.t[0], _x.t[1], _x.hl, _x.hw, _x.y0, _x.y1)), e = 0.5;
+            out.push(...P.wedges);
+            for(const r of _b.rects)
+            {
+                const W = (_r : number[]) => CForgePoly.ToWorld([[_r[0], _r[1]], [_r[2], _r[1]], [_r[2], _r[3]], [_r[0], _r[3]]], _b.o, _b.u);
+                out.push(CForgeCollide.Prism(W([r[0] - e, r[1] - e, r[2] + e, r[3] + e]), P.top - 0.1, P.top + CForgeHouseGen.RoofRise(_b, Math.min(r[2] - r[0], r[3] - r[1]) * 0.5) + 0.2));
             }
             return out;
         }

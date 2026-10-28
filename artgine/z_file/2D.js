@@ -1,6 +1,6 @@
 import { Build, CVec2, CVec3, CVec4, CMat3, Attribute, Null, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, max, min, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V3Cross, V3Nor, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, MappingTexToV3, MatTypeToMat, V2Abs, Sam2DArrV4, Sam2DArrNearestToV4, V2AddV2, V3Abs, V3Sqrt, V3MulV3, } from "./Shader";
 import { VFX, VFXDown2, GetTexCodiedUV, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, ColorModalFun, AlphaModalFun, vfxMat0, vfxMat1 } from "./ColorFun";
-import { ambientColor, ligCol, ligDir, ligCount, LightCac2D, ligMask, cullMask } from "./Light";
+import { ambientColor, ligCol, ligDir, ligCount, LightCac2D, ligMask, cullMask, material, emission, ligStep2, GetMaterial, emissiveIntensity } from "./Light";
 import { shadowOn, shadowRate, shadowWrite } from "./Shadow";
 import { GetWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { SDF } from "./SDF";
@@ -246,7 +246,7 @@ function vs_main(f3_ver, f2_uv, f3_sca) {
     BranchDefault();
     to_uv.xy = V2Abs(f2_uv);
     BranchEnd();
-    to_uv.z = 1.0;
+    to_uv.z = f3_sca.z;
     uv = new CVec2(f2_uv.x < 0.0 ? 0.0 : 1.0, f2_uv.y < 0.0 ? 0.0 : 1.0);
     var P = new CVec4(f3_ver, 1.0);
     var wMat;
@@ -255,34 +255,22 @@ function vs_main(f3_ver, f2_uv, f3_sca) {
     BranchDefault();
     wMat = worldMat;
     BranchEnd();
-    var isMerge;
     var isVertexBot;
     var isVertexLeft;
     var size;
-    BranchBegin("merge", "MG", []);
-    isMerge = 1.0;
     isVertexLeft = f3_sca.x < 0.0 ? 1.0 : 0.0;
     isVertexBot = f3_sca.y < 0.0 ? 1.0 : 0.0;
-    size = V3Abs(f3_sca);
-    BranchDefault();
-    isMerge = 0.0;
-    isVertexLeft = f3_sca.x < 0.0 ? 1.0 : 0.0;
-    isVertexBot = f3_ver.y < 0.0 ? 1.0 : 0.0;
-    size = new CVec3(V3Len(wMat[0].xyz) * 1.0, V3Len(wMat[1].xyz) * 1.0, V3Len(wMat[2].xyz) * 1.0);
-    BranchEnd();
+    size = V3MulV3(V3Abs(f3_sca), new CVec3(V3Len(wMat[0].xyz), V3Len(wMat[1].xyz), V3Len(wMat[2].xyz)));
     var origin;
+    var bcen;
     BranchBegin("billboard", "B", [billboard, billboardMat]);
     if (billboard > 0.5) {
-        if (isMerge > 0.5) {
-            origin = new CVec3(isVertexLeft > 0.5 ? -0.5 : 0.5, isVertexBot > 0.5 ? -0.5 : 0.5, 0.0);
-            P = new CVec4(origin, 1.0);
-        }
+        origin = new CVec3(isVertexLeft > 0.5 ? -0.5 : 0.5, isVertexBot > 0.5 ? -0.5 : 0.5, 0.0);
+        P = new CVec4(origin, 1.0);
         P.xyz = V3MulV3(P.xyz, size);
         P = V4MulMatCoordi(P, billboardMat);
-        if (isMerge > 0.5)
-            P.xyz = V3AddV3(P.xyz, V3SubV3(f3_ver, V3MulV3(origin, size)));
-        else
-            P.xyz = V3AddV3(P.xyz, wMat[3].xyz);
+        bcen = V4MulMatCoordi(new CVec4(V3SubV3(f3_ver, V3MulV3(origin, V3Abs(f3_sca))), 1.0), wMat);
+        P.xyz = V3AddV3(P.xyz, bcen.xyz);
     }
     else
         P = V4MulMatCoordi(P, wMat);
@@ -290,7 +278,7 @@ function vs_main(f3_ver, f2_uv, f3_sca) {
     P = V4MulMatCoordi(P, wMat);
     BranchEnd();
     BranchBegin("cutout", "CO", [cutoutPos]);
-    to_cutout.x = isMerge > 0.5 ? (isVertexBot > 0.5 ? P.y : P.y - size.y) : (wMat[3].y - size.y * 0.5);
+    to_cutout.x = isVertexBot > 0.5 ? P.y : P.y - size.y;
     to_cutout.y = size.y;
     BranchEnd();
     BranchBegin("wind", "W", [windDir, windPos, windInfo, windCount, windInfluence, time]);
@@ -389,20 +377,31 @@ function ps_main() {
     if (L_cor.a <= 0.01)
         discard;
     BranchEnd();
+    var texOffset = 1.0;
     var normal = new CVec3(0.0, 0.0, 0.0);
-    BranchBegin("normalMap", "N", [sam2DCount]);
+    BranchBegin("normalMap", "NM", [sam2DCount]);
     if (sam2DCount > 1.0) {
-        normal = Sam2DToColor(1.0, to_uv.xy).xyz;
+        normal = Sam2DToColor(texOffset, to_uv.xy).xyz;
         normal = MappingTexToV3(normal);
+        texOffset += 1.0;
+    }
+    BranchEnd();
+    var lmaterial = new CVec4(-9999.0, 0.0, 0.0, 0.0);
+    BranchBegin("materialMap", "MM", [sam2DCount, material]);
+    if (sam2DCount > 1.0) {
+        lmaterial = GetMaterial(material, Sam2DToColor(texOffset, to_uv.xy), sam2DCount);
+        texOffset += 1.0;
     }
     BranchEnd();
     var gamma = 1.0;
     var DSE = new CMat3(0);
-    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, cullMask, ambientColor]);
+    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, cullMask, ambientColor, material, emission, emissiveIntensity, ligStep2]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
-    DSE = LightCac2D(to_worldPos, L_cor, normal, shadow, cullMask.x);
-    L_cor.rgb = DSE[0];
+    if (lmaterial.x < -9990.0)
+        lmaterial = material;
+    DSE = LightCac2D(to_worldPos, L_cor, normal, shadow, cullMask.x, lmaterial.w);
+    L_cor.rgb = V3AddV3(V3AddV3(DSE[0], DSE[1]), DSE[2]);
     BranchDefault();
     if (shadow.r > -0.5) {
         L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);

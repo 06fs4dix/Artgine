@@ -81,8 +81,14 @@ export class CImgPro {
         }
         return boundList;
     }
-    static SphericalGaussianBlur(_tex, _updatedLayers, _mips = null) {
+    static SphericalGaussianBlur(_tex, _updatedLayers = null, _mips = null) {
         const v3 = CPoolGeo.ProductV3();
+        if (_updatedLayers == null) {
+            _updatedLayers = new Set();
+            for (let i = 0; i < _tex.GetInfo()[0].mCount * 6; i++) {
+                _updatedLayers.add(i);
+            }
+        }
         const maxSamples = 128;
         const LOD_MAX = Math.floor(Math.log2(_tex.GetWidth()));
         const ROUGH_LODS = Math.max(1, LOD_MAX - 4);

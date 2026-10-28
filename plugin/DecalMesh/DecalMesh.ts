@@ -110,30 +110,31 @@ export class CPaint3DDecalMesh extends CPaint
         CMath.V3MulFloat(yAxis, _size.y, yAxis);
         CMath.V3MulFloat(zAxis, _size.z, zAxis);
 
+        const lmat = new CMat();
         // 데칼 월드 행렬(데칼 => 월드)
-        this.mLMat.mF32A[0] = xAxis.x;
-        this.mLMat.mF32A[1] = xAxis.y;
-        this.mLMat.mF32A[2] = xAxis.z;
-        this.mLMat.mF32A[3] = 0; 
+        lmat.mF32A[0] = xAxis.x;
+        lmat.mF32A[1] = xAxis.y;
+        lmat.mF32A[2] = xAxis.z;
+        lmat.mF32A[3] = 0; 
 
-        this.mLMat.mF32A[4] = yAxis.x;
-        this.mLMat.mF32A[5] = yAxis.y;
-        this.mLMat.mF32A[6] = yAxis.z;
-        this.mLMat.mF32A[7] = 0;
+        lmat.mF32A[4] = yAxis.x;
+        lmat.mF32A[5] = yAxis.y;
+        lmat.mF32A[6] = yAxis.z;
+        lmat.mF32A[7] = 0;
 
-        this.mLMat.mF32A[8] = zAxis.x;
-        this.mLMat.mF32A[9] = zAxis.y;
-        this.mLMat.mF32A[10] = zAxis.z;
-        this.mLMat.mF32A[11] = 0;
+        lmat.mF32A[8] = zAxis.x;
+        lmat.mF32A[9] = zAxis.y;
+        lmat.mF32A[10] = zAxis.z;
+        lmat.mF32A[11] = 0;
 
-		this.mLMat.mF32A[12] = _pos.x;
-		this.mLMat.mF32A[13] = _pos.y;
-		this.mLMat.mF32A[14] = _pos.z;
-		this.mLMat.mF32A[15] = 1.0;
+		lmat.mF32A[12] = _pos.x;
+		lmat.mF32A[13] = _pos.y;
+		lmat.mF32A[14] = _pos.z;
+		lmat.mF32A[15] = 1.0;
 
-        this.mLMat.UnitCheck();
+        lmat.UnitCheck();
 
-        this.mUpdateLMat = true;
+        this.SetFMat(lmat);
     }
     // 이전 플로우
     // 버텍스를 로컬 => 월드로 변환
@@ -216,7 +217,7 @@ export class CPaint3DDecalMesh extends CPaint
         for(let i = 0; i < this.mMCI.vertexCount; i++) {
             this.mBound.InitBound(vertices.bufF.V3(i));
         }
-        this.mBound.MatCoordi(this.mLMat);
+        this.mBound.MatCoordi(this.mFMat);
 
         // 배치 클리어
         this.mIndex=gDecalIndex++;  // 너무 많이 생성되는데 괜찮을까?

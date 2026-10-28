@@ -15,10 +15,13 @@ import { SDF } from "../../z_file/SDF.js";
 
 export default class CEnvMap extends CBrushComp
 {
+    override Icon(){ return "bi bi-globe2"; }
     //구 반사 반지름(월드 단위). 반사 방향을 이 구에 투영한다. 0이면 무한거리
     mRadius : number = 0;
     mSize : number = 128;
     mCycle : number = 100000;
+    mCubeKey : string = null;   // 큐브맵 텍스쳐가 들어있으면 랜더링하지 않고 이걸 사용한다.
+    protected mCubeKeyUpdated : number = CUpdate.eType.Updated;
 
     constructor() {
         super("envMap_" + CUniqueID.Get());
@@ -30,11 +33,21 @@ export default class CEnvMap extends CBrushComp
         if(this.mBrush != null) this.UpdateBrush(_update);
     }
 
+    SetCubeKey(_key : string) {
+        this.mCubeKey = _key;
+        if(this.mBrush == null) return;
+        if(_key != null) {
+            this.Refresh();
+            this.mBrush.ClearRen();
+            this.mCubeKeyUpdated = CUpdate.eType.Updated;
+        }
+    }
+
     override GetTex()    {   return this.GetOwner().GetFrame().Pal().GetEnvMapTex();   }
 
     UpdateBrush(_update : CUpdate) {
         // 1. 기본 envmap RenderPass 등록
-        if(this.mWriteRP.length == 0)
+        if(this.mWriteRP.length == 0 && this.mCubeKey == null)
         {
             let pal=this.mBrush.mFrame.Pal();
 
@@ -88,6 +101,11 @@ export default class CEnvMap extends CBrushComp
             }
         }
 
+        if(this.mCubeKeyUpdated==CUpdate.eType.Updated)
+            this.mCubeKeyUpdated=CUpdate.eType.Already;
+        else if(this.mCubeKeyUpdated==CUpdate.eType.Already)
+            this.mCubeKeyUpdated=CUpdate.eType.Not;
+
         this.UpdateEnvmap(_update);
     }
 
@@ -106,7 +124,8 @@ export default class CEnvMap extends CBrushComp
         // 1. RP 세팅
         // -----------------------------------------------
         this.mTexOff =this.mBrush.mEnvmapTexOff;
-        for(let i = 0; i < 6; i++)
+        const useCube = this.mCubeKey != null;
+        for(let i = 0; i < 6 && !useCube; i++)
         {
             for(const rp of this.mWriteRP)
             {
@@ -136,7 +155,7 @@ export default class CEnvMap extends CBrushComp
         // -----------------------------------------------
         // 2. 카메라
         // -----------------------------------------------
-        if(this.mBrush.mCameraMap.has(this.mTexKey+0) == false || this.GetOwner().mUpdateMat != 0)
+        if(!useCube && (this.mBrush.mCameraMap.has(this.mTexKey+0) == false || this.GetOwner().mUpdateMat != 0))
         {
             const seye = this.GetOwner().GetMat().xyz;
             const cubeDir = [
@@ -191,17 +210,35 @@ export default class CEnvMap extends CBrushComp
             );
             this.UpdateAllEnvMap();
         }
+
+        if(this.mBrush.mEnvmapRebuild == CUpdate.eType.Already || this.mCubeKeyUpdated == CUpdate.eType.Already) this.CopyCube();
     }
 
-    UpdateAllEnvMap() {
+    protected CopyCube() : boolean {
+        const cube = this.mBrush.mFrame.Res().Find(this.mCubeKey) as CTexture;
+        if(cube == null) return false;
+        if(cube.GetBuf().length < 6) {
+            if(cube.mReadPixelEvent != null) cube.mReadPixelEvent.Call(cube);
+            return false;
+        }
+
+        const layers = new Set<number>();
+        for(let face = 0; face < 6; face++)
+            layers.add(this.mTexOff + face);
+        this.mBrush.mFrame.Ren().BlurEnvmap(this.GetTex(), layers, cube);
+        return true;
+    }
+
+    protected UpdateAllEnvMap() {
         if(this.mBrush == null) return;
         for(const ri of this.mBrush.mRenInfoMap.values()) {
             if(ri.mRP != null && ri.mRP.mRenderTarget==this.GetTex())
                 ri.mSleepReset=true;
         }
+        this.mBrush.mEnvmapRebuild = CUpdate.eType.Updated;
     }
 
-    UpdateThisEnvMap(_faceIdx : number = -1) {
+    protected UpdateThisEnvMap(_faceIdx : number = -1) {
         if(this.mBrush == null) return;
         for(const rp of this.mWriteRP) {
             const srpKey = this.mTexKey + rp.Key() + _faceIdx;
@@ -216,7 +253,7 @@ export default class CEnvMap extends CBrushComp
         }
     }
 
-    Refresh() {
+    protected Refresh() {
         if(this.mBrush!=null && this.mTexKey!=null)
         {
             for(let i=0;i<6;i++)
@@ -227,6 +264,7 @@ export default class CEnvMap extends CBrushComp
                     this.mBrush.RemoveAutoRP(this.mTexKey+rp.mShader+i);
                 }
             }
+            this.mWriteRP.length=0;
         }
     }
 

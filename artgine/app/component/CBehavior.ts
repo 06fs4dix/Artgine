@@ -14,6 +14,7 @@ class CCTEnterExit
 
 export class CBehavior extends CComponent
 {
+    override Icon(){ return "bi bi-lightning-charge"; }
     private mCTMap = new Map<CCollider, CCTEnterExit>();
     private mTick: number = 1;
 

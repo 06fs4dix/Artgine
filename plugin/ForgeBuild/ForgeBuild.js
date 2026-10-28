@@ -11,14 +11,16 @@ import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
 import { SDF } from "../../artgine/z_file/SDF.js";
 import { CForgeScene } from "./CForgeScene.js";
 import { CForgePoly } from "./CForgePoly.js";
+import { CLODSwitch } from "../../artgine/app/component/CLODSwitch.js";
+import { CLOD } from "../../artgine/app/component/CLOD.js";
 import { CForgeAdjust } from "./CForgeAdjust.js";
 import { CForgeGen } from "./CForgeGen.js";
 import { CForgeTex } from "./CForgeTex.js";
 import { CForgeGround } from "./CForgeGround.js";
 import { CForgeCollide } from "./CForgeCollide.js";
-import { CForgeHouseGen } from "./CForgeHouseGen.js";
-import { CForgeMerged, CForgeMergeOpt } from "./CForgeMerge.js";
-export { CForgeMerged, CForgeMergeOpt } from "./CForgeMerge.js";
+import { CForgeFire, CForgeLight } from "./CForgeFire.js";
+import { CSubjectForge } from "./CSubjectForge.js";
+export { CSubjectForge } from "./CSubjectForge.js";
 export { CForgeScene } from "./CForgeScene.js";
 export { CForgeHistory } from "./CForgeHistory.js";
 export { CForgeAdjust } from "./CForgeAdjust.js";
@@ -33,6 +35,7 @@ export class CForgeOption {
     mStyle = 0;
     mWall = -1;
     mRoof = -1;
+    mInterior = null;
     mOverride = null;
     mAngle = null;
     mSeed = 0;
@@ -57,6 +60,8 @@ export class CForgeFactory {
         bridge: CForgeScene.eKind.Bridge, stair: CForgeScene.eKind.Stair, church: CForgeScene.eKind.Church, dock: CForgeScene.eKind.Dock, monument: CForgeScene.eKind.Monument,
         lamp: CForgeScene.eKind.Monument, shop: CForgeScene.eKind.Monument };
     static sCount = 0;
+    static sInteriorLOD = 30;
+    static sInteriorHys = 0.2;
     mCanvas;
     mPush = [];
     mOwn = new Map();
@@ -114,11 +119,14 @@ export class CForgeFactory {
             const sig = JSON.stringify([it.kind, r, it.ent.gy, it.kind == CForgeScene.eKind.Wall ? it.ent.pts : null, it.surf]);
             let sub = old.get(sig)?.pop() ?? null;
             if (sub == null) {
-                sub = this.mCanvas.PushSub(new CSubject());
+                sub = this.mCanvas.PushSub(new CSubjectForge());
+                sub.mBlockEvent = this.mEvent;
                 const g = this.Ground(it.kind, it.ent);
                 const o = { kind: it.kind, sig, r, keys: [], verts: 0 };
                 this.mOwn.set(sub, o);
-                this.Attach(sub, o, CForgeGen.Build(it.kind, r, g), this.mCollider ? CForgeCollide.Build(it.kind, r, g) : [], it.surf);
+                const inter = this.Attach(sub, o, CForgeGen.Build(it.kind, r, g), this.mCollider ? CForgeCollide.Build(it.kind, r, g) : [], it.surf);
+                if (inter != null)
+                    this.InteriorLOD(sub, inter, r, it.ent);
                 built++;
             }
             if (!next.has(sig))
@@ -139,36 +147,15 @@ export class CForgeFactory {
         this.mLastMs = performance.now() - t0;
         return out;
     }
-    BuildMerged(_opt = new CForgeMergeOpt()) {
-        const t0 = performance.now(), items = this.mPush;
-        this.mPush = [];
-        const scene = new CForgeScene(1);
-        for (const it of items)
-            if (it.affect)
-                it.ent = scene.Push(it.kind, it.ent);
-        const out = new CForgeMerged(this.mCanvas, _opt);
-        let n = 0;
-        for (const it of items) {
-            const r = CForgeAdjust.Run(it.kind, it.ent, scene);
-            if (r == null)
-                continue;
-            const g = this.Ground(it.kind, it.ent);
-            const lod = it.kind == CForgeScene.eKind.Building ? [0, 1, 2].map(_l => CForgeHouseGen.Build(r, g, _l)) : null;
-            if (lod != null)
-                CForgeHouseGen.sLod = 0;
-            const parts = lod ?? [CForgeGen.Build(it.kind, r, g)];
-            const bound = CForgeMerged.Bound(parts[parts.length - 1]);
-            if (!(bound[0] <= bound[2]))
-                continue;
-            out.Add(bound, lod ?? [parts[0], parts[0], parts[0]]);
-            n++;
-        }
-        out.Commit();
-        this.mLastCount = n;
-        this.mLastMs = performance.now() - t0;
+    GetResolved(_sub) { return this.mOwn.get(_sub)?.r ?? null; }
+    GetHulls() {
+        const out = [];
+        for (const o of this.mOwn.values())
+            if (o.hulls != null)
+                out.push(...o.hulls);
         return out;
     }
-    GetResolved(_sub) { return this.mOwn.get(_sub)?.r ?? null; }
+    GetForgeSubs() { return [...this.mOwn.keys()].filter(_s => _s instanceof CSubjectForge); }
     ToEntity(_kind, _bottom, _top, _o) {
         const U = CForgeScene.sUnit, K = CForgeScene.eKind;
         const p = _bottom.map(v => [v.x / U, v.z / U, v.y / U]);
@@ -189,7 +176,7 @@ export class CForgeFactory {
                 height = s / p.length;
             }
             const roof = _o.mStyle == 1 ? CForgeScene.eRoof.Gable : _o.mStyle == 2 ? CForgeScene.eRoof.Hip : CForgeScene.eRoof.Auto;
-            return { ...base, poly: xz, height, roof, roofH: 0, glue: [], gy };
+            return { ...base, poly: xz, height, roof, roofH: 0, glue: [], gy, interior: _o.mInterior ?? undefined };
         }
         if (_kind == K.Wall) {
             let len = 0;
@@ -237,15 +224,79 @@ export class CForgeFactory {
         }
         return CForgeGround.Line(_e.pts.map((q, i) => [q[0], q[1], _e.gy?.[i] ?? 0]));
     }
+    mPointLight = 0;
+    mPointShadow = false;
+    SetPointShadow(_on) {
+        this.mPointShadow = _on;
+        for (const sub of this.mOwn.keys())
+            for (const l of sub.FindComps(CForgeLight, true))
+                l.SetShadow(_on);
+    }
+    SetPointLight(_k) {
+        this.mPointLight = _k;
+        for (const sub of this.mOwn.keys())
+            for (const l of sub.FindComps(CForgeLight, true))
+                l.SetPower(_k);
+    }
+    PushLight(_sub, _l) {
+        const U = CForgeScene.sUnit, sub = new CSubject(), lig = sub.PushComp(new CForgeLight(_l));
+        sub.SetPos(new CVec3(_l.pos[0] * U, _l.pos[1] * U, _l.pos[2] * U));
+        lig.SetPower(this.mPointLight);
+        lig.SetShadow(this.mPointShadow);
+        _sub.PushChild(sub);
+    }
     Attach(_sub, o, _parts, _convex, _so) {
         const frame = this.mCanvas.GetFrame(), U = CForgeScene.sUnit, ver = ++this.mVer;
+        o.hulls = _convex;
+        let inter = null;
+        const Under = (_p) => {
+            if (_p.interior != true)
+                return _sub;
+            if (inter == null) {
+                inter = new CSubject();
+                _sub.PushChild(inter);
+            }
+            return inter;
+        };
+        const kids = new Map();
+        const Kid = (_a, _under) => {
+            let k = kids.get(_a.key);
+            if (k != null)
+                return k;
+            k = new CSubject();
+            _under.PushChild(k);
+            const cols = [];
+            if (this.mCollider && _a.hull != null && _a.hull.length >= 4) {
+                const b = new CBound();
+                b.SetType(CBound.eType.GJK);
+                b.InitBound(_a.hull.map(q => new CVec3(q[0] * U, q[1] * U, q[2] * U)));
+                const col = k.PushComp(new CCollider(b));
+                col.SetLayer(this.mLayer);
+                if (this.mCollide.length > 0)
+                    col.PushCollisionLayer(this.mCollide);
+                col.SetEvent(this.mEvent);
+                cols.push(col);
+            }
+            _sub.AddPart(_a, k, cols);
+            kids.set(_a.key, k);
+            return k;
+        };
         _parts.forEach((_p, _i) => {
+            if (_p.fire != null) {
+                _sub.PushChild(new CForgeFire(frame, _p.fire));
+                return;
+            }
+            if (_p.light != null) {
+                this.PushLight(_sub, _p.light);
+                return;
+            }
             const key = `forge${this.mId}_${o.kind}_${ver}_${_i}.mesh`;
             if (!_p.buf.Commit(frame, key, _p.tex ?? frame.Pal().GetBlackTex(), _p.tex != null && _so.nor, _p.tex != null && _so.mat, _so.pbr, _p.tex != null && _so.real))
                 return;
             o.keys.push(key);
             o.verts += _p.buf.Count();
-            const pt = _sub.PushComp(new CPaint3D(key));
+            const under = Under(_p);
+            const pt = (_p.anim != null ? Kid(_p.anim, under) : under).PushComp(new CPaint3D(key));
             const rgb = _p.tex != null && _so.real ? CForgeTex.Scale(_p.tex, _p.rgb) : _p.rgb;
             if (_p.tex == null)
                 pt.SetColorModel(new CColor(_p.rgb[0], _p.rgb[1], _p.rgb[2], CColor.eModel.RGBAdd));
@@ -253,16 +304,27 @@ export class CForgeFactory {
                 pt.SetColorModel(new CColor(rgb[0], rgb[1], rgb[2], CColor.eModel.RGBMul));
                 pt.SetTexCodi(new CVec4(1 / CForgeTex.sMeter, 1 / CForgeTex.sMeter, CForgeTex.sUVOff, CForgeTex.sUVOff));
                 const surf = _so.nor || _so.mat ? CForgeTex.Surf(_p.tex) : null;
-                if (surf != null && _so.mat)
+                if (surf != null && _so.mat) {
                     pt.SetMaterial(-1, -1, 1, -1);
+                    pt.PushTag("forgeMat");
+                }
                 if (surf != null && _so.nor) {
                     pt.PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.Lambert));
                     if (_so.px && surf.mParallax > 0)
                         pt.ParallaxNormal(surf.mParallax, CForgeTex.sParallaxNear, CForgeTex.sParallaxFar, 0);
                 }
             }
+            if (_p.glow)
+                pt.PushTag("forgeGlow");
+            if (_p.emit != null) {
+                pt.SetEmission(new CColor(_p.emit[0], _p.emit[1], _p.emit[2], SDF.eColorModel.RGBMul));
+                pt.PushTag("forgeEmit");
+            }
             pt.PushTag(CPaint.eTag.Light);
             pt.PushTag(CPaint.eTag.Shadow);
+            pt.PushTag("shadowMulti");
+            if (_p.noShadow)
+                pt.PushTag(CPaint.eTag.ShadowReadOnly);
         });
         this.mVerts += o.verts;
         for (const pts of _convex) {
@@ -275,6 +337,29 @@ export class CForgeFactory {
                 col.PushCollisionLayer(this.mCollide);
             col.SetEvent(this.mEvent);
         }
+        return inter;
+    }
+    InteriorLOD(_sub, _inter, _r, _e) {
+        const U = CForgeScene.sUnit, n = _r.poly.length, gy = _e.gy ?? [];
+        let cx = 0, cz = 0, cy = 0;
+        for (const q of _r.poly) {
+            cx += q[0];
+            cz += q[1];
+        }
+        for (const y of gy)
+            cy += y;
+        cx /= n;
+        cz /= n;
+        cy = (gy.length > 0 ? cy / gy.length : 0) + _r.height * 0.5;
+        const anchor = new CSubject();
+        anchor.SetPos(new CVec3(cx * U, cy * U, cz * U));
+        _sub.PushChild(anchor);
+        _inter.SetEnable(false);
+        const R = CForgeFactory.sInteriorLOD * U;
+        anchor.PushComp(new CLODSwitch()).AddLODLevel([
+            new CLOD(null, 1, 0, 0, [], [], -1, _inter),
+            new CLOD(null, 1, R, R * CForgeFactory.sInteriorHys),
+        ]);
     }
     Clear(_sub, o) {
         _sub.RemoveComps(CPaint3D);

@@ -52,6 +52,7 @@ Tail
 
 export class CPaint2D extends CPaint
 {
+    override Icon(){ return "bi bi-image"; }
 	protected mSize : CVec2;
 	protected mPos : CVec3;
 	protected mSca : CVec2;
@@ -78,6 +79,12 @@ export class CPaint2D extends CPaint
 	public mRemoveSpeed=1;
 	public mRevers=new CVec2(1,1);
 
+	//크기/피벗/위치/반전/스케일은 메시 정점에 구워져 있다. 이 값이 바뀌면 다른 메시를 쓴다
+	mMeshKey="";
+	//피벗 오프셋이 포함된 로컬 위치. 메시에 구워진 값이며 tail 모드에서만 직접 쓴다
+	mLPos=new CVec3();
+	protected mLocalMat : CMat=null;
+
 	//X는 크기,Y는 꼬리
 	public mPosList : Array<CVec3>=null;
 	mTMat : CMat;
@@ -91,6 +98,7 @@ export class CPaint2D extends CPaint
 	
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
+		if(_member=="mMeshKey" || _member=="mLPos" || _member=="mLocalMat")	return false;
 		return super.IsShould(_member,_type);
 	}
 	constructor(_texture : string|CFontRef=null,_size : CVec2=null)
@@ -152,6 +160,8 @@ export class CPaint2D extends CPaint
 		super.Reset();
 		this.mPivot.Zero();
 		this.mPos.Zero();
+		this.mLPos.Zero();
+		this.mMeshKey="";
 		
 		//this.mTexCodi.x=1;this.mTexCodi.y=1;this.mTexCodi.z=0;this.mTexCodi.w=0;
 		
@@ -171,14 +181,21 @@ export class CPaint2D extends CPaint
 	}
 	PushNormalMap(_tex : string)
 	{
-		if(this.mTextureKey.length==1)
-			this.mTextureKey.push(_tex);
-		else if(this.mTextureKey.length==2)
-		{
+		if(this.mTag.has("normalMap"))
 			this.mTextureKey[1]=_tex;
+		else
+		{
+			this.mTextureKey.splice(1,0,_tex);
+			this.PushTag("normalMap");
 		}
 		this.ClearBatch();
-		this.PushTag("normalMap");
+	}
+	// R:AO G:roughness B:metallic A:emissive. mMaterial의 해당 값이 -1일 때만 텍스쳐 값을 쓴다(CPaint.ts 주석 참고)
+	PushMaterialMap(_tex : string)
+	{
+		this.mTextureKey[this.mTag.has("normalMap")?2:1]=_tex;
+		this.ClearBatch();
+		this.PushTag("materialMap");
 	}
 	override EditDrop(_object: CObject): void 
 	{
@@ -272,140 +289,8 @@ export class CPaint2D extends CPaint
 			this.mInit=false;
 
 	}
-	override FMatUpdate()
-	{
-		super.FMatUpdate();
-		if(this.mYSort == true)
-		{
-			const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
-			let yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
-			this.mFMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
-			this.mBW.mPos.mF32A[2]+=yRatio * CPaint2D.YSortZShift;
-		}
-	}
-	override Update(_update : CUpdate)
-	{
-		super.Update(_update);
-		
-		
-		if(this.mUpdateFMat == false)
-		{
-			return;
-		}
-		
-
-		
-		if(this.mTag.has("tail")==false || _update.DeltaTime()>1)	return;
-
-		
-		//if(this.mUpdateFMat == false) return;
-
-		if(this.mTag.has("billboard") && this.mPosList == null)
-		{
-			if(this.mRenPT.length == 0) return;
-
-			let pos=CPoolGeo.ProductV3();
-			let vec=CPoolGeo.ProductV3();
-			pos.mF32A[0]=this.GetFMat().mF32A[12];
-			pos.mF32A[1]=this.GetFMat().mF32A[13];
-			pos.mF32A[2]=this.GetFMat().mF32A[14];
-
-			// 포지션 0이면 업데이트 중단
-			if(pos.IsZero())	
-			{
-				CPoolGeo.RecycleV3(pos);
-				CPoolGeo.RecycleV3(vec);
-
-				return;
-			}
-			if(this.mBeforePos.IsZero())
-				this.mBeforePos.Import(pos);
-			// pos와 mBeforePos만 CPU 업데이트, 나머지 계산은 GPU로 이전
-			CMath.V3SubV3(pos,this.mBeforePos,vec);
-			var len=CMath.V3Len(vec);
-
-			// 거리가 사이즈보다 크면 사이즈 크기로 리사이즈
-			if(len>this.mSize.y)
-			{
-				CMath.V3AddV3(pos,CMath.V3MulFloat(vec,-this.mSize.y/len,vec),this.mBeforePos);
-			}
-
-			// 거리가 너무 가까우면 사이즈 0으로 줄임
-			else if(len<0.001)
-			{
-				this.mBeforePos.Import(pos);
-			}
-
-			// 멈춰있다면 서서히 lerp
-			else if(this.mStopPos.Equals(pos))
-			{
-				CMath.V3AddV3(
-					CMath.V3MulFloat(pos,_update.DeltaTime()*this.mRemoveSpeed),
-					CMath.V3MulFloat(this.mBeforePos,1-_update.DeltaTime()*this.mRemoveSpeed),
-					this.mBeforePos
-				);
-			}
-			this.mStopPos.Import(pos);
-
-			this.mTMat.SetV3(0,pos);
-			this.mTMat.SetV3(1,this.mBeforePos);
-			this.mTMat.mF32A[8] = this.mSize.x;
-			this.mTMat.mF32A[9] = this.mSize.y;
-			this.mTMat.SetV3(3,this.mPos);
-
-			if(this.mLastHide)
-			{
-				this.mTMat.mF32A[3]=1;
-				this.mTMat.mF32A[7]=1;
-				this.mTMat.mF32A[11]=0;
-				this.mTMat.mF32A[15]=0;
-			}
-			else
-			{
-				this.mTMat.mF32A[3]=1;
-				this.mTMat.mF32A[7]=1;
-				this.mTMat.mF32A[11]=1;
-				this.mTMat.mF32A[15]=1;
-			}
-			CPoolGeo.RecycleV3(pos);
-			CPoolGeo.RecycleV3(vec);
-			
-		}
-		else
-		{
-			if(this.mTag.has("billboard") && this.mShaderAttrMap.get("billboard").mData.mF32A[0] != 2.0) {
-				this.mShaderAttrMap.get("billboard").mData.mF32A[0] = 2.0;
-				this.ClearBatch();
-			}
-
-			let pos=CPoolGeo.ProductV3();
-			pos.mF32A[0]=this.GetFMat().mF32A[12];
-			pos.mF32A[1]=this.GetFMat().mF32A[13];
-			pos.mF32A[2]=this.GetFMat().mF32A[14];
-			//let pos = this.GetFMat().xyz;
-			
-			let v=CPoolGeo.ProductV3();
-			for(let i=0;i<4;++i)
-			{
-				CMath.V3AddV3(this.mPosList[i], pos, v);
-				this.mTMat.SetV3(i,v);
-			}
-			
-
-			this.mTMat.mF32A[3]=1;
-			this.mTMat.mF32A[7]=1;
-			this.mTMat.mF32A[11]=1;
-			this.mTMat.mF32A[15]=1;
-			CPoolGeo.RecycleV3(pos);
-			CPoolGeo.RecycleV3(v);
-
-		
-		}//else
-
-		
-		
-		
-	}
+	override FMatUpdate()	{}
+	override Update(_update : CUpdate)	{}
 	
 
 	override Prefab(_owner : CSubject)
@@ -472,50 +357,9 @@ export class CPaint2D extends CPaint
 	
 
 	
-	MatUpdate()
-	{
-		if(this.mSize==null)
-			return;
-
-		
-		this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
-		this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
-		this.mBound.mMin.z = -0.5;
-
-		this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
-		this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
-		this.mBound.mMax.z = 0.5;
-		
-		let bSca = this.GetScale();
-		let lpos=this.mPos.Export();
-		lpos.x += this.mBound.mMax.x*bSca.x*this.mPivot.x;
-		lpos.y += this.mBound.mMax.y*bSca.y*this.mPivot.y;
-		
-		CMath.MatScale(bSca,this.mLMat);
-	
-		this.mLMat.mF32A[12] = lpos.x;
-		this.mLMat.mF32A[13] = lpos.y;
-		this.mLMat.mF32A[14] = lpos.z;
-		
-		this.mLMat.UnitCheck();
-	
-
-		
-
-
-		this.mBound.MatCoordi(this.mLMat);
-
-		this.mBound.mMax.z=this.mBound.GetOutRadius();
-		this.mBound.mMin.z=-this.mBound.mMax.z;
-	
-
-
-		this.mBW.mRadian=0;
-
-
-		
-		this.mUpdateLMat=true;
-	}
+	MatUpdate()	{}
+	//메시에 구워진 크기/피벗/위치를 행렬로 되돌려 준다(머지 슬롯과 도구용). 매번 새로 계산한다
+	override GetMat() : CMat	{	return null;	}
 	GetHalf()
 	{
 		var pos=new CVec3((this.mSize.x * 0.5)*this.mPivot.x, (this.mSize.y * 0.5)*this.mPivot.y, 0);
@@ -590,56 +434,7 @@ export class CPaint2D extends CPaint
 
 
 	// }
-	override Render(_vf : CShader)
-	{
-
-		
-
-		var barr=this.RenderBatch(_vf,1);
-		if(barr==null)	return;
-
-		if(this.mSize==null || this.mTextureKey.length==0)
-		{
-			this.mBatchMap.clear();
-			//this.mBatchLastVF=null;
-			return;
-		}
-			
-		
-			
-
-		this.mOwner.GetFrame().BMgr().BatchOn();
-		this.Common(_vf);
-		if(this.mTag.has("tail"))
-		{
-			let wsa=new CShaderAttr("worldMat", this.mTMat);
-			this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
-		}
-		else
-		{
-			let wsa=new CShaderAttr("worldMat", this.GetFMat());
-			switch(this.mWorldMatType)
-			{
-			
-				case CMat.eType.Short2D:	wsa.mKey="worldMatShort";	break;
-			}
-			wsa.mType=this.mWorldMatType;
-			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType",new CVec1(this.mWorldMatType)));
-			this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
-			//let wsa=new CShaderAttr("worldMat", this.GetFMat());
-			//this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
-		}
-		
-		
-		if(_vf.mUniform.get("windInfluence")!=null)
-			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
-		var dm=this.GetDrawMesh("Artgine/DM/2D",_vf,this.mOwner.GetFrame().Pal().MCI2D());
-		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
-
-		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
-		
-	}
+	override Render(_vf : CShader)	{}
 	
 	// override SetTexCodi(_uv : CVec4) : void;
 	// override SetTexCodi(_uv : CVec4,_margin : number) : void;
@@ -760,7 +555,7 @@ export class CPaint2D extends CPaint
 		{
 			this.PushTag("tail");
 			this.ClearBatch();
-			this.mUpdateLMat=true;
+			this.mUpdateReq=true;
 		}
 		
 		
@@ -793,7 +588,7 @@ export class CPaint2D extends CPaint
 			this.mBound.InitBound(this.mPosList);
 			this.mBound.SetType(CBound.eType.Box);
 			this.mBW.mRadian=0;
-			this.mLMat.Unit();
+			this.mLPos.Zero();
 		
 		}
 			
@@ -810,6 +605,7 @@ export class CPaint2D extends CPaint
 */
 export class CPaintHTML extends CPaint2D
 {
+    override Icon(){ return "bi bi-filetype-html"; }
 	
 	public mElement : HTMLElement=null;
 	public mOrgSize=new CVec2();
@@ -859,15 +655,7 @@ export class CPaintHTML extends CPaint2D
 	// 	this.mElement=_html as HTMLElement;
 	// 	this.mAttach=false;	
 	// }
-	override UpdateRenPt()
-	{
-		for(let i=0;i<this.mRenPT.length;++i)
-		{
-			let ren=this.mRenPT[i];
-			ren.mShow=2;
-			ren.mDistance=0x7FFFFE00;
-		}
-	}
+	override UpdateRenPt()	{}
 	override SetSize(_size: CVec2): void {
 		this.mSize=_size;
 		this.mUpdateFMat=true;
@@ -882,112 +670,7 @@ export class CPaintHTML extends CPaint2D
 	// 	if(this.GetOwner()==null)	return;
 	// 	this.mElement.hidden=!this.GetOwner().IsEnable();
 	// }
-	override Update(_delay)
-	{
-		if(this.mRenPT.length==0 || this.mElement==null)	return;
-		if(this.mRenPT[0].mCam.mUpdateMat!=0 || this.mOwner.mUpdateMat!=0 || this.mOwner.GetFrame().Win().IsResize() || this.mUpdateFMat==true || this.mElement.clientWidth!=this.mOrgSize.x){}
-		else return;
-
-		//if(this.GetOwner().IsDestroy())this.mElement.remove();
-		//this.MatUpdate();
-		//this.CacBound();
-		
-		this.mUpdateFMat=false;
-		
-		if(this.mAttach==false)
-		{
-			this.mParent.appendChild(this.mElement);
-			// if(this.mParent==CDOM.CanvasDiv())
-			// 	this.mElement.style.zIndex=900+"";
-			this.mElement.style.position="absolute";
-			//if(this.mElement.style.pointerEvents=='')
-			//	this.mElement.style.pointerEvents="none";
-			this.mAttach=true;	
-		}
-
-		
-		let zoom = 1 / this.mRenPT[0].mCam.mZoom;
-		let pos=this.GetOwner().GetMat().xyz;
-		
-		// pos.x*=zoom;
-		// pos.y*=zoom;
-		//this.mBound.SetType(CBound.eType.Box);
-		
-		
-		
-
-		if(this.mElement.offsetWidth != 0)
-		{
-			// DOM 크기가 바뀌었을 때만 바운딩 박스 갱신
-			if (this.mOrgSize.x != this.mElement.clientWidth || this.mOrgSize.y != this.mElement.clientHeight)
-			{
-				this.mOrgSize.x = this.mElement.clientWidth;
-				this.mOrgSize.y = this.mElement.clientHeight;
-
-				// 명시적인 mSize가 없을 때 DOM 실제 크기를 바운딩 박스에 반영
-				if (this.mSize == null)
-				{
-					this.mBound.mMin.x = -this.mOrgSize.x * 0.5;
-					this.mBound.mMin.y = -this.mOrgSize.y * 0.5;
-					this.mBound.mMax.x = this.mOrgSize.x * 0.5;
-					this.mBound.mMax.y = this.mOrgSize.y * 0.5;
-
-					// 부모 CUI가 있다면 앵커 재계산 트리거
-					if (this.mOwner && (this.mOwner as any).mUpdateAnchor !== undefined)
-					{
-						(this.mOwner as any).mUpdateAnchor = true;
-					}
-				}
-			}
-		}
-		let pivotX=0;
-		let pivotY=0;
-		if(this.mSize!=null)
-		{
-			//let sizeX=this.mSize.x*this.GetOwner().GetMat().mF32A[0];
-			//let sizeX=this.mSize.x*this.GetOwner().GetMat().mF32A[0];
-			pos.x+=this.mPivot.x*this.mSize.x*0.5;
-			pos.y+=this.mPivot.y*this.mSize.y*0.5;
-			if(this.mSize.x!=0)
-				this.mElement.style.width=this.mSize.x+"px";
-			if(this.mSize.y!=0)
-				this.mElement.style.height=this.mSize.y+"px";
-			//this.m_html.style.scale="scale("+zoom+","+zoom+")";
-			this.mElement.style.transform = "scale(" + (zoom*this.GetOwner().GetMat().mF32A[0]) + "," + (zoom*this.GetOwner().GetMat().mF32A[5]) + ")";
-			pivotX=this.mOrgSize.x*0.5;
-			pivotY=this.mOrgSize.y*0.5;
-		}
-		else
-		{
-			pivotX=this.mOrgSize.x*(this.mPivot.x*0.5+0.5);
-			pivotY=this.mOrgSize.y*(this.mPivot.y*0.5+0.5);
-		}
-		
-	
-		// let winX=this.mRenPT[0].mCam.mWidth;
-		// let winY=this.mRenPT[0].mCam.mHeight;
-		// if(winX==0)	winX=this.mOwner.GetFrame().PF().mWidth;
-		// if(winY==0)	winY=this.mOwner.GetFrame().PF().mHeight;
-		// winX/=this.mOwner.GetFrame().PF().mWidth;
-		// winY/=this.mOwner.GetFrame().PF().mHeight;
-		
-		pos=CMath.V3MulMatCoordi(pos,this.mRenPT[0].mCam.GetViewMat());
-		pos=CMath.V3MulMatCoordi(pos,this.mRenPT[0].mCam.GetProjMat());
-		var x=(pos.x+1)/2.0;
-		var y=(-pos.y+1)/2.0;
-
-		var left=this.GetOwner().GetFrame().PF().mLeft;
-		var top=this.GetOwner().GetFrame().PF().mTop;
-		left+=x*this.mOwner.GetFrame().PF().mWidth-pivotX+this.mPos.x;
-		top+=y*this.mOwner.GetFrame().PF().mHeight-pivotY-this.mPos.y;
-		left=Math.trunc(left);
-		top=Math.trunc(top);
-		this.mElement.style.left=left+"px";
-		this.mElement.style.top=top+"px";
-
-
-		
-	}
+	override Update(_delay)	{}
 
 	override Destroy(): void 
 	{
@@ -1000,6 +683,7 @@ export class CPaintHTML extends CPaint2D
 // 한가지 텍스쳐만 사용( 셰이더 공유하기 위함 )
 export class CPaint2DMerge extends CPaintMerge
 {
+    override Icon(){ return "bi bi-images"; }
 	mMatList : Array<CMat>;
 	mCodiList : Array<CVec4>;
 	mTexSize : CVec2=null;
@@ -1009,6 +693,9 @@ export class CPaint2DMerge extends CPaintMerge
 
 	protected mSlotCodi=new Float32Array(0);
 	protected mSlotCodiUse=new Uint8Array(0);
+	//슬롯 알파는 정점 sca 채널의 z로 올라가 셰이더에서 to_uv.z로 알파에 곱해진다
+	protected mSlotAlpha=new Float32Array(0);
+	protected mSlotAlphaInit=new Array<number>();
 
 	constructor(_texture : CFontRef|string, _matList : Array<CMat>=[], _codiList : Array<CVec4> = [])
 	{
@@ -1024,7 +711,6 @@ export class CPaint2DMerge extends CPaintMerge
 				this.SetTexture(_texture);
 		}
 
-        this.PushTag("merge");
 	}
 
     override InitChk()
@@ -1065,18 +751,35 @@ export class CPaint2DMerge extends CPaintMerge
 	override Start(): void {
 		this.BuildSlot();
 		for(let i=0;i<this.mMatList.length;++i)
-			this.PushSlot(this.mMatList[i],this.mCodiList[i]);
+			this.PushSlot(this.mMatList[i],this.mCodiList[i],this.mSlotAlphaInit[i]??1);
 	}
 
-	Push(_mat : CMat,_codi : CVec4=null) : number
+	Push(_mat : CMat,_codi : CVec4=null,_alpha=1) : number
 	{
 		if(this.mSlotReady==false)
 		{
 			this.mMatList.push(_mat);
 			this.mCodiList[this.mMatList.length-1]=_codi;
+			this.mSlotAlphaInit[this.mMatList.length-1]=_alpha;
 			return this.mMatList.length-1;
 		}
-		return this.PushSlot(_mat,_codi);
+		return this.PushSlot(_mat,_codi,_alpha);
+	}
+	//시작 전에는 Push가 돌려준 번호가 목록 번호라서 그 자리의 초기 알파를 바꾼다
+	ModifyAlpha(_slot : number,_alpha : number)
+	{
+		if(this.mSlotReady==false)
+		{
+			if(_slot>=0 && _slot<this.mMatList.length)	this.mSlotAlphaInit[_slot]=_alpha;
+			return;
+		}
+		if(this.IsUse(_slot)==false || this.mSlotAlpha[_slot]==_alpha)	return;
+		this.mSlotAlpha[_slot]=_alpha;
+		const s=this.F32(CVertexFormat.eIdentifier.Position,1);
+		const vs=this.mSlotVS[_slot];
+		for(let k=0;k<4;++k)
+			s[(vs+k)*3+2]=_alpha;
+		this.Dirty(_slot);
 	}
 	override Modify(_slot : number,_mat : CMat,_codi : CVec4=undefined)
 	{
@@ -1127,11 +830,12 @@ export class CPaint2DMerge extends CPaintMerge
 		this.mYSort = _enable;
 	}
 
-	private PushSlot(_mat : CMat,_codi : CVec4) : number
+	private PushSlot(_mat : CMat,_codi : CVec4,_alpha=1) : number
 	{
 		const slot=this.NewSlot("");
 		this.SetSlotMat(slot,_mat);
 		this.SetSlotCodi(slot,_codi);
+		this.mSlotAlpha[slot]=_alpha;
 		this.WriteSlot(slot,true);
 		this.Dirty(slot);
 		return slot;
@@ -1149,6 +853,7 @@ export class CPaint2DMerge extends CPaintMerge
 	protected override GrowSlotData(_cap: number): void {
 		const codi=new Float32Array(_cap*4);	codi.set(this.mSlotCodi);	this.mSlotCodi=codi;
 		const use=new Uint8Array(_cap);	use.set(this.mSlotCodiUse);	this.mSlotCodiUse=use;
+		const alpha=new Float32Array(_cap).fill(1);	alpha.set(this.mSlotAlpha);	this.mSlotAlpha=alpha;
 	}
 	protected override CreateChannel(): void {
 		const ci=this.mMeshDataNode.ci;
@@ -1192,7 +897,6 @@ export class CPaint2DMerge extends CPaintMerge
 
 		const sx=Math.sqrt(m[o]*m[o]+m[o+1]*m[o+1]+m[o+2]*m[o+2]);
 		const sy=Math.sqrt(m[o+4]*m[o+4]+m[o+5]*m[o+5]+m[o+6]*m[o+6]);
-		const sz=Math.sqrt(m[o+8]*m[o+8]+m[o+9]*m[o+9]+m[o+10]*m[o+10]);
 
 		let dz=0;
 		if(this.mYSort)
@@ -1235,7 +939,7 @@ export class CPaint2DMerge extends CPaintMerge
 			const pz=(m[o+2]*x+m[o+6]*y+m[o+14]+dz)/w;
 			const v3=(vs+k)*3, v2=(vs+k)*2;
 			p[v3]=px; p[v3+1]=py; p[v3+2]=pz;
-			s[v3]=x<0?-sx:sx; s[v3+1]=y<0?-sy:sy; s[v3+2]=sz;
+			s[v3]=x<0?-sx:sx; s[v3+1]=y<0?-sy:sy; s[v3+2]=this.mSlotAlpha[_slot];
 			if(_static)	{	uv[v2]=x<0?-u0:u1; uv[v2+1]=y<0?-v0:v1;	}
 			nor[v3]=m[o+8]; nor[v3+1]=m[o+9]; nor[v3+2]=m[o+10];
 			this.BoundPush(px,py,pz-0.5);
@@ -1259,3 +963,6 @@ export class CPaint2DMerge extends CPaintMerge
 	private static sDirX=[-0.5, 0.5, 0.5, -0.5];
 	private static sDirY=[-0.5, -0.5, 0.5, 0.5];
 }
+
+import CPaint2D_imple from "../../../app_imple/component/paint/CPaint2D.js";
+CPaint2D_imple();

@@ -370,7 +370,7 @@ export class CShadowPlane extends CPaint2D {
             const points = area.m_points;
             points.forEach(p => CMath.V3SubV3(p, this.GetOwner().GetPos(), p));
             this.SetPosList(points);
-            this.mUpdateLMat = true;
+            this.mUpdateReq = true;
             this.CaptureShadow();
             this.SetAlphaModel(new CAlpha(this.mShadowAlpha));
         }

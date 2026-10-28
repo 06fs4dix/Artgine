@@ -23,13 +23,13 @@ gPF.mIAuto = true;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mschkcx4_2";
+gPF.mVersion = "mvs4vtvv_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
 import {CPlugin} from "../../artgine/util/CPlugin.js";
 CPlugin.PushPath('ControlMedia','../../plugin/ControlMedia/');
-import "../../plugin/ControlMedia/ControlMediaClient.js";
+import "../../plugin/ControlMedia/ControlMediaClient.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
@@ -75,8 +75,57 @@ const CONTENT_MIN_FOR_LEFT = 720;
 const SIDEBAR_BOTH_MIN = CONTENT_MAX + 325 + 325; // 1850
 const SIDEBAR_LEFT_MIN = SIDEBAR_WIDTH + CONTENT_MIN_FOR_LEFT; // 1030
 
+const vscodeParams = new URLSearchParams(location.search);
+const vscodeMode: 'left' | 'right' | 'panel' | null = ((m) => m === 'left' || m === 'right' || m === 'panel' ? m : null)(vscodeParams.get('vscode'));
+if (vscodeMode) {
+    document.body.classList.add('vscode-' + vscodeMode);
+    const vscodeToken = vscodeParams.get('authToken');
+    if (vscodeToken) setAuthToken(CPath.WebRootUrl(), vscodeToken);
+}
+// 로컬 서버는 보통 세션 쿠키로 인증하지만, VS Code 웹뷰 iframe에서는 쿠키가 전달되지 않아 토큰을 직접 실어야 한다.
+function ctrlTokenOf(baseUrl: string): string {
+    if (baseUrl) return getAuthToken(baseUrl);
+    return vscodeMode ? getAuthToken(CPath.WebRootUrl()) : '';
+}
+function ctrlTokenBody(baseUrl: string): { token?: string } {
+    const token = ctrlTokenOf(baseUrl);
+    return token ? { token } : {};
+}
+if (vscodeMode === 'panel') {
+    const tabId = vscodeParams.get('tab') === 'messenger' ? 'messenger-tab' : 'log-tab';
+    setTimeout(() => (window as any).bootstrap.Tab.getOrCreateInstance(document.getElementById(tabId)).show(), 300);
+}
+
+if (vscodeMode === 'left') {
+    const openTab = (key: string, src: string) => window.parent.postMessage({ artgineVscode: 'openFrame', key, src }, '*');
+    const theme = () => encodeURIComponent(document.documentElement.getAttribute('data-bs-theme') ?? 'dark');
+    const htmlPage = (name: string) => `${CPath.WebRootArtgineUrl()}artgine/server/html/${name}.html?theme=${theme()}`;
+    const menuItems: Record<string, () => void> = {
+        File: () => openTab('File', htmlPage('File')),
+        Memo: () => openTab('Memo', htmlPage('Memo')),
+        RDP: () => document.getElementById('rdp-add-btn')?.click(),
+        Chat: () => document.getElementById('chat-new-btn')?.click(),
+        Terminal: () => document.getElementById('term-new-btn')?.click(),
+        Browser: () => document.getElementById('browser-new-btn')?.click(),
+        Web: () => document.getElementById('web-new-btn')?.click(),
+        Search: () => document.getElementById('search-open-btn')?.click(),
+        Team: () => document.getElementById('team-tab')?.click(),
+        Log: () => openTab('Log', new URL('Control.html?vscode=panel&tab=log', location.href).href),
+        Messenger: () => openTab('Messenger', new URL('Control.html?vscode=panel&tab=messenger', location.href).href),
+                Help: () => openTab('Help', new URL('./artgine-agent.html', import.meta.url).href),
+    };
+    window.addEventListener('message', (e: MessageEvent) => {
+        if (e.data?.artgineVscodeCmd === 'menu') menuItems[e.data.name]?.();
+    });
+}
+
 function updateSidebarMode() {
     if (!mainContainer) return;
+    if (vscodeMode) {
+        appSidebar?.classList.toggle('sidebar-docked', vscodeMode === 'left');
+        appSidebarRight?.classList.toggle('sidebar-docked', vscodeMode === 'right');
+        return;
+    }
     const w = window.innerWidth;
     let leftDock = false;
     let rightDock = false;
@@ -592,14 +641,14 @@ document.getElementById('agentAddFolderBtn')?.addEventListener('click', () => sh
 // 아티젠 DB(db/artgine.sqlite)를 CORMRouter(/ORM/Exec) 경유로 읽어 보여주는 읽기 전용 ORM 뷰어.
 // RDP로 원격 서버를 보는 중이면 그 서버의 DB를, 아니면 로컬 DB를 연다(currentWebRootUrl 기준).
 document.getElementById('sqliteViewerBtn')?.addEventListener('click', () => {
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     new CORMViewer(undefined, 'sqlite', 'db/artgine.sqlite', currentWebRootUrl, token).Open(CModal.ePos.Center);
 });
 
 // 임의의 DB(mysql/mssql/sqlite/ne/postgresql/mongodb)에 접속해 보여주는 범용 ORM 뷰어. dbType/database를 비워 넘기면
 // CORMViewer가 연결 정보 입력 폼을 먼저 띄운다.
 document.getElementById('dbViewerBtn')?.addEventListener('click', () => {
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     new CORMViewer(undefined, undefined, undefined, currentWebRootUrl, token).Open(CModal.ePos.Center);
 });
 
@@ -1141,6 +1190,10 @@ interface FramePoolCtx {
 // ctx.container는 더 이상 쓰이지 않지만(각 타입의
 // 옛 전용 탭 컨테이너), FramePoolCtx 생성부를 그대로 두기 위해 필드는 남겨둔다.
 function showPooledFrame(ctx: FramePoolCtx, key: string, src: string): HTMLIFrameElement {
+    if (vscodeMode) {
+        if (src) window.parent.postMessage({ artgineVscode: 'openFrame', key, src: new URL(src, location.href).href }, '*');
+        return document.createElement('iframe');
+    }
     let f = ctx.pool.get(key);
     if (!f) {
         f = document.createElement('iframe');
@@ -1494,7 +1547,7 @@ async function ctrlRefreshRootSelect() {
         }
     }
     try {
-        const token = baseUrl ? getAuthToken(baseUrl) : '';
+        const token = ctrlTokenOf(baseUrl);
         const data = await CFecth.Exe((baseUrl || CPath.WebRootUrl()) + "File/Root", token ? { token } : {}, "json") as { RootPath: string, RootUrl: string, roots: ICtrlRootOpt[] };
         if (seq !== ctrlRootReqSeq) return;
         ctrlRenderRootOpts(data.roots ?? []);
@@ -1880,6 +1933,73 @@ const CTRL_SEARCH_EXCLUDE_DIRS = ['node_modules'];
 const ctrlIsSearchExcluded = (name: string) => name.startsWith('.') || CTRL_SEARCH_EXCLUDE_DIRS.includes(name);
 const ctrlEncodeUrlPath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
 
+// Terminal.html은 text/plain(경로)만으로는 파일이 어느 서버 것인지 알 수 없어, 세션 서버와 출처 서버가 다르면
+// (원격 세션에 로컬 파일을 끌어다 놓은 경우) 이 MIME의 baseUrl로 판단해 URL 변환을 부모(Control)에 요청한다.
+const CTRL_FILE_DRAG_MIME = 'application/x-artgine-file';
+function ctrlSetFileDrag(dt: DataTransfer | null, absPath: string, baseUrl: string) {
+    if (!dt) return;
+    dt.setData('text/plain', absPath);
+    dt.setData(CTRL_FILE_DRAG_MIME, JSON.stringify({ path: absPath, baseUrl: baseUrl || CPath.WebRootUrl() }));
+    dt.effectAllowed = 'copy';
+}
+
+// 원격 서버가 받아갈 수 있는 주소로 바꾼다. localhost/사설 IP로 열려 있으면 원격에서 닿지 않으므로 공인 IP로 치환한다.
+let ctrlPublicIp = '';
+async function ctrlExternalUrl(url: string): Promise<string> {
+    const u = new URL(url);
+    const h = u.hostname;
+    const unreachable = h === 'localhost' || h === '[::1]' || /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+    if (!unreachable) return u.href;
+    if (!ctrlPublicIp) ctrlPublicIp = (await (await fetch('https://api.ipify.org?format=text')).text()).trim();
+    if (!ctrlPublicIp) throw new Error('public ip unavailable');
+    u.hostname = ctrlPublicIp;
+    return u.href;
+}
+
+async function ctrlFetchRoots(baseUrl: string): Promise<Array<{ path: string; url: string; name: string }>> {
+    const token = ctrlSideFileAuthToken(baseUrl);
+    const data = await CFecth.Exe(baseUrl + 'File/Root', token ? { token } : {}, 'json') as { roots?: Array<{ path: string; url: string; name: string }> };
+    return data?.roots ?? [];
+}
+
+async function ctrlAbsPathToExternalUrl(absPath: string, baseUrl: string): Promise<string | null> {
+    const norm = termNormAbsPath(absPath);
+    const normLower = norm.toLowerCase();
+    const root = (await ctrlFetchRoots(baseUrl)).find(r => {
+        const rp = termNormAbsPath(r.path).toLowerCase();
+        return normLower === rp || normLower.startsWith(rp + '/');
+    });
+    if (!root) return null;
+    const rel = norm.slice(termNormAbsPath(root.path).length).replace(/^\/+/, '');
+    const downBase = new URL(root.url, baseUrl).href.replace(/\/+$/, '');
+    return ctrlExternalUrl(downBase + '/' + ctrlEncodeUrlPath(rel));
+}
+
+// 원격 세션에 드롭된 로컬 PC 파일: 로컬(Control) 서버의 temp/uploads/에 저장하고 외부 접속 URL을 돌려준다.
+async function ctrlUploadToLocalExternalUrl(name: string, b64: string): Promise<string> {
+    const base = CPath.WebRootUrl();
+    const roots = await ctrlFetchRoots(base);
+    const root = roots.find(r => r.name === './') ?? roots[0];
+    if (!root) throw new Error('no root');
+    const token = ctrlSideFileAuthToken(base);
+    const rel = 'temp/uploads';
+    const mk: any = { data: '/' + rel, RootPath: root.path };
+    if (token) mk.token = token;
+    const mkRes = await CFecth.Exe(base + 'File/Mkdir', mk, 'json') as { ok?: boolean };
+    if (mkRes && mkRes.ok === false) throw new Error('mkdir failed');
+    const safeName = `${Date.now()}_${name.replace(/[\\/:*?"<>|]/g, '_')}`;
+    const up: any = { path: termNormAbsPath(root.path) + '/' + rel + '/', name: [safeName], data: [b64] };
+    if (token) up.token = token;
+    const res = await CFecth.Exe(base + 'File/Upload', up, 'json') as { ok?: boolean };
+    if (!res?.ok) throw new Error('upload failed');
+    const downBase = new URL(root.url, base).href.replace(/\/+$/, '');
+    return ctrlExternalUrl(`${downBase}/${rel}/${encodeURIComponent(safeName)}`);
+}
+
+function ctrlTermInsertReply(source: MessageEventSource | null, text: string, error = '') {
+    if (source) CIframeMsg.Send(source as Window, 'term-insert', { text, error });
+}
+
 // 검색 모달에 체크박스로 나열할 "모든 패스" = 로컬 등록 루트(localRootOpts) + 인증된 원격들의 등록 루트(remoteRootsCache).
 // 좌측 사이드바 Agent 그룹 소스(renderAgentGroups)와 동일한 키 규칙을 그대로 재사용해 그룹 Search 버튼의 키와 맞춘다.
 interface ICtrlSearchScopeItem { key: string; scope: ICtrlSearchScope; }
@@ -1994,8 +2114,7 @@ async function ctrlFileSearch(onlyKey?: string) {
         // 사이드바 File 목록(ctrlSideFileRenderList)과 동일하게, 터미널 탭(iframe)에 드롭하면 경로가 입력창에 삽입된다.
         item.draggable = true;
         item.addEventListener('dragstart', (e) => {
-            e.dataTransfer?.setData('text/plain', (g_ctrlSrchRoot.get(scopeKey) ?? '') + dirPath + fl.name);
-            if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+            ctrlSetFileDrag(e.dataTransfer, (g_ctrlSrchRoot.get(scopeKey) ?? '') + dirPath + fl.name, scope.editorBaseUrl);
         });
         if (fl.file) {
             item.addEventListener('click', () => {
@@ -2184,7 +2303,7 @@ function ctrlSideFileVcsBadge(status: string | undefined, filePath: string): str
 // webRootUrl/token은 File 탭과 동일하게 currentWebRootUrl(원격 접속 시)을 기준으로 삼는다.
 async function ctrlOpenVcsDiff(filePath: string) {
     const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     let res: any;
     try {
         res = await CFecth.Exe(webRootUrl + "File/VCS", { action: "diff", path: filePath, token }, "json");
@@ -2262,7 +2381,7 @@ let ctrlSideFileReqSeq = 0;
     const norm = termNormAbsPath(absPath);
     const normLower = norm.toLowerCase();
     try {
-        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json") as { roots: Array<{ path: string; url: string; name: string }> };
+        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", ctrlTokenBody(""), "json") as { roots: Array<{ path: string; url: string; name: string }> };
         const root = (data.roots || []).find(r => {
             const rp = termNormAbsPath(r.path).toLowerCase();
             return normLower === rp || normLower.startsWith(rp + '/');
@@ -2281,7 +2400,7 @@ let ctrlSideFileReqSeq = 0;
 async function ctrlUrlToPath(url: string, baseUrl: string): Promise<string | null> {
     const apiUrl = baseUrl || CPath.WebRootUrl();
     try {
-        const data = await CFecth.Exe(apiUrl + "File/Root", {}, "json") as { roots: Array<{ path: string; url: string; name: string }> };
+        const data = await CFecth.Exe(apiUrl + "File/Root", ctrlTokenBody(apiUrl), "json") as { roots: Array<{ path: string; url: string; name: string }> };
         for (const root of data.roots || []) {
             const downBase = new URL(root.url, apiUrl).href.replace(/\/+$/, '');
             if (url === downBase || url.startsWith(downBase + '/')) {
@@ -2514,7 +2633,7 @@ async function ctrlSideFilePasteCopy(item: CtrlSideCopyItem) {
         }
     }
     const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     try {
         // 대상에 동명 있는지 확인 → 있으면 덮어쓰기/패스 컨펌
         const p: any = { path: ctrlSideFilePath };
@@ -2641,15 +2760,14 @@ function ctrlSideFileRenderList(list: CtrlSideFileEntry[]) {
         // 터미널 탭(iframe)에 드롭하면 그 안의 Terminal.html이 text/plain을 읽어 입력창에 경로를 삽입한다.
         item.draggable = true;
         item.addEventListener('dragstart', (e) => {
-            e.dataTransfer?.setData('text/plain', ctrlSideFileRoot + ctrlSideFilePath + fl.name);
-            if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+            ctrlSetFileDrag(e.dataTransfer, ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentWebRootUrl);
         });
         item.addEventListener('click', () => {
             if (fl.file) {
                 // sqlite/db는 서버가 정적 서빙 자체를 403으로 막으므로(CServerMain.ts), Editor로 열지 말고
                 // File.ts의 openOrm과 동일하게 전용 API(CORMViewer)로 연다.
                 if (ctrlSideFileKind(fl) === 'orm') {
-                    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+                    const token = ctrlTokenOf(currentWebRootUrl);
                     new CORMViewer(undefined, 'sqlite', ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentWebRootUrl, token).Open();
                     return;
                 }
@@ -2676,7 +2794,7 @@ async function ctrlSideFileGoTo(pathVal: string) {
     const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
     const rootPathParam = ctrlSelectedRootPath || undefined;
     try {
-        const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+        const token = ctrlTokenOf(currentWebRootUrl);
         const p: any = { path: pathVal };
         if (rootPathParam) p.RootPath = rootPathParam;
         if (token) p.token = token;
@@ -2825,7 +2943,7 @@ async function ctrlSideSrchScan(key: string): Promise<void> {
 
     const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
     const rootPathParam = ctrlSelectedRootPath || undefined;
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     const queue: string[] = ['/'];
     let scanned = 0;
     let stopped = false;
@@ -2948,8 +3066,7 @@ function ctrlSideSrchRenderFileResults(query: string): number {
             // 전체 경로가 입력창에 삽입된다.
             item.draggable = true;
             item.addEventListener('dragstart', (e) => {
-                e.dataTransfer?.setData('text/plain', g_ctrlSideSrch.root + dirPath + fl.name);
-                if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+                ctrlSetFileDrag(e.dataTransfer, g_ctrlSideSrch.root + dirPath + fl.name, currentWebRootUrl);
             });
             item.addEventListener('click', () => {
                 ctrlSideFileSearchInputEl.value = '';
@@ -3172,6 +3289,23 @@ document.addEventListener('keydown', (e) => {
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
         runControlHotkey(String(data.key ?? ''), !!data.shift);
+    },
+});
+
+// 원격 세션 Terminal.html이 보내는 드롭 처리 요청. 세션 서버가 파일을 직접 못 읽는 경우라서 외부 접속 URL로 바꿔 돌려준다.
+CIframeMsg.Recv({
+    'term-path-to-url': async (data, source) => {
+        try {
+            const url = await ctrlAbsPathToExternalUrl(String(data.path ?? ''), String(data.baseUrl ?? '') || CPath.WebRootUrl());
+            if (!url) { ctrlTermInsertReply(source, '', 'File is outside the registered roots.'); return; }
+            ctrlTermInsertReply(source, `"${url}" `);
+        } catch (e) { ctrlTermInsertReply(source, '', String(e)); }
+    },
+    'term-upload-local': async (data, source) => {
+        try {
+            const url = await ctrlUploadToLocalExternalUrl(String(data.name ?? 'file'), String(data.data ?? ''));
+            ctrlTermInsertReply(source, `"${url}" `);
+        } catch (e) { ctrlTermInsertReply(source, '', String(e)); }
     },
 });
 
@@ -3982,7 +4116,7 @@ function updateAgentGroupHeader(el: AgentGroupEl, meta: IAgentGroupMeta) {
 // 완전히 별도로 관리한다 - 어느 RDP 탭을 보고 있든 로컬은 로컬대로, 원격은 원격대로 항상 동시에 보인다.
 async function refreshLocalRoots() {
     try {
-        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json") as { roots: ICtrlRootOpt[] };
+        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", ctrlTokenBody(""), "json") as { roots: ICtrlRootOpt[] };
         // ctrlRenderRootOpts와 동일하게 Artgine 작업경로 항목만 표시 이름을 바꿔치기한다.
         localRootOpts = (data.roots ?? []).map(r => r.name === './' ? { ...r, name: 'Artgine (WorkingPath)' } : r);
         renderSessionSidebar();
@@ -4111,7 +4245,7 @@ function noteSessionFetchFailure(remoteId: string) {
 // (서버의 AIChat/cmd 라우터가 CFileServer와 동일하게 authToken 있으면 토큰, 없으면 쿠키로 인증한다.)
 interface IServerCtx { remoteId: string; apiUrl: string; artgineUrl: string; authToken: string; }
 function localServerCtx(): IServerCtx {
-    return { remoteId: '', apiUrl: CPath.WebRootUrl(), artgineUrl: CPath.WebRootArtgineUrl(), authToken: '' };
+    return { remoteId: '', apiUrl: CPath.WebRootUrl(), artgineUrl: CPath.WebRootArtgineUrl(), authToken: vscodeMode ? getAuthToken(CPath.WebRootUrl()) : '' };
 }
 function remoteServerCtx(r: IRdpRemote): IServerCtx {
     const base = rdpRemoteWebRootUrl(r.entryUrl);
@@ -4489,6 +4623,10 @@ function renderOtherList(entries: { key: string; sortKey: number; spec: SessionI
 // ---- Chat 탭 (Home.html의 AI Chat 세션 목록/프레임 풀 패턴을 재사용) ----
 // 같은 출처(same-origin) 요청이라 세션 쿠키가 자동 전송된다 → 토큰 별도 첨부 불필요.
 function authedFetch(url: string, init?: RequestInit): Promise<Response> {
+    if (vscodeMode && url.startsWith(CPath.WebRootUrl()) && !url.includes('authToken=')) {
+        const t = getAuthToken(CPath.WebRootUrl());
+        if (t) url += (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(t);
+    }
     return fetch(url, init);
 }
 
@@ -4647,7 +4785,7 @@ async function ctrlSaveOpenedSheet(filePath: string, base64: string, baseUrl: st
     const fileName = filePath.split('/').pop() ?? filePath;
     const dir = filePath.slice(0, filePath.length - fileName.length);
     const webRootUrl = baseUrl || CPath.WebRootUrl();
-    const token = baseUrl ? getAuthToken(baseUrl) : '';
+    const token = ctrlTokenOf(baseUrl);
     const up: any = { path: dir, name: [fileName], data: [base64] };
     if (token) up.token = token;
     try {
@@ -4664,7 +4802,7 @@ async function ctrlSaveOpenedSheet(filePath: string, base64: string, baseUrl: st
 function promptSourceAction(fullPath: string, baseUrl: string, url: string, activate: boolean = true) {
     const ext = fileExtOf(fullPath);
     if (ext === 'sqlite' || ext === 'db') {
-        const token = baseUrl ? getAuthToken(baseUrl) : '';
+        const token = ctrlTokenOf(baseUrl);
         new CORMViewer(undefined, 'sqlite', fullPath, baseUrl, token).Open(CModal.ePos.Center);
         return;
     }
@@ -4935,7 +5073,7 @@ function chatItemSpec(s: IChatSess): SessionItemSpec {
     const isRemote = !!s.remoteId;
     const addr = remoteEntryUrl(s.remoteId);
     const rel = chatFormatRelative(s.updatedAt);
-    const isLoaded = chatIframePool.has(key);
+    const isLoaded = vscodeMode !== null || chatIframePool.has(key);
     const st: 'off' | 'busy' | 'idle' = !isLoaded ? 'off' : s.busy ? 'busy' : 'idle';
     const dot = st === 'off'  ? `<span class="text-danger small" title="${L('ctrl.st.disconnected', 'Disconnected')}">●</span>`
               : st === 'busy' ? `<span class="ai-busy-dot text-warning small" title="${L('ctrl.st.busy', 'Busy')}">●</span>`
@@ -5110,7 +5248,7 @@ function termItemSpec(s: ITermSess): SessionItemSpec {
     const key = sessKey('term', s.remoteId, s.token);
     const isRemote = !!s.remoteId;
     const addr = remoteEntryUrl(s.remoteId);
-    const isLoaded = termIframePool.has(key);
+    const isLoaded = vscodeMode !== null || termIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     const preview = aiEscapeHtml(s.lastMsg || '(empty)');
     const dotLabel = s.mode.slice(0, 3);
@@ -5538,7 +5676,7 @@ function browserItemSpec(s: IBrowserSessionData): SessionItemSpec {
     const key = sessKey('browser', s.remoteId, s.sessionId);
     const isRemote = !!s.remoteId;
     const addr = remoteEntryUrl(s.remoteId);
-    const isLoaded = browserIframePool.has(key);
+    const isLoaded = vscodeMode !== null || browserIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     return {
         ...sessActiveFromKey(key),
@@ -5921,6 +6059,7 @@ function tmuxPoolForKey(key: string): { pool: Map<string, HTMLIFrameElement>, on
     return null;
 }
 function tmuxEnsurePooledFrame(key: string): HTMLIFrameElement | null {
+    if (vscodeMode) return null;
     const spec = tmuxPoolForKey(key);
     if (!spec) return null;
     const existing = spec.pool.get(key);
@@ -7135,6 +7274,25 @@ if (CDOM.ID('messenger-panel').classList.contains('active')) {
 // ============================================================
 // ↑↑↑ 메신저(Messenger) 탭 관련 소스 끝 ↑↑↑
 // ============================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

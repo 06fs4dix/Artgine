@@ -4,6 +4,7 @@ class CCTEnterExit {
     tick;
 }
 export class CBehavior extends CComponent {
+    Icon() { return "bi bi-lightning-charge"; }
     mCTMap = new Map();
     mTick = 1;
     Start() {

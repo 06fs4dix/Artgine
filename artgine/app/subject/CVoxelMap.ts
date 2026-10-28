@@ -185,6 +185,8 @@ export class CVTile extends CObject implements IMapLabel
 	mColliderLayer : string = "";
 	mColor : number=0;
 	mAtlas : number=0;
+	//true면 빛이 통과한다(물, 유리 등). 기본 타일은 불투명
+	mLightPass : boolean=false;
 	//mPattern=new Array<CVTileSurface>();
 	
 	constructor(_color : number,_atlas : number,_collider : string="",_label : string="")
@@ -300,8 +302,13 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 	// };
 	mToolMode=false;
     mAtlas : CAtlas=new CAtlas("Voxel/");
-    
-	
+	//둘 다 있어야 쓴다(텍스처 3개: 색 0, 노말 1, 재질 2). 색 아틀라스와 같은 크기·순서로 만들어 UV가 같아야 한다
+	mAtlasNormal : CAtlas=null;
+	mAtlasMaterial : CAtlas=null;
+	//AO, 거칠기, 금속, 발광(CPaint.mMaterial과 같다). -1이면 재질 아틀라스에서 읽는다
+	mMaterial=new CVec4(1,-1,-1,0);
+
+
 	mBuf : CMapBuf=new CMapBuf();
 	//mColliderEvent =new Array();
 	//mTileArr =new Array<CVTile2>();
@@ -311,14 +318,27 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
     //mPaint : CPaintVoxel=null;
 	declare mPaintArr : Array<CPaintVoxel>;
 	mDiv=16;
-    mPlane : Array<CVoxPlane>=new Array<CVoxPlane>();//임시 버퍼
+    //PlaneRefresh가 한 칸의 6면을 계산해 두는 임시 버퍼. 칸 전체를 들고 있지 않는다
+    mPlane : Array<CVoxPlane>=new Array<CVoxPlane>();
+    //칸×6+방향 -> 청크 페인트의 면 슬롯 번호. 보이지 않는 면은 -1
+    mFaceSlot : Int32Array=null;
     //mCount=new CVec3();
     //mSize=0;
 	mUpdateRes=true;
 	mUpdateModify=new Set<CCIndex>();
+	//true면 칸별 하늘빛/블록빛(0~15)을 계산해 면 정점 광량(CVoxPlane.mLight)으로 넣는다
 	mLight=false;
+	mSkyLight : Uint8Array=null;
+	mTorchLight : Uint8Array=null;
+	//블록빛 광원. 칸 오프셋 -> 시작 밝기. 광원 칸은 빛이 통과하는 빈 칸이어야 한다
+	mTorchSrc=new Map<number,number>();
 	mTag=["shadow","light"];
 	static SunValue=1.0;
+	static LightMax=15;
+	//빛이 0인 칸의 최소 밝기
+	static LightMin=0.1;
+	//빛이 한 칸 약해질 때마다 곱하는 비율
+	static LightFalloff=0.8;
 	
 	mLayer =new Array<CBlackBoardRef<CVoxelMap>>();
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -327,6 +347,7 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 		if(_member=="mComArr" && _type==CObject.eShould.Editer)	return true;
 
 		if(_member=="mPaint" || _member=="mUpdateRes" || _member=="mPlane" || _member=="mComArr")	return false;
+		if(_member=="mSkyLight" || _member=="mTorchLight" || _member=="mTorchSrc" || _member=="mFaceSlot")	return false;
 
 		return super.IsShould(_member,_type);
 	}
@@ -374,6 +395,10 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 		this.mPTArr=null;
 		
 		this.mBuf.Reset(_count,_size);
+		this.mFaceSlot=null;
+		this.mSkyLight=null;
+		this.mTorchLight=null;
+		this.mTorchSrc.clear();
 
 		this.mUpdateRes=true;
 
@@ -389,52 +414,22 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 	
 	RefreshModify()
 	{
-		let cntX=Math.ceil(this.mBuf.mCount.x/this.mDiv);
-		let cntY=Math.ceil(this.mBuf.mCount.y/this.mDiv);
-
-		let chunkMap=new Map<number, Array<CCIndex>>();
 		for(let m of this.mUpdateModify)
 		{
+			//Bonds가 이웃 칸을 범위 검사 없이 넣는다. 맵 밖 칸은 오프셋이 다른 칸과 겹치므로 건너뛴다
+			if(this.IndexOut(m))	continue;
 			this.PlaneRefresh(m);
-			let cx=Math.floor(m.x/this.mDiv);
-			let cy=Math.floor(m.y/this.mDiv);
-			let cz=Math.floor(m.z/this.mDiv);
-			let pi=cx+cy*cntX+cz*cntX*cntY;
-			if(!chunkMap.has(pi)) chunkMap.set(pi,[]);
-			chunkMap.get(pi).push(m);
-		}
-
-		for(let [pi,cells] of chunkMap)
-		{
-			let paint=this.mPaintArr[pi];
-			if(paint==null) continue;
-
-			let cz=Math.floor(pi/(cntX*cntY));
-			let cy=Math.floor((pi%(cntX*cntY))/cntX);
-			let cx=pi%cntX;
-			let x0=cx*this.mDiv, y0=cy*this.mDiv, z0=cz*this.mDiv;
-			let chunkW=Math.min(this.mDiv, this.mBuf.mCount.x-x0);
-			let chunkH=Math.min(this.mDiv, this.mBuf.mCount.y-y0);
-
-			let chunkPlanes=new Array<CVoxPlane>();
-			for(let m of cells)
-			{
-				let lx=m.x-x0, ly=m.y-y0, lz=m.z-z0;
-				let localBase=(lx + ly*chunkW + lz*chunkW*chunkH)*6;
-				let globalBase=m.x*6 + m.y*this.mBuf.mCount.x*6
-									+ m.z*this.mBuf.mCount.x*this.mBuf.mCount.y*6;
-				for(let j=0;j<6;++j)
-				{
-					let plane=this.mPlane[globalBase+j];
-					plane.mOff=localBase+j; // 청크 로컬로 교정
-					chunkPlanes.push(plane);
-				}
-			}
-			paint.Rebuild(chunkPlanes);
+			this.PlaneApply(m);
 		}
 		this.mUpdateModify.clear();
 	}
+	//_index 칸 하나의 6면을 mPlane[0~5] 임시 버퍼에 계산한다
 	PlaneRefresh(_index : CCIndex)
+	{
+		
+	}
+	//PlaneRefresh가 계산한 임시 면을 청크 페인트의 슬롯에 반영한다. 가려진 면은 슬롯을 비우고, 드러난 면은 슬롯을 받는다
+	PlaneApply(_index : CCIndex)
 	{
 		
 	}
@@ -462,35 +457,41 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 		else
 			this.mAtlas.GetUV(tile.mAtlas,_texCodi);
 	}
+	//면이 바라보는 이웃 칸의 하늘빛/블록빛을 정점 광량으로 돌려준다. x=하늘빛, y=블록빛 (0~1)
 	GetLight(_index : CCIndex,_dir : CCIndex,_light : CVec2)
 	{
-		let x=_index.x+_dir.x;
-		let y=_index.y+_dir.y;
-		let z=_index.z+_dir.z;
-
 		_light.x=1.0;
 		_light.y=0.0;
-		// return;
+		if(this.mLight==false || this.mSkyLight==null)	return;
 
-		// if(this.mBuf.mCount.z==1)
-		// {
-		// 	_light.x=1.0;
-		// 	_light.y=0.0;
-		// 	return;
-		// }
-		
-
-        // if(x<0 || x>=this.mBuf.mCount.x || y<0 || y>=this.mBuf.mCount.y || 
-		// 	z<0 || z>=this.mBuf.mCount.z)
-        //     return 0;
-		// if(this.mLight)
-		// {
-		// 	_light.x=CVoxel.GSun(this.mBuffer[x+this.mBuf.mCount.x*y+this.mBuf.mCount.x*this.mBuf.mCount.y*z])/CVoxel.Sun;
-		// 	_light.y=CVoxel.GTorch(this.mBuffer[x+this.mBuf.mCount.x*y+this.mBuf.mCount.x*this.mBuf.mCount.y*z])/CVoxel.Torch;
-		// }
-			
-		
-
+		const c=this.mBuf.mCount;
+		const x=_index.x+_dir.x;
+		const y=_index.y+_dir.y;
+		const z=_index.z+_dir.z;
+		let sky=CVoxelMap.LightMax;
+		let torch=0;
+		if(x>=0 && x<c.x && y>=0 && y<c.y && z>=0 && z<c.z)
+		{
+			const off=x+y*c.x+z*c.x*c.y;
+			sky=this.mSkyLight[off];
+			torch=this.mTorchLight[off];
+		}
+		_light.x=CVoxelMap.LightMin+(1-CVoxelMap.LightMin)*Math.pow(CVoxelMap.LightFalloff,CVoxelMap.LightMax-sky);
+		_light.y=torch>0 ? Math.pow(CVoxelMap.LightFalloff,CVoxelMap.LightMax-torch) : 0;
+	}
+	//mLight 맵의 하늘빛/블록빛을 전체 다시 계산한다. RefreshRes가 버퍼가 없을 때 자동 호출한다
+	LightBuild()	{}
+	//_index 주변 칸의 빛을 다시 계산하고 면이 바뀐 칸을 mUpdateModify에 넣는다
+	LightUpdate(_index : CCIndex)	{}
+	TorchPush(_index : CCIndex,_level : number=14)
+	{
+		this.mTorchSrc.set(_index.Offset(this.mBuf.mCount),_level);
+		this.LightUpdate(_index);
+	}
+	TorchRemove(_index : CCIndex)
+	{
+		this.mTorchSrc.delete(_index.Offset(this.mBuf.mCount));
+		this.LightUpdate(_index);
 	}
     RefreshRes()
     {
@@ -503,7 +504,7 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 		// 	return;
 		// }
 
-		if(this.mUpdateRes || this.mUpdateModify.size>0)
+		if(this.mUpdateRes)
 			this.ColWake();
 		if(this.mUpdateRes)
 			this.RefreshRes();
@@ -524,6 +525,8 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 		
 		if(this.IndexOut(_index))	return;
 
+		//아래에서 _index를 옮기므로 라이트 갱신용 위치는 미리 복사해 둔다
+		const lightIndex=_index.Export();
 		this.mBuf.RGB(_index,_data);
 		if(_data==0)
 		{
@@ -547,6 +550,7 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 			}
 			
 			//this.m_updateRes=true;
+			this.LightUpdate(lightIndex);
 			return;
 		}
 		let select = this.mTileMap.get(_data);
@@ -561,11 +565,7 @@ export class CVoxelMap extends CSubjectMap implements IMapSchema
 		//룰검사
 		//중심 기준으로 9개 패턴이 동일하면 덮어쓰기
 		this.RoleChk(_index);
-		
-		
-		
-			
-		
+		this.LightUpdate(lightIndex);
 	}
 	RoleChk(_index : CCIndex)
 	{

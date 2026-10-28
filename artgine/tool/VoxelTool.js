@@ -603,7 +603,7 @@ function SelectMapRefresh() {
         let pt = new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
         pt.SetColorModel(new CColor(0, 1, 0, CColor.eModel.RGBAdd));
         pt.SetAlphaModel(new CAlpha(0.5));
-        pt.SetLMat(mat);
+        pt.SetFMat(mat);
         gPress.PushComp(pt);
     }
 }
@@ -621,7 +621,7 @@ function VoxelToolResetCurser(_xSize = 1, _ySize = 1) {
                 pos.y = -y * 1;
                 let mat = new CMat();
                 mat.xyz = pos;
-                pt.SetLMat(mat);
+                pt.SetFMat(mat);
                 gCurser.PushComp(pt);
                 pt.SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBAdd));
                 pt.SetAlphaModel(new CAlpha(0.5));
@@ -630,7 +630,7 @@ function VoxelToolResetCurser(_xSize = 1, _ySize = 1) {
         let mat = new CMat();
         mat.mF32A[5] = 0.2;
         mat.xyz = new CVec3(1 * (_xSize), 0, 0);
-        pt.SetLMat(mat);
+        pt.SetFMat(mat);
         gCurser.PushComp(pt);
         pt.SetColorModel(new CColor(0, 0, 1, CColor.eModel.RGBAdd));
         pt.SetAlphaModel(new CAlpha(0.6));
@@ -638,7 +638,7 @@ function VoxelToolResetCurser(_xSize = 1, _ySize = 1) {
         mat = new CMat();
         mat.mF32A[0] = 0.2;
         mat.xyz = new CVec3(0, 1, 0);
-        pt.SetLMat(mat);
+        pt.SetFMat(mat);
         gCurser.PushComp(pt);
         pt.SetColorModel(new CColor(0, 1, 0, CColor.eModel.RGBAdd));
         pt.SetAlphaModel(new CAlpha(0.6));
@@ -655,7 +655,7 @@ function VoxelToolResetCurser(_xSize = 1, _ySize = 1) {
         let mat = new CMat();
         mat.mF32A[10] = 0.2;
         mat.xyz = new CVec3(1 * (_xSize), 0, 0);
-        pt.SetLMat(mat);
+        pt.SetFMat(mat);
         gCurser.PushComp(pt);
         pt.SetColorModel(new CColor(0, 0, 1, CColor.eModel.RGBAdd));
         pt.SetAlphaModel(new CAlpha(0.6));
@@ -663,7 +663,7 @@ function VoxelToolResetCurser(_xSize = 1, _ySize = 1) {
         mat = new CMat();
         mat.mF32A[0] = 0.2;
         mat.xyz = new CVec3(0, 0, 1 * (_ySize));
-        pt.SetLMat(mat);
+        pt.SetFMat(mat);
         gCurser.PushComp(pt);
         pt.SetColorModel(new CColor(0, 1, 0, CColor.eModel.RGBAdd));
         pt.SetAlphaModel(new CAlpha(0.6));

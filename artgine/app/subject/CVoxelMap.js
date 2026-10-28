@@ -1,4 +1,5 @@
 import { CVec3 } from "../../geometry/CVec3.js";
+import { CVec4 } from "../../geometry/CVec4.js";
 import { CAtlas } from "../../util/CAtlas.js";
 import { CCollider } from "../component/CCollider.js";
 import { CPaintVoxel } from "../component/paint/CPaintVoxel.js";
@@ -40,6 +41,7 @@ export class CVTile extends CObject {
     mColliderLayer = "";
     mColor = 0;
     mAtlas = 0;
+    mLightPass = false;
     constructor(_color, _atlas, _collider = "", _label = "") {
         super();
         if (_color == null || _color <= 0) {
@@ -125,22 +127,34 @@ export class CVTileMold extends CObject {
 export class CVoxelMap extends CSubjectMap {
     mToolMode = false;
     mAtlas = new CAtlas("Voxel/");
+    mAtlasNormal = null;
+    mAtlasMaterial = null;
+    mMaterial = new CVec4(1, -1, -1, 0);
     mBuf = new CMapBuf();
     mTileMap = new Map();
     mTileRoleArr = new Array();
     mTileMoldArr = new Array();
     mDiv = 16;
     mPlane = new Array();
+    mFaceSlot = null;
     mUpdateRes = true;
     mUpdateModify = new Set();
     mLight = false;
+    mSkyLight = null;
+    mTorchLight = null;
+    mTorchSrc = new Map();
     mTag = ["shadow", "light"];
     static SunValue = 1.0;
+    static LightMax = 15;
+    static LightMin = 0.1;
+    static LightFalloff = 0.8;
     mLayer = new Array();
     IsShould(_member, _type) {
         if (_member == "mComArr" && _type == CObject.eShould.Editer)
             return true;
         if (_member == "mPaint" || _member == "mUpdateRes" || _member == "mPlane" || _member == "mComArr")
+            return false;
+        if (_member == "mSkyLight" || _member == "mTorchLight" || _member == "mTorchSrc" || _member == "mFaceSlot")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -173,6 +187,10 @@ export class CVoxelMap extends CSubjectMap {
         this.mPaintArr.length = 0;
         this.mPTArr = null;
         this.mBuf.Reset(_count, _size);
+        this.mFaceSlot = null;
+        this.mSkyLight = null;
+        this.mTorchLight = null;
+        this.mTorchSrc.clear();
         this.mUpdateRes = true;
         if (_count.z == 1 && this.mPos.z == 0) {
             let pos = this.mPos.Export();
@@ -181,46 +199,17 @@ export class CVoxelMap extends CSubjectMap {
         }
     }
     RefreshModify() {
-        let cntX = Math.ceil(this.mBuf.mCount.x / this.mDiv);
-        let cntY = Math.ceil(this.mBuf.mCount.y / this.mDiv);
-        let chunkMap = new Map();
         for (let m of this.mUpdateModify) {
-            this.PlaneRefresh(m);
-            let cx = Math.floor(m.x / this.mDiv);
-            let cy = Math.floor(m.y / this.mDiv);
-            let cz = Math.floor(m.z / this.mDiv);
-            let pi = cx + cy * cntX + cz * cntX * cntY;
-            if (!chunkMap.has(pi))
-                chunkMap.set(pi, []);
-            chunkMap.get(pi).push(m);
-        }
-        for (let [pi, cells] of chunkMap) {
-            let paint = this.mPaintArr[pi];
-            if (paint == null)
+            if (this.IndexOut(m))
                 continue;
-            let cz = Math.floor(pi / (cntX * cntY));
-            let cy = Math.floor((pi % (cntX * cntY)) / cntX);
-            let cx = pi % cntX;
-            let x0 = cx * this.mDiv, y0 = cy * this.mDiv, z0 = cz * this.mDiv;
-            let chunkW = Math.min(this.mDiv, this.mBuf.mCount.x - x0);
-            let chunkH = Math.min(this.mDiv, this.mBuf.mCount.y - y0);
-            let chunkPlanes = new Array();
-            for (let m of cells) {
-                let lx = m.x - x0, ly = m.y - y0, lz = m.z - z0;
-                let localBase = (lx + ly * chunkW + lz * chunkW * chunkH) * 6;
-                let globalBase = m.x * 6 + m.y * this.mBuf.mCount.x * 6
-                    + m.z * this.mBuf.mCount.x * this.mBuf.mCount.y * 6;
-                for (let j = 0; j < 6; ++j) {
-                    let plane = this.mPlane[globalBase + j];
-                    plane.mOff = localBase + j;
-                    chunkPlanes.push(plane);
-                }
-            }
-            paint.Rebuild(chunkPlanes);
+            this.PlaneRefresh(m);
+            this.PlaneApply(m);
         }
         this.mUpdateModify.clear();
     }
     PlaneRefresh(_index) {
+    }
+    PlaneApply(_index) {
     }
     IndexOut(_index) {
         if (_index.x < 0 || _index.x >= this.mBuf.mCount.x || _index.y < 0 || _index.y >= this.mBuf.mCount.y || _index.z < 0 || _index.z >= this.mBuf.mCount.z)
@@ -244,16 +233,38 @@ export class CVoxelMap extends CSubjectMap {
             this.mAtlas.GetUV(tile.mAtlas, _texCodi);
     }
     GetLight(_index, _dir, _light) {
-        let x = _index.x + _dir.x;
-        let y = _index.y + _dir.y;
-        let z = _index.z + _dir.z;
         _light.x = 1.0;
         _light.y = 0.0;
+        if (this.mLight == false || this.mSkyLight == null)
+            return;
+        const c = this.mBuf.mCount;
+        const x = _index.x + _dir.x;
+        const y = _index.y + _dir.y;
+        const z = _index.z + _dir.z;
+        let sky = CVoxelMap.LightMax;
+        let torch = 0;
+        if (x >= 0 && x < c.x && y >= 0 && y < c.y && z >= 0 && z < c.z) {
+            const off = x + y * c.x + z * c.x * c.y;
+            sky = this.mSkyLight[off];
+            torch = this.mTorchLight[off];
+        }
+        _light.x = CVoxelMap.LightMin + (1 - CVoxelMap.LightMin) * Math.pow(CVoxelMap.LightFalloff, CVoxelMap.LightMax - sky);
+        _light.y = torch > 0 ? Math.pow(CVoxelMap.LightFalloff, CVoxelMap.LightMax - torch) : 0;
+    }
+    LightBuild() { }
+    LightUpdate(_index) { }
+    TorchPush(_index, _level = 14) {
+        this.mTorchSrc.set(_index.Offset(this.mBuf.mCount), _level);
+        this.LightUpdate(_index);
+    }
+    TorchRemove(_index) {
+        this.mTorchSrc.delete(_index.Offset(this.mBuf.mCount));
+        this.LightUpdate(_index);
     }
     RefreshRes() {
     }
     Update(_update) {
-        if (this.mUpdateRes || this.mUpdateModify.size > 0)
+        if (this.mUpdateRes)
             this.ColWake();
         if (this.mUpdateRes)
             this.RefreshRes();
@@ -268,6 +279,7 @@ export class CVoxelMap extends CSubjectMap {
     Bonds(_index, _data) {
         if (this.IndexOut(_index))
             return;
+        const lightIndex = _index.Export();
         this.mBuf.RGB(_index, _data);
         if (_data == 0) {
             this.mBuf.RGB(_index, 0);
@@ -286,6 +298,7 @@ export class CVoxelMap extends CSubjectMap {
                 _index.Add(0, 0, -2);
                 this.mUpdateModify.add(_index.Export());
             }
+            this.LightUpdate(lightIndex);
             return;
         }
         let select = this.mTileMap.get(_data);
@@ -295,6 +308,7 @@ export class CVoxelMap extends CSubjectMap {
         }
         this.mUpdateModify.add(_index.Export());
         this.RoleChk(_index);
+        this.LightUpdate(lightIndex);
     }
     RoleChk(_index) {
         let data = [16383, 16383, 16383, 16383, 16383, 16383, 16383, 16383, 16383];

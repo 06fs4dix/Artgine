@@ -179,6 +179,18 @@ function CubeToUV(_cubeUVW, _texelSize, _texOff) {
     _cubeUVW.z += _texOff - SDF.eShadow.Near;
     return _cubeUVW;
 }
+function Sam2DCompareCube(_uv, _compare) {
+    var sp0 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, _uv);
+    return sp0.w < 1.0 ? 0.0 : step(_compare, -abs(sp0.z));
+}
+function CubeAxisDepth(_dir, _pos) {
+    var a = V3Abs(_dir);
+    if (a.x >= a.y && a.x >= a.z)
+        return abs(_pos.x);
+    if (a.y >= a.z)
+        return abs(_pos.y);
+    return abs(_pos.z);
+}
 function CalcShadowPoint(_index, _world, _normal, _ligDir, _camPos, _row0) {
     var texOff = _row0.y;
     var far = _row0.z;
@@ -190,18 +202,21 @@ function CalcShadowPoint(_index, _world, _normal, _ligDir, _camPos, _row0) {
     var ligToPos = V3SubV3(_world.xyz, _ligDir.xyz);
     var ligToPosLength = V3Len(ligToPos);
     if (ligToPosLength <= far) {
-        var depth = -ligToPosLength / far;
         var texSize = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
         var texScale = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
-        var depthBias = slopedDepthBias * texScale.x;
-        depth += depthBias;
+        var depthBias = slopedDepthBias * texScale.x * far;
         var viewDistance = V3Len(V3SubV3(_world.xyz, _camPos));
         var diskRadius = (1.0 + viewDistance / far) * 0.8;
         var samples = clamp((PCF + 1.0) * (PCF + 1.0), 1.0, 20.0);
         var sVal = 0.0;
         for (var i = 0; i < FloatToInt(samples); i++) {
-            var uvw = CubeToUV(V3AddV3(ligToPos, V3MulFloat(GridSamplingDisk(IntToFloat(i)), diskRadius)), texScale, texOff);
-            sVal += Sam2DCompare(SDF.eTexSlot.ArrShadowWrite, uvw, depth);
+            var sampleDir = V3AddV3(ligToPos, V3MulFloat(GridSamplingDisk(IntToFloat(i)), diskRadius));
+            var uvw = CubeToUV(sampleDir, texScale, texOff);
+            var sampleU = V3Nor(sampleDir);
+            var planeDot = V3Dot(_normal, sampleU);
+            var rayLen = abs(planeDot) > 0.05 ? V3Dot(_normal, ligToPos) / planeDot : ligToPosLength;
+            rayLen = clamp(rayLen, ligToPosLength * 0.5, ligToPosLength * 2.0);
+            sVal += Sam2DCompareCube(uvw, -CubeAxisDepth(sampleDir, V3MulFloat(sampleU, rayLen)) + depthBias);
         }
         return 1.0 - sVal / samples;
     }
@@ -222,13 +237,13 @@ export function CalcParallaxShadow(_shadowIndex, _world, _uv, _texOff, _heightSc
         lDir.xyz = V3SubV3(lDir.xyz, _world.xyz);
         var dist = V3Len(lDir.xyz);
         if (dist > outRadius)
-            return shadowRate;
+            return 1.0;
     }
     lDir.xyz = V3Nor(lDir.xyz);
     var TBN = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
     lDir.xyz = V3MulMat3Normal(lDir.xyz, TBN);
     if (lDir.z <= 0.0)
-        return shadowRate;
+        return isPointLight > 0.5 ? 1.0 : shadowRate;
     var minLayers = 4.0;
     var maxLayers = 16.0;
     var numLayers = mix(maxLayers, minLayers, abs(V3Dot(new CVec3(0.0, 0.0, 1.0), lDir.xyz)));

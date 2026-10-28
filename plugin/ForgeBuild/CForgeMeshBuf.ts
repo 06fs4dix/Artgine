@@ -6,9 +6,18 @@ import { CUtilRender } from "../../artgine/render/CUtilRender.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CForgeScene } from "./CForgeScene.js";
 import { CForgeTex } from "./CForgeTex.js";
+import { IForgeFire, IForgeLight } from "./CForgeFire.js";
+
+//움직이는 부품. 같은 key의 재질 묶음은 자식 서브젝트 하나로 묶이고, 메시 좌표는 pivot(m)을 원점으로 한 상대 좌표다(월드 축 그대로).
+//ForgeAction 값 p(0~1)에서 자세 = pivot + slide * p, 회전 = axis(축 방향) * angle * p(라디안, 한 축씩만).
+//hull : 닫힌 자세(p = 0)의 충돌 볼록체(pivot 기준 상대 좌표, 점 3개씩). 닫혔을 때만 막는다. focus : 상호작용 중심(pivot 기준 상대 좌표, 없으면 hull 중심)
+export interface IForgeAnim { key : string; kind : string; pivot : number[]; axis : number[]; angle : number; slide : number[]; dur : number; hull? : number[][]; focus? : number[]; }
 
 //생성기가 내놓는 재질 묶음 하나(색, 선택 텍스처)
-export interface IForgePart { buf : CForgeMeshBuf; rgb : number[]; tex? : string; }
+//fire·light : 메시 대신 불꽃 파티클·점광원 위치(buf는 비워 둔다)
+//anim : 있으면 건물 메시에 합치지 않고 따로 움직이는 부품으로 만든다
+//interior : 실내 안에서만 보이는 부품. 멀면 한꺼번에 끈다(문·창은 밖에서도 보이므로 표시하지 않는다)
+export interface IForgePart { buf : CForgeMeshBuf; rgb : number[]; tex? : string; glow? : boolean; emit? : number[]; noShadow? : boolean; fire? : IForgeFire; light? : IForgeLight; anim? : IForgeAnim; interior? : boolean; }
 
 //좌표는 m로 받아 엔진 단위로 저장한다. 면은 항상 넘긴 법선 쪽이 앞면이 되게 감김을 맞춰 넣는다
 export class CForgeMeshBuf
@@ -19,6 +28,16 @@ export class CForgeMeshBuf
     mIdx : number[] = [];
 
     Count() : number { return this.mPos.length / 3; }
+/*
+    //_x·_y·_z(m)만큼 옮긴 복사본. 피벗 기준 상대 좌표로 만든 부품을 월드 자리에 구울 때 쓴다
+    Moved(_x : number, _y : number, _z : number) : CForgeMeshBuf
+    {
+        const b = new CForgeMeshBuf(), U = CForgeScene.sUnit;
+        b.mPos = this.mPos.map((_v, _i) => _v + [_x, _y, _z][_i % 3] * U);
+        b.mUV = this.mUV.slice(); b.mNor = this.mNor.slice(); b.mIdx = this.mIdx.slice();
+        return b;
+    }
+*/
     Clear() { this.mPos = []; this.mUV = []; this.mNor = []; this.mIdx = []; }
 
     Vert(_x : number, _y : number, _z : number, _u : number, _v : number, _nx : number, _ny : number, _nz : number) : number

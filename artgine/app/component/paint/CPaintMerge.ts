@@ -9,6 +9,7 @@ import { CPaint } from "./CPaint.js";
 
 export class CPaintMerge extends CPaint
 {
+    override Icon(){ return "bi bi-collection"; }
 	//이 정점 수 이하로 떨어진 변경 구간은 하나로 합쳐 올린다(bufferSubData 호출 수와 전송량의 절충)
 	static sRangeGap=64;
 	static sRangeMax=16;
@@ -24,9 +25,9 @@ export class CPaintMerge extends CPaint
 	protected mSlotReady=false;
 
 	private mFree=new Map<string,Array<number>>();
-	private mUseCount=0;
+	protected mUseCount=0;
 	private mVtxEnd=0;
-	private mIdxEnd=0;
+	protected mIdxEnd=0;
 	private mVtxCap=0;
 	private mPatKey : string=null;
 	private mPatV=0;
@@ -34,11 +35,11 @@ export class CPaintMerge extends CPaint
 	//그래서 아직 안 쓴 용량 구간까지 mPrefillKey 슬롯 모양으로 인덱스를 미리 채워 두고,
 	//인덱스 내용이 바뀌는 경우(용량 증가, 다른 모양 슬롯 추가)에만 draw mesh를 새로 만든다.
 	private mPrefillKey : string=null;
-	private mPrefillDirty=false;
+	protected mPrefillDirty=false;
 	private mHetero=false;
 	private mVer=0;
 	private mBuildID=0;
-	private mDMKey=new Set<string>();
+	protected mDMKey=new Set<string>();
 
 	private mBufCache=new Array<CMeshBuf>(32);
 	private mBufStamp=-1;
@@ -49,15 +50,15 @@ export class CPaintMerge extends CPaint
 	private mPendMin=new Array<number>();
 	private mPendMax=new Array<number>();
 	private mPendAll=new Array<boolean>();
-	private mPendCount=0;
+	protected mPendCount=0;
 	private mPendLast=-1;
 	private mSealMin=new Array<number>();
 	private mSealMax=new Array<number>();
 	private mSealAll=new Array<boolean>();
 	private mSealCount=0;
-	private mGen=0;
-	private mShaderGen=new Map<CShader,number>();
-	private mBatchValid=false;
+	protected mGen=0;
+	protected mShaderGen=new Map<CShader,number>();
+	protected mBatchValid=false;
 
 	override IsShould(_member: string, _type: CObject.eShould): boolean
 	{
@@ -255,6 +256,18 @@ export class CPaintMerge extends CPaint
 		this.mUseCount++;
 		return slot;
 	}
+	//슬롯을 _count개 더 넣을 용량을 한 번에 잡는다. NewSlot이 용량 부족을 만날 때마다 두 배로 늘리며 다시 올리는 것을 피한다
+	protected ReserveSlot(_key : string,_count : number)
+	{
+		const v=this.SlotVertex(_key);
+		const need=this.mVtxEnd+v*_count;
+		if(need<=this.mVtxCap)	return;
+		this.mPatKey=_key;
+		this.mPatV=v;
+		this.ReserveVertex(need);
+		this.Prefill();
+		this.Restructure();
+	}
 	protected SetSlotMat(_slot : number,_mat : CMat)
 	{
 		this.mSlotMat.set(_mat.mF32A,_slot*16);
@@ -304,7 +317,7 @@ export class CPaintMerge extends CPaint
 		if(change)
 		{
 			this.mBW.mRadian=0;
-			this.UpdateLMat();
+			this.UpdateFMat();
 		}
 	}
 	protected AddPos(_vs : number,_vc : number,_dx : number,_dy : number,_dz : number)
@@ -337,45 +350,7 @@ export class CPaintMerge extends CPaint
 		}
 	}
 
-	override Render(_vf : CShader) : void
-	{
-		var barr=this.RenderBatch(_vf,1);
-		if(barr==null)	return;
-		//배치 배열이 캐시됐으니 다음 변경 때는 무효화해야 Render가 다시 돈다
-		this.mBatchValid=true;
-		if(this.mSlotReady==false || this.mUseCount==0)	return;
-		if(this.mPrefillDirty)	this.Prefill();
-		if(this.mPendCount>0)	this.Seal();
-
-		const frame=this.mOwner.GetFrame();
-		frame.BMgr().BatchOn();
-		this.Common(_vf);
-		this.RenderAttr(_vf);
-		frame.BMgr().SetBatchTex(this.mTextureKey);
-
-		const key=this.DrawMeshKey();
-		const resKey=key+_vf.ObjHash();
-		let dm=frame.Res().Find(resKey) as CMeshDrawNode;
-		if(dm==null)
-		{
-			this.mMeshDataNode.ci.bound.Import(this.mBound);
-			dm=this.GetDrawMesh(key,_vf,this.mMeshDataNode.ci);
-			this.mDMKey.add(resKey);
-		}
-		else
-		{
-			const gen=this.mShaderGen.get(_vf);
-			if(gen==null || gen<this.mGen-1)
-				frame.Ren().BuildMeshDrawNode(dm,this.mMeshDataNode.ci,_vf);
-			else if(gen==this.mGen-1)
-				this.Upload(dm,_vf);
-		}
-		this.mShaderGen.set(_vf,this.mGen);
-		dm.iNum=this.mIdxEnd;
-		frame.BMgr().SetBatchMesh(dm);
-
-		barr[0]=frame.BMgr().BatchOff();
-	}
+	override Render(_vf : CShader) : void	{}
 	override Destroy(): void
 	{
 		this.ReleaseDrawMesh();
@@ -388,7 +363,7 @@ export class CPaintMerge extends CPaint
 		this.mSlotReady=false;
 	}
 
-	private DrawMeshKey()	{	return "Artgine/DM/Merge/"+this.Key()+"/"+this.mVer;	}
+	protected DrawMeshKey()	{	return "Artgine/DM/Merge/"+this.Key()+"/"+this.mVer;	}
 	private DirtyRange(_min : number,_max : number,_all : boolean)
 	{
 		if(this.mBatchValid)
@@ -444,7 +419,7 @@ export class CPaintMerge extends CPaint
 		}
 		this.mPendLast=hit;
 	}
-	private Seal()
+	protected Seal()
 	{
 		const min=this.mSealMin, max=this.mSealMax, all=this.mSealAll;
 		this.mSealMin=this.mPendMin;	this.mPendMin=min;
@@ -486,7 +461,7 @@ export class CPaintMerge extends CPaint
 		this.mDMKey.clear();
 		this.mShaderGen.clear();
 	}
-	private Upload(_dm : CMeshDrawNode,_vf : CShader)
+	protected Upload(_dm : CMeshDrawNode,_vf : CShader)
 	{
 		if(this.mSealCount==0)	return;
 		const ren=this.mOwner.GetFrame().Ren();
@@ -508,7 +483,7 @@ export class CPaintMerge extends CPaint
 			}
 		}
 	}
-	private ZeroPos(_vs : number,_vc : number)
+	protected ZeroPos(_vs : number,_vc : number)
 	{
 		if(_vc<=0)	return;
 		const p=this.F32(CVertexFormat.eIdentifier.Position);
@@ -526,7 +501,7 @@ export class CPaintMerge extends CPaint
 		const mat=new Float32Array(cap*16);	mat.set(this.mSlotMat);	this.mSlotMat=mat;
 		this.GrowSlotData(cap);
 	}
-	private Stride(_buf : CMeshBuf) : number
+	protected Stride(_buf : CMeshBuf) : number
 	{
 		if(this.mVtxCap>0 && _buf.bufF.mSize>0)
 			return Math.round(_buf.bufF.mSize/this.mVtxCap);
@@ -557,7 +532,7 @@ export class CPaintMerge extends CPaint
 		this.mVtxCap=cap;
 		ci.vertexCount=cap;
 	}
-	private Prefill()
+	protected Prefill()
 	{
 		const ci=this.mMeshDataNode.ci;
 		const inb=this.Buf(CVertexFormat.eIdentifier.Index);
@@ -574,3 +549,6 @@ export class CPaintMerge extends CPaint
 		this.mPrefillDirty=false;
 	}
 }
+
+import CPaintMerge_imple from "../../../app_imple/component/paint/CPaintMerge.js";
+CPaintMerge_imple();

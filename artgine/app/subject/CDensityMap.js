@@ -12,6 +12,7 @@ import { CMesh } from "../../render/CMesh.js";
 import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
 import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
 import { CShaderAttr } from "../../render/CShaderAttr.js";
+import { CLOD } from "../component/CLOD.js";
 import { CCIndex } from "../canvas/CCIndex.js";
 import { CCollider } from "../component/CCollider.js";
 import { CPaint2D, CPaint2DMerge } from "../component/paint/CPaint2D.js";
@@ -21,24 +22,7 @@ import { CPaint } from "../component/paint/CPaint.js";
 import { CUtilRender } from "../../render/CUtilRender.js";
 import { CSubjectMap } from "./CSubjectMap.js";
 import { CTerrainMap } from "./CTerrainMap.js";
-export class CLODInfo extends CObject {
-    mRes;
-    mAmount;
-    mDistance;
-    mHysteresis;
-    mPaintTag = new Array();
-    mPaintShaderAttr = new Array();
-    mWind = -1;
-    constructor(_res = null, _amount = 1, _dist = 0, _hysteresis = 0, _paintTag = [], _paintShaderAttr = []) {
-        super();
-        this.mRes = _res;
-        this.mAmount = _amount;
-        this.mDistance = _dist;
-        this.mHysteresis = _hysteresis;
-        this.mPaintTag = _paintTag;
-        this.mPaintShaderAttr = _paintShaderAttr;
-    }
-}
+export { CLOD } from "../component/CLOD.js";
 export class CDensityColliderInfo extends CObject {
     mLayer = "";
     mBound = null;
@@ -81,21 +65,8 @@ export class CDensityInfo extends CObject {
     Label() { return this.mLabel; }
     Color() { return this.mColor; }
     Size() { return this.mSize; }
-    AddLODLevel(_resOrList, _distance = 0, _hysteresis = 0, _amount = 1) {
-        if (Array.isArray(_resOrList)) {
-            for (const info of _resOrList) {
-                const lod = new CLODInfo(info.mRes ?? null, info.mAmount ?? 1, info.mDistance ?? 0, info.mHysteresis ?? 0, info.mPaintTag ?? [], info.mPaintShaderAttr ?? []);
-                lod.mWind = info.mWind ?? -1;
-                this.InsertLODInfo(lod);
-            }
-            return;
-        }
-        this.InsertLODInfo(new CLODInfo(_resOrList, _amount, Math.abs(_distance), _hysteresis));
-    }
-    InsertLODInfo(_info) {
-        const insertIndex = this.mLODInfo.findIndex(existing => _info.mDistance < existing.mDistance);
-        const index = insertIndex === -1 ? this.mLODInfo.length : insertIndex;
-        this.mLODInfo.splice(index, 0, _info);
+    AddLODLevel(_resOrList, _distance = 0, _hysteresis = 0, _amount = 1, _paintTag = [], _paintShaderAttr = []) {
+        CLOD.Add(this.mLODInfo, _resOrList, _distance, _hysteresis, _amount, _paintTag, _paintShaderAttr);
     }
 }
 class CLODGroup {
@@ -147,18 +118,7 @@ export class CChunk {
         return dist;
     }
     UpdateGroupLOD(_group, _dist) {
-        const lodInfo = _group.mDensity.mLODInfo;
-        let level = 0;
-        for (let i = lodInfo.length - 1; i >= 0; i--) {
-            let edge = lodInfo[i].mDistance;
-            if (i <= _group.mCurLODLevel) {
-                edge = Math.max(0, edge - lodInfo[i].mHysteresis);
-            }
-            if (_dist >= edge) {
-                level = i;
-                break;
-            }
-        }
+        const level = CLOD.Select(_group.mDensity.mLODInfo, _dist, _group.mCurLODLevel);
         const prevMerge = _group.mPtMergeArr[_group.mPrevLODLevel];
         if (_group.mPrevLODLevel != _group.mCurLODLevel && prevMerge != null) {
             if (prevMerge.IsEnable() == true)
@@ -844,7 +804,7 @@ export class CDensityMap extends CSubjectMap {
             key = "2D|" + key + "|" + _pt.mYSort + "|" + _pt.mWindInfluence.x;
         else {
             const pt3D = _pt;
-            key = "3D|" + key + "|" + pt3D.mMesh + "|" + pt3D.mCenterPos + "|" + pt3D.mTargetScale + "|" + pt3D.mWindInfluence.x;
+            key = "3D|" + key + "|" + pt3D.mMesh + "|" + "|" + pt3D.mWindInfluence.x;
         }
         return key;
     }
@@ -860,7 +820,7 @@ export class CDensityMap extends CSubjectMap {
         }
         else {
             const pt3D = _pt;
-            const m3D = new CPaint3DMerge([], [], pt3D.mCenterPos, pt3D.mTargetScale);
+            const m3D = new CPaint3DMerge([], []);
             if (pt3D.mWindInfluence.x > 0)
                 m3D.Wind(pt3D.mWindInfluence.x);
             if (pt3D.GetTexture().length > 0)

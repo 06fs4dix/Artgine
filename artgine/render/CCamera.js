@@ -13,6 +13,7 @@ import { CClass } from "../basic/CClass.js";
 var g_offset = 1024;
 export class CCamera extends CObject {
     mEye;
+    mViewEye;
     mLook;
     mUp;
     mView;
@@ -47,6 +48,7 @@ export class CCamera extends CObject {
             this.mPF = new CPreferences();
         this.mEye = new CVec3(0, 0, 0);
         this.mEye.NewWASM();
+        this.mViewEye = new CVec3(0, 0, 0);
         this.mLook = new CVec3();
         this.mUp = new CVec3(0, 1, 0);
         this.mView = new CVec3();
@@ -72,7 +74,7 @@ export class CCamera extends CObject {
             "mViewMat", "mProjMat", "mPF",
             "mPlane", "mUpdateMat", "mViewMatComp", "mReset", "mBillboardMat",
             "mShakeMagnitude", "mShakeDuration", "mShakeDamping", "mShakeDistance",
-            "mRCS", "mShadow", "mFrustum"
+            "mRCS", "mShadow", "mFrustum", "mViewEye"
         ];
         if (should.indexOf(_member) != -1)
             return false;
@@ -109,6 +111,7 @@ export class CCamera extends CObject {
         return this.mViewPort;
     }
     GetEye() { return this.mEye; }
+    GetViewEye() { return this.mViewEye; }
     GetLook() { return this.mLook; }
     GetUp() { return this.mUp; }
     GetView() { return this.mView; }
@@ -196,6 +199,7 @@ export class CCamera extends CObject {
         this.mOrthographic = false;
         CMath.MatMul(this.mViewMat, this.mProjMat, this.mVPMat);
         this.ViewAndCrossVector3Set();
+        this.mViewEye.Import(this.mEye);
         this.BillboardSet();
         this.PlaneSet();
         this.mReset = false;
@@ -263,6 +267,7 @@ export class CCamera extends CObject {
         this.mOrthographic = true;
         CMath.MatMul(this.mViewMat, this.mProjMat, this.mVPMat);
         this.ViewAndCrossVector3Set();
+        this.mViewEye.Import(this.mEye);
         this.BillboardSet();
         this.PlaneSet();
         this.mReset = true;

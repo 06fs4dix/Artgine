@@ -40,6 +40,7 @@
 | 월드 좌표 추적 HTML(네임태그) | 좌표 변환해 DOM 이동 | `CPaintHTML` (§3, §6) | CPaintHTML |
 | 팝업/메뉴/대화상자/알림 | **document.body 삽입, z-index 지정** | `CModal`, `CConfirm`, `CAlert` (§6) | CModal, CAlert |
 | 사운드 | new Audio/AudioContext | `CAudioBuf` / `CAudioTag` (§6) | CAudioBuf, SetRemove |
+| 다국어(언어 전환) | navigator.language 직접 분기, 문자열 테이블 자작 | `CLan` (§6) | CLan, SetCode, Get |
 | 조명/그림자 | 셰이더 슬롯 하드코딩 | `CLight` + 페인트 태그 (§7) | SetShadow3D, eTag |
 | 파티클/VFX/데칼 | 입자 직접 관리 | `CParticle`, `SetVFX`, `ResetDecal` (§7) | CParticle, eVFX |
 | 커스텀 셰이더/포스트 | raw GL, UseShader 직접 | `z_file` Build + `CRenderPass`, `CRPMgr`+`CSurface` (§8) | BranchBegin, CSurfaceBloom |
@@ -47,6 +48,7 @@
 | 네트워크/DB | fetch/소켓 직접 | `CFecth.Exe`, `CSocketIO`, ORM (§9) | CFecth, CSocketIO, CSQLite |
 | 벡터/행렬/색상 | 배열로 직접 연산 | `CMath`, `CVec*`, `CMat`, `CColor` | V3AddV3, CColor |
 | 자료구조/이벤트/압축 | 직접 구현 | `CArray`, `CTree`, `CQueue`, `CEvent`, LZ/Zlib | basic/ |
+| 엔진 상태 확인(프레임 정지/스텝/FPS 제한, 렌더·씬·리소스 리포트, 객체 상태·위치 추적, 내부 텍스처 보기, 서브젝트 화면 좌표) | 루프/rAF 직접 가로채기, 렌더 상태 직접 계측 | `artgine/tool/AITool.ts` → `ai/AIToolGuide.md` | AITool, Report, Inspect, Track, Until, View.Show, Screen |
 
 ---
 
@@ -186,15 +188,19 @@
 - ⚠️ 터치는 손가락 식별자가 아니라 **100px 안의 가장 가까운 칸**으로 이어 붙인다(`system_imple/CInput.ts` `TouchRefrash`). 그래서 ① 손 뗀 직후(약 2프레임) 같은 자리를 다시 누르면 눌림이 켜지지 않고 그 칸이 지워져 손가락을 잃는다 ② 두 손가락이 100px 안이면 한 칸으로 합쳐져 한쪽을 떼면 남은 쪽도 잃는다 ③ 마우스 칸(0번) 근처 터치는 눌림이 안 켜진다. 다음 `touchmove`에서 새 칸이 생기며 회복된다(2026-10 확인, 엔진 미수정).
 - HTML 요소 클릭 후 캔버스 포커스를 잃어 키 입력이 끊김 → `Frame().Win().Handle().focus()`.
 - `CPad`에 스틱 전용 모드가 없음(`Basic`은 버튼 2개 포함). 버튼 제거는 생성 후 `mButton`의 각 버튼을 `Destroy()`하고 배열을 비움.
+- 원형 스틱만 쓰려면 `mPadType = CPad.ePadType.None`, `mSave = false`, `Stick(CPad.eStickType.Circle, true)`. 샘플 `proj/AI/PokemonArena/CPkHud.ts` `BuildTouch`
 - 샘플 `proj/Tutorial/DecalSample/DecalSample.ts:71-96`, `proj/2D/Maze/CUser.ts:104-167`, `proj/2D/Dire/Content/CPlayerControl.ts:63,108-126`
 
 **UI(HUD)**: `CUIText`, `CUIPicture`, `CUIButtonImg`/`CUIButtonRGBA`(**`CUIButton` 클래스는 없음**), `CUIProgressBar`, `CUIHTML`. 배치 `SetAnchorX/Y`, 클릭 `SetClickEvent(fn)`/`SetPressEvent`(콜라이더 자동). `canvas.PushSub(ui)`.
 - `CUIHTML` 루트는 `pointer-events:none` → 안의 HTML 버튼은 클릭 안 됨. `SetClickEvent` 사용, 불가피하면 내부 요소에 `pointer-events:auto`.
+- 앵커 `SetAnchorX/Y(eAnchor.Min|Max, len)`: len은 화면 가장자리에서 안쪽으로의 px 거리. X는 Min=왼쪽·Max=오른쪽, **Y는 반전되어 Min=아래·Max=위**. 샘플 `proj/AI/PokemonArena/CPkHud.ts` `Build`
 - 일시정지 `canvas.SetPause(true)`: 업데이트만 멈추고 렌더는 계속.
 - 샘플 `proj/AI/Shooting/CGameMgr.ts:63-72`, `proj/3D/Map/Map.ts:69-73`
 
 **화면 패널**: `new CModal(key)` → `SetTitle/SetBody/SetSize/SetZIndex(CModal.eSort.Top)` → `Open(CModal.ePos.Center)`/`Close()`, `On(CEvent.eType.Close, fn)`. 확인창 `CConfirm.SetConfirm(...)`. 알림 `CAlert.Info/Warning/E`. 상속 가능(`plugin/Inventory`). **document.body 삽입·z-index 직접 지정 금지.**
 - 위치 `basic/CModal.ts`, `basic_impl/CModal.ts`, `basic/CAlert.ts`, `util/CModalUtil.ts`. 샘플 `proj/2D/Village/CNPC.ts:176-184`, `proj/2D/Dire/Content/Item.ts:173-190`, `plugin/Inventory/Inventory.ts`
+
+**다국어**: `CLan.SetCode(코드)`/`GetCode()`로 언어 코드 지정(기본은 브라우저 언어), `CLan.Set(국가, 키, 문장)`으로 등록, `CLan.Get(키, 기본값)`은 번역이 없으면 기본값을 돌려줌. 샘플 `proj/AI/PokemonArena/CPkLan.ts`
 
 **사운드**: 효과음 `new CAudioBuf(path|[paths]).SetRemove(true)` → `Volume` → `Play()` (**`SetRemove(true)` 빠뜨리면 재생 후 해제 안 됨**). BGM `new CAudioTag(path)`. 자동재생 권한 `await CSysAuth.Confirm(true)`.
 - 위치 `system/audio/CAudio.ts`, `system/CSoundMgr.ts`, `system/CSysAuth.ts`. 샘플 `proj/2D/Maze/CUser.ts:177-179`, `proj/2D/Maze/Maze.ts:425-430`
@@ -213,7 +219,7 @@
   - bias/normalBias/PCF는 기본 RP에 설정(§3). 타일 10 기준 예: 0.15 / 0.4 / 2.
   - 모바일은 16F 그림자맵이라 정밀도가 낮다. 캐스터 여유 거리 `lig.SetShadowCasterMargin(dist)`(기본 20000)로 조정.
   샘플 `proj/3D/GameWorld/GameWorld.ts:83-98`, `proj/2D/Maze/CUser.ts:58-61`
-- **파티클**: `new CParticle()` + `mSample=new CSampList([...])`(또는 CPool 키) + `mShape=new CParticleShapeOut()` → `PushSub`. 입자 수명은 `CAniFlow`+`CClipDestroy`. 샘플 `proj/Tutorial/Particle/Particle.ts:86-151`
+- **파티클**: `new CParticleOut()`(방향/속도 랜덤 기본형, `mDir`/`mSpeed`/`mPos`/`mSca`) + `mSample=new CSampList([...])`(또는 CPool 키) → `PushSub`. 움직임을 직접 정의하려면 `CParticle`을 상속해 `LineUp(생성 시)`/`ParticleUpdate(매 프레임, 오버라이드한 경우에만 호출)`를 구현한다. 입자 수명은 `CAniFlow`+`CClipDestroy`. 샘플 `proj/Tutorial/Particle/Particle.ts:86-151`
 - **페인트 VFX**: `pt.SetVFX(slot0~2, SDF.eVFX.X, [params])` (파라미터 설명 `render/CVFX.ts`). 데칼 `pt.ResetDecal(slot:number, pos, size, dir, rot)` + `SetVFX(slot, eVFX.Decal…)`, 메시 데칼 `plugin/DecalMesh`.
 - **물**: `new CWater3D()`(`NormalFlow`, `AddReflector`, `AddCaustics`, `GetPT()`), `new CWater2D().NormalFlow(...)`. 샘플 `proj/3D/GameWorld/GameWorld.ts:134-145`, `proj/Tutorial/Water2D/Water2D.ts:50-52`
 - **바람**: `sub.PushComp(new CWind())` + 받는 페인트 **`pt.Wind(influence)`** (태그 `"wind"` + `mWindInfluence` 설정까지 함). `PushTag(CPaint.eTag.Wind)`만 하면 influence가 설정되지 않으니 `Wind()`를 쓸 것. 샘플 `proj/Tutorial/Wind/Wind.ts`

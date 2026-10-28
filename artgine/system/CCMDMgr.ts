@@ -174,8 +174,15 @@ export class CCMDMgr {
         const pkg = path.join(CPath.WorkingPath(), 'node_modules', _name, 'package.json');
         try {
             if (fs.existsSync(pkg)) {
-                const v = JSON.parse(fs.readFileSync(pkg, 'utf8'))?.version;
-                return typeof v === 'string' ? v : '';
+                const json = JSON.parse(fs.readFileSync(pkg, 'utf8'));
+                // 설치가 중간에 끊기면 package.json만 있고 main 진입 파일이 없는 상태가 남는다.
+                if (typeof json?.main === 'string' && json.main !== '') {
+                    const base = path.join(path.dirname(pkg), json.main);
+                    const ok = [base, base + '.js', base + '.cjs', base + '.mjs', path.join(base, 'index.js')]
+                        .some(p => fs.existsSync(p) && fs.statSync(p).isFile());
+                    if (!ok) return null;
+                }
+                return typeof json?.version === 'string' ? json.version : '';
             }
         } catch { /* 손상된 package.json은 미설치로 취급해 재설치하게 둔다 */ }
         return null;

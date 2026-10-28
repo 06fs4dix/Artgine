@@ -36,6 +36,8 @@ export class CLoaderOption extends CObject {
     mGPU = true;
     mTexBufRaw = false;
     mInch = false;
+    mCenterPos = false;
+    mTargetScale = 0;
     mComputeNormal = true;
     mMergeStatic = true;
     mIsBumpHeightmap = false;
@@ -333,6 +335,8 @@ export class CLoader {
             par = new CParserOBJ(_option.mComputeNormal, _option.mMergeStatic);
         else
             par = new CParserGLTF(_option.mInch, _option.mColorTex, _option.mTexBufRaw, _option.mComputeNormal, _option.mMergeStatic);
+        par.mCenterPos = _option.mCenterPos;
+        par.mTargetScale = _option.mTargetScale;
         par.SetBuffer(new Uint8Array(_buffer), _buffer.byteLength);
         await par.Load(_file);
         var mesh = par.GetResult();

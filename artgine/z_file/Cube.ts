@@ -5,7 +5,7 @@ import { SDF } from "./SDF";
 import {
     Build, CMat, CVec3, CVec4, Mat4ToMat3, OutColor, OutPosition,
     V3Nor, Vertex3, V4MulMatCoordi, Mat3ToMat4, V3MulFloat,
-    V3MulV3, acos, V3Dot, V3AddV3, V3Mix, smoothstep, sin,
+    V3MulV3, acos, V3Dot, V3Cross, V3AddV3, V3Mix, smoothstep, sin,
     mod, V3Max, V3Len, SamCubeToColor, max, fract, CVec2, 
     pow, abs, floor, SaturateFloat, 
     FloatToInt, Exp, LWVPMul, 
@@ -118,6 +118,10 @@ var auroraMax : CVec3 = new CVec3(20000.0, 25000.0, 20000.0);
 var auroraStep : number = 20.0;
 
 var camPos : CVec3=Null();
+
+//이미션 텍스처에 그릴 때 켠다. 태양/달/별만 남기고 하늘색·구름색·오로라는 그리지 않는다(구름은 가리는 정도만 반영)
+var skyEmission : number=Null();
+
 
 var roughness : number;
 
@@ -526,6 +530,39 @@ function Star(_viewDir : CVec3) : CVec3
 }
 
 /************************************************************************************************/
+//moon
+//달 위상은 달 조명 밝기로 정한다. 밝기가 0이면 합삭(밝은 면 없음), 0.08 이상이면 보름달이고 그 사이는 오른쪽부터 차오른다(ForgeBuild 달 조명이 약 0.078).
+//달 반지름은 0.045 라디안으로 고정
+//반환값은 디스크 안 밝기(0~1). 디스크 밖은 위상에 비례하는 약한 후광이다
+function MoonShade(_viewDir : CVec3, _moonDir : CVec3, _phase : number) : number
+{
+    if(V3Dot(_viewDir, _moonDir) <= 0.0) return 0.0;
+
+    var up0 : CVec3 = new CVec3(0.0, 1.0, 0.0);
+    if(abs(_moonDir.y) > 0.99) up0 = new CVec3(0.0, 0.0, 1.0);
+    var right : CVec3 = V3Nor(V3Cross(_moonDir, up0));
+    var up : CVec3 = V3Cross(V3MulFloat(_moonDir, -1.0), right);
+
+    var u : number = V3Dot(_viewDir, right) / 0.045;
+    var v : number = V3Dot(_viewDir, up) / 0.045;
+    var r : number = sqrt(u * u + v * v);
+    var depth : number = sqrt(max(0.0, 1.0 - r * r));
+
+    var phase : number = SaturateFloat(_phase);
+    var coverage : number = 1.0 - smoothstep(0.92, 1.0, r);
+
+    //경계선 x = k*sqrt(1-v^2): k가 1이면 밝은 면이 없고 -1이면 원 전체가 밝다
+    var k : number = 1.0 - 2.0 * phase;
+    var lit : number = smoothstep(-0.06, 0.06, u - k * sqrt(max(0.0, 1.0 - v * v)));
+    var earth : number = 0.035;
+
+    var maria : number = NoiseGet(new CVec3(u * 2.1 + 5.0, v * 2.1 + 3.0, 0.5 * (u + v)), SDF.eNoise.PerlinFBM3);
+    var surface : number = mix(0.72, 1.0, SaturateFloat(maria)) * mix(0.8, 1.0, depth);
+
+    var halo : number = Exp(-max(0.0, r - 1.0) * 4.0) * 0.12 * (1.0 - smoothstep(1.0, 4.0, r)) * phase;
+    return coverage * surface * (lit + earth * (1.0 - lit)) + halo * (1.0 - coverage);
+}
+/************************************************************************************************/
 
 function ps_main() {
     var fragDir: CVec3 = V3Nor(to_uvw);
@@ -587,7 +624,23 @@ function ps_main() {
     //아래서 곱연산으로 처리하려고
     t=-1.0;
     BranchEnd();
+
+    var sunsetMul : number = 1.0;
+    var cloudMul  : number = 1.0;
+    var auroraMul : number = 1.0;
+    var glowMul   : number = 1.0;
+    var discCut   : number = 0.0;
+    var cloudCut  : number = 0.0;
+    BranchBegin("skyEmission","SE",[skyEmission]);
+    finalColor = new CVec3(0.0, 0.0, 0.0);
+    sunsetMul = 0.0;
+    cloudCut = 0.7;
+    auroraMul = 0.0;
+    glowMul = 0.0;
+    discCut = 0.3;
+    BranchEnd();
     
+
     // ── light branch 변수 선언 ─────────────────────────────────
     var ligSumSun   : CVec3  = new CVec3(0.0, 0.0, 0.0);  // 태양 디스크
     var ligMaxSun   : CVec3  = new CVec3(0.0, 0.0, 0.0);
@@ -657,6 +710,10 @@ function ps_main() {
         
         col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
         col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
+        if(isSunDisc < 0.5) {
+            col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
+            col = V3MulFloat(col, MoonShade(fragDir, dir, intensity / 0.08) * 0.8);
+        }
 
         // ── 태양/달 디스크를 분리 누적 ─────────────────────────
         if(isSunDisc > 0.5) {
@@ -668,10 +725,16 @@ function ps_main() {
         }
     }
     
+    //이미션에서는 디스크 둘레의 넓은 후광을 빼고 디스크만 남긴다. 후광은 값이 작아도 블룸이 하늘 전체로 번지게 한다
+    ligMaxSun = V3Max(V3SubV3(ligMaxSun, new CVec3(discCut, discCut, discCut)), new CVec3(0.0, 0.0, 0.0));
+    ligMaxNight = V3Max(V3SubV3(ligMaxNight, new CVec3(discCut, discCut, discCut)), new CVec3(0.0, 0.0, 0.0));
+    ligSumSun = V3MulFloat(ligSumSun, glowMul);
+    ligSumNight = V3MulFloat(ligSumNight, glowMul);
+
     if(t<0.0)
         finalColor = V3MulV3(finalColor, V3Mix(new CVec3(1.0, 1.0, 1.0), sunsetCol, sunsetBlend));
     else
-        finalColor = V3Mix(finalColor, sunsetCol, sunsetBlend);
+        finalColor = V3Mix(finalColor, sunsetCol, sunsetBlend * sunsetMul);
 
     // 태양 디스크는 구름 앞 — 그대로 적용
     finalColor = V3Max(V3AddV3(finalColor, V3MulFloat(ligSumSun, 0.2)), ligMaxSun);
@@ -683,7 +746,7 @@ function ps_main() {
     BranchBegin("cloud","C",[cloudCoverage, cloudDither, cloudStart, cloudHeight, cloudPlanetRadius, cloudSpeed, cloudStep, cloudLightStep, cloudScale, cloudExtinction, cloudScatter, cloudAmbient, cloudLightDistance]);
     value = Cloud(fragDir, sunDirL, sunColL);
     cloudAlpha = value.w;
-    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - cloudAlpha)), V3MulFloat(value.rgb, cloudAlpha));
+    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - cloudAlpha)), V3MulFloat(V3Max(V3SubV3(value.rgb, new CVec3(cloudCut, cloudCut, cloudCut)), new CVec3(0.0, 0.0, 0.0)), cloudAlpha * cloudMul));
     BranchEnd();
 
     var nightVisMoon : number = SaturateFloat(1.0 - cloudAlpha);        // 달: 선형, 부드럽게
@@ -708,10 +771,10 @@ function ps_main() {
 
     // ── 4. 오로라 — 구름 뒤, cloudAlpha 마스킹 ────────────────
     BranchBegin("aurora","A",[aurora, auroraSpeed, auroraColorBot, auroraColorMid, auroraColorTop, auroraOffset, auroraDistort, auroraSmoothness, auroraMin, auroraMax, auroraStep,auroraScale]);
-    if(sunIntensity<0.99)
+    if(sunIntensity<0.99 && auroraMul > 0.5)
     {
         value = Aurora(fragDir);
-        finalColor = V3AddV3(finalColor, V3MulFloat(value.rgb, nightVis));
+        finalColor = V3AddV3(finalColor, V3MulFloat(value.rgb, nightVis * auroraMul));
         finalColor = SaturateV3(finalColor);
     }
     

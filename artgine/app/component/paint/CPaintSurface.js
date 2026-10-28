@@ -1,6 +1,7 @@
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CPaint } from "./CPaint.js";
 export class CPaintSurface extends CPaint {
+    Icon() { return "bi bi-display"; }
     constructor(_rp, _size = null) {
         super();
         if (_rp == null)

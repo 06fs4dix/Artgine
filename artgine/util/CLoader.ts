@@ -52,6 +52,9 @@ export class CLoaderOption extends CObject
 
 
 	public mInch=false;
+	//메시 전체 바운드 기준으로 파싱 때 한 번만 정규화한다. mTargetScale은 최대 변 길이(0=끔)
+	public mCenterPos=false;
+	public mTargetScale=0;
 	public mComputeNormal=true;
 	public mMergeStatic=true;
     public mIsBumpHeightmap=false;
@@ -277,6 +280,7 @@ export class CLoader
 	}
 	
 	async Exe(_file : Array<string>) : Promise<any>
+	async Exe(_file : Array<string>,_option : CLoaderOption) : Promise<any>
 	async Exe(_file : string) : Promise<any>
 	async Exe(_file : string,_option : CLoaderOption) : Promise<any>
 	async Exe(_file : any,_option : CLoaderOption=null) : Promise<any>
@@ -465,6 +469,8 @@ export class CLoader
 
 
 
+		par.mCenterPos=_option.mCenterPos;
+		par.mTargetScale=_option.mTargetScale;
 		par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
 		await par.Load(_file)
 		var mesh : CMesh = par.GetResult();

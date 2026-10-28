@@ -1,3 +1,4 @@
+/*
 import { CVec4 } from "../../artgine/geometry/CVec4.js";
 import { CColor } from "../../artgine/render/CColor.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
@@ -178,6 +179,7 @@ export class CForgeMerged
                     if(cls.startsWith("px")) pt.ParallaxNormal(Number(cls.slice(2)), CForgeTex.sParallaxNear, CForgeTex.sParallaxFar, 0);
                     pt.PushTag(CPaint.eTag.Light);
                     pt.PushTag(CPaint.eTag.Shadow);
+                    pt.PushTag("shadowMulti");
                     _c.mPaint.push(pt);
                 }
             _c.mPack = null;
@@ -247,3 +249,4 @@ export class CForgeMerged
         return b;
     }
 }
+*/

@@ -9,8 +9,8 @@ export class CBoundWorld {
     mPos = new CVec3();
     mRadian = 0;
     Init(_LBound, _WMat) {
-        this.mBound.Reset();
         this.mBound.mType = _LBound.mType;
+        this.mBound.mPos.Clear();
         if (_LBound.mType == CBound.eType.GJK || _LBound.mType == CBound.eType.Triangle)
             this.mBound.mPos.PushArray(_LBound.mPos);
         if (_LBound.mType == CBound.eType.Sphere) {
@@ -22,6 +22,37 @@ export class CBoundWorld {
             this.mBound.InitBound(this.mSize.x);
             return;
         }
+        const lmn = _LBound.mMin.mF32A, lmx = _LBound.mMax.mF32A;
+        if (_WMat != null && lmn[0] <= lmx[0] && lmn[1] <= lmx[1] && lmn[2] <= lmx[2]) {
+            const m = _WMat.mF32A;
+            const cx = (lmn[0] + lmx[0]) * 0.5, cy = (lmn[1] + lmx[1]) * 0.5, cz = (lmn[2] + lmx[2]) * 0.5;
+            const hx = (lmx[0] - lmn[0]) * 0.5, hy = (lmx[1] - lmn[1]) * 0.5, hz = (lmx[2] - lmn[2]) * 0.5;
+            const wx = m[0] * cx + m[4] * cy + m[8] * cz;
+            const wy = m[1] * cx + m[5] * cy + m[9] * cz;
+            const wz = m[2] * cx + m[6] * cy + m[10] * cz;
+            const ex = Math.abs(m[0]) * hx + Math.abs(m[4]) * hy + Math.abs(m[8]) * hz;
+            const ey = Math.abs(m[1]) * hx + Math.abs(m[5]) * hy + Math.abs(m[9]) * hz;
+            const ez = Math.abs(m[2]) * hx + Math.abs(m[6]) * hy + Math.abs(m[10]) * hz;
+            const bmn = this.mBound.mMin.mF32A, bmx = this.mBound.mMax.mF32A;
+            bmn[0] = wx - ex;
+            bmn[1] = wy - ey;
+            bmn[2] = wz - ez;
+            bmx[0] = wx + ex;
+            bmx[1] = wy + ey;
+            bmx[2] = wz + ez;
+            if (this.mBound.mType == CBound.eType.Null)
+                this.mBound.mType = CBound.eType.Box;
+            this.mBound.GetCenter(this.mCenter);
+            this.mBound.GetSize(this.mSize);
+            return;
+        }
+        const acMn = this.mBound.mMin.mF32A, acMx = this.mBound.mMax.mF32A;
+        acMn[0] = 1e30;
+        acMn[1] = 1e30;
+        acMn[2] = 1e30;
+        acMx[0] = -1e30;
+        acMx[1] = -1e30;
+        acMx[2] = -1e30;
         this.mCenter.x = _LBound.mMin.x;
         this.mCenter.y = _LBound.mMin.y;
         this.mCenter.z = _LBound.mMin.z;

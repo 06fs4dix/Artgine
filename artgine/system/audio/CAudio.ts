@@ -4,6 +4,7 @@ import {CRes} from "../CRes.js";
 export let gContext : AudioContext=null;
 export let gDecodeMap : Map<string, AudioBuffer>=null;
 export let gCompressor : DynamicsCompressorNode = null;
+const gDecodePending = new Map<string, Promise<AudioBuffer>>();
 
 function InitAudio()
 {
@@ -165,20 +166,26 @@ export class CAudioTag extends CAudio
 	}
 	override async Play()
 	{
-		if(this.m_source!=null)
+		if(this.m_source==null)
 		{
 			this.m_source = GetAudioContext().createMediaElementSource(this.m_tag);
 			this.m_source.connect(this.mGain);
 		}
-		
-		
+
+
 		if(this.m_state==0)
 		{
 			this.m_state=1;
 			//return;
 		}
 		super.Play();
-		this.m_tag.play();
+		const p=this.m_tag.play();
+		if(p!=null)
+			p.catch((e)=>{
+				//자동재생 차단이나 Stop 으로 인한 중단은 정상 흐름이다
+				if(e?.name!="NotAllowedError" && e?.name!="AbortError")
+					console.error(e);
+			});
 	}
 	override Stop()
 	{
@@ -241,31 +248,29 @@ export class CAudioBuf extends CAudio
 		var decBuf=gDecodeMap.get(key);
 		if(decBuf==null)
 		{
-			if(this.mRes!=null)
+			//같은 파일을 디코딩 중에 또 요청하면 로딩과 디코딩을 다시 하지 않고 진행 중인 것을 기다린다
+			let pending=gDecodePending.get(key);
+			if(pending==null)
 			{
-				let buf=this.mRes.Find(key);
-				if(buf!=null)
-				{
-
-					decBuf=await GetAudioContext().decodeAudioData(buf);
-					gDecodeMap.set(key,decBuf);
-				}
-				else
-				{
-					let buf=await CFile.Load(key);
-					decBuf=await GetAudioContext().decodeAudioData(buf);
-					gDecodeMap.set(key,decBuf);
-				}
+				const res=this.mRes;
+				pending=(async()=>{
+					try
+					{
+						let buf=res!=null? res.Find(key) : null;
+						if(buf==null)
+							buf=await CFile.Load(key);
+						const dec=await GetAudioContext().decodeAudioData(buf);
+						gDecodeMap.set(key,dec);
+						return dec;
+					}
+					finally
+					{
+						gDecodePending.delete(key);
+					}
+				})();
+				gDecodePending.set(key,pending);
 			}
-			else
-			{
-				
-				let buf=await CFile.Load(key);
-				decBuf=await GetAudioContext().decodeAudioData(buf);
-				gDecodeMap.set(key,decBuf);
-
-			}
-			
+			decBuf=await pending;
 		}
 		super.Play();
 			
@@ -295,7 +300,8 @@ export class CAudioBuf extends CAudio
 	override Volume(_val)
 	{
 		//this.m_volume=_val;
-		this.mGain.gain.value=_val;
+		if(this.mGain!=null)
+			this.mGain.gain.value=_val;
 	}
 	IsPlayReady()
 	{
@@ -305,8 +311,11 @@ export class CAudioBuf extends CAudio
 	}
 	override Destroy(): void {
 		super.Destroy();
-		this.m_source.disconnect();
-		this.m_source=null;
+		if(this.m_source!=null)
+		{
+			this.m_source.disconnect();
+			this.m_source=null;
+		}
 	}
 	override Export()
 	{

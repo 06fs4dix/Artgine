@@ -311,7 +311,7 @@ export class CForgeAdjust {
             } });
         }
         return { id: _e.id, seed: _e.seed, poly: world, height, roof: _e.roof, roofH: pitch * wid * 0.5,
-            floors: Math.max(1, Math.round(height / 2.8)), pitch, o: c0, u, local, rects, door, others, leanWall: wallLine != null };
+            floors: Math.max(1, Math.round(height / 2.8)), pitch, o: c0, u, local, rects, door, others, leanWall: wallLine != null, interior: _e.interior };
     }
     static Line(_e, _width) {
         return { id: _e.id, seed: _e.seed, pts: CForgeAdjust.Dedupe(_e.pts, 0.3), width: _width };

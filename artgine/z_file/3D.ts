@@ -44,7 +44,10 @@ import {
     material,
     cullMask,
     sam2DCount,
-    samCubeCount
+    samCubeCount,
+    emission,
+	envmapOn,
+	emissiveIntensity
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
@@ -760,7 +763,7 @@ function ps_main()
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
 	var waterLit : CVec3 = new CVec3(1.0, 1.0, 1.0);
     var gamma : number = 1.0;
-	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,cullMask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envCount,envPos,sam2DCount,samCubeCount]);
+	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,emission,emissiveIntensity,cullMask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,envCount,envPos,sam2DCount,samCubeCount]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
 
@@ -770,9 +773,9 @@ function ps_main()
 	sunCol = dseMat[1];
 	waterLit = SaturateV3(V3AddV3(ambientColor, sunCol));
 
-	dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
+	dseMat = LightCac3D(to_worldPos, L_cor, normal, shadow, cullMask.x, lmaterial.w, camPos, lmaterial.y, lmaterial.x, lmaterial.z, to_envIdx.x);
  
-	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
+	L_cor.rgb = V3AddV3(V3AddV3(dseMat[0],dseMat[1]),dseMat[2]);
     
 	BranchDefault();
 	if(shadow.a > -0.5) {
@@ -933,16 +936,12 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 
     var viewPos : CVec4=V4MulMatCoordi(P,viewMat);
     out_position=V4MulMatCoordi(viewPos, projectMat);
-	
-    BranchBegin("PointLightShadowV","PLSV",[]);
-    to_viewPos = P;
-    BranchDefault();
+
     to_viewPos = viewPos;
-    BranchEnd();
 
     out_position.z = min(out_position.z, out_position.w);
 }
-function ps_main_shadow_write() 
+function ps_main_shadow_write()
 {
 	//슬롯 0 고정이면 텍스처가 여러 장인 메시(나무: 껍질 다음 잎)는 잎이 껍질 알파로 판정돼 알파 0 영역까지 그림자가 생긴다
 	var L_cor : CVec4 = Sam2DToColor(to_ref.x, to_uv);
@@ -957,18 +956,9 @@ function ps_main_shadow_write()
     if ( L_cor.a <= 0.01 ) discard;
 	BranchEnd();
 
-    var row0: CVec4;
-    var lDir: CVec4;
-    BranchBegin("PointLightShadowF","PLSF",[ligDir]);
-    row0 = Sam2DArrNearestToV4(shadowInfoList, shadowWrite.y * 4.0);
-    lDir = Sam2DArrNearestToV4(ligDir, row0.x);
-    out_color.b = -V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) / row0.z;
-    out_color.a = 1.0;
-    BranchDefault();
     out_color = to_viewPos;
     out_color.z += shadowZOffset;
     out_color.a = 1.0;
-    BranchEnd();
 }
 function vs_main_shadow_read(f3_ver : Vertex3,f2_uv : UV2,f4_we : Weight4,f4_wi : WeightIndexI4,
 	f3_nor : Normal3,f4_tan : Tangent4,f3_ref : TexOff3)
@@ -1056,10 +1046,10 @@ function ps_main_shadow_read()
         pShadow = new CVec4(0.0,0.0,0.0,0.0);
         for(var i=0;i<SDF.TexSizeMax;++i) {
             if(i >= FloatToInt(shadowCount)) break;
-            pShadow[FloatToInt(outputIndex)] += CalcParallaxShadow(IntToFloat(i), world, uv, to_ref, parallaxNormal, to_tangent, to_binormal, to_normal);
+            var psv : number = CalcParallaxShadow(IntToFloat(i), world, uv, to_ref, parallaxNormal, to_tangent, to_binormal, to_normal);
+            pShadow[FloatToInt(outputIndex)] = i > 3 ? min(pShadow.a, psv) : psv;
             outputIndex = min(outputIndex + 1.0, 3.0);
         }
-        pShadow.a /= max(shadowCount - 3.0, 1.0);
 	}
 	BranchEnd();
 
@@ -1086,16 +1076,17 @@ function ps_main_shadow_read()
     if ( L_cor.a <= 0.01 ) discard;
 	BranchEnd();
 	
+	var dsv : number;
     var dShadow : CVec4 = new CVec4(1.0,1.0,1.0,1.0);
 	BranchBegin("shadowMulti","SDM",[]);
     outputIndex = 0.0;
     dShadow = new CVec4(0.0,0.0,0.0,0.0);
     for(var i=0;i<SDF.TexSizeMax;++i) {
         if(i >= FloatToInt(shadowCount)) break;
-        dShadow[FloatToInt(outputIndex)] += CalcShadow(IntToFloat(i), to_normal, world, camPos, to_viewPos.xyz);
+        dsv = CalcShadow(IntToFloat(i), to_normal, world, camPos, to_viewPos.xyz);
+        dShadow[FloatToInt(outputIndex)] = i > 3 ? min(dShadow.a, dsv) : dsv;
         outputIndex = min(outputIndex + 1.0, 3.0);
     }
-    dShadow.a /= max(shadowCount - 3.0, 1.0);
 	BranchDefault();
     dShadow.r = CalcShadow(0.0, to_normal, world, camPos, to_viewPos.xyz);
     dShadow.rgb = new CVec3(dShadow.r, dShadow.r, dShadow.r);   // 하나만 사용하기 때문에 rgba 같은값으로 넣어줌

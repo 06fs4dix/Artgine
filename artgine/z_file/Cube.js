@@ -2,7 +2,7 @@ import { HSVToRGB, RGBToHSV } from "./ColorFun";
 import { ligCol, ligCount, ligDir } from "./Light";
 import { NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
-import { Build, CMat, CVec3, CVec4, Mat4ToMat3, V3Nor, V4MulMatCoordi, Mat3ToMat4, V3MulFloat, V3MulV3, acos, V3Dot, V3AddV3, V3Mix, smoothstep, sin, mod, V3Max, V3Len, SamCubeToColor, max, fract, CVec2, pow, abs, floor, SaturateFloat, FloatToInt, Exp, LWVPMul, clamp, Attribute, Null, BranchEnd, BranchBegin, BranchDefault, screenPos, IntToFloat, sqrt, V3SubV3, mix, min, Hash13, SaturateV3, V3Floor, V3DivV3, V3Fract, V3DivFloat, V3Min, V2Len, Sam2DArrNearestToV4, } from "./Shader";
+import { Build, CMat, CVec3, CVec4, Mat4ToMat3, V3Nor, V4MulMatCoordi, Mat3ToMat4, V3MulFloat, V3MulV3, acos, V3Dot, V3Cross, V3AddV3, V3Mix, smoothstep, sin, mod, V3Max, V3Len, SamCubeToColor, max, fract, CVec2, pow, abs, floor, SaturateFloat, FloatToInt, Exp, LWVPMul, clamp, Attribute, Null, BranchEnd, BranchBegin, BranchDefault, screenPos, IntToFloat, sqrt, V3SubV3, mix, min, Hash13, SaturateV3, V3Floor, V3DivV3, V3Fract, V3DivFloat, V3Min, V2Len, Sam2DArrNearestToV4, } from "./Shader";
 var worldMat = Null();
 var viewMat = Null();
 var projectMat = Null();
@@ -42,6 +42,7 @@ var auroraMin = new CVec3(-20000.0, 15000.0, -20000.0);
 var auroraMax = new CVec3(20000.0, 25000.0, 20000.0);
 var auroraStep = 20.0;
 var camPos = Null();
+var skyEmission = Null();
 var roughness;
 var SkyColorRTable = new CMat(0.24, 0.27, 0.30, 0.34, 0.38, 0.43, 0.50, 0.58, 0.56, 0.53, 0.50, 0.48, 0.47, 0.47, 0.47, 0.47);
 var SkyColorGTable = new CMat(0.47, 0.52, 0.56, 0.60, 0.64, 0.68, 0.73, 0.78, 0.75, 0.71, 0.67, 0.64, 0.63, 0.63, 0.63, 0.63);
@@ -280,6 +281,28 @@ function Star(_viewDir) {
     core = V3AddV3(core, StarLayer(_viewDir, starLayer3ColorTable));
     return core;
 }
+function MoonShade(_viewDir, _moonDir, _phase) {
+    if (V3Dot(_viewDir, _moonDir) <= 0.0)
+        return 0.0;
+    var up0 = new CVec3(0.0, 1.0, 0.0);
+    if (abs(_moonDir.y) > 0.99)
+        up0 = new CVec3(0.0, 0.0, 1.0);
+    var right = V3Nor(V3Cross(_moonDir, up0));
+    var up = V3Cross(V3MulFloat(_moonDir, -1.0), right);
+    var u = V3Dot(_viewDir, right) / 0.045;
+    var v = V3Dot(_viewDir, up) / 0.045;
+    var r = sqrt(u * u + v * v);
+    var depth = sqrt(max(0.0, 1.0 - r * r));
+    var phase = SaturateFloat(_phase);
+    var coverage = 1.0 - smoothstep(0.92, 1.0, r);
+    var k = 1.0 - 2.0 * phase;
+    var lit = smoothstep(-0.06, 0.06, u - k * sqrt(max(0.0, 1.0 - v * v)));
+    var earth = 0.035;
+    var maria = NoiseGet(new CVec3(u * 2.1 + 5.0, v * 2.1 + 3.0, 0.5 * (u + v)), SDF.eNoise.PerlinFBM3);
+    var surface = mix(0.72, 1.0, SaturateFloat(maria)) * mix(0.8, 1.0, depth);
+    var halo = Exp(-max(0.0, r - 1.0) * 4.0) * 0.12 * (1.0 - smoothstep(1.0, 4.0, r)) * phase;
+    return coverage * surface * (lit + earth * (1.0 - lit)) + halo * (1.0 - coverage);
+}
 function ps_main() {
     var fragDir = V3Nor(to_uvw);
     var value;
@@ -303,6 +326,20 @@ function ps_main() {
     BranchDefault();
     finalColor = SamCubeToColor(0.0, to_uvw).xyz;
     t = -1.0;
+    BranchEnd();
+    var sunsetMul = 1.0;
+    var cloudMul = 1.0;
+    var auroraMul = 1.0;
+    var glowMul = 1.0;
+    var discCut = 0.0;
+    var cloudCut = 0.0;
+    BranchBegin("skyEmission", "SE", [skyEmission]);
+    finalColor = new CVec3(0.0, 0.0, 0.0);
+    sunsetMul = 0.0;
+    cloudCut = 0.7;
+    auroraMul = 0.0;
+    glowMul = 0.0;
+    discCut = 0.3;
     BranchEnd();
     var ligSumSun = new CVec3(0.0, 0.0, 0.0);
     var ligMaxSun = new CVec3(0.0, 0.0, 0.0);
@@ -354,6 +391,10 @@ function ps_main() {
         }
         col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
         col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
+        if (isSunDisc < 0.5) {
+            col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
+            col = V3MulFloat(col, MoonShade(fragDir, dir, intensity / 0.08) * 0.8);
+        }
         if (isSunDisc > 0.5) {
             ligMaxSun = V3Max(ligMaxSun, col);
             ligSumSun = V3AddV3(ligSumSun, col);
@@ -363,17 +404,21 @@ function ps_main() {
             ligSumNight = V3AddV3(ligSumNight, col);
         }
     }
+    ligMaxSun = V3Max(V3SubV3(ligMaxSun, new CVec3(discCut, discCut, discCut)), new CVec3(0.0, 0.0, 0.0));
+    ligMaxNight = V3Max(V3SubV3(ligMaxNight, new CVec3(discCut, discCut, discCut)), new CVec3(0.0, 0.0, 0.0));
+    ligSumSun = V3MulFloat(ligSumSun, glowMul);
+    ligSumNight = V3MulFloat(ligSumNight, glowMul);
     if (t < 0.0)
         finalColor = V3MulV3(finalColor, V3Mix(new CVec3(1.0, 1.0, 1.0), sunsetCol, sunsetBlend));
     else
-        finalColor = V3Mix(finalColor, sunsetCol, sunsetBlend);
+        finalColor = V3Mix(finalColor, sunsetCol, sunsetBlend * sunsetMul);
     finalColor = V3Max(V3AddV3(finalColor, V3MulFloat(ligSumSun, 0.2)), ligMaxSun);
     BranchEnd();
     var cloudAlpha = 0.0;
     BranchBegin("cloud", "C", [cloudCoverage, cloudDither, cloudStart, cloudHeight, cloudPlanetRadius, cloudSpeed, cloudStep, cloudLightStep, cloudScale, cloudExtinction, cloudScatter, cloudAmbient, cloudLightDistance]);
     value = Cloud(fragDir, sunDirL, sunColL);
     cloudAlpha = value.w;
-    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - cloudAlpha)), V3MulFloat(value.rgb, cloudAlpha));
+    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - cloudAlpha)), V3MulFloat(V3Max(V3SubV3(value.rgb, new CVec3(cloudCut, cloudCut, cloudCut)), new CVec3(0.0, 0.0, 0.0)), cloudAlpha * cloudMul));
     BranchEnd();
     var nightVisMoon = SaturateFloat(1.0 - cloudAlpha);
     var nightVis = SaturateFloat(1.0 - cloudAlpha * 1.5);
@@ -386,9 +431,9 @@ function ps_main() {
     }
     BranchEnd();
     BranchBegin("aurora", "A", [aurora, auroraSpeed, auroraColorBot, auroraColorMid, auroraColorTop, auroraOffset, auroraDistort, auroraSmoothness, auroraMin, auroraMax, auroraStep, auroraScale]);
-    if (sunIntensity < 0.99) {
+    if (sunIntensity < 0.99 && auroraMul > 0.5) {
         value = Aurora(fragDir);
-        finalColor = V3AddV3(finalColor, V3MulFloat(value.rgb, nightVis));
+        finalColor = V3AddV3(finalColor, V3MulFloat(value.rgb, nightVis * auroraMul));
         finalColor = SaturateV3(finalColor);
     }
     BranchEnd();

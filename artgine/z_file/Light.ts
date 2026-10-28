@@ -1,3 +1,4 @@
+import { ColorModalFun } from "./ColorFun";
 import { SDF } from "./SDF";
 import { 
     CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, Null, IntToFloat, reflect, 
@@ -16,7 +17,9 @@ import {
 } from "./Shader";
 
 export var ambientColor : CVec3 = new CVec3(0.2,0.2,0.2);
-export var material : CVec4 = new CVec4(0.0,0.0,0.0,1.0);
+export var material : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var emission : CVec4;
+export var emissiveIntensity : number = 1.0;
 export var cullMask : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
 
 //count
@@ -29,12 +32,13 @@ export var ligCount : number=0;
 
 export var ligStep0 : number=SDF.eLightStep0.HafeLambert;
 export var ligStep1 : number=SDF.eLightStep1.Phong;
-export var ligStep2 : number=SDF.eLightStep2.Emissive;
+export var ligStep2 : number=SDF.eLightStep2.None;
 export var ligStep3 : number=SDF.eLightStep3.None;
 
 //CBrush.mEnvmapPos. xyz=probe 위치, w=구 반사 반지름(0이면 무한거리). 레이어 시작은 인덱스*6
 export var envCount : number = 0.0;
 export var envPos: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4EnvPos);
+export var envmapOn : number = 1.0;
 
 //LUT
 export var ligDir: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightDir);
@@ -48,7 +52,7 @@ export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : num
         if(tm.x<-0.5)	tm.x=_texColor.x;
         if(tm.y<-0.5)	tm.y=_texColor.y;
         if(tm.z<-0.5)	tm.z=_texColor.z;
-        if(tm.w<-0.5)	tm.w=_texColor.w;
+        if(tm.w<-0.01)	tm.w=_texColor.w*(0.0-_material.w);
     }
     return tm;
 }
@@ -162,8 +166,8 @@ function ComputeSpecularOcclusion(_nDotV : number, _ao : number, _roughness : nu
 }
 
 export function LightCac3D(
-    position : CVec4, albedo : CVec4, normal :CVec3, shadow : CVec4, maskIndex : number,
-    campos : CVec3, roughness : number,ao : number,metalic : number,envIdx : number) : CMat3
+    position : CVec4, albedo : CVec4, normal :CVec3, shadow : CVec4, maskIndex : number, emissive : number,
+    campos : CVec3, roughness : number, ao : number, metalic : number, envIdx : number) : CMat3
 {
     normal = V3Nor(normal);
 
@@ -177,7 +181,7 @@ export function LightCac3D(
 
     var DAll : CVec3=new CVec3(0,0,0);
     var SAll : CVec3=new CVec3(0,0,0);
-    var emAll : CVec3=new CVec3(0,0,0);
+    var EAll : CVec3=new CVec3(0,0,0);
 
     //====================================================
     // Direct Lighting
@@ -316,15 +320,6 @@ export function LightCac3D(
             diffuse = V3MulFloat(V3MulV3(kD, diffuse), 0.3183098861837907);
             specular = V3MulFloat(kS, D * G * nDotL);
         }
-
-        //====================================================
-        //Step2 : Emissive 라이트 모델
-        //====================================================
-        if(ligStep2 < SDF.eLightStep2.None + 0.5) {;}
-        else if(ligStep2 < SDF.eLightStep2.Emissive + 0.5) 
-        {
-            emAll=V3AddV3(emAll, V3MulFloat(radiance, nDotL));
-        }
         
         if(isPointLight > 0.5) {
             DPtAll=V3AddV3(DPtAll,V3MulV3(diffuse , radiance));
@@ -336,11 +331,21 @@ export function LightCac3D(
         }
     }
 
+	//====================================================
+    //Step2 : Emissive 라이트 모델
+    //====================================================
+    if(ligStep2 < SDF.eLightStep2.None + 0.5) {;}
+    else if(ligStep2 < SDF.eLightStep2.Emissive + 0.5) 
+    {
+        EAll= V3MulFloat(ColorModalFun(albedo.rgb, emission), emissive * emissiveIntensity);
+    }
+
     //====================================================
     // Indirect Lighting
     //====================================================
     var DEnvAll : CVec3;
     var SEnvAll : CVec3;
+    if(envmapOn > 0.5)
     {
         var envBest : number = round(envIdx);
         if(envBest < 0.0) {
@@ -421,7 +426,7 @@ export function LightCac3D(
     DAll = V3AddV3(V3AddV3(DDirAll, DPtAll), DEnvAll);
     SAll = V3AddV3(V3AddV3(SDirAll, SPtAll), SEnvAll);
     
-    return new CMat3(DAll, SAll, emAll);
+    return new CMat3(DAll, SAll, EAll);
 }
 
 export function GetSunInfo() : CMat3
@@ -453,15 +458,24 @@ export function GetSunInfo() : CMat3
 
 // lig(0,1,0)이 가장 밝고, lig(0,-1,0)이 가장 어두운 라이팅 계산
 // normal2D는 z값 없이 y값만으로 계산함
-export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow :CVec4,maskIndex :number) : CMat3
+export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow :CVec4,maskIndex :number,emissive :number) : CMat3
 {
+    //====================================================
+    //Step2 : Emissive 라이트 모델
+    //====================================================
+    if(ligStep2 < SDF.eLightStep2.None + 0.5) {;}
+    else if(ligStep2 < SDF.eLightStep2.Emissive + 0.5) 
+    {
+        return new CMat3(new CVec3(0.0,0.0,0.0), new CVec3(0.0,0.0,0.0), V3MulFloat(ColorModalFun(albedo.rgb, emission), emissive * emissiveIntensity));
+    }
+
     albedo.rgb = V3Max(albedo.rgb, new CVec3(0.01, 0.01, 0.01));
-    
-    var DPtAll : CVec3=new CVec3(0.0,0.0,0.0);
-    var DDirAll : CVec3=new CVec3(0.0,0.0,0.0);
 
     var norLen : number=V3Len(normal);
     if(norLen<0.5)  normal=new CVec3(0.0,1.0,0.0);  //노말맵 안쓰면 기본 노말
+
+    var DPtAll : CVec3=new CVec3(0.0,0.0,0.0);
+    var DDirAll : CVec3=new CVec3(0.0,0.0,0.0);
 
     for(var i=0;i<SDF.TexSizeMax;++i)
     {
@@ -526,5 +540,5 @@ export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow 
     var ambientLight :CVec3 = V3MulV3(albedo.xyz, ambientColor);
     DAll = V3Max(DAll, ambientLight);
 
-    return new CMat3(DAll, new CVec3(0.0,0.0,0.0), new CVec3(0.0,0.0,0.0));
+    return new CMat3(DAll, new CVec3(0.0, 0.0, 0.0), new CVec3(0.0, 0.0, 0.0));
 }

@@ -1,17 +1,11 @@
 import { CObject } from "../../../basic/CObject.js";
-import { CUtil } from "../../../basic/CUtil.js";
-import {CBound} from "../../../geometry/CBound.js";
 import {CVec2} from "../../../geometry/CVec2.js";
 import {CVec3} from "../../../geometry/CVec3.js";
 import {CVec4} from "../../../geometry/CVec4.js";
-import { CMeshCopyNode } from "../../../render/CMeshCopyNode.js";
-import { CMeshCreateInfo } from "../../../render/CMeshCreateInfo.js";
-import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
-import {CRenderPass} from "../../../render/CRenderPass.js";
+import { CMeshBuf } from "../../../render/CMeshCreateInfo.js";
 import {CShader,  CVertexFormat } from "../../../render/CShader.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
-import { CRPAuto } from "../../canvas/CRPMgr.js";
-import {CPaint} from "./CPaint.js";
+import { CPaintMerge } from "./CPaintMerge.js";
 
 export class CVoxPlane extends CObject
 {
@@ -43,163 +37,98 @@ export class CVoxPlane extends CObject
 	mOff : number;
 }
 
-export class CPaintVoxel extends CPaint
+//면 하나가 슬롯 하나다(정점 6개). 이웃에 가려지지 않은 면에만 슬롯을 주고, 슬롯 관리는 CPaintMerge가 한다
+export class CPaintVoxel extends CPaintMerge
 {
-	public mMCI=new CMeshCreateInfo();
-	public mMD=new CMeshDrawNode();
 	public mSize=100;
-	
+
+	static readonly sFaceKey="f";
+	static readonly sFaceVertex=6;
+
 	constructor()
 	{
 		super();
-		this.mMCI.Create(CVertexFormat.eIdentifier.Position);
-		this.mMCI.Create(CVertexFormat.eIdentifier.UV);
-		this.mMCI.Create(CVertexFormat.eIdentifier.Color);
 		this.PushTag("alphaCut");
-
 	}
-	override IsShould(_member: string, _type: CObject.eShould) 
+	//슬롯을 쓸 수 있게 준비한다. PushComp 직후, 면을 넣기 전에 한 번 부른다
+	Init()
 	{
-		if(_member=="mMCI" || _member=="mMD")	return false;
-
-		return super.IsShould(_member,_type);
+		this.BuildSlot();
 	}
-	// InitChk()
-	// {
-	// 	super.InitChk();
-
-	// 	if(this.mRenderPass.length==0)
-	// 	{
-	// 		var rp=new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxel().mKey);
-	// 		rp.mPriority = CRenderPass.ePriority.BackGround;
-	// 		this.mRenderPass=[rp];
-	// 	}
-
-		
-
-	// 	//Start에 있어야 하지 않나?
-		
-	// }
-	override Start(): void {
-		if(CUtil.IsNode())	return;
-		this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(this.mMD,this.mOwner.GetFrame().Pal().SlVoxel().mShader[0],this.mMCI);
+	//면이 _count개 더 들어갈 용량을 미리 잡는다
+	ReserveFace(_count : number)
+	{
+		this.ReserveSlot(CPaintVoxel.sFaceKey,_count);
 	}
-	//6면이 한세트로 들어있어야 한다.
-	Rebuild(_arr : Array<CVoxPlane>)
-	{	
-		let pbuf=new Float32Array(4*6);
-		let ubuf=new Float32Array(4*6);
-		let cbuf=new Float32Array(2*6);
-
-		for(let i=0;i<_arr.length;++i)
+	PushFace(_plane : CVoxPlane) : number
+	{
+		const slot=this.NewSlot(CPaintVoxel.sFaceKey);
+		this.ModifyFace(slot,_plane);
+		return slot;
+	}
+	ModifyFace(_slot : number,_plane : CVoxPlane)
+	{
+		const I=CVertexFormat.eIdentifier;
+		const p=this.F32(I.Position), uv=this.F32(I.UV), c=this.F32(I.Color);
+		const vs=this.mSlotVS[_slot];
+		const pos=_plane.mPos.mF32A, tex=_plane.mUV.mF32A, light=_plane.mLight.mF32A;
+		for(let j=0;j<CPaintVoxel.sFaceVertex;++j)
 		{
-			for(let j=0;j<6;++j)
-			{
-				pbuf[j*4+0]=_arr[i].mPos.mF32A[0];
-				pbuf[j*4+1]=_arr[i].mPos.mF32A[1];
-				pbuf[j*4+2]=_arr[i].mPos.mF32A[2];
-				pbuf[j*4+3]=_arr[i].mDir+j;
-
-				ubuf[j*4+0]=_arr[i].mUV.mF32A[0];
-				ubuf[j*4+1]=_arr[i].mUV.mF32A[1];
-				ubuf[j*4+2]=_arr[i].mUV.mF32A[2];
-				ubuf[j*4+3]=_arr[i].mUV.mF32A[3];
-
-				cbuf[j*2+0]=_arr[i].mLight.mF32A[0];
-				cbuf[j*2+1]=_arr[i].mLight.mF32A[1];
-			}
-			
-			this.mOwner.GetFrame().Ren().RebuildMeshDrawNode(this.mMD,0,_arr[i].mOff*4*6*4,pbuf);
-			this.mOwner.GetFrame().Ren().RebuildMeshDrawNode(this.mMD,1,_arr[i].mOff*4*6*4,ubuf);
-			this.mOwner.GetFrame().Ren().RebuildMeshDrawNode(this.mMD,2,_arr[i].mOff*2*6*4,cbuf);
+			const v=vs+j, p4=v*4, c2=v*2;
+			p[p4]=pos[0];
+			p[p4+1]=pos[1];
+			p[p4+2]=pos[2];
+			p[p4+3]=_plane.mDir+j;
+			uv[p4]=tex[0];
+			uv[p4+1]=tex[1];
+			uv[p4+2]=tex[2];
+			uv[p4+3]=tex[3];
+			c[c2]=light[0];
+			c[c2+1]=light[1];
 		}
-		//this.ClearBatch();
+		this.Dirty(_slot);
 	}
-	Build(_arr : Array<CVoxPlane>)
+
+	protected override CreateChannel(): void
 	{
-		if(CUtil.IsNode())	return;
-
-		let pbuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.Position)[0].bufF;
-		let ubuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.UV)[0].bufF;
-		let cbuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.Color)[0].bufF;
-
-		pbuf.Resize(_arr.length*6*4);
-		ubuf.Resize(_arr.length*6*4);
-		cbuf.Resize(_arr.length*6*2);
-		this.mBound.SetType(CBound.eType.Box);
-
-
-
-		this.mBound.Reset();
-		this.mMCI.vertexCount=_arr.length*6;
-		let i=0;
-		for(let each0 of _arr)
-		{
-			this.mBound.InitBound(each0.mPos);
-			pbuf.V4(0+i*6,each0.mPos.mF32A[0],each0.mPos.mF32A[1],each0.mPos.mF32A[2],each0.mDir+0);
-			pbuf.V4(1+i*6,each0.mPos.mF32A[0],each0.mPos.mF32A[1],each0.mPos.mF32A[2],each0.mDir+1);
-			pbuf.V4(2+i*6,each0.mPos.mF32A[0],each0.mPos.mF32A[1],each0.mPos.mF32A[2],each0.mDir+2);
-			pbuf.V4(3+i*6,each0.mPos.mF32A[0],each0.mPos.mF32A[1],each0.mPos.mF32A[2],each0.mDir+3);
-			pbuf.V4(4+i*6,each0.mPos.mF32A[0],each0.mPos.mF32A[1],each0.mPos.mF32A[2],each0.mDir+4);
-			pbuf.V4(5+i*6,each0.mPos.mF32A[0],each0.mPos.mF32A[1],each0.mPos.mF32A[2],each0.mDir+5);
-		
-
-			ubuf.V4(0+i*6,each0.mUV.mF32A[0],each0.mUV.mF32A[1],each0.mUV.mF32A[2],each0.mUV.mF32A[3]);
-			ubuf.V4(1+i*6,each0.mUV.mF32A[0],each0.mUV.mF32A[1],each0.mUV.mF32A[2],each0.mUV.mF32A[3]);
-			ubuf.V4(2+i*6,each0.mUV.mF32A[0],each0.mUV.mF32A[1],each0.mUV.mF32A[2],each0.mUV.mF32A[3]);
-			ubuf.V4(3+i*6,each0.mUV.mF32A[0],each0.mUV.mF32A[1],each0.mUV.mF32A[2],each0.mUV.mF32A[3]);
-			ubuf.V4(4+i*6,each0.mUV.mF32A[0],each0.mUV.mF32A[1],each0.mUV.mF32A[2],each0.mUV.mF32A[3]);
-			ubuf.V4(5+i*6,each0.mUV.mF32A[0],each0.mUV.mF32A[1],each0.mUV.mF32A[2],each0.mUV.mF32A[3]);
-
-			cbuf.V2(0+i*6,each0.mLight.mF32A[0],each0.mLight.mF32A[1]);
-			cbuf.V2(1+i*6,each0.mLight.mF32A[0],each0.mLight.mF32A[1]);
-			cbuf.V2(2+i*6,each0.mLight.mF32A[0],each0.mLight.mF32A[1]);
-			cbuf.V2(3+i*6,each0.mLight.mF32A[0],each0.mLight.mF32A[1]);
-			cbuf.V2(4+i*6,each0.mLight.mF32A[0],each0.mLight.mF32A[1]);
-			cbuf.V2(5+i*6,each0.mLight.mF32A[0],each0.mLight.mF32A[1]);
-
-	
-			i++;
-			
-		
-			
-		}//for
-		this.mBound.mMax.x+=this.mSize;
-		this.mBound.mMax.y+=this.mSize;
-		this.mBound.mMax.z+=this.mSize;
-
-		if(this.mOwner==null)
-			return;
-		this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(this.mMD,this.mOwner.GetFrame().Pal().SlVoxel().mShader[0],
-			this.mMCI);
-
-		// pbuf.Shrink();   // GPU 업로드 끝났으니 CPU 그림자 복사본 해제
-		// ubuf.Shrink();
-		// cbuf.Shrink();
-		
+		const ci=this.mMeshDataNode.ci;
+		ci.Create(CVertexFormat.eIdentifier.Position);
+		ci.Create(CVertexFormat.eIdentifier.UV);
+		ci.Create(CVertexFormat.eIdentifier.Color);
 	}
-	override Render(_vf : CShader)
+	protected override Stride(_buf : CMeshBuf) : number
 	{
-		if(this.mMD.vGBuf==null || this.mMD.vNum<=0)	return;
-
-		var barr=this.RenderBatch(_vf,1);
-		if(barr==null)	return;
-
-		this.mOwner.GetFrame().BMgr().BatchOn();
-		this.Common(_vf);
-		
-		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
-		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("size", this.mSize));
-        if (_vf.mUniform.get("material") != null)
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
-		this.mOwner.GetFrame().BMgr().SetBatchMesh(this.mMD);
-		let batch=this.mOwner.GetFrame().BMgr().BatchOff();
-		if(batch==null || batch.mKey==0)
+		const I=CVertexFormat.eIdentifier;
+		switch(_buf.vfType)
 		{
-			this.ClearBatch();
-			return;
+			case I.Position:	case I.UV:	return 4;
+			case I.Color:	return 2;
 		}
-		barr[0]=batch;
+		return super.Stride(_buf);
+	}
+	protected override SlotVertex(_key : string) : number	{	return CPaintVoxel.sFaceVertex;	}
+	protected override SlotIndex(_key : string) : number	{	return CPaintVoxel.sFaceVertex;	}
+	protected override WriteIndex(_key : string,_iStart : number,_vStart : number) : void
+	{
+		const ib=this.Buf(CVertexFormat.eIdentifier.Index).bufI;
+		for(let j=0;j<CPaintVoxel.sFaceVertex;++j)
+			ib[_iStart+j]=_vStart+j;
+	}
+	//위치 채널의 w가 방향이라, Null 방향이면 셰이더가 정점을 접어 그리지 않는다
+	protected override ZeroPos(_vs : number,_vc : number) : void
+	{
+		if(_vc<=0)	return;
+		const p=this.F32(CVertexFormat.eIdentifier.Position);
+		if(p==null)	return;
+		for(let i=_vs*4+3,e=(_vs+_vc)*4;i<e;i+=4)
+			p[i]=CVoxPlane.eDir.Null;
+	}
+	protected override RenderAttr(_vf : CShader) : void
+	{
+		const bmgr=this.mOwner.GetFrame().BMgr();
+		bmgr.SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
+		bmgr.SetBatchSA(new CShaderAttr("size", this.mSize));
+		if(_vf.mUniform.get("material")!=null)
+			bmgr.SetBatchSA(new CShaderAttr("material", this.mMaterial));
 	}
 }

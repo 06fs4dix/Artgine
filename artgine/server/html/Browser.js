@@ -81,6 +81,38 @@ function appendLog(text, cls = '') {
     logArea.appendChild(div);
     logArea.scrollTop = logArea.scrollHeight;
 }
+function appendLink(prefix, url, cls = '') {
+    const div = document.createElement('div');
+    div.className = cls;
+    div.append(prefix);
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = url;
+    div.appendChild(a);
+    logArea.appendChild(div);
+    logArea.scrollTop = logArea.scrollHeight;
+}
+let publicIp = '';
+async function toExternalUrl(url) {
+    const u = new URL(url);
+    const h = u.hostname;
+    const unreachable = h === 'localhost' || h === '[::1]' || /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+    if (!unreachable)
+        return u.href;
+    try {
+        if (!publicIp)
+            publicIp = (await (await fetch('https://api.ipify.org?format=text')).text()).trim();
+    }
+    catch {
+        return u.href;
+    }
+    if (!publicIp)
+        return u.href;
+    u.hostname = publicIp;
+    return u.href;
+}
 function initCaptureControl() {
     if (!controlsBar)
         return;
@@ -98,18 +130,48 @@ function initCaptureControl() {
         }
         const d = new Date();
         const p = (n) => String(n).padStart(2, '0');
-        const name = `capture_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.jpg`;
+        const base = `capture_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+        const name = `${base}.jpg`;
+        const jsonName = `${base}.json`;
         btn.disabled = true;
         try {
+            let logs = [];
+            let url = '';
+            try {
+                const [rLogs, rList] = await Promise.all([
+                    fetch(pwUrl('PlayWright/logs'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId: SESSION_ID, fromOffset: 0 })
+                    }),
+                    fetch(pwUrl('PlayWright/list')),
+                ]);
+                const jLogs = await rLogs.json();
+                if (!jLogs.ok)
+                    throw new Error(jLogs.msg || 'logs failed');
+                logs = jLogs.logs ?? [];
+                const jList = await rList.json();
+                url = jList.sessions?.find(s => s.sessionId === SESSION_ID)?.currentUrl ?? '';
+            }
+            catch (e) {
+                appendLog(`[capture] console info failed: ${e.message}`, 'text-danger');
+            }
+            const info = JSON.stringify({ time: d.toISOString(), sessionId: SESSION_ID, url, image: name, logs }, null, 2);
+            const bytes = new TextEncoder().encode(info);
+            let bin = '';
+            for (let i = 0; i < bytes.length; i += 0x8000)
+                bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
             const res = await fetch(CPath.WebRootUrl() + 'File/Upload', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: 'temp/', name: [name], data: [b64], token: authToken })
+                body: JSON.stringify({ path: 'temp/', name: [name, jsonName], data: [b64, btoa(bin)], token: authToken })
             });
             const j = await res.json();
             if (!j.ok)
                 throw new Error(j.msg || 'Upload failed');
-            appendLog(`[capture] temp/${name}`, 'text-info');
+            appendLog(`[capture] saved temp/${name}, temp/${jsonName} (logs ${logs.length})`, 'text-info');
+            appendLink('[capture] image: ', await toExternalUrl(CPath.WebRootUrl() + 'temp/' + name), 'text-info');
+            appendLink('[capture] json:  ', await toExternalUrl(CPath.WebRootUrl() + 'temp/' + jsonName), 'text-info');
         }
         catch (e) {
             appendLog(`[capture] failed: ${e.message}`, 'text-danger');

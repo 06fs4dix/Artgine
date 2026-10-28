@@ -410,57 +410,7 @@ export class CForgeTex {
     static sBaseR = new Map();
     static sReal = new Map();
     static sKeep = new Map();
-    static MeanAO(_key, _pbr = false, _real = false) {
-        const tab = _real ? CForgeTex.sAOR : _pbr ? CForgeTex.sAOP : CForgeTex.sAO;
-        let v = tab.get(_key);
-        if (v != null)
-            return v;
-        v = 1;
-        CForgeTex.Surf(_key);
-        if (_real) {
-            CForgeTex.EnsureReal(_key);
-            v = CForgeTex.sAOR.get(_key) ?? 1;
-        }
-        else if (_pbr)
-            v = CForgeTex.sAOP.get(_key) ?? 1;
-        else {
-            const m = CForgeTex.sMatBuf.get(_key);
-            if (m != null) {
-                let a = 0;
-                for (let i = 0; i < m.length; i += 4)
-                    a += m[i];
-                v = a / (m.length / 4) / 255;
-            }
-        }
-        tab.set(_key, v);
-        return v;
-    }
     static sMatBuf = new Map();
-    static Tint(_key, _rgb, _real = false) {
-        const q = CForgeTex.Q(_rgb), key = _key.replace(".tex", `_${_real ? "tr" : "t"}${q[0]}_${q[1]}_${q[2]}.tex`);
-        if (CForgeTex.sFrame.Res().Find(key) != null)
-            return key;
-        const colored = _real ? (CForgeTex.EnsureReal(_key), CForgeTex.sBaseR.get(_key)) : null;
-        const src = colored ?? CForgeTex.sBase.get(_key), out = new Uint8Array(src.length);
-        if (colored != null) {
-            const s = CForgeTex.Scale(_key, _rgb);
-            for (let i = 0; i < src.length; i += 4) {
-                out[i] = Math.min(255, src[i] * s[0]);
-                out[i + 1] = Math.min(255, src[i + 1] * s[1]);
-                out[i + 2] = Math.min(255, src[i + 2] * s[2]);
-                out[i + 3] = 255;
-            }
-        }
-        else
-            for (let i = 0; i < src.length; i += 4) {
-                out[i] = src[i] * q[0] / 255;
-                out[i + 1] = src[i + 1] * q[1] / 255;
-                out[i + 2] = src[i + 2] * q[2] / 255;
-                out[i + 3] = 255;
-            }
-        CForgeTex.Upload(CForgeTex.sFrame, key, out, Math.round(Math.sqrt(out.length / 4)));
-        return key;
-    }
     static Scale(_key, _rgb) {
         const s = CForgeTex.EnsureReal(_key);
         if (s == null || s.mRef == null)
@@ -719,10 +669,11 @@ export class CForgeTex {
                     nor.buf[(y * N + x) * 4 + 3] = (0.1 + 0.9 * s / 9) * 255;
                 }
             CForgeTex.Upload(_frame, nk, nor.buf);
-            const mat = CForgeTex.Material(hgt, nor.ny, N, _rough, _roughVar, _aoStr);
+            const em = _key == CForgeTex.sGlass || _key == CForgeTex.sSash;
+            const mat = CForgeTex.Material(hgt, nor.ny, N, _rough, _roughVar, _aoStr, em);
             CForgeTex.sMatBuf.set(_key, mat);
             CForgeTex.Upload(_frame, mk, mat);
-            const pb = CForgeTex.sPBR.get(_key) ?? [_rough, _roughVar * 0.5, _aoStr * 0.4, 0], pbr = CForgeTex.MaterialPBR(hgt, N, pb[0], pb[1], pb[2], pb[3]);
+            const pb = CForgeTex.sPBR.get(_key) ?? [_rough, _roughVar * 0.5, _aoStr * 0.4, 0], pbr = CForgeTex.MaterialPBR(hgt, N, pb[0], pb[1], pb[2], pb[3], em);
             CForgeTex.sAOP.set(_key, pbr.ao);
             CForgeTex.Upload(_frame, pk, pbr.buf);
             const surf = new CForgeTexSurf(nk, mk, _parallax, pk);
@@ -783,7 +734,8 @@ export class CForgeTex {
             }
         return { buf: out, ny };
     }
-    static Material(_h, _ny, N, _rough, _roughVar, _aoStr) {
+    static EmitMask(_h) { return Math.round(255 * (1 - Math.max(0, Math.min(1, (_h - 0.45) / 0.2)))); }
+    static Material(_h, _ny, N, _rough, _roughVar, _aoStr, _emit = false) {
         const R = 4, H = (_x, _y) => _h[((_y + N) % N) * N + ((_x + N) % N)], out = new Uint8Array(N * N * 4);
         for (let y = 0; y < N; y++)
             for (let x = 0; x < N; x++) {
@@ -798,7 +750,7 @@ export class CForgeTex {
                 out[i] = ao * 255;
                 out[i + 1] = Math.max(0.05, Math.min(1, _rough + (0.5 - h) * _roughVar)) * 255;
                 out[i + 2] = 0;
-                out[i + 3] = 255;
+                out[i + 3] = _emit ? CForgeTex.EmitMask(h) : 255;
             }
         return out;
     }
@@ -842,7 +794,7 @@ export class CForgeTex {
         M(T.sDryCourse, 0.72, 0.16, 1.15);
         M(T.sHiero, 0.55, 0.12, 0.95);
     }
-    static MaterialPBR(_h, N, _rough, _roughVar, _aoStr, _metalHi) {
+    static MaterialPBR(_h, N, _rough, _roughVar, _aoStr, _metalHi, _emit = false) {
         const R = 4, H = (_x, _y) => _h[((_y + N) % N) * N + ((_x + N) % N)], out = new Uint8Array(N * N * 4);
         let sum = 0;
         for (let y = 0; y < N; y++)
@@ -860,7 +812,7 @@ export class CForgeTex {
                 out[i] = ao * 255;
                 out[i + 1] = rough * 255;
                 out[i + 2] = metal * 255;
-                out[i + 3] = 255;
+                out[i + 3] = _emit ? CForgeTex.EmitMask(h) : 255;
                 sum += ao;
             }
         return { buf: out, ao: sum / (N * N) };
@@ -1130,14 +1082,17 @@ export class CForgeTex {
                 albH[i + 1] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 1)) * 255;
                 albH[i + 2] = Clamp(CForgeTex.SampleU(alb, N, lx, ly, 2)) * 255;
                 albH[i + 3] = 255;
-                let rg = rough, met = 0;
+                let rg = rough, met = 0, em = 1;
                 if (mode == 1) {
                     const came = Math.max(0, Math.min(1, (h - 0.55) / 0.3));
                     met = came * metalHi;
                     rg = Math.min(1, rough + came * gap);
+                    em = 1 - came;
                 }
-                else if (mode == 2)
+                else if (mode == 2) {
                     rg = Math.min(1, gap + s * Math.max(0, rough - gap));
+                    em = 1 - s;
+                }
                 else {
                     const grain = Math.min(micro, Math.abs(hf) * 0.85), pore = Math.min(micro * 0.4, Math.abs(grit) * micro);
                     rg = Math.min(1, rough + (1 - s) * gap + grain + pore);
@@ -1145,7 +1100,7 @@ export class CForgeTex {
                 const aoV = mode == 0 ? Math.max(0.62, Math.min(1, ao * (0.78 + 0.22 * s) * (hf < -0.06 ? 0.92 : 1))) : ao;
                 const rl = Math.max(rg, Math.min(1, rg + 0.25));
                 mat[i] = matP[i] = aoV * 255;
-                mat[i + 3] = matP[i + 3] = 255;
+                mat[i + 3] = matP[i + 3] = em * 255;
                 mat[i + 1] = rl * 255;
                 matP[i + 1] = rg * 255;
                 mat[i + 2] = 0;

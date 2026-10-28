@@ -9,6 +9,7 @@ import { CPaint } from "./CPaint.js";
 
 export class CPaintSurface extends CPaint
 {
+    override Icon(){ return "bi bi-display"; }
 
     constructor(_rp : CRenderPass,_size : CVec2);
     constructor(_rp : Array<CRenderPass>,_size : CVec2);

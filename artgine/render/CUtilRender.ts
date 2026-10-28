@@ -952,6 +952,19 @@ export class CUtilRender
 
 	//==============================================
 	//dir,size
+	//2D 셰이더(vs_main)는 크기를 f3_sca(두 번째 Position 채널, 부호로 좌/하 구분)와 worldMat 열 길이의 곱으로 읽는다.
+	//단위 쿼드는 ±1이라 크기는 worldMat 스케일 그대로다
+	static GetPlane2D(_half : number)
+	{
+		let ci=CUtilRender.GetPlane(new CVec4(0,0,1,_half));
+		let sb=ci.Create(CVertexFormat.eIdentifier.Position);
+		sb.bufF.Push(new CVec3(-1,-1,1));
+		sb.bufF.Push(new CVec3(1,-1,1));
+		sb.bufF.Push(new CVec3(1,1,1));
+		sb.bufF.Push(new CVec3(-1,1,1));
+		return ci;
+	}
+
 	static GetPlane(_plane: CVec4, _uv: CVec2 = new CVec2(1, 1)) {
 		var rVal = new CMeshCreateInfo();
 		
@@ -2361,6 +2374,66 @@ export class CUtilRender
 		for(let i=0;i<node.length;++i)
 		{
 			MeshNodeBoundUpdate(skinMat,node[i]);
+		}
+	}
+
+	//MeshBoundUpdate 이후에 불러야 한다. ci.bound가 이미 루트 pst까지 반영된 트리 공간 값이라,
+	//루트 TRS에 (스케일,센터)를 곱하는 것과 같은 변환을 bound의 min/max/mPos에 그대로 적용하면 된다.
+	//정점/스킨/키프레임/모프는 건드리지 않는다. 루트 pst가 모든 노드와 본에 상속되기 때문이다.
+	static MeshNormalize(_mesh : CMesh,_centerPos : boolean,_targetScale : number)
+	{
+		if(_centerPos==false && _targetScale==0)	return;
+		let root=_mesh.meshTree.mData;
+		if(root==null)	return;
+
+		let boundSet=new Set<CBound>();
+		let min=[1e30,1e30,1e30];
+		let max=[-1e30,-1e30,-1e30];
+		let nodeArr=_mesh.meshTree.GetArray();
+		for(let i=0;i<nodeArr.length;++i)
+		{
+			let md=nodeArr[i].mData;
+			if(md==null || md.ci==null || md.textureOff.length==0)	continue;
+			let bound=md.ci.bound;
+			if(bound.GetType()==CBound.eType.Null || boundSet.has(bound))	continue;
+			boundSet.add(bound);
+			for(let k=0;k<3;++k)
+			{
+				min[k]=Math.min(min[k],bound.mMin.mF32A[k]);
+				max[k]=Math.max(max[k],bound.mMax.mF32A[k]);
+			}
+		}
+		if(boundSet.size==0)	return;
+
+		let maxSize=Math.max(max[0]-min[0],max[1]-min[1],max[2]-min[2]);
+		if(maxSize<=0 || isFinite(maxSize)==false)	return;
+
+		let s=_targetScale!=0 ? _targetScale/maxSize : 1;
+		let t=[0,0,0];
+		if(_centerPos)
+		{
+			for(let k=0;k<3;++k)
+				t[k]=-(min[k]+max[k])*0.5*s;
+		}
+
+		root.sca.x*=s;	root.sca.y*=s;	root.sca.z*=s;
+		root.pos.x=root.pos.x*s+t[0];
+		root.pos.y=root.pos.y*s+t[1];
+		root.pos.z=root.pos.z*s+t[2];
+
+		for(let bound of boundSet)
+		{
+			for(let k=0;k<3;++k)
+			{
+				bound.mMin.mF32A[k]=bound.mMin.mF32A[k]*s+t[k];
+				bound.mMax.mF32A[k]=bound.mMax.mF32A[k]*s+t[k];
+			}
+			for(let i=0;i<bound.mPos.Size();++i)
+			{
+				let p=bound.mPos.Find(i);
+				for(let k=0;k<3;++k)
+					p.mF32A[k]=p.mF32A[k]*s+t[k];
+			}
 		}
 	}
 

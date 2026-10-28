@@ -9,6 +9,13 @@ export class CCanvasPluginRPMgr extends CCanvasPlugin {
         super();
         this.SetRPMgr(_RPMgr);
     }
+    SetCanvas(_canvas) {
+        super.SetCanvas(_canvas);
+        if (this.mRPMgr != null)
+            this.mRPMgr.mUpdate = CUpdate.eType.Updated;
+        if (this.mChangeRPMgr != null)
+            this.mChangeRPMgr.mUpdate = CUpdate.eType.Updated;
+    }
     SetRPMgr(_rpMgr = null) {
         if (_rpMgr == null)
             _rpMgr = new CRPMgr();

@@ -45,7 +45,7 @@ export class CGeometryInfo implements IAutoFixed
             const su=this.mOctree.mStaticUpdate;
             if(i<count-1)   this.mOctree.mStaticUpdate=false;
             this.mOctree.Build();
-            if(i<count-1)   this.mOctree.mStaticUpdate=su;
+            if(i<count-1)   this.mOctree.mStaticUpdate=su || this.mOctree.mStaticUpdate;
         }
 
         
@@ -56,6 +56,7 @@ export class CGeometryInfo implements IAutoFixed
 }
 export class CGeometryComp extends CComponent
 {
+    override Icon(){ return "bi bi-bounding-box"; }
     constructor()
     {
         super();

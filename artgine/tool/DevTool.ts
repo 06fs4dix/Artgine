@@ -15,6 +15,7 @@ import { CBase64File } from "../util/CBase64File.js";
 import { CFrame } from "../util/CFrame.js";
 import { CLoaderOption } from "../util/CLoader.js";
 import { CMesh } from "../render/CMesh.js";
+import { CUtilRender } from "../render/CUtilRender.js";
 import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../util/CCamCon.js";
 import { CShader, CShaderList } from "../render/CShader.js";
 import { CTexture } from "../render/CTexture.js";
@@ -1227,7 +1228,8 @@ function DevToolDrop(_drop : CDrop)
         else if(_drop.mObject instanceof CMesh)
         {
             newSub=new CSubject();
-            newSub.PushComp(new CPaint3D(_drop.mObject.Key(),true,100));
+            CUtilRender.MeshNormalize(_drop.mObject,true,100);
+            newSub.PushComp(new CPaint3D(_drop.mObject.Key()));
         }
         else if(_drop.mObject instanceof CTexture)
         {
@@ -2691,6 +2693,18 @@ function LeftNewItem(_obj : CObject)
 {
     gLeftItem.set(_obj.ObjHash(),_obj);
     const collapseId = `${_obj.ObjHash()}_collapse`;
+    let compIcon="";
+    if(_obj instanceof CSubject)
+    {
+        const compMap=new Map<Function,string>();
+        for(const comp of _obj.mComArr)
+        {
+            if(!compMap.has(comp.constructor) && comp.Icon()!="")
+                compMap.set(comp.constructor,comp.Icon());
+        }
+        for(const [type,icon] of compMap)
+            compIcon+=`<i class="bi ${icon} ms-1 text-secondary" title="${type.name}"></i>`;
+    }
     let str=`<li id='${_obj.ObjHash()}_li'>
         <div class="card p-0">
             <div class="card-body p-0 d-flex overflow-hidden white-space-nowrap cursor-pointer">
@@ -2700,6 +2714,7 @@ function LeftNewItem(_obj : CObject)
                 <div class="d-flex align-items-center">
                 <i class="bi ${_obj.Icon()} me-1"></i>
                 <div>${_obj.Key()}</div>
+                ${compIcon}
                 <div class="ms-1" id='${_obj.ObjHash()}_count'></div>
                 </div>
             </div>

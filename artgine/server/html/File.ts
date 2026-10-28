@@ -108,6 +108,8 @@ installFileAuthIndicatorStyle();
 // ==================================================================================================================
 var g_contentJBox = new CModal("content_modal");
 g_contentJBox.SetCloseToHide(true);
+g_contentJBox.SetLimitPush(true);
+g_contentJBox.mBodyStyle = "card-body p-0 overflow-auto";
 g_contentJBox.SetBody("<img id='ImageModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' onclick='NextPhoto()'/>" +
             "<video id='VideoModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' controls onended='NextPhoto()'></video>" +
             "<a id='FileModalSrc' download >Download</a>" +
@@ -138,7 +140,7 @@ var folderList = {"<>":"ul","class":"list-group","html":[] as any[]};
 // 특수 동작(이미지/시트/HTML 선택 다이얼로그/MD 뷰어/ORM)만 EXT_KIND에 둔다.
 type FileKind = 'folder'|'image'|'audio'|'video'|'soundlist'|'html'|'code'|'md'|'sheet'|'orm'|'pdf'|'file';
 const EXT_KIND: Record<string, FileKind> = {
-    png:'image', jpg:'image', jpeg:'image', bmp:'image',
+    png:'image', jpg:'image', jpeg:'image', bmp:'image', webp:'image', gif:'image',
     mp3:'audio', ogg:'audio',
     mp4:'video', mov:'video', avi:'video',
     soundlist:'soundlist',
@@ -1423,14 +1425,14 @@ function NextPhoto()
         {
             CDOM.ID("fl"+fl.index).className="list-group-item list-group-item-action list-group-item-secondary";
             fl.open=true;
-            if(fl.ext=="png" || fl.ext=="jpg" || fl.ext=="jpeg" || fl.ext=="bmp")
+            if(EXT_KIND[fl.ext]=="image")
             {
                 CDOM.ID("ImageModalSrc").hidden=false;
                 (CDOM.ID("ImageModalSrc") as HTMLImageElement).src=gDown+encodeUrlPath(gPath+fl.name);
                 CDOM.ID("VideoModalSrc").hidden=true;
                 CDOM.ID("FileModalSrc").hidden=true;
             }
-            else if(fl.ext=="mp4" || fl.ext=="mov" || fl.ext=="avi")
+            else if(EXT_KIND[fl.ext]=="video")
             {
                 CDOM.ID("ImageModalSrc").hidden=true;
                 (CDOM.ID("VideoModalSrc") as HTMLVideoElement).src=gDown+encodeUrlPath(gPath+fl.name);

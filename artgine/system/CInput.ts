@@ -3,6 +3,7 @@ import {CRay} from "../geometry/CRay.js";
 import {CVec3} from "../geometry/CVec3.js";
 import {CPreferences} from "../basic/CPreferences.js";
 import {CBound} from "../geometry/CBound.js";
+import {CConsol} from "../basic/CConsol.js";
 
 export class CInput
 {
@@ -180,7 +181,41 @@ export class CInput
 		bound.InitBound(new CVec3(this.Mouse().x,this.Mouse().y));
 		return bound;
 	}
-	SetFocus(_focus : boolean){	
+	private mLogEvent : Array<[string,(e:Event)=>void]>=null;
+	IsLog()	{	return this.mLogEvent!=null;	}
+	SetLog(_enable : boolean) : void
+	{
+		if(_enable==this.IsLog())	return;
+		if(!_enable)
+		{
+			for(const [type,fn] of this.mLogEvent)
+				window.removeEventListener(type,fn,true);
+			this.mLogEvent=null;
+			return;
+		}
+		const tag=(e : Event)=>
+		{
+			const t=e.target as HTMLElement;
+			if(t==null || t.tagName==null)	return "";
+			return " <"+t.tagName.toLowerCase()+(t.id?"#"+t.id:"")+">";
+		};
+		const btn=["L","M","R"];
+		this.mLogEvent=[];
+		const add=(type : string,fn : (e:any)=>string)=>
+		{
+			const h=(e : Event)=>{	CConsol.Log("[Input] "+type+" "+fn(e)+tag(e),"#00aaff");	};
+			this.mLogEvent.push([type,h]);
+			window.addEventListener(type,h,true);
+		};
+		add("keydown",(e : KeyboardEvent)=>e.repeat? "" : e.key+" ("+e.code+","+e.keyCode+")");
+		add("keyup",(e : KeyboardEvent)=>e.key+" ("+e.code+","+e.keyCode+")");
+		add("mousedown",(e : MouseEvent)=>(btn[e.button]??e.button)+" x="+e.clientX+" y="+e.clientY);
+		add("mouseup",(e : MouseEvent)=>(btn[e.button]??e.button)+" x="+e.clientX+" y="+e.clientY);
+		add("wheel",(e : WheelEvent)=>"deltaY="+e.deltaY+" x="+e.clientX+" y="+e.clientY);
+		add("touchstart",(e : TouchEvent)=>Array.from(e.changedTouches).map(t=>"x="+t.clientX+" y="+t.clientY).join(" | "));
+		add("touchend",(e : TouchEvent)=>Array.from(e.changedTouches).map(t=>"x="+t.clientX+" y="+t.clientY).join(" | "));
+	}
+	SetFocus(_focus : boolean){
 		if(this.mFocus!=_focus)
 			this.mFocus=_focus;	
 	}

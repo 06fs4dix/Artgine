@@ -6,7 +6,10 @@ export type ForgeV2 = [number, number];
 export interface IForgeEntity { id : number; seed : number; theme? : string; style? : number; over? : Record<string, any>; }
 //pts : [x, z, 높이, 바닥 높이(선택)]. gy : 점마다 바닥 높이(m, 선택) — 호출자가 넣은 지면 정보
 export interface IForgeWall extends IForgeEntity { pts : number[][]; thick : number; style : number; }
-export interface IForgeBuilding extends IForgeEntity { poly : ForgeV2[]; height : number; roof : number; roofH : number; glue : number[]; gy? : number[]; }
+//enable : 실내 생성 여부. concept : modern · hanok · machiya · medieval(없으면 건축 양식에서 고른다). kitchen·bath : true · false · "auto"(넓이로 정한다). density : 가구 밀도 0~1.
+//anim : ForgeAction으로 움직이는 부품(문·창·의자)별 켜기·끄기(기본 모두 켬). 끄면 그 부품은 움직이지 않는다(의자는 정적 메시, 창은 유리가 벽에 붙은 채 그대로, 문은 문짝 없는 열린 문틀)
+export interface IForgeInterior { enable : boolean; concept? : string; kitchen? : boolean | "auto"; bath? : boolean | "auto"; density? : number; anim? : { door? : boolean; window? : boolean; chair? : boolean }; }
+export interface IForgeBuilding extends IForgeEntity { poly : ForgeV2[]; height : number; roof : number; roofH : number; glue : number[]; gy? : number[]; interior? : IForgeInterior; }
 //shape : 0 원형, 1 사각형
 export interface IForgeTower extends IForgeEntity { c : ForgeV2; r : number; height : number; roof : number; roofH : number; shape? : number; gy? : number; }
 export interface IForgePath extends IForgeEntity { pts : ForgeV2[]; width : number; gy? : number[]; }

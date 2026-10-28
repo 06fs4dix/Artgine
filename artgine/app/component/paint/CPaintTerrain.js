@@ -1,9 +1,10 @@
-import { CUpdate } from "../../../basic/Basic.js";
 import { CMat } from "../../../geometry/CMat.js";
 import { CVec1 } from "../../../geometry/CVec1.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CPaint } from "./CPaint.js";
+const gTerrainMat = new CMat();
 export class CPaintTerrain extends CPaint {
+    Icon() { return "bi bi-tree"; }
     mTerrainOffset;
     mTerrainHeight;
     mLevel;
@@ -58,44 +59,20 @@ export class CPaintTerrain extends CPaint {
         const r = this.mCameraMain.GetEye().y / this.mDefaultHeight.x;
         this.mHeightScale.x = r < 1 ? 1 : Math.pow(2, Math.floor(Math.log2(r)));
         const cellCount = Math.round(Math.sqrt(this.GetOwner().GetFrame().Pal().Terrain().vertexCount)) - 1;
-        this.mLMat.mF32A[0] = this.mCellSize.x * this.mLevelScale.x * this.mHeightScale.x * cellCount;
-        this.mLMat.mF32A[5] = this.mTerrainHeight.x;
-        this.mLMat.mF32A[10] = this.mCellSize.x * this.mLevelScale.x * this.mHeightScale.x * cellCount;
-        this.mLMat.mF32A[12] = this.mCameraMain.GetEye().x + this.mCellIndex.x * this.mLMat.mF32A[0];
-        this.mLMat.mF32A[14] = this.mCameraMain.GetEye().z + this.mCellIndex.z * this.mLMat.mF32A[10];
-        this.mLMat.UnitCheck();
-        this.mBound.MatCoordi(this.mLMat);
+        const lmat = gTerrainMat;
+        lmat.mF32A[0] = this.mCellSize.x * this.mLevelScale.x * this.mHeightScale.x * cellCount;
+        lmat.mF32A[5] = this.mTerrainHeight.x;
+        lmat.mF32A[10] = this.mCellSize.x * this.mLevelScale.x * this.mHeightScale.x * cellCount;
+        lmat.mF32A[12] = this.mCameraMain.GetEye().x + this.mCellIndex.x * lmat.mF32A[0];
+        lmat.mF32A[14] = this.mCameraMain.GetEye().z + this.mCellIndex.z * lmat.mF32A[10];
+        lmat.UnitCheck();
+        this.SetFMat(lmat);
+        this.mBound.MatCoordi(lmat);
         this.mBW.mRadian = 0;
-        this.UpdateLMat();
+        this.UpdateFMat();
     }
-    Update(_update) {
-        if (this.mCameraMain != null) {
-            if (this.mCameraMain.mUpdateMat == CUpdate.eType.Updated) {
-                this.MatUpdate();
-            }
-        }
-        super.Update(_update);
-    }
-    Render(_vf) {
-        var barr = this.RenderBatch(_vf, 1);
-        if (barr == null)
-            return;
-        this.mOwner.GetFrame().BMgr().BatchOn();
-        this.Common(_vf);
-        let wsa = new CShaderAttr("worldMat", this.GetFMat());
-        switch (this.mWorldMatType) {
-            case CMat.eType.Short2D:
-                wsa.mKey = "worldMatShort";
-                break;
-        }
-        wsa.mType = this.mWorldMatType;
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType", new CVec1(this.mWorldMatType)));
-        this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
-        const cellCount = Math.round(Math.sqrt(this.GetOwner().GetFrame().Pal().Terrain().vertexCount)) - 1;
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("cellCount", new CVec1(cellCount)));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
-        var dm = this.GetDrawMesh("Artgine/DM/GeoClipmap" + cellCount, _vf, this.mOwner.GetFrame().Pal().Terrain());
-        this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
-        barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
-    }
+    Update(_update) { }
+    Render(_vf) { }
 }
+import CPaintTerrain_imple from "../../../app_imple/component/paint/CPaintTerrain.js";
+CPaintTerrain_imple();

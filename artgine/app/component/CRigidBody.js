@@ -25,7 +25,7 @@ export class CRigidBody extends CGeometryComp {
     mFreezePos = new Array(false, false, false);
     mStartPos = null;
     mLastDir = CVec3.eDir.Null;
-    Icon() { return "bi bi-person-walking"; }
+    Icon() { return "bi bi-speedometer2"; }
     SetGravity(_scale) { this.mGravity = _scale; }
     GetGravity() { return this.mGravity; }
     constructor() {

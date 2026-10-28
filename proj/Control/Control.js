@@ -19,7 +19,7 @@ gPF.mIAuto = true;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mschkcx4_2";
+gPF.mVersion = "mvs4vtvv_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
 CPlugin.PushPath('ControlMedia', '../../plugin/ControlMedia/');
@@ -57,9 +57,58 @@ const CONTENT_MAX = 1200;
 const CONTENT_MIN_FOR_LEFT = 720;
 const SIDEBAR_BOTH_MIN = CONTENT_MAX + 325 + 325;
 const SIDEBAR_LEFT_MIN = SIDEBAR_WIDTH + CONTENT_MIN_FOR_LEFT;
+const vscodeParams = new URLSearchParams(location.search);
+const vscodeMode = ((m) => m === 'left' || m === 'right' || m === 'panel' ? m : null)(vscodeParams.get('vscode'));
+if (vscodeMode) {
+    document.body.classList.add('vscode-' + vscodeMode);
+    const vscodeToken = vscodeParams.get('authToken');
+    if (vscodeToken)
+        setAuthToken(CPath.WebRootUrl(), vscodeToken);
+}
+function ctrlTokenOf(baseUrl) {
+    if (baseUrl)
+        return getAuthToken(baseUrl);
+    return vscodeMode ? getAuthToken(CPath.WebRootUrl()) : '';
+}
+function ctrlTokenBody(baseUrl) {
+    const token = ctrlTokenOf(baseUrl);
+    return token ? { token } : {};
+}
+if (vscodeMode === 'panel') {
+    const tabId = vscodeParams.get('tab') === 'messenger' ? 'messenger-tab' : 'log-tab';
+    setTimeout(() => window.bootstrap.Tab.getOrCreateInstance(document.getElementById(tabId)).show(), 300);
+}
+if (vscodeMode === 'left') {
+    const openTab = (key, src) => window.parent.postMessage({ artgineVscode: 'openFrame', key, src }, '*');
+    const theme = () => encodeURIComponent(document.documentElement.getAttribute('data-bs-theme') ?? 'dark');
+    const htmlPage = (name) => `${CPath.WebRootArtgineUrl()}artgine/server/html/${name}.html?theme=${theme()}`;
+    const menuItems = {
+        File: () => openTab('File', htmlPage('File')),
+        Memo: () => openTab('Memo', htmlPage('Memo')),
+        RDP: () => document.getElementById('rdp-add-btn')?.click(),
+        Chat: () => document.getElementById('chat-new-btn')?.click(),
+        Terminal: () => document.getElementById('term-new-btn')?.click(),
+        Browser: () => document.getElementById('browser-new-btn')?.click(),
+        Web: () => document.getElementById('web-new-btn')?.click(),
+        Search: () => document.getElementById('search-open-btn')?.click(),
+        Team: () => document.getElementById('team-tab')?.click(),
+        Log: () => openTab('Log', new URL('Control.html?vscode=panel&tab=log', location.href).href),
+        Messenger: () => openTab('Messenger', new URL('Control.html?vscode=panel&tab=messenger', location.href).href),
+        Help: () => openTab('Help', new URL('./artgine-agent.html', import.meta.url).href),
+    };
+    window.addEventListener('message', (e) => {
+        if (e.data?.artgineVscodeCmd === 'menu')
+            menuItems[e.data.name]?.();
+    });
+}
 function updateSidebarMode() {
     if (!mainContainer)
         return;
+    if (vscodeMode) {
+        appSidebar?.classList.toggle('sidebar-docked', vscodeMode === 'left');
+        appSidebarRight?.classList.toggle('sidebar-docked', vscodeMode === 'right');
+        return;
+    }
     const w = window.innerWidth;
     let leftDock = false;
     let rightDock = false;
@@ -528,11 +577,11 @@ document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showA
 document.getElementById('aiOpencodeStatusBtn')?.addEventListener('click', () => showOpencodeStatusModal());
 document.getElementById('agentAddFolderBtn')?.addEventListener('click', () => showWorkFolderModal());
 document.getElementById('sqliteViewerBtn')?.addEventListener('click', () => {
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     new CORMViewer(undefined, 'sqlite', 'db/artgine.sqlite', currentWebRootUrl, token).Open(CModal.ePos.Center);
 });
 document.getElementById('dbViewerBtn')?.addEventListener('click', () => {
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     new CORMViewer(undefined, undefined, undefined, currentWebRootUrl, token).Open(CModal.ePos.Center);
 });
 document.getElementById('pruneConvBtn')?.addEventListener('click', () => {
@@ -1027,6 +1076,11 @@ const tmuxIdlePool = document.createElement('div');
 tmuxIdlePool.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
 document.body.appendChild(tmuxIdlePool);
 function showPooledFrame(ctx, key, src) {
+    if (vscodeMode) {
+        if (src)
+            window.parent.postMessage({ artgineVscode: 'openFrame', key, src: new URL(src, location.href).href }, '*');
+        return document.createElement('iframe');
+    }
     let f = ctx.pool.get(key);
     if (!f) {
         f = document.createElement('iframe');
@@ -1330,7 +1384,7 @@ async function ctrlRefreshRootSelect() {
         }
     }
     try {
-        const token = baseUrl ? getAuthToken(baseUrl) : '';
+        const token = ctrlTokenOf(baseUrl);
         const data = await CFecth.Exe((baseUrl || CPath.WebRootUrl()) + "File/Root", token ? { token } : {}, "json");
         if (seq !== ctrlRootReqSeq)
             return;
@@ -1698,6 +1752,74 @@ function ctrlGroupSearchScope(key) {
 const CTRL_SEARCH_EXCLUDE_DIRS = ['node_modules'];
 const ctrlIsSearchExcluded = (name) => name.startsWith('.') || CTRL_SEARCH_EXCLUDE_DIRS.includes(name);
 const ctrlEncodeUrlPath = (p) => p.split('/').map(encodeURIComponent).join('/');
+const CTRL_FILE_DRAG_MIME = 'application/x-artgine-file';
+function ctrlSetFileDrag(dt, absPath, baseUrl) {
+    if (!dt)
+        return;
+    dt.setData('text/plain', absPath);
+    dt.setData(CTRL_FILE_DRAG_MIME, JSON.stringify({ path: absPath, baseUrl: baseUrl || CPath.WebRootUrl() }));
+    dt.effectAllowed = 'copy';
+}
+let ctrlPublicIp = '';
+async function ctrlExternalUrl(url) {
+    const u = new URL(url);
+    const h = u.hostname;
+    const unreachable = h === 'localhost' || h === '[::1]' || /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+    if (!unreachable)
+        return u.href;
+    if (!ctrlPublicIp)
+        ctrlPublicIp = (await (await fetch('https://api.ipify.org?format=text')).text()).trim();
+    if (!ctrlPublicIp)
+        throw new Error('public ip unavailable');
+    u.hostname = ctrlPublicIp;
+    return u.href;
+}
+async function ctrlFetchRoots(baseUrl) {
+    const token = ctrlSideFileAuthToken(baseUrl);
+    const data = await CFecth.Exe(baseUrl + 'File/Root', token ? { token } : {}, 'json');
+    return data?.roots ?? [];
+}
+async function ctrlAbsPathToExternalUrl(absPath, baseUrl) {
+    const norm = termNormAbsPath(absPath);
+    const normLower = norm.toLowerCase();
+    const root = (await ctrlFetchRoots(baseUrl)).find(r => {
+        const rp = termNormAbsPath(r.path).toLowerCase();
+        return normLower === rp || normLower.startsWith(rp + '/');
+    });
+    if (!root)
+        return null;
+    const rel = norm.slice(termNormAbsPath(root.path).length).replace(/^\/+/, '');
+    const downBase = new URL(root.url, baseUrl).href.replace(/\/+$/, '');
+    return ctrlExternalUrl(downBase + '/' + ctrlEncodeUrlPath(rel));
+}
+async function ctrlUploadToLocalExternalUrl(name, b64) {
+    const base = CPath.WebRootUrl();
+    const roots = await ctrlFetchRoots(base);
+    const root = roots.find(r => r.name === './') ?? roots[0];
+    if (!root)
+        throw new Error('no root');
+    const token = ctrlSideFileAuthToken(base);
+    const rel = 'temp/uploads';
+    const mk = { data: '/' + rel, RootPath: root.path };
+    if (token)
+        mk.token = token;
+    const mkRes = await CFecth.Exe(base + 'File/Mkdir', mk, 'json');
+    if (mkRes && mkRes.ok === false)
+        throw new Error('mkdir failed');
+    const safeName = `${Date.now()}_${name.replace(/[\\/:*?"<>|]/g, '_')}`;
+    const up = { path: termNormAbsPath(root.path) + '/' + rel + '/', name: [safeName], data: [b64] };
+    if (token)
+        up.token = token;
+    const res = await CFecth.Exe(base + 'File/Upload', up, 'json');
+    if (!res?.ok)
+        throw new Error('upload failed');
+    const downBase = new URL(root.url, base).href.replace(/\/+$/, '');
+    return ctrlExternalUrl(`${downBase}/${rel}/${encodeURIComponent(safeName)}`);
+}
+function ctrlTermInsertReply(source, text, error = '') {
+    if (source)
+        CIframeMsg.Send(source, 'term-insert', { text, error });
+}
 function ctrlAllSearchScopeItems() {
     const items = [];
     const seen = new Set();
@@ -1796,9 +1918,7 @@ async function ctrlFileSearch(onlyKey) {
                 `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(scope.serverLabel)}:${dirPath}</span>`;
         item.draggable = true;
         item.addEventListener('dragstart', (e) => {
-            e.dataTransfer?.setData('text/plain', (g_ctrlSrchRoot.get(scopeKey) ?? '') + dirPath + fl.name);
-            if (e.dataTransfer)
-                e.dataTransfer.effectAllowed = 'copy';
+            ctrlSetFileDrag(e.dataTransfer, (g_ctrlSrchRoot.get(scopeKey) ?? '') + dirPath + fl.name, scope.editorBaseUrl);
         });
         if (fl.file) {
             item.addEventListener('click', () => {
@@ -1973,7 +2093,7 @@ function ctrlSideFileVcsBadge(status, filePath) {
 }
 async function ctrlOpenVcsDiff(filePath) {
     const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     let res;
     try {
         res = await CFecth.Exe(webRootUrl + "File/VCS", { action: "diff", path: filePath, token }, "json");
@@ -2046,7 +2166,7 @@ window.ctrlPathToUrl = async (absPath) => {
     const norm = termNormAbsPath(absPath);
     const normLower = norm.toLowerCase();
     try {
-        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json");
+        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", ctrlTokenBody(""), "json");
         const root = (data.roots || []).find(r => {
             const rp = termNormAbsPath(r.path).toLowerCase();
             return normLower === rp || normLower.startsWith(rp + '/');
@@ -2064,7 +2184,7 @@ window.ctrlPathToUrl = async (absPath) => {
 async function ctrlUrlToPath(url, baseUrl) {
     const apiUrl = baseUrl || CPath.WebRootUrl();
     try {
-        const data = await CFecth.Exe(apiUrl + "File/Root", {}, "json");
+        const data = await CFecth.Exe(apiUrl + "File/Root", ctrlTokenBody(apiUrl), "json");
         for (const root of data.roots || []) {
             const downBase = new URL(root.url, apiUrl).href.replace(/\/+$/, '');
             if (url === downBase || url.startsWith(downBase + '/')) {
@@ -2261,7 +2381,7 @@ async function ctrlSideFilePasteCopy(item) {
         }
     }
     const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     try {
         const p = { path: ctrlSideFilePath };
         if (ctrlSelectedRootPath)
@@ -2386,14 +2506,12 @@ function ctrlSideFileRenderList(list) {
         });
         item.draggable = true;
         item.addEventListener('dragstart', (e) => {
-            e.dataTransfer?.setData('text/plain', ctrlSideFileRoot + ctrlSideFilePath + fl.name);
-            if (e.dataTransfer)
-                e.dataTransfer.effectAllowed = 'copy';
+            ctrlSetFileDrag(e.dataTransfer, ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentWebRootUrl);
         });
         item.addEventListener('click', () => {
             if (fl.file) {
                 if (ctrlSideFileKind(fl) === 'orm') {
-                    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+                    const token = ctrlTokenOf(currentWebRootUrl);
                     new CORMViewer(undefined, 'sqlite', ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentWebRootUrl, token).Open();
                     return;
                 }
@@ -2415,7 +2533,7 @@ async function ctrlSideFileGoTo(pathVal) {
     const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
     const rootPathParam = ctrlSelectedRootPath || undefined;
     try {
-        const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+        const token = ctrlTokenOf(currentWebRootUrl);
         const p = { path: pathVal };
         if (rootPathParam)
             p.RootPath = rootPathParam;
@@ -2553,7 +2671,7 @@ async function ctrlSideSrchScan(key) {
     ctrlSideFileSearchInputEl.placeholder = LF('ctrl.indexingCount', 'Indexing... ({0})', 0);
     const webRootUrl = currentWebRootUrl || CPath.WebRootUrl();
     const rootPathParam = ctrlSelectedRootPath || undefined;
-    const token = currentWebRootUrl ? getAuthToken(currentWebRootUrl) : '';
+    const token = ctrlTokenOf(currentWebRootUrl);
     const queue = ['/'];
     let scanned = 0;
     let stopped = false;
@@ -2679,9 +2797,7 @@ function ctrlSideSrchRenderFileResults(query) {
                     `<span class="text-muted ms-2" style="font-size:11px;">${aiEscapeHtml(dirPath)}</span>`;
             item.draggable = true;
             item.addEventListener('dragstart', (e) => {
-                e.dataTransfer?.setData('text/plain', g_ctrlSideSrch.root + dirPath + fl.name);
-                if (e.dataTransfer)
-                    e.dataTransfer.effectAllowed = 'copy';
+                ctrlSetFileDrag(e.dataTransfer, g_ctrlSideSrch.root + dirPath + fl.name, currentWebRootUrl);
             });
             item.addEventListener('click', () => {
                 ctrlSideFileSearchInputEl.value = '';
@@ -2901,6 +3017,30 @@ document.addEventListener('keydown', (e) => {
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
         runControlHotkey(String(data.key ?? ''), !!data.shift);
+    },
+});
+CIframeMsg.Recv({
+    'term-path-to-url': async (data, source) => {
+        try {
+            const url = await ctrlAbsPathToExternalUrl(String(data.path ?? ''), String(data.baseUrl ?? '') || CPath.WebRootUrl());
+            if (!url) {
+                ctrlTermInsertReply(source, '', 'File is outside the registered roots.');
+                return;
+            }
+            ctrlTermInsertReply(source, `"${url}" `);
+        }
+        catch (e) {
+            ctrlTermInsertReply(source, '', String(e));
+        }
+    },
+    'term-upload-local': async (data, source) => {
+        try {
+            const url = await ctrlUploadToLocalExternalUrl(String(data.name ?? 'file'), String(data.data ?? ''));
+            ctrlTermInsertReply(source, `"${url}" `);
+        }
+        catch (e) {
+            ctrlTermInsertReply(source, '', String(e));
+        }
     },
 });
 CIframeMsg.Recv({
@@ -3622,7 +3762,7 @@ function updateAgentGroupHeader(el, meta) {
 }
 async function refreshLocalRoots() {
     try {
-        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json");
+        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", ctrlTokenBody(""), "json");
         localRootOpts = (data.roots ?? []).map(r => r.name === './' ? { ...r, name: 'Artgine (WorkingPath)' } : r);
         renderSessionSidebar();
         ctrlSyncSideFileRootSel();
@@ -3743,7 +3883,7 @@ function noteSessionFetchFailure(remoteId) {
         rdpNoteFetchFailure(remote);
 }
 function localServerCtx() {
-    return { remoteId: '', apiUrl: CPath.WebRootUrl(), artgineUrl: CPath.WebRootArtgineUrl(), authToken: '' };
+    return { remoteId: '', apiUrl: CPath.WebRootUrl(), artgineUrl: CPath.WebRootArtgineUrl(), authToken: vscodeMode ? getAuthToken(CPath.WebRootUrl()) : '' };
 }
 function remoteServerCtx(r) {
     const base = rdpRemoteWebRootUrl(r.entryUrl);
@@ -4123,6 +4263,11 @@ function renderOtherList(entries, frozen) {
     }
 }
 function authedFetch(url, init) {
+    if (vscodeMode && url.startsWith(CPath.WebRootUrl()) && !url.includes('authToken=')) {
+        const t = getAuthToken(CPath.WebRootUrl());
+        if (t)
+            url += (url.includes('?') ? '&' : '?') + 'authToken=' + encodeURIComponent(t);
+    }
     return fetch(url, init);
 }
 function chatFormatRelative(ts) {
@@ -4262,7 +4407,7 @@ async function ctrlSaveOpenedSheet(filePath, base64, baseUrl) {
     const fileName = filePath.split('/').pop() ?? filePath;
     const dir = filePath.slice(0, filePath.length - fileName.length);
     const webRootUrl = baseUrl || CPath.WebRootUrl();
-    const token = baseUrl ? getAuthToken(baseUrl) : '';
+    const token = ctrlTokenOf(baseUrl);
     const up = { path: dir, name: [fileName], data: [base64] };
     if (token)
         up.token = token;
@@ -4277,7 +4422,7 @@ async function ctrlSaveOpenedSheet(filePath, base64, baseUrl) {
 function promptSourceAction(fullPath, baseUrl, url, activate = true) {
     const ext = fileExtOf(fullPath);
     if (ext === 'sqlite' || ext === 'db') {
-        const token = baseUrl ? getAuthToken(baseUrl) : '';
+        const token = ctrlTokenOf(baseUrl);
         new CORMViewer(undefined, 'sqlite', fullPath, baseUrl, token).Open(CModal.ePos.Center);
         return;
     }
@@ -4545,7 +4690,7 @@ function chatItemSpec(s) {
     const isRemote = !!s.remoteId;
     const addr = remoteEntryUrl(s.remoteId);
     const rel = chatFormatRelative(s.updatedAt);
-    const isLoaded = chatIframePool.has(key);
+    const isLoaded = vscodeMode !== null || chatIframePool.has(key);
     const st = !isLoaded ? 'off' : s.busy ? 'busy' : 'idle';
     const dot = st === 'off' ? `<span class="text-danger small" title="${L('ctrl.st.disconnected', 'Disconnected')}">●</span>`
         : st === 'busy' ? `<span class="ai-busy-dot text-warning small" title="${L('ctrl.st.busy', 'Busy')}">●</span>`
@@ -4727,7 +4872,7 @@ function termItemSpec(s) {
     const key = sessKey('term', s.remoteId, s.token);
     const isRemote = !!s.remoteId;
     const addr = remoteEntryUrl(s.remoteId);
-    const isLoaded = termIframePool.has(key);
+    const isLoaded = vscodeMode !== null || termIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     const preview = aiEscapeHtml(s.lastMsg || '(empty)');
     const dotLabel = s.mode.slice(0, 3);
@@ -5137,7 +5282,7 @@ function browserItemSpec(s) {
     const key = sessKey('browser', s.remoteId, s.sessionId);
     const isRemote = !!s.remoteId;
     const addr = remoteEntryUrl(s.remoteId);
-    const isLoaded = browserIframePool.has(key);
+    const isLoaded = vscodeMode !== null || browserIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     return {
         ...sessActiveFromKey(key),
@@ -5517,6 +5662,8 @@ function tmuxPoolForKey(key) {
     return null;
 }
 function tmuxEnsurePooledFrame(key) {
+    if (vscodeMode)
+        return null;
     const spec = tmuxPoolForKey(key);
     if (!spec)
         return null;

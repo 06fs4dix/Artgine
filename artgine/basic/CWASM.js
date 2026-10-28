@@ -745,7 +745,7 @@ function buildImportObject() {
     };
 }
 async function instantiate(fileName, bytes) {
-    gMemory = new WebAssembly.Memory({ initial: 512, maximum: 2048 });
+    gMemory = new WebAssembly.Memory({ initial: 512, maximum: 8192 });
     gLastBuffer = gMemory.buffer;
     gLastBufferLen = gLastBuffer.byteLength;
     const wasmBytes = bytes ?? await CWASM.LoadArtgineBytes("artgine/wasm/" + fileName);
@@ -891,8 +891,8 @@ function liftDecodeString(pointer) {
     const end = start + (memoryU32[(pointer - 4) >>> 2] >>> 1);
     return String.fromCharCode(...memoryU16.subarray(start, end));
 }
-const RES_TAG_A = "2204757308_4051816024";
-const RES_TAG_B = "2529968786_3530583902";
+const RES_TAG_A = "2439553405_3595388337";
+const RES_TAG_B = "3784495169_940147285";
 const gArtgineBytesCache = new Map();
 export class CWASM {
     static async LoadArtgineBytes(_relPath) {
@@ -1183,7 +1183,7 @@ export class CWASM {
         buf[o + 14] = _isStatic ? 1 : 0;
         _mgr["_insCount"] = count + 1;
     }
-    static COctreeMgr_RemoveQueue(_mgr, _dataId) {
+    static COctreeMgr_RemoveQueue(_mgr, _dataId, _mode = 2) {
         const count = _mgr["_insCount"] || 0;
         octInsertBufEnsure(_mgr, count + 1);
         const buf = _mgr["_insBuf"];
@@ -1191,18 +1191,33 @@ export class CWASM {
         for (let i = 0; i < OCT_INSERT_STRIDE; ++i)
             buf[o + i] = 0;
         buf[o + 0] = _dataId;
-        buf[o + 14] = 2;
+        buf[o + 14] = _mode;
         _mgr["_insCount"] = count + 1;
     }
+    static COctreeMgr_SetLastMode(_mgr, _mode) {
+        const count = _mgr["_insCount"] || 0;
+        if (count <= 0)
+            return;
+        _mgr["_insBuf"][(count - 1) * OCT_INSERT_STRIDE + 14] = _mode;
+    }
     static COctreeMgr_Build(_handle, _mgr, _forceStaticUpdate) {
+        let fallback = false;
         const octN = gInstance.exports.ASM_LINK_OCT_N;
         const count = _mgr["_insCount"] || 0;
         if (count > 0) {
             octN(CWASM.FN_Octree_InsertBatch, _handle, _mgr["_insBuf"]["ptr"], count, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            checkMemoryGrow();
+            const buf = _mgr["_insBuf"];
+            for (let i = 0; i < count; ++i)
+                if (buf[i * OCT_INSERT_STRIDE + 14] === -1) {
+                    fallback = true;
+                    break;
+                }
             _mgr["_insCount"] = 0;
         }
         octN(CWASM.FN_Octree_Build, _handle, _forceStaticUpdate ? 1 : 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         checkMemoryGrow();
+        return fallback;
     }
     static COctreeMgr_InsideRay(_handle, _ox, _oy, _oz, _dx, _dy, _dz, _rayLength, _boundary) {
         const buf = octResultBuf();

@@ -156,6 +156,12 @@ export class CTexture extends CObject {
             };
             _div.prepend(CDOM.DataToDom(img));
         }
+        for (let info of this.mInfo) {
+            if (info.mFormat == CTexture.eFormat.RGBA32F) {
+                this.mBuffer.length = 0;
+                break;
+            }
+        }
         _div.prepend(CDOM.DataToDom({ "tag": "div", "class": "row", "html": [
                 { "tag": "div", "class": "col", "html": [
                         {
